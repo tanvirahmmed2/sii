@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --primary: #48a0f8;
-  --primary-dark: #0087fe;
-  --primary-light: #70b7fe;
+  --primary: #ffa425;
+  --primary-dark: #ff7402;
+  --primary-light: #fcbc54;
   --secondary: #f4f5f6;
   --secondary-dark: #0f172a;
 
   /* Tertiary Colors */
-  --tertiary: #ffa425;
-  --tertiary-dark: #ff7402;
-  --tertiary-light: #fcbc54;
+  --tertiary: #AC2B49;
+  --tertiary-dark: #af042c;
+  --tertiary-light: #b0576c;
 }
 
 @theme {
