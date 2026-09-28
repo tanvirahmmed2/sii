@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { isAdmin } from '@/lib/auth';
+import { isAdmin } from '@/lib/middleware/auth';
 
 // PUT update an academic period (Admin only)
 export async function PUT(request, { params }) {

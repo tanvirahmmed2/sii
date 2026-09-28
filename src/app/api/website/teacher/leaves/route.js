@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { verifyJWT } from '@/lib/auth';
+import { verifyJWT } from '@/lib/middleware/auth';
 import { query } from '@/lib/db';
 
 // GET leave applications submitted by the logged-in teacher

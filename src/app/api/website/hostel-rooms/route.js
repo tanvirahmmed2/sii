@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { isAdmin, isRegister } from '@/lib/auth';
+import { isAdmin, isRegister } from '@/lib/middleware/auth';
 
 // GET all rooms, optionally filter by hostel_id
 export async function GET(request) {

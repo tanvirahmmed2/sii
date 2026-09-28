@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { isAdmin, getAdminUser } from '@/lib/auth';
+import { isAdmin, getAdminUser } from '@/lib/middleware/auth';
 import { sendEmail } from '@/lib/brevo';
 import { recordActivityLog } from '@/lib/logger';
 import crypto from 'crypto';

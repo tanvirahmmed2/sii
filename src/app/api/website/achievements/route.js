@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { isAdmin, isRegister } from '@/lib/auth';
+import { isAdmin, isRegister } from '@/lib/middleware/auth';
 import { uploadImage } from '@/lib/cloudinary';
 
 // GET all achievements

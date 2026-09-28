@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { isAdmin, getTeacherUser, getStudentUser } from '@/lib/auth';
+import { isAdmin, getTeacherUser, getStudentUser } from '@/lib/middleware/auth';
 import { uploadImage, deleteImage } from '@/lib/cloudinary';
 
 // GET single club details with restricted notice_info access

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { isAdmin, hashPassword } from '@/lib/auth';
+import { isAdmin, hashPassword } from '@/lib/middleware/auth';
 
 // PUT update staff details (Admin only)
 export async function PUT(request, { params }) {

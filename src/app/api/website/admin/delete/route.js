@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { query } from '@/lib/db';
-import { verifyJWT, comparePassword } from '@/lib/auth';
+import { verifyJWT, comparePassword } from '@/lib/middleware/auth';
 
 export async function DELETE(request) {
   try {

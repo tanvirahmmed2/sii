@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { isAdmin } from '@/lib/auth';
+import { isAdmin } from '@/lib/middleware/auth';
 
 // GET security audit login logs (Admin only)
 export async function GET() {

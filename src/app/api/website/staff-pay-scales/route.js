@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { isAdmin } from '@/lib/auth';
+import { isAdmin } from '@/lib/middleware/auth';
 
 // GET all staff pay scale grades
 export async function GET() {

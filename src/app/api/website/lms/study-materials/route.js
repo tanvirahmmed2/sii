@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { isTeacher, isAdmin, isStudent, verifyJWT } from '@/lib/auth';
+import { isTeacher, isAdmin, isStudent, verifyJWT } from '@/lib/middleware/auth';
 import { cookies } from 'next/headers';
 import { logActivity } from '@/lib/activity_logger';
 

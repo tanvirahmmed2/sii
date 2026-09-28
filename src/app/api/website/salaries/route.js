@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { isAdmin, isCashier } from '@/lib/auth';
+import { isAdmin, isCashier } from '@/lib/middleware/auth';
 
 export async function GET(request) {
   try {

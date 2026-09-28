@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { hashPassword, getAdminUser } from '@/lib/auth';
+import { hashPassword, getAdminUser } from '@/lib/middleware/auth';
 import { recordActivityLog } from '@/lib/logger';
 
 export async function POST(request) {

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import pool, { query } from '@/lib/db';
-import { isAdmin, isCashier, verifyJWT } from '@/lib/auth';
-import { triggerMonthlyFeeGeneration } from '@/lib/fees';
+import { isAdmin, isCashier, verifyJWT } from '@/lib/middleware/auth';
+import { triggerMonthlyFeeGeneration } from '@/lib/database/fees';
 
 // GET student fees logs (Admin/Cashier only)
 export async function GET(request) {

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { verifyJWT } from '@/lib/auth';
+import { verifyJWT } from '@/lib/middleware/auth';
 import { query } from '@/lib/db';
-import { triggerMonthlyFeeGeneration } from '@/lib/fees';
+import { triggerMonthlyFeeGeneration } from '@/lib/database/fees';
 
 export async function GET() {
   try {

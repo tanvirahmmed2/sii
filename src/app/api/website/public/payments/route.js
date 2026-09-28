@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { triggerMonthlyFeeGeneration } from '@/lib/fees';
+import { triggerMonthlyFeeGeneration } from '@/lib/database/fees';
 
 // GET billing details by registration number (Public route)
 export async function GET(request) {

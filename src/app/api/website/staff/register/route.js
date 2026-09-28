@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { hashPassword } from '@/lib/auth';
+import { hashPassword } from '@/lib/middleware/auth';
 
 // POST: Verify staff using unique verification token
 export async function POST(request) {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { isAdmin, hashPassword } from '@/lib/auth';
+import { isAdmin, hashPassword } from '@/lib/middleware/auth';
 
 // GET a specific teacher (Public by username slug OR numeric id)
 export async function GET(request, { params }) {

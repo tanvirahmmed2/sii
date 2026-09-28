@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { isAdmin, isRegister, isCashier } from '@/lib/auth';
+import { isAdmin, isRegister, isCashier } from '@/lib/middleware/auth';
 import { uploadImage } from '@/lib/cloudinary';
 import { sendEmail } from '@/lib/brevo';
 import { recordActivityLog } from '@/lib/logger';

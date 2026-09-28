@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { getStudentUser } from '@/lib/auth';
+import { getStudentUser } from '@/lib/middleware/auth';
 import { uploadImage } from '@/lib/cloudinary';
 
 // GET clubs assigned to student as club moderator in club_member

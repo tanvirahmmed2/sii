@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import pool from '@/lib/db';
-import { isAdmin, isRegister, isCashier, verifyJWT } from '@/lib/auth';
+import { isAdmin, isRegister, isCashier, verifyJWT } from '@/lib/middleware/auth';
 import { sendEmail } from '@/lib/brevo';
 
 export async function PUT(request) {

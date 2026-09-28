@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { isAdmin } from '@/lib/auth';
-import { syncExamStatuses } from '@/lib/exams';
+import { isAdmin } from '@/lib/middleware/auth';
+import { syncExamStatuses } from '@/lib/database/exams';
 
 // GET details of a single exam including routines
 export async function GET(request, { params }) {

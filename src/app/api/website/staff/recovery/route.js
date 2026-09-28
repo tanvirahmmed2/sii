@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { hashPassword } from '@/lib/auth';
+import { hashPassword } from '@/lib/middleware/auth';
 import { sendEmail } from '@/lib/brevo';
 import crypto from 'crypto';
 

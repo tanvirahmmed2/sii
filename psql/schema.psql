@@ -1,10 +1,15 @@
--- Admin & Classes & Sections & Teachers & Subjects Schema
+-- ============================================================================
+-- SAAS EDUCATIONAL WEBSITE DEVELOPER COMPANY PLATFORM
+-- Multi-Tenant Database Architecture & Schema Definition
+-- Main SaaS Platform & Company Operations Schema
+-- ============================================================================
 
--- Enable UUID extension if needed in the future
+-- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ============================================================================
--- UTILITY FUNCTIONS & TRIGGERS
+-- GLOBAL UTILITY FUNCTIONS & TRIGGERS
 -- ============================================================================
 
 -- Function to automatically update updated_at timestamp on row modification
@@ -14,1810 +19,312 @@ BEGIN
     NEW.updated_at = CURRENT_TIMESTAMP;
     RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$ LANGUAGE plpgsql;
+
 
 -- ============================================================================
--- ADMIN TABLE
+-- SECTION 1: MAIN SAAS COMPANY / PLATFORM TABLES
+-- (Super-Admin, Developers, Role Permissions, Packages, Modules, Billing, Support & FAQs)
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS admins (
+-- ----------------------------------------------------------------------------
+-- 1. DEVELOPER MODULES TABLE (Main Website System Modules for Permissions)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS developer_modules (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_developer_modules_updated_at ON developer_modules;
+CREATE TRIGGER update_developer_modules_updated_at
+    BEFORE UPDATE ON developer_modules
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 2. MODULE PERMISSIONS TABLE (Granular Permissions inside Developer Modules)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS module_permissions (
+    id BIGSERIAL PRIMARY KEY,
+    module_id BIGINT NOT NULL REFERENCES developer_modules(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    permission_key VARCHAR(100) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(module_id, permission_key)
+);
+
+-- ----------------------------------------------------------------------------
+-- 3. DEVELOPER ROLES TABLE (SaaS Platform Internal Roles)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS developer_roles (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_developer_roles_updated_at ON developer_roles;
+CREATE TRIGGER update_developer_roles_updated_at
+    BEFORE UPDATE ON developer_roles
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 4. DEVELOPER ROLE PERMISSIONS TABLE (Role-to-Permission Mapping)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS developer_role_permissions (
+    id BIGSERIAL PRIMARY KEY,
+    role_id BIGINT NOT NULL REFERENCES developer_roles(id) ON DELETE CASCADE,
+    permission_id BIGINT NOT NULL REFERENCES module_permissions(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(role_id, permission_id)
+);
+
+-- ----------------------------------------------------------------------------
+-- 5. DEVELOPERS TABLE (SaaS Company Engineers, Admins & Staff)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS developers (
+    id BIGSERIAL PRIMARY KEY,
+    role_id BIGINT REFERENCES developer_roles(id) ON DELETE SET NULL,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    phone VARCHAR(50),
+    designation VARCHAR(100) DEFAULT 'Software Engineer',
+    password VARCHAR(255) NOT NULL,
+    avatar_url TEXT,
+    avatar_id VARCHAR(255),
+    bio TEXT,
+    github_profile VARCHAR(255),
+    linkedin_profile VARCHAR(255),
+    is_active BOOLEAN DEFAULT TRUE,
+    two_factor_code VARCHAR(10),
+    two_factor_expires TIMESTAMPTZ,
+    recovery_token VARCHAR(255),
+    recovery_token_expires TIMESTAMPTZ,
+    last_login_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_developers_updated_at ON developers;
+CREATE TRIGGER update_developers_updated_at
+    BEFORE UPDATE ON developers
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 6. DEVELOPER LOGIN ACTIVITIES TABLE (Developer Login Audit Trail)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS developer_login_activities (
+    id BIGSERIAL PRIMARY KEY,
+    developer_id BIGINT NOT NULL REFERENCES developers(id) ON DELETE CASCADE,
+    ip_address VARCHAR(100),
+    user_agent TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'Success' CHECK (status IN ('Success', 'Failed')),
+    failure_reason VARCHAR(255),
+    login_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ----------------------------------------------------------------------------
+-- 7. DEVELOPER LOGIN SESSIONS TABLE (Active Developer Auth Sessions)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS developer_login_sessions (
+    id BIGSERIAL PRIMARY KEY,
+    developer_id BIGINT NOT NULL REFERENCES developers(id) ON DELETE CASCADE,
+    token VARCHAR(255) UNIQUE NOT NULL,
+    ip_address VARCHAR(100),
+    user_agent TEXT,
+    expires_at TIMESTAMPTZ NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    last_active_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_developer_login_sessions_updated_at ON developer_login_sessions;
+CREATE TRIGGER update_developer_login_sessions_updated_at
+    BEFORE UPDATE ON developer_login_sessions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 8. PACKAGES TABLE (Subscription Pricing Plans for Schools/Clients)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS packages (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    tagline VARCHAR(255),
+    description TEXT,
+    monthly_price DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (monthly_price >= 0.00),
+    yearly_price DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (yearly_price >= 0.00),
+    discount_percentage DECIMAL(5, 2) DEFAULT 0.00 CHECK (discount_percentage >= 0.00 AND discount_percentage <= 100.00),
+    max_students INT DEFAULT 500,
+    max_teachers INT DEFAULT 30,
+    max_staff INT DEFAULT 20,
+    max_storage_mb INT DEFAULT 5120,
+    features JSONB DEFAULT '[]'::jsonb,
+    is_popular BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    trial_days INT DEFAULT 14,
+    sort_order INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_packages_updated_at ON packages;
+CREATE TRIGGER update_packages_updated_at
+    BEFORE UPDATE ON packages
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 9. TENANT MODULES TABLE (Tenant Features / School System Modules Catalog)
+-- e.g., Attendance, Exams, LMS, Hostel, Fees, Accounting, Inventory
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS tenant_modules (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    icon VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_tenant_modules_updated_at ON tenant_modules;
+CREATE TRIGGER update_tenant_modules_updated_at
+    BEFORE UPDATE ON tenant_modules
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 10. PACKAGE MODULES TABLE (Tenant Modules included in Packages)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS package_modules (
+    id BIGSERIAL PRIMARY KEY,
+    package_id BIGINT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
+    tenant_module_id BIGINT NOT NULL REFERENCES tenant_modules(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(package_id, tenant_module_id)
+);
+
+-- ----------------------------------------------------------------------------
+-- 11. CREATORS TABLE (Clients / Educational Institution Owners / Customers)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS creators (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
-    number VARCHAR(50) NOT NULL,
-    address TEXT NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    phone VARCHAR(50),
+    institution VARCHAR(255),
+    country VARCHAR(100),
+    city VARCHAR(100),
+    address TEXT,
+    password VARCHAR(255) NOT NULL,
+    email_verified BOOLEAN DEFAULT FALSE,
+    verification_token VARCHAR(255),
+    verification_token_expires TIMESTAMPTZ,
     recovery_token VARCHAR(255),
     recovery_token_expires TIMESTAMPTZ,
     two_factor_code VARCHAR(10),
     two_factor_expires TIMESTAMPTZ,
     is_active BOOLEAN DEFAULT TRUE,
-    image TEXT,
-    image_id VARCHAR(255),
+    last_login_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE admins ADD COLUMN IF NOT EXISTS two_factor_code VARCHAR(10);
-ALTER TABLE admins ADD COLUMN IF NOT EXISTS two_factor_expires TIMESTAMPTZ;
-ALTER TABLE admins ADD COLUMN IF NOT EXISTS image TEXT;
-ALTER TABLE admins ADD COLUMN IF NOT EXISTS image_id VARCHAR(255);
-
-DROP TRIGGER IF EXISTS update_admins_updated_at ON admins;
-CREATE TRIGGER update_admins_updated_at
-    BEFORE UPDATE ON admins
+DROP TRIGGER IF EXISTS update_creators_updated_at ON creators;
+CREATE TRIGGER update_creators_updated_at
+    BEFORE UPDATE ON creators
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-
-
--- ============================================================================
--- CLASSES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS classes (
+-- ----------------------------------------------------------------------------
+-- 12. SUBSCRIBERS TABLE (Marketing & Newsletter Subscribers)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS subscribers (
     id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL,
-    numeric_name INT NOT NULL,
-    code VARCHAR(50) UNIQUE NOT NULL,
-    max_seats INT DEFAULT 40,
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_classes_updated_at ON classes;
-CREATE TRIGGER update_classes_updated_at
-    BEFORE UPDATE ON classes
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- CLASS MONTHLY FEES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS class_monthly_fees (
-    id BIGSERIAL PRIMARY KEY,
-    class_id BIGINT UNIQUE NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-    amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_class_monthly_fees_updated_at ON class_monthly_fees;
-CREATE TRIGGER update_class_monthly_fees_updated_at
-    BEFORE UPDATE ON class_monthly_fees
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- SECTIONS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS sections (
-    id BIGSERIAL PRIMARY KEY,
-    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-    name VARCHAR(100) NOT NULL,
-    capacity INT DEFAULT 40,
-    room_number VARCHAR(50),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(class_id, name)
-);
-
-DROP TRIGGER IF EXISTS update_sections_updated_at ON sections;
-CREATE TRIGGER update_sections_updated_at
-    BEFORE UPDATE ON sections
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- TEACHER PAY SCALES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS teacher_pay_scale (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL,
-    basic_salary NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    allowance NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_teacher_pay_scale_updated_at ON teacher_pay_scale;
-CREATE TRIGGER update_teacher_pay_scale_updated_at
-    BEFORE UPDATE ON teacher_pay_scale
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
-
-
--- ============================================================================
--- TEACHERS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS teachers (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
-    number VARCHAR(50) NOT NULL,
-    designation VARCHAR(255),
-    address TEXT,
-    password_hash VARCHAR(255),
-    recovery_token VARCHAR(255),
-    recovery_token_expires TIMESTAMPTZ,
-    is_active BOOLEAN DEFAULT FALSE,
-    is_registered BOOLEAN DEFAULT FALSE,
-    is_permanent BOOLEAN DEFAULT FALSE,
-    image TEXT,
-    image_id VARCHAR(255),
-    grade_id BIGINT REFERENCES teacher_pay_scale(id) ON DELETE SET NULL,
-    verification_token VARCHAR(255),
-    verification_token_expires TIMESTAMPTZ,
-    date_of_birth DATE,
-    nationality VARCHAR(100),
-    blood_group VARCHAR(10),
-    gender VARCHAR(20),
-    nid_number VARCHAR(100),
-    bio TEXT,
-    username VARCHAR(255) UNIQUE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_teachers_updated_at ON teachers;
-CREATE TRIGGER update_teachers_updated_at
-    BEFORE UPDATE ON teachers
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- SUBJECTS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS subjects (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL,
-    code VARCHAR(50) UNIQUE NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_subjects_updated_at ON subjects;
-CREATE TRIGGER update_subjects_updated_at
-    BEFORE UPDATE ON subjects
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- CLASS SUBJECTS MAPPING & ASSIGNMENT TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS class_subjects (
-    id BIGSERIAL PRIMARY KEY,
-    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-    subject_id BIGINT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(class_id, subject_id)
-);
-
-DROP TRIGGER IF EXISTS update_class_subjects_updated_at ON class_subjects;
-CREATE TRIGGER update_class_subjects_updated_at
-    BEFORE UPDATE ON class_subjects
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- CLASS SUBJECT TEACHERS ASSIGNMENTS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS class_subject_teachers (
-    id BIGSERIAL PRIMARY KEY,
-    class_subject_id BIGINT NOT NULL REFERENCES class_subjects(id) ON DELETE CASCADE,
-    section_id BIGINT REFERENCES sections(id) ON DELETE CASCADE,
-    teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS cst_unique_idx
-  ON class_subject_teachers (class_subject_id, COALESCE(section_id, -1));
-
-DROP TRIGGER IF EXISTS update_class_subject_teachers_updated_at ON class_subject_teachers;
-CREATE TRIGGER update_class_subject_teachers_updated_at
-    BEFORE UPDATE ON class_subject_teachers
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- CLUBS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS clubs (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) UNIQUE NOT NULL,
-    slug VARCHAR(255) UNIQUE NOT NULL,
-    motto TEXT,
-    description TEXT,
-    notice_info TEXT,
-    image TEXT,
-    image_id VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_clubs_updated_at ON clubs;
-CREATE TRIGGER update_clubs_updated_at
-    BEFORE UPDATE ON clubs
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- CLUB ADMIN TABLE (ONLY TEACHERS ASSIGNED TO CLUBS AS ADMINS)
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS club_admin (
-    id BIGSERIAL PRIMARY KEY,
-    club_id BIGINT NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
-    teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
-    designation VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(club_id, teacher_id)
-);
-
-DROP TRIGGER IF EXISTS update_club_admin_updated_at ON club_admin;
-CREATE TRIGGER update_club_admin_updated_at
-    BEFORE UPDATE ON club_admin
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- CLUB MEMBER TABLE (ONLY STUDENTS ASSIGNED AS MEMBERS OR MODERATORS)
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS club_member (
-    id BIGSERIAL PRIMARY KEY,
-    club_id BIGINT NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    role VARCHAR(50) NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'moderator')),
-    designation VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(club_id, student_id)
-);
-
-DROP TRIGGER IF EXISTS update_club_member_updated_at ON club_member;
-CREATE TRIGGER update_club_member_updated_at
-    BEFORE UPDATE ON club_member
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- CLUB NEWS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS club_news (
-    id BIGSERIAL PRIMARY KEY,
-    club_id BIGINT NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
-    image_url TEXT,
-    image_id VARCHAR(100),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_club_news_updated_at ON club_news;
-CREATE TRIGGER update_club_news_updated_at
-    BEFORE UPDATE ON club_news
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- SALARIES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS salaries (
-    id BIGSERIAL PRIMARY KEY,
-    teacher_id BIGINT REFERENCES teachers(id) ON DELETE CASCADE,
-    month VARCHAR(50) NOT NULL,
-    basic DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (basic >= 0.00),
-    allowance DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (allowance >= 0.00),
-    deductions DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (deductions >= 0.00),
-    status VARCHAR(50) NOT NULL DEFAULT 'Pending',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_salaries_updated_at ON salaries;
-CREATE TRIGGER update_salaries_updated_at
-    BEFORE UPDATE ON salaries
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- LEAVE APPLICATIONS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS leave_applications (
-    id BIGSERIAL PRIMARY KEY,
-    teacher_id BIGINT REFERENCES teachers(id) ON DELETE CASCADE,
-    type VARCHAR(100) NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    reason TEXT NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'Pending',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_leave_applications_updated_at ON leave_applications;
-CREATE TRIGGER update_leave_applications_updated_at
-    BEFORE UPDATE ON leave_applications
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- TEACHER ATTENDANCES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS teacher_attendances (
-    id BIGSERIAL PRIMARY KEY,
-    teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
-    date DATE NOT NULL DEFAULT CURRENT_DATE,
-    check_in VARCHAR(50),
-    check_out VARCHAR(50),
-    status VARCHAR(50) NOT NULL DEFAULT 'Present',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(teacher_id, date)
-);
-
-DROP TRIGGER IF EXISTS update_teacher_attendances_updated_at ON teacher_attendances;
-CREATE TRIGGER update_teacher_attendances_updated_at
-    BEFORE UPDATE ON teacher_attendances
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- EXAMS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS exams (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    term VARCHAR(100),
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'upcoming' CHECK (status IN ('current', 'upcoming', 'previous')),
-    class_id BIGINT REFERENCES classes(id) ON DELETE CASCADE,
-    exam_fee NUMERIC(10, 2) DEFAULT 0.00,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT unique_exam_per_class UNIQUE (name, class_id)
-);
-
-DROP TRIGGER IF EXISTS update_exams_updated_at ON exams;
-CREATE TRIGGER update_exams_updated_at
-    BEFORE UPDATE ON exams
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- EXAM SCHEDULES (ROUTINES) TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS exam_schedules (
-    id BIGSERIAL PRIMARY KEY,
-    exam_id BIGINT NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
-    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-    subject_id BIGINT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
-    exam_date DATE NOT NULL,
-    start_time VARCHAR(50) NOT NULL,
-    end_time VARCHAR(50) NOT NULL,
-    room_number VARCHAR(50),
-    full_marks DECIMAL(5,2) DEFAULT 100.00,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(exam_id, class_id, subject_id)
-);
-
-DROP TRIGGER IF EXISTS update_exam_schedules_updated_at ON exam_schedules;
-CREATE TRIGGER update_exam_schedules_updated_at
-    BEFORE UPDATE ON exam_schedules
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- CLASS ROUTINES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS class_routines (
-    id BIGSERIAL PRIMARY KEY,
-    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-    subject_id BIGINT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
-    day_id BIGINT NOT NULL REFERENCES days(id) ON DELETE CASCADE,
-    start_time TIME NOT NULL,
-    end_time TIME NOT NULL,
-    section_id BIGINT REFERENCES sections(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS class_routine_unique_idx ON class_routines (class_id, day_id, start_time, end_time, COALESCE(section_id, -1));
-
-DROP TRIGGER IF EXISTS update_class_routines_updated_at ON class_routines;
-CREATE TRIGGER update_class_routines_updated_at
-    BEFORE UPDATE ON class_routines
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- SYLLABUSES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS syllabuses (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    link TEXT NOT NULL,
-    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-    subject_id BIGINT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_syllabuses_updated_at ON syllabuses;
-CREATE TRIGGER update_syllabuses_updated_at
-    BEFORE UPDATE ON syllabuses
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- STUDENTS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS students (
-    id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255),
-    email VARCHAR(255) UNIQUE,
-    phone VARCHAR(50),
-    registration_number VARCHAR(100) UNIQUE NOT NULL,
-    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-    section_id BIGINT REFERENCES sections(id) ON DELETE SET NULL,
-    date_of_birth DATE,
-    address TEXT,
-    parents_info TEXT,
-    blood_group VARCHAR(10),
-    father_name VARCHAR(255),
-    father_occupation VARCHAR(255),
-    father_phone VARCHAR(50),
-    mother_name VARCHAR(255),
-    mother_occupation VARCHAR(255),
-    mother_phone VARCHAR(50),
-    past_school_name VARCHAR(255),
-    past_school_class VARCHAR(50),
-    past_school_result VARCHAR(100),
-    special_note TEXT,
-    birth_certificate_number VARCHAR(100) UNIQUE,
-    gender VARCHAR(20) CHECK (gender IN ('Male', 'Female', 'Other')),
-    roll INT CHECK (roll > 0),
-    password_hash VARCHAR(255),
-    recovery_token VARCHAR(255),
-    recovery_token_expires TIMESTAMPTZ,
-    verification_code VARCHAR(255),
-    verification_code_expires TIMESTAMPTZ,
-    is_active BOOLEAN DEFAULT FALSE,
-    is_registered BOOLEAN DEFAULT FALSE,
-    image TEXT,
-    image_id VARCHAR(255),
-    signature TEXT,
-    signature_id VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    source VARCHAR(100) DEFAULT 'website',
+    is_active BOOLEAN DEFAULT TRUE,
+    subscribed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    unsubscribed_at TIMESTAMPTZ
 );
 
-DROP TRIGGER IF EXISTS update_students_updated_at ON students;
-CREATE TRIGGER update_students_updated_at
-    BEFORE UPDATE ON students
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- STUDENT ATTENDANCES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS student_attendances (
+-- ----------------------------------------------------------------------------
+-- 13. WEBSITES TABLE (TENANTS MASTER TABLE)
+-- Represents individual educational institution websites hosted on SaaS
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS websites (
     id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-    subject_id BIGINT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
-    period_id BIGINT NOT NULL REFERENCES periods(id) ON DELETE CASCADE,
-    date DATE NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'Present' CHECK (status IN ('Present', 'Absent', 'Late', 'On Leave')),
-    remarks TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(student_id, date, subject_id, period_id)
-);
-
-DROP TRIGGER IF EXISTS update_student_attendances_updated_at ON student_attendances;
-CREATE TRIGGER update_student_attendances_updated_at
-    BEFORE UPDATE ON student_attendances
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- STUDENT FEES TABLE (Monthly Tuition, Exam Fees, Re-Admission Fees, etc.)
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS student_fees (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount >= 0.00),
-    due_date DATE NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'unpaid' CHECK (LOWER(status) IN ('unpaid', 'paid', 'partially paid', 'pending', 'cancelled')),
-    paid_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
-    payment_date TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_student_fees_updated_at ON student_fees;
-CREATE TRIGGER update_student_fees_updated_at
-    BEFORE UPDATE ON student_fees
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- STUDENT FINES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS student_fines (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    fee_id BIGINT REFERENCES student_fees(id) ON DELETE SET NULL,
-    title VARCHAR(255) NOT NULL,
-    amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount >= 0.00),
-    status VARCHAR(50) NOT NULL DEFAULT 'Unpaid' CHECK (status IN ('Paid', 'Unpaid')),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_student_fines_updated_at ON student_fines;
-CREATE TRIGGER update_student_fines_updated_at
-    BEFORE UPDATE ON student_fines
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- MARKS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS marks (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    exam_id BIGINT NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
-    subject_id BIGINT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
-    marks_obtained DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
-    total_marks DECIMAL(5, 2) NOT NULL DEFAULT 100.00,
-    remarks VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT unique_student_exam_subject UNIQUE(student_id, exam_id, subject_id)
-);
-
-DROP TRIGGER IF EXISTS update_marks_updated_at ON marks;
-CREATE TRIGGER update_marks_updated_at
-    BEFORE UPDATE ON marks
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- RESULTS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS results (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    exam_id BIGINT NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
-    gpa DECIMAL(3, 2) DEFAULT 0.00,
-    grade VARCHAR(10),
-    total_marks DECIMAL(6, 2) DEFAULT 0.00,
-    status VARCHAR(50) DEFAULT 'Pass',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT unique_student_exam UNIQUE(student_id, exam_id)
-);
-
-DROP TRIGGER IF EXISTS update_results_updated_at ON results;
-CREATE TRIGGER update_results_updated_at
-    BEFORE UPDATE ON results
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- RESULT PUBLISH TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS result_publish (
-    id BIGSERIAL PRIMARY KEY,
-    exam_id BIGINT UNIQUE NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
-    is_published BOOLEAN DEFAULT FALSE,
-    published_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_result_publish_updated_at ON result_publish;
-CREATE TRIGGER update_result_publish_updated_at
-    BEFORE UPDATE ON result_publish
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- TRANSCRIPTS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS transcripts (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    exam_id BIGINT NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
-    gpa DECIMAL(3, 2) DEFAULT 0.00,
-    remarks TEXT,
-    generated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-
--- ============================================================================
--- CLUB MEMBERS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS club_members (
-    id BIGSERIAL PRIMARY KEY,
-    club_id BIGINT NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT unique_club_student UNIQUE(club_id, student_id)
-);
-
--- ============================================================================
--- CLUB ANNOUNCEMENTS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS club_announcements (
-    id BIGSERIAL PRIMARY KEY,
-    club_id BIGINT NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
-    is_important BOOLEAN DEFAULT FALSE,
-    expires_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_club_announcements_updated_at ON club_announcements;
-CREATE TRIGGER update_club_announcements_updated_at
-    BEFORE UPDATE ON club_announcements
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- NEWS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS news (
-    id BIGSERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) UNIQUE,
-    content TEXT NOT NULL,
-    image TEXT,
-    image_id VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_news_updated_at ON news;
-CREATE TRIGGER update_news_updated_at
-    BEFORE UPDATE ON news
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- EVENTS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS events (
-    id BIGSERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) UNIQUE,
-    description TEXT NOT NULL,
-    event_date TIMESTAMPTZ NOT NULL,
-    location VARCHAR(255) NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_events_updated_at ON events;
-CREATE TRIGGER update_events_updated_at
-    BEFORE UPDATE ON events
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- EVENT PARTICIPANTS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS event_participants (
-    event_id BIGINT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    joined_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (event_id, student_id)
-);
-
--- ============================================================================
--- NOTICES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS notices (
-    id BIGSERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    link TEXT NOT NULL,
-    is_pinned BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_notices_updated_at ON notices;
-CREATE TRIGGER update_notices_updated_at
-    BEFORE UPDATE ON notices
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- STUDENT FEE PAYMENTS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS student_fee_payments (
-    id BIGSERIAL PRIMARY KEY,
-    student_fee_id BIGINT NOT NULL REFERENCES student_fees(id) ON DELETE CASCADE,
-    amount_paid DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount_paid >= 0.00),
-    payment_method VARCHAR(50) NOT NULL DEFAULT 'Cash',
-    transaction_id VARCHAR(100),
-    remarks TEXT,
-    billed_by VARCHAR(255),
-    payment_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_student_fee_payments_updated_at ON student_fee_payments;
-CREATE TRIGGER update_student_fee_payments_updated_at
-    BEFORE UPDATE ON student_fee_payments
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- -- ============================================================================
--- AUTHORITY DESIGNATIONS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS authority_designations (
-    id BIGSERIAL PRIMARY KEY,
-    title VARCHAR(255) UNIQUE NOT NULL,
-    slug VARCHAR(255) UNIQUE NOT NULL,
-    description TEXT,
-    is_head BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-
--- ============================================================================
--- AUTHORITIES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS authorities (
-    id BIGSERIAL PRIMARY KEY,
+    creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
+    package_id BIGINT REFERENCES packages(id) ON DELETE SET NULL,
     name VARCHAR(255) NOT NULL,
-    bio TEXT,
-    designation_id BIGINT NOT NULL REFERENCES authority_designations(id) ON DELETE RESTRICT,
-    email VARCHAR(255) UNIQUE,
-    contact VARCHAR(50),
-    image TEXT,
-    image_id VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_authorities_updated_at ON authorities;
-CREATE TRIGGER update_authorities_updated_at
-    BEFORE UPDATE ON authorities
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- AUTHORITY QUALIFICATIONS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS authority_qualifications (
-    id BIGSERIAL PRIMARY KEY,
-    authority_id BIGINT NOT NULL REFERENCES authorities(id) ON DELETE CASCADE,
-    degree VARCHAR(255) NOT NULL,
-    institution VARCHAR(255) NOT NULL,
-    passing_year INT NOT NULL,
-    result VARCHAR(100),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_authority_qualifications_updated_at ON authority_qualifications;
-CREATE TRIGGER update_authority_qualifications_updated_at
-    BEFORE UPDATE ON authority_qualifications
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- TEACHER QUALIFICATIONS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS teacher_qualifications (
-    id BIGSERIAL PRIMARY KEY,
-    teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
-    degree VARCHAR(255) NOT NULL,
-    institution VARCHAR(255) NOT NULL,
-    passing_year INT NOT NULL,
-    result VARCHAR(100),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_teacher_qualifications_updated_at ON teacher_qualifications;
-CREATE TRIGGER update_teacher_qualifications_updated_at
-    BEFORE UPDATE ON teacher_qualifications
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- ACHIEVEMENTS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS achievements (
-    id BIGSERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    description TEXT NOT NULL,
-    image_url TEXT,
-    image_id TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_achievements_updated_at ON achievements;
-CREATE TRIGGER update_achievements_updated_at
-    BEFORE UPDATE ON achievements
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- RECOGNITIONS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS recognitions (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) UNIQUE NOT NULL,
-    description TEXT,
-    awarded_by VARCHAR(255) NOT NULL,
-    date DATE NOT NULL,
-    image TEXT,
-    image_id VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_recognitions_updated_at ON recognitions;
-CREATE TRIGGER update_recognitions_updated_at
-    BEFORE UPDATE ON recognitions
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- ANNOUNCEMENTS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS announcements (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    expires_at TIMESTAMPTZ,
-    location VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_announcements_updated_at ON announcements;
-CREATE TRIGGER update_announcements_updated_at
-    BEFORE UPDATE ON announcements
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- HOSTELS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS hostels (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) UNIQUE NOT NULL,
-    description TEXT,
-    total_room INT NOT NULL DEFAULT 0,
-    location VARCHAR(255) NOT NULL,
-    gender VARCHAR(20) CHECK (gender IN ('Male', 'Female', 'Other')),
-    image TEXT,
-    image_id VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_hostels_updated_at ON hostels;
-CREATE TRIGGER update_hostels_updated_at
-    BEFORE UPDATE ON hostels
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- HOSTEL ROOMS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS hostel_rooms (
-    id BIGSERIAL PRIMARY KEY,
-    hostel_id BIGINT NOT NULL REFERENCES hostels(id) ON DELETE CASCADE,
-    room_number VARCHAR(100) NOT NULL,
-    room_type VARCHAR(100) NOT NULL,
-    capacity INT NOT NULL DEFAULT 1,
-    availability_status VARCHAR(50) NOT NULL DEFAULT 'Available',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT unique_hostel_room UNIQUE(hostel_id, room_number)
-);
-
-DROP TRIGGER IF EXISTS update_hostel_rooms_updated_at ON hostel_rooms;
-CREATE TRIGGER update_hostel_rooms_updated_at
-    BEFORE UPDATE ON hostel_rooms
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- HOSTEL PROVOST TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS hostel_provost (
-    id BIGSERIAL PRIMARY KEY,
-    hostel_id BIGINT NOT NULL REFERENCES hostels(id) ON DELETE CASCADE,
-    teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT unique_hostel_provost UNIQUE(hostel_id, teacher_id)
-);
-
-DROP TRIGGER IF EXISTS update_hostel_provost_updated_at ON hostel_provost;
-CREATE TRIGGER update_hostel_provost_updated_at
-    BEFORE UPDATE ON hostel_provost
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- HOSTEL ALLOCATIONS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS hostel_allocations (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    room_id BIGINT NOT NULL REFERENCES hostel_rooms(id) ON DELETE CASCADE,
-    allocated_at DATE NOT NULL DEFAULT CURRENT_DATE,
-    vacated_at DATE,
-    status VARCHAR(50) NOT NULL DEFAULT 'Active',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS unique_active_student_allocation ON hostel_allocations(student_id) WHERE status = 'Active';
-
-DROP TRIGGER IF EXISTS update_hostel_allocations_updated_at ON hostel_allocations;
-CREATE TRIGGER update_hostel_allocations_updated_at
-    BEFORE UPDATE ON hostel_allocations
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- HOSTEL FEES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS hostel_fees (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount >= 0.00),
-    due_date DATE NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'Unpaid' CHECK (status IN ('Paid', 'Unpaid', 'Partially Paid')),
-    paid_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
-    payment_date TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_hostel_fees_updated_at ON hostel_fees;
-CREATE TRIGGER update_hostel_fees_updated_at
-    BEFORE UPDATE ON hostel_fees
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- MARK GRADES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS mark_grades (
-    grade_id BIGSERIAL PRIMARY KEY,
-    letter_grade VARCHAR(5) NOT NULL,
-    min_mark DECIMAL(5,2) NOT NULL,
-    max_mark DECIMAL(5,2) NOT NULL,
-    point DECIMAL(5,2) NOT NULL DEFAULT 0.00,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_mark_grades_updated_at ON mark_grades;
-CREATE TRIGGER update_mark_grades_updated_at
-    BEFORE UPDATE ON mark_grades
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- COLLABORATIONS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS collaborations (
-    id BIGSERIAL PRIMARY KEY,
-    institution_name VARCHAR(255) NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    subdomain VARCHAR(100) UNIQUE NOT NULL,
+    custom_domain VARCHAR(255) UNIQUE,
+    custom_domain_verified BOOLEAN DEFAULT FALSE,
+    institution_type VARCHAR(100) DEFAULT 'School',
+    eiin_number VARCHAR(100),
+    status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'pending', 'suspended', 'expired', 'archived')),
+    theme VARCHAR(100) DEFAULT 'default',
+    primary_color VARCHAR(50) DEFAULT '#1e40af',
     logo TEXT,
     logo_id VARCHAR(255),
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_collaborations_updated_at ON collaborations;
-CREATE TRIGGER update_collaborations_updated_at
-    BEFORE UPDATE ON collaborations
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- DAYS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS days (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(50) NOT NULL UNIQUE,
-    status VARCHAR(10) CHECK(status IN ('on', 'off')) DEFAULT 'on',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_days_updated_at ON days;
-CREATE TRIGGER update_days_updated_at
-    BEFORE UPDATE ON days
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- PERIODS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS periods (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    start_time VARCHAR(50) NOT NULL,
-    end_time VARCHAR(50) NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_periods_updated_at ON periods;
-CREATE TRIGGER update_periods_updated_at
-    BEFORE UPDATE ON periods
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- LESSON PLANS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS lesson_plans (
-    id BIGSERIAL PRIMARY KEY,
-    class_subject_id BIGINT NOT NULL REFERENCES class_subjects(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    description TEXT NOT NULL,
-    date DATE NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'Draft',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_lesson_plans_updated_at ON lesson_plans;
-CREATE TRIGGER update_lesson_plans_updated_at
-    BEFORE UPDATE ON lesson_plans
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- STUDY MATERIALS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS study_materials (
-    id BIGSERIAL PRIMARY KEY,
-    class_subject_id BIGINT NOT NULL REFERENCES class_subjects(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    file_url TEXT NOT NULL,
-    file_id VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_study_materials_updated_at ON study_materials;
-CREATE TRIGGER update_study_materials_updated_at
-    BEFORE UPDATE ON study_materials
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- ASSIGNMENTS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS assignments (
-    id BIGSERIAL PRIMARY KEY,
-    class_subject_id BIGINT NOT NULL REFERENCES class_subjects(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    description TEXT NOT NULL,
-    file_url TEXT,
-    file_id VARCHAR(255),
-    due_date TIMESTAMPTZ NOT NULL,
-    max_marks DECIMAL(5, 2) NOT NULL DEFAULT 100.00,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_assignments_updated_at ON assignments;
-CREATE TRIGGER update_assignments_updated_at
-    BEFORE UPDATE ON assignments
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- ASSIGNMENT SUBMISSIONS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS assignment_submissions (
-    id BIGSERIAL PRIMARY KEY,
-    assignment_id BIGINT NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    file_url TEXT,
-    file_id VARCHAR(255),
-    submission_text TEXT,
-    submitted_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    marks_obtained DECIMAL(5, 2),
-    remarks TEXT,
-    status VARCHAR(50) NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Graded', 'Late', 'Resubmitted')),
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(assignment_id, student_id)
-);
-
-DROP TRIGGER IF EXISTS update_assignment_submissions_updated_at ON assignment_submissions;
-CREATE TRIGGER update_assignment_submissions_updated_at
-    BEFORE UPDATE ON assignment_submissions
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- WEBSITE SETTINGS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS website_settings (
-    id BIGSERIAL PRIMARY KEY,
-    contact_phone VARCHAR(50),
+    favicon TEXT,
+    favicon_id VARCHAR(255),
     contact_email VARCHAR(255),
+    contact_phone VARCHAR(50),
     address TEXT,
-    map_url TEXT,
-    motto TEXT,
-    mission TEXT,
-    vission TEXT,
-    history TEXT,
-    facebook_url TEXT,
-    twitter_url TEXT,
-    instagram_url TEXT,
-    youtube_url TEXT,
+    subscription_expires_at TIMESTAMPTZ,
+    storage_used_mb INT DEFAULT 0,
+    is_maintenance_mode BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TRIGGER IF EXISTS update_website_settings_updated_at ON website_settings;
-CREATE TRIGGER update_website_settings_updated_at
-    BEFORE UPDATE ON website_settings
+DROP TRIGGER IF EXISTS update_websites_updated_at ON websites;
+CREATE TRIGGER update_websites_updated_at
+    BEFORE UPDATE ON websites
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-
--- ============================================================================
--- TEACHER SUBJECTS TABLE (QUALIFICATION & GENERAL ASSIGNMENT)
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS teacher_subjects (
+-- ----------------------------------------------------------------------------
+-- 14. WEBSITE MODULES TABLE (Tenant Modules activated per Website)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_modules (
     id BIGSERIAL PRIMARY KEY,
-    teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
-    subject_id BIGINT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(teacher_id, subject_id)
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    tenant_module_id BIGINT NOT NULL REFERENCES tenant_modules(id) ON DELETE CASCADE,
+    is_enabled BOOLEAN DEFAULT TRUE,
+    enabled_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, tenant_module_id)
 );
 
-DROP TRIGGER IF EXISTS update_teacher_subjects_updated_at ON teacher_subjects;
-CREATE TRIGGER update_teacher_subjects_updated_at
-    BEFORE UPDATE ON teacher_subjects
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- STUDENT GUARDIANS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS student_guardians (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    relationship VARCHAR(100) NOT NULL CHECK (relationship IN ('Father', 'Mother', 'Relative')),
-    email VARCHAR(255),
-    phone VARCHAR(50) NOT NULL,
-    occupation VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_student_guardians_updated_at ON student_guardians;
-CREATE TRIGGER update_student_guardians_updated_at
-    BEFORE UPDATE ON student_guardians
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- ADMISSIONS CIRCULARS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS admissions (
-    id BIGSERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-    min_age INT,
-    max_age INT,
-    birth_regi_number VARCHAR(100),
-    admission_start_date DATE NOT NULL,
-    finish_date DATE NOT NULL,
-    result_date DATE,
-    fees DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (fees >= 0.00),
-    description TEXT,
-    is_result_published BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_admissions_updated_at ON admissions;
-CREATE TRIGGER update_admissions_updated_at
-    BEFORE UPDATE ON admissions
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- STUDENT ADMISSIONS TABLE (APPLICATIONS)
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS student_admissions (
-    id BIGSERIAL PRIMARY KEY,
-    admission_id BIGINT REFERENCES admissions(id) ON DELETE CASCADE,
-    student_id BIGINT REFERENCES students(id) ON DELETE SET NULL,
-    applicant_name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    phone VARCHAR(50) NOT NULL,
-    date_of_birth DATE NOT NULL,
-    gender VARCHAR(20) NOT NULL CHECK (gender IN ('Male', 'Female', 'Other')),
-    blood_group VARCHAR(10),
-    address TEXT NOT NULL,
-    applied_class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-    father_name VARCHAR(255),
-    father_occupation VARCHAR(255),
-    father_phone VARCHAR(50),
-    mother_name VARCHAR(255),
-    mother_occupation VARCHAR(255),
-    mother_phone VARCHAR(50),
-    past_school_name VARCHAR(255),
-    past_school_class VARCHAR(50),
-    past_school_result VARCHAR(100),
-    special_note TEXT,
-    previous_school TEXT,
-    guardian_name VARCHAR(255) NOT NULL,
-    guardian_phone VARCHAR(50) NOT NULL,
-    birth_regi_number VARCHAR(100),
-    image TEXT,
-    image_id VARCHAR(255),
-    signature TEXT,
-    signature_id VARCHAR(255),
-    status VARCHAR(50) DEFAULT 'incomplete' CHECK (status IN ('incomplete', 'pending', 'approved', 'rejected', 'selected', 'disqualified')),
-    applied_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_student_admissions_updated_at ON student_admissions;
-CREATE TRIGGER update_student_admissions_updated_at
-    BEFORE UPDATE ON student_admissions
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
-
-
--- ============================================================================
--- ACCEPTED ADMISSIONS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS accepted_admissions (
-    id BIGSERIAL PRIMARY KEY,
-    student_admission_id BIGINT UNIQUE NOT NULL REFERENCES student_admissions(id) ON DELETE CASCADE,
-    admission_id BIGINT NOT NULL REFERENCES admissions(id) ON DELETE CASCADE,
-    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-    applicant_name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    phone VARCHAR(50) NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-
-
-
--- ============================================================================
--- ADMISSION FEES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS admission_fees (
-    id BIGSERIAL PRIMARY KEY,
-    student_admission_id BIGINT UNIQUE NOT NULL REFERENCES student_admissions(id) ON DELETE CASCADE,
-    amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount >= 0.00),
-    status VARCHAR(50) DEFAULT 'unpaid' CHECK (status IN ('unpaid', 'pending', 'paid', 'cancelled')),
-    billed_by VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_admission_fees_updated_at ON admission_fees;
-CREATE TRIGGER update_admission_fees_updated_at
-    BEFORE UPDATE ON admission_fees
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- STAFF PAY SCALES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS staff_pay_scale (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL,
-    basic_salary NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    allowance NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_staff_pay_scale_updated_at ON staff_pay_scale;
-CREATE TRIGGER update_staff_pay_scale_updated_at
-    BEFORE UPDATE ON staff_pay_scale
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
-
-
--- ============================================================================
--- STAFFS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS staffs (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    number VARCHAR(50) NOT NULL,
-    role VARCHAR(50) NOT NULL CHECK (role IN ('cashier', 'registrar', 'staff')),
-    address TEXT,
-    password_hash VARCHAR(255),
-    recovery_token VARCHAR(255),
-    recovery_token_expires TIMESTAMPTZ,
-    is_active BOOLEAN DEFAULT FALSE,
-    is_registered BOOLEAN DEFAULT FALSE,
-    verification_token VARCHAR(255),
-    verification_token_expires TIMESTAMPTZ,
-    image TEXT,
-    image_id VARCHAR(255),
-    grade_id BIGINT REFERENCES staff_pay_scale(id) ON DELETE SET NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_staffs_updated_at ON staffs;
-CREATE TRIGGER update_staffs_updated_at
-    BEFORE UPDATE ON staffs
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- STUDENT DOCUMENTS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS student_documents (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    document_name VARCHAR(255) NOT NULL,
-    document_type VARCHAR(100) NOT NULL,
-    file_url TEXT NOT NULL,
-    file_id VARCHAR(255),
-    uploaded_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_student_documents_updated_at ON student_documents;
-CREATE TRIGGER update_student_documents_updated_at
-    BEFORE UPDATE ON student_documents
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- STUDENT ENROLLMENTS TABLE (ACADEMIC YEAR HISTORY)
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS student_enrollments (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-    section_id BIGINT REFERENCES sections(id) ON DELETE SET NULL,
-    session_year VARCHAR(50) NOT NULL,
-    roll_number INT CHECK (roll_number > 0),
-    enrollment_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    status VARCHAR(50) DEFAULT 'Active' CHECK (status IN ('Active', 'Completed', 'Dropped', 'Transferred')),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(student_id, session_year)
-);
-
-DROP TRIGGER IF EXISTS update_student_enrollments_updated_at ON student_enrollments;
-CREATE TRIGGER update_student_enrollments_updated_at
-    BEFORE UPDATE ON student_enrollments
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- STUDENT TRANSFERS TABLE (TC SYSTEM)
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS student_transfers (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    transfer_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    transfer_reason TEXT NOT NULL,
-    target_school VARCHAR(255) NOT NULL,
-    tc_number VARCHAR(100) UNIQUE NOT NULL,
-    status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('Pending', 'Approved', 'Cancelled')),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_student_transfers_updated_at ON student_transfers;
-CREATE TRIGGER update_student_transfers_updated_at
-    BEFORE UPDATE ON student_transfers
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- STUDENT LEAVES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS student_leaves (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    type VARCHAR(100) NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    reason TEXT NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Approved', 'Rejected')),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_student_leaves_updated_at ON student_leaves;
-CREATE TRIGGER update_student_leaves_updated_at
-    BEFORE UPDATE ON student_leaves
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- STUDENT ATTENDANCE LOGS TABLE (RFID/BIOMETRIC)
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS student_attendance_logs (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    scan_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    device_id VARCHAR(100),
-    direction VARCHAR(50) CHECK (direction IN ('IN', 'OUT')),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-
--- ============================================================================
--- TEACHER CLASSES TABLE (CLASS TEACHER ASSIGNMENTS)
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS teacher_classes (
-    id BIGSERIAL PRIMARY KEY,
-    teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
-    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-    section_id BIGINT REFERENCES sections(id) ON DELETE CASCADE,
-    academic_year VARCHAR(50) NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(class_id, section_id, academic_year)
-);
-
-DROP TRIGGER IF EXISTS update_teacher_classes_updated_at ON teacher_classes;
-CREATE TRIGGER update_teacher_classes_updated_at
-    BEFORE UPDATE ON teacher_classes
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- EXAM SUBJECTS TABLE (CONFIG RULES)
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS exam_subjects (
-    id BIGSERIAL PRIMARY KEY,
-    exam_id BIGINT NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
-    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-    subject_id BIGINT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
-    full_marks DECIMAL(5, 2) NOT NULL DEFAULT 100.00,
-    pass_marks DECIMAL(5, 2) NOT NULL DEFAULT 33.00,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(exam_id, class_id, subject_id)
-);
-
-DROP TRIGGER IF EXISTS update_exam_subjects_updated_at ON exam_subjects;
-CREATE TRIGGER update_exam_subjects_updated_at
-    BEFORE UPDATE ON exam_subjects
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- ATTENDANCE REPORTS TABLE (CUMULATIVE STATS)
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS attendance_reports (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT REFERENCES students(id) ON DELETE CASCADE,
-    class_id BIGINT REFERENCES classes(id) ON DELETE CASCADE,
-    section_id BIGINT REFERENCES sections(id) ON DELETE CASCADE,
-    report_month DATE NOT NULL,
-    total_working_days INT NOT NULL,
-    total_present INT NOT NULL,
-    total_absent INT NOT NULL,
-    total_late INT NOT NULL,
-    total_half_day INT NOT NULL,
-    attendance_percentage DECIMAL(5, 2) NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-
--- ============================================================================
--- PAYMENT TRANSACTIONS TABLE (UNIFIED LEDGER)
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS payment_transactions (
-    id BIGSERIAL PRIMARY KEY,
-    transaction_number VARCHAR(100) UNIQUE NOT NULL,
-    payment_method VARCHAR(50) NOT NULL DEFAULT 'Cash',
-    amount DECIMAL(12, 2) NOT NULL,
-    transaction_type VARCHAR(50) NOT NULL CHECK (transaction_type IN ('Credit', 'Debit')),
-    category VARCHAR(100) NOT NULL,
-    reference_id BIGINT,
-    payment_gateway VARCHAR(100),
-    gateway_transaction_id VARCHAR(100),
-    status VARCHAR(50) NOT NULL DEFAULT 'Success' CHECK (status IN ('Pending', 'Success', 'Failed')),
-    remarks TEXT,
-    billed_by VARCHAR(255),
-    payment_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_payment_transactions_updated_at ON payment_transactions;
-CREATE TRIGGER update_payment_transactions_updated_at
-    BEFORE UPDATE ON payment_transactions
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- EXPENSE CATEGORIES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS expense_categories (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) UNIQUE NOT NULL,
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_expense_categories_updated_at ON expense_categories;
-CREATE TRIGGER update_expense_categories_updated_at
-    BEFORE UPDATE ON expense_categories
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- EXPENSES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS expenses (
-    id BIGSERIAL PRIMARY KEY,
-    category_id BIGINT NOT NULL REFERENCES expense_categories(id) ON DELETE RESTRICT,
-    title VARCHAR(255) NOT NULL,
-    amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount >= 0.00),
-    expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    paid_by VARCHAR(255),
-    receipt_image TEXT,
-    receipt_image_id VARCHAR(255),
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_expenses_updated_at ON expenses;
-CREATE TRIGGER update_expenses_updated_at
-    BEFORE UPDATE ON expenses
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- INCOME CATEGORIES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS income_categories (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) UNIQUE NOT NULL,
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_income_categories_updated_at ON income_categories;
-CREATE TRIGGER update_income_categories_updated_at
-    BEFORE UPDATE ON income_categories
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- INCOMES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS incomes (
-    id BIGSERIAL PRIMARY KEY,
-    category_id BIGINT NOT NULL REFERENCES income_categories(id) ON DELETE RESTRICT,
-    title VARCHAR(255) NOT NULL,
-    amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount >= 0.00),
-    income_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    received_by VARCHAR(255),
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_incomes_updated_at ON incomes;
-CREATE TRIGGER update_incomes_updated_at
-    BEFORE UPDATE ON incomes
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- CERTIFICATE ISSUES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS certificate_issues (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    certificate_type VARCHAR(100) NOT NULL,
-    certificate_number VARCHAR(100) UNIQUE NOT NULL,
-    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    issued_by BIGINT REFERENCES admins(id) ON DELETE SET NULL,
-    content TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_certificate_issues_updated_at ON certificate_issues;
-CREATE TRIGGER update_certificate_issues_updated_at
-    BEFORE UPDATE ON certificate_issues
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- TESTIMONIALS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS testimonials (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
-    issued_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    signatory_name VARCHAR(255) NOT NULL,
-    signatory_designation VARCHAR(255) NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_testimonials_updated_at ON testimonials;
-CREATE TRIGGER update_testimonials_updated_at
-    BEFORE UPDATE ON testimonials
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- INVENTORY CATEGORIES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS inventory_categories (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) UNIQUE NOT NULL,
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_inventory_categories_updated_at ON inventory_categories;
-CREATE TRIGGER update_inventory_categories_updated_at
-    BEFORE UPDATE ON inventory_categories
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- SUPPLIERS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS suppliers (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    contact_name VARCHAR(255),
-    phone VARCHAR(50) NOT NULL,
-    email VARCHAR(255),
-    address TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_suppliers_updated_at ON suppliers;
-CREATE TRIGGER update_suppliers_updated_at
-    BEFORE UPDATE ON suppliers
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- INVENTORY ITEMS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS inventory_items (
-    id BIGSERIAL PRIMARY KEY,
-    category_id BIGINT NOT NULL REFERENCES inventory_categories(id) ON DELETE RESTRICT,
-    name VARCHAR(255) NOT NULL,
-    code VARCHAR(100) UNIQUE NOT NULL,
-    description TEXT,
-    total_quantity INT NOT NULL DEFAULT 0,
-    available_quantity INT NOT NULL DEFAULT 0,
-    unit VARCHAR(50) DEFAULT 'Pcs',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_inventory_items_updated_at ON inventory_items;
-CREATE TRIGGER update_inventory_items_updated_at
-    BEFORE UPDATE ON inventory_items
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- PURCHASES TABLE
--- ============================================================================
-
+-- ----------------------------------------------------------------------------
+-- 15. PURCHASES TABLE (Package Subscriptions & Module Purchases by Creators)
+-- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS purchases (
     id BIGSERIAL PRIMARY KEY,
-    supplier_id BIGINT NOT NULL REFERENCES suppliers(id) ON DELETE RESTRICT,
-    purchase_number VARCHAR(100) UNIQUE NOT NULL,
-    purchase_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    total_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (total_amount >= 0.00),
-    paid_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (paid_amount >= 0.00),
-    payment_status VARCHAR(50) DEFAULT 'Unpaid' CHECK (payment_status IN ('Paid', 'Unpaid', 'Partially Paid')),
-    remarks TEXT,
+    creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
+    website_id BIGINT REFERENCES websites(id) ON DELETE SET NULL,
+    package_id BIGINT REFERENCES packages(id) ON DELETE SET NULL,
+    purchase_code VARCHAR(100) UNIQUE NOT NULL,
+    billing_cycle VARCHAR(50) NOT NULL DEFAULT 'monthly' CHECK (billing_cycle IN ('monthly', 'yearly', 'lifetime', 'custom')),
+    base_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (base_amount >= 0.00),
+    discount_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (discount_amount >= 0.00),
+    tax_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (tax_amount >= 0.00),
+    total_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (total_amount >= 0.00),
+    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed', 'refunded', 'cancelled')),
+    period_start TIMESTAMPTZ,
+    period_end TIMESTAMPTZ,
+    invoice_pdf_url TEXT,
+    notes TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -1827,597 +334,322 @@ CREATE TRIGGER update_purchases_updated_at
     BEFORE UPDATE ON purchases
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-
--- ============================================================================
--- PURCHASE ITEMS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS purchase_items (
+-- ----------------------------------------------------------------------------
+-- 16. PAYMENTS TABLE (Financial Transactions for SaaS Subscriptions)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS payments (
     id BIGSERIAL PRIMARY KEY,
     purchase_id BIGINT NOT NULL REFERENCES purchases(id) ON DELETE CASCADE,
-    inventory_item_id BIGINT NOT NULL REFERENCES inventory_items(id) ON DELETE RESTRICT,
-    quantity INT NOT NULL CHECK (quantity > 0),
-    unit_price DECIMAL(10, 2) NOT NULL CHECK (unit_price >= 0),
-    total_price DECIMAL(10, 2) NOT NULL CHECK (total_price >= 0),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-
--- ============================================================================
--- STOCK MOVEMENTS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS stock_movements (
-    id BIGSERIAL PRIMARY KEY,
-    inventory_item_id BIGINT NOT NULL REFERENCES inventory_items(id) ON DELETE CASCADE,
-    quantity INT NOT NULL,
-    movement_type VARCHAR(50) NOT NULL CHECK (movement_type IN ('Purchase', 'Issue', 'Return', 'Adjustment', 'Loss')),
-    reference_id BIGINT,
-    movement_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    handled_by VARCHAR(255),
-    remarks TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-
--- ============================================================================
--- LOGIN LOGS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS login_logs (
-    id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    user_role VARCHAR(50) NOT NULL CHECK (user_role IN ('admin', 'teacher', 'student', 'guardian', 'staff')),
-    login_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    ip_address VARCHAR(45),
-    user_agent TEXT,
-    status VARCHAR(50) NOT NULL DEFAULT 'Success' CHECK (status IN ('Success', 'Failed')),
-    failure_reason VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-
--- ============================================================================
--- STAFF SALARIES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS staff_salaries (
-    id BIGSERIAL PRIMARY KEY,
-    staff_id BIGINT REFERENCES staffs(id) ON DELETE CASCADE,
-    month VARCHAR(50) NOT NULL,
-    basic DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (basic >= 0.00),
-    allowance DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (allowance >= 0.00),
-    deductions DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (deductions >= 0.00),
-    status VARCHAR(50) NOT NULL DEFAULT 'Pending',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_staff_salaries_updated_at ON staff_salaries;
-CREATE TRIGGER update_staff_salaries_updated_at
-    BEFORE UPDATE ON staff_salaries
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- STAFF ATTENDANCE TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS staff_attendance (
-    id BIGSERIAL PRIMARY KEY,
-    staff_id BIGINT NOT NULL REFERENCES staffs(id) ON DELETE CASCADE,
-    date DATE NOT NULL DEFAULT CURRENT_DATE,
-    check_in VARCHAR(50),
-    check_out VARCHAR(50),
-    status VARCHAR(50) NOT NULL DEFAULT 'Present',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(staff_id, date)
-);
-
-DROP TRIGGER IF EXISTS update_staff_attendance_updated_at ON staff_attendance;
-CREATE TRIGGER update_staff_attendance_updated_at
-    BEFORE UPDATE ON staff_attendance
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- STAFF LEAVES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS staff_leaves (
-    id BIGSERIAL PRIMARY KEY,
-    staff_id BIGINT NOT NULL REFERENCES staffs(id) ON DELETE CASCADE,
-    type VARCHAR(100) NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    reason TEXT NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'Pending',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_staff_leaves_updated_at ON staff_leaves;
-CREATE TRIGGER update_staff_leaves_updated_at
-    BEFORE UPDATE ON staff_leaves
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- STAFF APPLICATIONS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS staff_applications (
-    id BIGSERIAL PRIMARY KEY,
-    staff_id BIGINT REFERENCES staffs(id) ON DELETE CASCADE,
-    type VARCHAR(100) NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    details TEXT NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'Pending',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_staff_applications_updated_at ON staff_applications;
-CREATE TRIGGER update_staff_applications_updated_at
-    BEFORE UPDATE ON staff_applications
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- ADMISSION FEE PAYMENTS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS admission_fee_payments (
-    id BIGSERIAL PRIMARY KEY,
-    admission_fee_id BIGINT NOT NULL REFERENCES admission_fees(id) ON DELETE CASCADE,
-    amount_paid DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount_paid >= 0.00),
-    payment_method VARCHAR(50) NOT NULL DEFAULT 'Cash',
-    transaction_id VARCHAR(100),
-    remarks TEXT,
+    creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
+    transaction_id VARCHAR(100) UNIQUE NOT NULL,
+    amount DECIMAL(12, 2) NOT NULL CHECK (amount >= 0.00),
+    currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+    payment_method VARCHAR(100) NOT NULL DEFAULT 'Stripe',
+    payment_gateway VARCHAR(100),
+    gateway_fee DECIMAL(10, 2) DEFAULT 0.00 CHECK (gateway_fee >= 0.00),
+    gateway_response JSONB,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'successful', 'failed', 'refunded', 'cancelled')),
     payment_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TRIGGER IF EXISTS update_admission_fee_payments_updated_at ON admission_fee_payments;
-CREATE TRIGGER update_admission_fee_payments_updated_at
-    BEFORE UPDATE ON admission_fee_payments
+DROP TRIGGER IF EXISTS update_payments_updated_at ON payments;
+CREATE TRIGGER update_payments_updated_at
+    BEFORE UPDATE ON payments
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- ============================================================================
--- TEACHER SALARY PAYMENTS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS teacher_salary_payments (
+-- ----------------------------------------------------------------------------
+-- 17. BLOGS TABLE (SaaS Platform Company Blog & Educational Articles)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS blogs (
     id BIGSERIAL PRIMARY KEY,
-    salary_id BIGINT NOT NULL REFERENCES salaries(id) ON DELETE CASCADE,
-    amount_paid DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount_paid >= 0.00),
-    payment_method VARCHAR(50) NOT NULL DEFAULT 'Bank Transfer',
-    transaction_id VARCHAR(100),
-    remarks TEXT,
-    payment_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_teacher_salary_payments_updated_at ON teacher_salary_payments;
-CREATE TRIGGER update_teacher_salary_payments_updated_at
-    BEFORE UPDATE ON teacher_salary_payments
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- STAFF SALARY PAYMENTS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS staff_salary_payments (
-    id BIGSERIAL PRIMARY KEY,
-    staff_salary_id BIGINT NOT NULL REFERENCES staff_salaries(id) ON DELETE CASCADE,
-    amount_paid DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount_paid >= 0.00),
-    payment_method VARCHAR(50) NOT NULL DEFAULT 'Bank Transfer',
-    transaction_id VARCHAR(100),
-    remarks TEXT,
-    payment_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_staff_salary_payments_updated_at ON staff_salary_payments;
-CREATE TRIGGER update_staff_salary_payments_updated_at
-    BEFORE UPDATE ON staff_salary_payments
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ============================================================================
--- EVENTS & EVENT PARTICIPANTS TABLES
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS events (
-    id BIGSERIAL PRIMARY KEY,
+    developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
     title VARCHAR(255) NOT NULL,
-    description TEXT NOT NULL,
-    event_date TIMESTAMPTZ NOT NULL,
-    location VARCHAR(255) NOT NULL,
-    image TEXT,
-    image_id TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS event_participants (
-    id BIGSERIAL PRIMARY KEY,
-    event_id BIGINT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    joined_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(event_id, student_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_event_participants_event ON event_participants (event_id);
-CREATE INDEX IF NOT EXISTS idx_event_participants_student ON event_participants (student_id);
-
--- ============================================================================
--- PERFORMANCE OPTIMIZATION INDEXES
--- ============================================================================
-
-CREATE INDEX IF NOT EXISTS idx_marks_exam_subject ON marks (exam_subject_id);
-CREATE INDEX IF NOT EXISTS idx_marks_student_enrollment ON marks (student_enrollment_id);
-CREATE INDEX IF NOT EXISTS idx_student_attendances_enrollment ON student_attendances (student_enrollment_id);
-CREATE INDEX IF NOT EXISTS idx_student_fee_payments_fee ON student_fee_payments (student_fee_id);
-CREATE INDEX IF NOT EXISTS idx_hostel_allocations_room ON hostel_allocations (room_id);
-CREATE INDEX IF NOT EXISTS idx_hostel_allocations_student ON hostel_allocations (student_id);
-CREATE INDEX IF NOT EXISTS idx_class_routines_lookup ON class_routines (class_id, section_id);
-
--- ============================================================================
--- HISTORIES TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS histories (
-    id BIGSERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    description TEXT NOT NULL,
-    date TIMESTAMPTZ NOT NULL,
-    infor TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_histories_updated_at ON histories;
-CREATE TRIGGER update_histories_updated_at
-    BEFORE UPDATE ON histories
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
--- ============================================================================
--- HOSTEL MANAGEMENT TABLES
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS hostels (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) UNIQUE NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
-    description TEXT,
-    total_room INT DEFAULT 0,
-    location VARCHAR(255),
-    gender VARCHAR(50) DEFAULT 'Both',
+    excerpt TEXT,
+    content TEXT NOT NULL,
     image TEXT,
     image_id VARCHAR(255),
+    category VARCHAR(100),
+    tags TEXT[],
+    meta_title VARCHAR(255),
+    meta_description TEXT,
+    is_published BOOLEAN DEFAULT FALSE,
+    published_at TIMESTAMPTZ,
+    views_count INT DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TRIGGER IF EXISTS update_hostels_updated_at ON hostels;
-CREATE TRIGGER update_hostels_updated_at
-    BEFORE UPDATE ON hostels
+DROP TRIGGER IF EXISTS update_blogs_updated_at ON blogs;
+CREATE TRIGGER update_blogs_updated_at
+    BEFORE UPDATE ON blogs
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-
-CREATE TABLE IF NOT EXISTS hostel_rooms (
-    id BIGSERIAL PRIMARY KEY,
-    hostel_id BIGINT NOT NULL REFERENCES hostels(id) ON DELETE CASCADE,
-    floor INT DEFAULT 1,
-    room_number VARCHAR(50) NOT NULL,
-    room_type VARCHAR(100) DEFAULT 'Standard',
-    capacity INT DEFAULT 4,
-    availability_status VARCHAR(50) DEFAULT 'Available',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(hostel_id, room_number)
-);
-
-DROP TRIGGER IF EXISTS update_hostel_rooms_updated_at ON hostel_rooms;
-CREATE TRIGGER update_hostel_rooms_updated_at
-    BEFORE UPDATE ON hostel_rooms
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
-CREATE TABLE IF NOT EXISTS hostel_seats (
-    id BIGSERIAL PRIMARY KEY,
-    room_id BIGINT NOT NULL REFERENCES hostel_rooms(id) ON DELETE CASCADE,
-    seat_code VARCHAR(50) NOT NULL,
-    one_time_fee NUMERIC(10, 2) DEFAULT 0.00,
-    monthly_fee NUMERIC(10, 2) DEFAULT 0.00,
-    status VARCHAR(50) DEFAULT 'available',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(room_id, seat_code)
-);
-
-DROP TRIGGER IF EXISTS update_hostel_seats_updated_at ON hostel_seats;
-CREATE TRIGGER update_hostel_seats_updated_at
-    BEFORE UPDATE ON hostel_seats
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
-CREATE TABLE IF NOT EXISTS hostel_allocations (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    seat_id BIGINT REFERENCES hostel_seats(id) ON DELETE CASCADE,
-    allocated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    status VARCHAR(50) DEFAULT 'active',
-    allocated_by_role VARCHAR(50) DEFAULT 'admin',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-ALTER TABLE hostel_allocations ADD COLUMN IF NOT EXISTS seat_id BIGINT REFERENCES hostel_seats(id) ON DELETE CASCADE;
-ALTER TABLE hostel_allocations ADD COLUMN IF NOT EXISTS allocated_by_role VARCHAR(50) DEFAULT 'admin';
-
-DROP TRIGGER IF EXISTS update_hostel_allocations_updated_at ON hostel_allocations;
-CREATE TRIGGER update_hostel_allocations_updated_at
-    BEFORE UPDATE ON hostel_allocations
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
-CREATE TABLE IF NOT EXISTS hostel_transfers (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    from_seat_id BIGINT REFERENCES hostel_seats(id) ON DELETE SET NULL,
-    to_seat_id BIGINT NOT NULL REFERENCES hostel_seats(id) ON DELETE CASCADE,
-    transferred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    reason TEXT,
-    transferred_by VARCHAR(50) DEFAULT 'admin',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-
-CREATE TABLE IF NOT EXISTS hostel_applications (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    preferred_hostel_id BIGINT REFERENCES hostels(id) ON DELETE SET NULL,
-    reason TEXT,
-    status VARCHAR(50) DEFAULT 'pending',
-    applied_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    reviewed_at TIMESTAMPTZ,
-    reviewed_by VARCHAR(50),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
--- ============================================================================
--- SYSTEM AUDIT LOGS TABLES
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS login_logs (
-    id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT,
-    user_type VARCHAR(50) NOT NULL, -- 'admin', 'teacher', 'student', 'staff'
-    name VARCHAR(255),
-    email VARCHAR(255),
-    ip_address VARCHAR(100),
-    user_agent TEXT,
-    status VARCHAR(50) DEFAULT 'success',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS activity_logs (
-    id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT,
-    user_type VARCHAR(50) NOT NULL, -- 'admin', 'teacher', 'staff', 'system'
-    user_name VARCHAR(255),
-    action VARCHAR(100) NOT NULL,
-    entity_type VARCHAR(100) NOT NULL, -- 'admin', 'teacher', 'staff', 'admission', 'circular', 'news', 'club', 'class', 'section', 'subject', 'club_news', 'notice'
-    entity_id BIGINT,
-    details TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
--- ============================================================================
--- STAFFS TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS staffs (
+-- ----------------------------------------------------------------------------
+-- 18. CONTACTS TABLE (Lead Inquiries submitted on Main SaaS Website)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS contacts (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    phone VARCHAR(50) NOT NULL,
-    role VARCHAR(100) NOT NULL DEFAULT 'staff',
-    address TEXT,
-    password_hash VARCHAR(255),
-    recovery_token VARCHAR(255),
-    recovery_token_expires TIMESTAMPTZ,
-    two_factor_code VARCHAR(10),
-    two_factor_expires TIMESTAMPTZ,
-    is_active BOOLEAN DEFAULT TRUE,
-    is_registered BOOLEAN DEFAULT TRUE,
-    is_two_factor_enabled BOOLEAN DEFAULT FALSE,
-    image TEXT,
-    image_id VARCHAR(255),
-    date_of_birth DATE,
-    nationality VARCHAR(100),
-    blood_group VARCHAR(10),
-    gender VARCHAR(20),
-    nid_number VARCHAR(100),
-    bio TEXT,
-    username VARCHAR(255) UNIQUE,
+    email VARCHAR(255) NOT NULL,
+    phone VARCHAR(50),
+    institution VARCHAR(255),
+    subject VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'read', 'in_progress', 'replied', 'closed')),
+    assigned_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    admin_notes TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- ============================================================================
--- EXPERIENCES TABLES
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS teacher_experiences (
-    id BIGSERIAL PRIMARY KEY,
-    teacher_id BIGINT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    organization VARCHAR(255) NOT NULL,
-    start_date DATE,
-    end_date DATE,
-    is_current BOOLEAN DEFAULT FALSE,
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS staff_experiences (
-    id BIGSERIAL PRIMARY KEY,
-    staff_id BIGINT NOT NULL REFERENCES staffs(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    organization VARCHAR(255) NOT NULL,
-    start_date DATE,
-    end_date DATE,
-    is_current BOOLEAN DEFAULT FALSE,
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS admin_experiences (
-    id BIGSERIAL PRIMARY KEY,
-    admin_id BIGINT NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    organization VARCHAR(255) NOT NULL,
-    start_date DATE,
-    end_date DATE,
-    is_current BOOLEAN DEFAULT FALSE,
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-
-
--- ============================================================================
--- STUDENT DOCUMENTS & CERTIFICATES TABLES
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS student_testimonials (
-    id BIGSERIAL PRIMARY KEY,
-    testimonial_no VARCHAR(100) UNIQUE NOT NULL,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    academic_character VARCHAR(100) DEFAULT 'Excellent',
-    conduct VARCHAR(100) DEFAULT 'Good',
-    remarks TEXT,
-    issued_by_type VARCHAR(50) NOT NULL,
-    issued_by_id BIGINT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS student_transfer_certificates (
-    id BIGSERIAL PRIMARY KEY,
-    tc_number VARCHAR(100) UNIQUE NOT NULL,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    reason_for_leaving TEXT NOT NULL,
-    destination_school VARCHAR(255),
-    conduct VARCHAR(100) DEFAULT 'Good',
-    last_class_attended VARCHAR(100),
-    promoted_to_class VARCHAR(100),
-    fee_cleared BOOLEAN DEFAULT TRUE,
-    remarks TEXT,
-    issued_by_type VARCHAR(50) NOT NULL,
-    issued_by_id BIGINT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS transferred_students (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT UNIQUE NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    tc_id BIGINT REFERENCES student_transfer_certificates(id) ON DELETE SET NULL,
-    transfer_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    reason TEXT,
-    destination_school VARCHAR(255),
-    previous_class VARCHAR(100),
-    previous_roll INT,
-    archived_by_type VARCHAR(50),
-    archived_by_id BIGINT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS student_admit_cards (
-    id BIGSERIAL PRIMARY KEY,
-    admit_card_no VARCHAR(100) UNIQUE NOT NULL,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    exam_id BIGINT NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
-    fee_cleared BOOLEAN DEFAULT TRUE,
-    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    issued_by_type VARCHAR(50) NOT NULL,
-    issued_by_id BIGINT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS student_id_cards (
-    id BIGSERIAL PRIMARY KEY,
-    id_card_no VARCHAR(100) UNIQUE NOT NULL,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    expiry_date DATE,
-    status VARCHAR(50) DEFAULT 'active',
-    issued_by_type VARCHAR(50) NOT NULL,
-    issued_by_id BIGINT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS student_transcripts (
-    id BIGSERIAL PRIMARY KEY,
-    transcript_no VARCHAR(100) UNIQUE NOT NULL,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    exam_id BIGINT REFERENCES exams(id) ON DELETE SET NULL,
-    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    remarks TEXT,
-    issued_by_type VARCHAR(50) NOT NULL,
-    issued_by_id BIGINT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
--- ============================================================================
--- LMS & ACTIVITY LOGS TABLES
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS study_materials (
-    id BIGSERIAL PRIMARY KEY,
-    class_subject_id BIGINT NOT NULL REFERENCES class_subjects(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    file_url TEXT NOT NULL,
-    file_id VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS lesson_plans (
-    id BIGSERIAL PRIMARY KEY,
-    class_subject_id BIGINT NOT NULL REFERENCES class_subjects(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    description TEXT NOT NULL,
-    date DATE NOT NULL,
-    status VARCHAR(50) DEFAULT 'Completed',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS activity_logs (
-    id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT,
-    user_type VARCHAR(50),
-    action VARCHAR(255) NOT NULL,
-    details JSONB,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_hostel_applications_updated_at ON hostel_applications;
-CREATE TRIGGER update_hostel_applications_updated_at
-    BEFORE UPDATE ON hostel_applications
+DROP TRIGGER IF EXISTS update_contacts_updated_at ON contacts;
+CREATE TRIGGER update_contacts_updated_at
+    BEFORE UPDATE ON contacts
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- ----------------------------------------------------------------------------
+-- 19. REVIEWS TABLE (Client Testimonials & Reviews for SaaS Platform)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS reviews (
+    id BIGSERIAL PRIMARY KEY,
+    creator_id BIGINT REFERENCES creators(id) ON DELETE SET NULL,
+    website_id BIGINT REFERENCES websites(id) ON DELETE SET NULL,
+    reviewer_name VARCHAR(255) NOT NULL,
+    institution_name VARCHAR(255),
+    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    title VARCHAR(255),
+    review_text TEXT NOT NULL,
+    is_featured BOOLEAN DEFAULT FALSE,
+    is_approved BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
 
+DROP TRIGGER IF EXISTS update_reviews_updated_at ON reviews;
+CREATE TRIGGER update_reviews_updated_at
+    BEFORE UPDATE ON reviews
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 20. POLICIES TABLE (Platform Legal Documents: Privacy, Terms, SLA, etc.)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS policies (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    description TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_policies_updated_at ON policies;
+CREATE TRIGGER update_policies_updated_at
+    BEFORE UPDATE ON policies
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 21. FAQ TABLE (Frequently Asked Questions for Main SaaS Website)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS faq (
+    id BIGSERIAL PRIMARY KEY,
+    question TEXT NOT NULL,
+    answer TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_faq_updated_at ON faq;
+CREATE TRIGGER update_faq_updated_at
+    BEFORE UPDATE ON faq
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 22. SUPPORTS TABLE (Support Tickets & Helpdesk Sessions)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS supports (
+    id BIGSERIAL PRIMARY KEY,
+    creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
+    website_id BIGINT REFERENCES websites(id) ON DELETE SET NULL,
+    assigned_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    ticket_number VARCHAR(100) UNIQUE NOT NULL,
+    subject VARCHAR(255) NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'waiting_for_user', 'resolved', 'closed')),
+    priority VARCHAR(50) NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+    last_message_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_supports_updated_at ON supports;
+CREATE TRIGGER update_supports_updated_at
+    BEFORE UPDATE ON supports
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 23. SUPPORT MESSAGES TABLE (Individual Messages inside Support Chats)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS support_messages (
+    id BIGSERIAL PRIMARY KEY,
+    support_id BIGINT NOT NULL REFERENCES supports(id) ON DELETE CASCADE,
+    sender_type VARCHAR(50) NOT NULL CHECK (sender_type IN ('creator', 'developer', 'system')),
+    sender_id BIGINT NOT NULL,
+    message TEXT,
+    is_internal_note BOOLEAN DEFAULT FALSE,
+    is_read BOOLEAN DEFAULT FALSE,
+    read_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ----------------------------------------------------------------------------
+-- 24. SUPPORT IMAGES TABLE (Image Attachments for Support Messages)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS support_images (
+    id BIGSERIAL PRIMARY KEY,
+    message_id BIGINT NOT NULL REFERENCES support_messages(id) ON DELETE CASCADE,
+    image_url TEXT NOT NULL,
+    image_id VARCHAR(255),
+    file_name VARCHAR(255),
+    file_size INT,
+    mime_type VARCHAR(100),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ----------------------------------------------------------------------------
+-- 25. LIVE CHATS TABLE (Real-time Live Chat Sessions for Visitors & Leads)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS live_chats (
+    id BIGSERIAL PRIMARY KEY,
+    session_id VARCHAR(255) UNIQUE NOT NULL,
+    visitor_name VARCHAR(255) NOT NULL,
+    visitor_email VARCHAR(255),
+    visitor_phone VARCHAR(50),
+    creator_id BIGINT REFERENCES creators(id) ON DELETE SET NULL,
+    assigned_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    website_id BIGINT REFERENCES websites(id) ON DELETE SET NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'ACTIVE', 'WAITING', 'CLOSED', 'open', 'active', 'waiting', 'closed')),
+    department VARCHAR(100) DEFAULT 'general',
+    ip_address VARCHAR(100),
+    user_agent TEXT,
+    started_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    ended_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_live_chats_updated_at ON live_chats;
+CREATE TRIGGER update_live_chats_updated_at
+    BEFORE UPDATE ON live_chats
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Alias view for singular queries (e.g., live_chat)
+CREATE OR REPLACE VIEW live_chat AS SELECT * FROM live_chats;
+
+-- ----------------------------------------------------------------------------
+-- 26. LIVE CHAT MESSAGES TABLE (Real-time Live Chat Message Stream)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS live_chat_messages (
+    id BIGSERIAL PRIMARY KEY,
+    chat_id BIGINT NOT NULL REFERENCES live_chats(id) ON DELETE CASCADE,
+    sender_type VARCHAR(50) NOT NULL CHECK (sender_type IN ('ADMIN', 'VISITOR', 'SYSTEM', 'CREATOR', 'DEVELOPER', 'admin', 'visitor', 'system', 'creator', 'developer')),
+    sender_id BIGINT,
+    sender_name VARCHAR(255) NOT NULL DEFAULT 'Visitor',
+    message TEXT NOT NULL,
+    attachment_url TEXT,
+    is_read BOOLEAN DEFAULT FALSE,
+    read_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Alias view for singular queries (e.g., live_chat_message)
+CREATE OR REPLACE VIEW live_chat_message AS SELECT * FROM live_chat_messages;
+
+-- ----------------------------------------------------------------------------
+-- 27. INTERNAL CHATS TABLE (Internal Staff & Developer 1-on-1 and Group Chats)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS internal_chats (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255),
+    type VARCHAR(50) NOT NULL DEFAULT 'DIRECT' CHECK (type IN ('DIRECT', 'GROUP', 'direct', 'group')),
+    created_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_internal_chats_updated_at ON internal_chats;
+CREATE TRIGGER update_internal_chats_updated_at
+    BEFORE UPDATE ON internal_chats
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 28. CHAT PARTICIPANTS TABLE (Staff Participants in Internal Chats)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS chat_participants (
+    id BIGSERIAL PRIMARY KEY,
+    chat_id BIGINT NOT NULL REFERENCES internal_chats(id) ON DELETE CASCADE,
+    developer_id BIGINT NOT NULL REFERENCES developers(id) ON DELETE CASCADE,
+    last_read_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (chat_id, developer_id)
+);
+
+-- ----------------------------------------------------------------------------
+-- 29. CHAT MESSAGES TABLE (Staff Internal Messages)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id BIGSERIAL PRIMARY KEY,
+    chat_id BIGINT NOT NULL REFERENCES internal_chats(id) ON DELETE CASCADE,
+    sender_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    message TEXT NOT NULL,
+    is_system BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ----------------------------------------------------------------------------
+-- 30. CHAT IMAGES TABLE (Image Attachments for Internal Chat Messages)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS chat_images (
+    id BIGSERIAL PRIMARY KEY,
+    message_id BIGINT NOT NULL REFERENCES chat_messages(id) ON DELETE CASCADE,
+    image_url TEXT NOT NULL,
+    file_name VARCHAR(255),
+    file_size INT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- ============================================================================
+-- SECTION 2: CORE PLATFORM PERFORMANCE INDEXES
+-- ============================================================================
+
+-- Core Platform Indexes
+CREATE INDEX IF NOT EXISTS idx_websites_creator ON websites(creator_id);
+CREATE INDEX IF NOT EXISTS idx_websites_package ON websites(package_id);
+CREATE INDEX IF NOT EXISTS idx_websites_subdomain ON websites(subdomain);
+CREATE INDEX IF NOT EXISTS idx_websites_custom_domain ON websites(custom_domain);
+CREATE INDEX IF NOT EXISTS idx_purchases_creator ON purchases(creator_id);
+CREATE INDEX IF NOT EXISTS idx_purchases_website ON purchases(website_id);
+CREATE INDEX IF NOT EXISTS idx_payments_purchase ON payments(purchase_id);
+CREATE INDEX IF NOT EXISTS idx_supports_creator ON supports(creator_id);
+CREATE INDEX IF NOT EXISTS idx_supports_website ON supports(website_id);
+CREATE INDEX IF NOT EXISTS idx_support_messages_support ON support_messages(support_id);
+CREATE INDEX IF NOT EXISTS idx_support_images_message ON support_images(message_id);
+CREATE INDEX IF NOT EXISTS idx_blogs_slug ON blogs(slug);
+CREATE INDEX IF NOT EXISTS idx_dev_login_activities_dev ON developer_login_activities(developer_id);
+CREATE INDEX IF NOT EXISTS idx_dev_login_sessions_dev ON developer_login_sessions(developer_id);
+CREATE INDEX IF NOT EXISTS idx_dev_login_sessions_token ON developer_login_sessions(token);
+CREATE INDEX IF NOT EXISTS idx_live_chats_session ON live_chats(session_id);
+CREATE INDEX IF NOT EXISTS idx_live_chats_creator ON live_chats(creator_id);
+CREATE INDEX IF NOT EXISTS idx_live_chats_developer ON live_chats(assigned_developer_id);
+CREATE INDEX IF NOT EXISTS idx_live_chats_website ON live_chats(website_id);
+CREATE INDEX IF NOT EXISTS idx_live_chats_status ON live_chats(status);
+CREATE INDEX IF NOT EXISTS idx_live_chat_messages_chat ON live_chat_messages(chat_id);
+CREATE INDEX IF NOT EXISTS idx_internal_chats_creator ON internal_chats(created_by_developer_id);
+CREATE INDEX IF NOT EXISTS idx_chat_participants_chat ON chat_participants(chat_id);
+CREATE INDEX IF NOT EXISTS idx_chat_participants_dev ON chat_participants(developer_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_chat ON chat_messages(chat_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_sender ON chat_messages(sender_developer_id);
+CREATE INDEX IF NOT EXISTS idx_chat_images_message ON chat_images(message_id);

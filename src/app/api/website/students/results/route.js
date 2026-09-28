@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { isAdmin } from '@/lib/auth';
+import { isAdmin } from '@/lib/middleware/auth';
 
 // Helper to determine GPA and Letter Grade from Percentage
 function calculateGPAAndGrade(percentage) {

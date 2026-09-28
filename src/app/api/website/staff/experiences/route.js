@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getStaffUser } from '@/lib/auth';
+import { getStaffUser } from '@/lib/middleware/auth';
 import { query } from '@/lib/db';
 
 // GET all experiences for the authenticated staff
