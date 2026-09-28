@@ -1,12 +1,13 @@
-import { SCHOOL_NAME } from '@/lib/secret';
+import { SITE_NAME } from '@/lib/db/secret'
+import React from 'react'
 
-const shortName = SCHOOL_NAME.split(" ").map((w) => w[0]).join('');
-
-export const metadata = {
-  title: `About | ${shortName} Campus`,
-  description: `Learn about the history, vision, mission, campus, and milestones of ${SCHOOL_NAME} (${shortName}).`,
-};
-
-export default function AboutLayout({ children }) {
-  return <>{children}</>;
+export const metadata={
+    title: `About | ${SITE_NAME}`,
+    description:`About site of ${SITE_NAME}`
 }
+
+const layout = ({children}) => {
+  return <>{children}</>
+}
+
+export default layout

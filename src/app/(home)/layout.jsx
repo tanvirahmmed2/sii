@@ -1,19 +1,20 @@
-import Footer from '@/component/bars/Footer'
-import Navbar from '@/component/bars/Navbar'
-import Sidebar from '@/component/bars/Sidebar'
-import React from 'react'
+import Navbar from '@/components/home/bar/Navbar';
+import Footer from '@/components/home/bar/Footer';
+import LiveChatPopup from '@/components/home/LiveChatPopup';
+import { SITE_NAME } from '@/lib/db/secret';
 
-const HomeLayout = ({children}) => {
+export const metadata = {
+  title: `${SITE_NAME} - Build Your Identity`,
+  description: `Portfolio wesite builder ${SITE_NAME}`,
+};
+
+export default function HomeLayout({ children }) {
   return (
-    <div className='relative min-h-screen flex flex-col justify-between overflow-x-hidden bg-slate-50/50 text-slate-800'>
-      <Navbar/>
-      <Sidebar/>
-      <main className='w-full flex-1 flex flex-col'>
-        {children}
-      </main>
-      <Footer/>
+    <div className="min-h-screen w-full overflow-x-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 relative transition-colors duration-200">
+      <Navbar />
+      <main className="flex-1">{children}</main>
+      <Footer />
+      <LiveChatPopup />
     </div>
-  )
+  );
 }
-
-export default HomeLayout

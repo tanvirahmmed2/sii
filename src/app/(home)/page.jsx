@@ -1,28 +1,28 @@
-import About from '@/component/pages/home/About'
-import Admission from '@/component/pages/home/Admission'
-import Events from '@/component/pages/home/Events'
-import Hero from '@/component/pages/home/Hero'
-import Life from '@/component/pages/home/Life'
-import News from '@/component/pages/home/News'
-import Notices from '@/component/pages/home/Notices'
-import Recognition from '@/component/pages/home/Recognition'
-import AnnouncementPopup from '@/component/helper/AnnouncementPopup'
+import About from '@/components/home/pages/About'
+import Ecommerce from '@/components/home/pages/E-commerce'
+import Restaurant from '@/components/home/pages/Restaurant'
+import Hero from '@/components/home/pages/Hero'
+import LearnMore from '@/components/home/pages/LearnMore'
+import Portfolio from '@/components/home/pages/Portfolio'
+import Reviews from '@/components/home/pages/Reviews'
+import SystemManagement from '@/components/home/pages/SystemManagement'
+import Themes from '@/components/home/pages/Themes'
 import React from 'react'
 
-const Home = () => {
+const page = () => {
   return (
-    <>
-    <Hero/>
-    <About/>
-    <Life/>
-    <Admission/>
-    <Notices/>
-    <Events/>
-    <News/>
-    <AnnouncementPopup/>
-    <Recognition/>
-    </>
+    <div className='w-full flex flex-col'>
+      <Hero/>
+      <About/>
+      <LearnMore/>
+      <Ecommerce/>
+      <Restaurant/>
+      <Portfolio/>
+      <SystemManagement/>
+      <Themes/>
+      <Reviews/>
+    </div>
   )
 }
 
-export default Home
+export default page
