@@ -1,12 +1,13 @@
-import { ContextProvider } from "@/component/helper/Context";
-import ToastProvider from "@/component/helper/ToastProvider";
+
 import "./globals.css";
-import { META_TITLE, META_DESCRIPTION, SCHOOL_NAME } from "@/lib/secret";
+import { ContextProvider } from "src/component/helper/Context";
+import ToastProvider from "src/component/helper/ToastProvider";
+import { SCHOOL_NAME, META_TITLE, META_DESCRIPTION } from "src/lib/database/secret";
 
 const shortName = SCHOOL_NAME.split(" ").map((w) => w[0]).join('');
 
 export const metadata = {
-  title: META_TITLE || `${SCHOOL_NAME} | ${shortName} Campus`,
+  title: META_TITLE || `${SCHOOL_NAME} |  Campus`,
   description: META_DESCRIPTION || `Official portal for ${SCHOOL_NAME} (${shortName}).`,
 };
 
@@ -15,6 +16,7 @@ export default function RootLayout({ children }) {
     <html lang="en" className="w-full h-full">
       <body className="min-h-full w-full overflow-x-hidden">
         <ContextProvider>
+          
           <ToastProvider />
           <main>{children}</main>
         </ContextProvider>

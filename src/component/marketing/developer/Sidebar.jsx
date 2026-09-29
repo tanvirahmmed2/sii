@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { SITE_NAME } from '@/lib/db/secret';
+import { SITE_NAME } from 'src/lib/database/secret';
 import {
   BiX,
   BiLogOut,
@@ -37,7 +37,7 @@ import {
   BiLogoWhatsapp,
   BiBriefcase,
 } from 'react-icons/bi';
-import { ROLE_PERMISSIONS } from '@/app/(developers)/developer/layout';
+import { ROLE_PERMISSIONS } from 'src/app/(developers)/developer/layout';
 
 export const ADMIN_NAV_SECTIONS = [
   {

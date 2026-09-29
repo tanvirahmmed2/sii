@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/database/db';
-import { getStudentUser } from '@/lib/middleware/auth';
-import { uploadImage } from '@/lib/database/cloudinary';
+import { query } from 'src/lib/database/db';
+import { getStudentUser } from 'src/lib/middleware/auth';
+import { uploadImage } from 'src/lib/database/cloudinary';
 
 // GET student's assigned clubs from club_member
 export async function GET() {

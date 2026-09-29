@@ -8,7 +8,7 @@ import {
   BiRefresh,
   BiRightArrowAlt,
 } from 'react-icons/bi';
-import HomeBlogCard from '@/component/marketing/home/cards/BlogCard';
+import HomeBlogCard from 'src/component/marketing/home/cards/BlogCard';
 
 export default function BlogsPage() {
   const [blogs, setBlogs] = useState([]);

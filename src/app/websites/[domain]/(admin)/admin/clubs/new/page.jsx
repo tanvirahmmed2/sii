@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { FiPlus, FiEdit, FiTrash2, FiActivity, FiBookOpen, FiMessageSquare } from 'react-icons/fi';
-import TiptapEditor from '@/component/helper/TiptapEditor';
+import TiptapEditor from 'src/component/helper/TiptapEditor';
 
 const AdminClubsNewPage = () => {
   const [clubs, setClubs] = useState([]);

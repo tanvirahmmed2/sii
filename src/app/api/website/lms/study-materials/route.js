@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/database/db';
-import { isTeacher, isAdmin, isStudent, verifyJWT } from '@/lib/middleware/auth';
+import { query } from 'src/lib/database/db';
+import { isTeacher, isAdmin, isStudent, verifyJWT } from 'src/lib/middleware/auth';
 import { cookies } from 'next/headers';
-import { logActivity } from '@/lib/database/activity_logger';
+import { logActivity } from 'src/lib/database/activity_logger';
 
 // GET study materials
 export async function GET(request) {

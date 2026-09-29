@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/database/db';
+import { query } from 'src/lib/database/db';
 
 // GET authorities for a specific role / designation slug
 export async function GET(request, { params }) {

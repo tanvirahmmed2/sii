@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/database/db';
-import { isAdmin, getAdminUser } from '@/lib/middleware/auth';
-import { recordActivityLog } from '@/lib/database/logger';
+import { query } from 'src/lib/database/db';
+import { isAdmin, getAdminUser } from 'src/lib/middleware/auth';
+import { recordActivityLog } from 'src/lib/database/logger';
 
 // GET sections
 export async function GET(request) {

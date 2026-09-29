@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from '@/lib/database/db';
-import { hashPassword } from '@/lib/middleware/developer';
-import { sendEmail } from '@/lib/database/brevo';
+import { queryDb } from 'src/lib/database/db';
+import { hashPassword } from 'src/lib/middleware/developer';
+import { sendEmail } from 'src/lib/database/brevo';
 
 export async function POST(request) {
   try {

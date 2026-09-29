@@ -17,10 +17,10 @@ import {
   SITE_CONTACT,
   SITE_MAIL,
   SITE_NAME,
-} from '@/lib/db/secret';
-import { Context } from '@/components/helper/Context';
-import SubscribeForm from '@/component/marketing/home/bar/SubscribeForm';
-import TranslateButton from '@/component/website/ui/TranslateButton';
+} from 'src/lib/database/secret';
+import { Context } from 'src/component/helper/Context';
+import TranslateButton from 'src/component/website/ui/TranslateButton';
+import SubscribeForm from './SubscribeForm';
 
 const Footer = () => {
   const { theme = 'light', toggleTheme, setTheme, creator } = useContext(Context);

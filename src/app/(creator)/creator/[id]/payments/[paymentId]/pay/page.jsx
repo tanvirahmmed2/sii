@@ -3,7 +3,7 @@
 import { Suspense, use } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { BiLoaderAlt } from 'react-icons/bi';
-import PaymentGatewayCheckout from '@/component/marketing/creator/PaymentGatewayCheckout';
+import PaymentGatewayCheckout from 'src/component/marketing/creator/PaymentGatewayCheckout';
 
 function PayContent({ params }) {
   const resolvedParams = params && typeof params.then === 'function' ? use(params) : params;

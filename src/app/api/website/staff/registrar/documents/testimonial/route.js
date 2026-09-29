@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { verifyJWT } from '@/lib/middleware/auth';
-import { query } from '@/lib/database/db';
-import { logActivity } from '@/lib/database/activity_logger';
+import { verifyJWT } from 'src/lib/middleware/auth';
+import { query } from 'src/lib/database/db';
+import { logActivity } from 'src/lib/database/activity_logger';
 
 export async function POST(request) {
   try {

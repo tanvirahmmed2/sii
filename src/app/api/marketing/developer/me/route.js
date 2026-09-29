@@ -5,8 +5,8 @@ import {
   comparePassword,
   generateToken,
   setAdminSessionCookie,
-} from '@/lib/middleware/developer';
-import { query } from '@/lib/database/db';
+} from 'src/lib/middleware/developer';
+import { query } from 'src/lib/database/db';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

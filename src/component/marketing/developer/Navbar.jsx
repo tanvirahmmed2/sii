@@ -2,10 +2,10 @@
 
 import { useContext } from 'react';
 import Link from 'next/link';
-import { SITE_NAME } from '@/lib/db/secret';
+import { SITE_NAME } from 'src/lib/database/secret';
 import { BiMenu, BiLogOut, BiShieldQuarter, BiCog, BiSun, BiMoon } from 'react-icons/bi';
 import { useRouter } from 'next/navigation';
-import { Context } from '@/components/helper/Context';
+import { Context } from 'src/component/helper/Context';
 
 export default function AdminNavbar({ onToggleSidebar, currentUser = null }) {
   const router = useRouter();

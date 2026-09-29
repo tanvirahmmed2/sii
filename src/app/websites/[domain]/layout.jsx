@@ -1,5 +1,5 @@
 import React from 'react';
-import { TenantWebsiteProvider } from '@/component/helper/WebsiteContext';
+import { TenantWebsiteProvider } from 'src/component/helper/WebsiteContext';
 
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { pool } from '@/lib/database/db';
-import { hasModulePermission } from '@/lib/middleware/developer';
-import { sendPlatformMessage } from '@/lib/meta/graph';
+import { pool } from 'src/lib/database/db';
+import { hasModulePermission } from 'src/lib/middleware/developer';
+import { sendPlatformMessage } from 'src/lib/meta/graph';
 
 const META_PERMISSIONS = ['facebook-messages', 'instagram-messages', 'whatsapp-messages', 'chats'];
 

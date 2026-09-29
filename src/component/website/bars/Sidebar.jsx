@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { TenantWebsiteContext } from '../../helper/WebsiteContext';
 import { FiX, FiChevronDown, FiHome, FiInfo, FiBookOpen, FiGrid, FiMail, FiLogIn, FiArrowRight, FiCalendar, FiShield } from 'react-icons/fi';
 import { MdOutlineAnnouncement } from 'react-icons/md';
-import { SCHOOL_NAME } from '@/lib/secret';
+import { SCHOOL_NAME } from 'src/lib/database/secret';
 
 const Sidebar = () => {
   const { sidebar, setSidebar, classes, clubs, designations, websiteSettings } = useContext(TenantWebsiteContext);

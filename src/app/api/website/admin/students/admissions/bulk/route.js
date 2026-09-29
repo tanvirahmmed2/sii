@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import pool from '@/lib/database/db';
-import { isAdmin, isRegister } from '@/lib/middleware/auth';
+import pool from 'src/lib/database/db';
+import { isAdmin, isRegister } from 'src/lib/middleware/auth';
 
 export async function POST(request) {
   let client;

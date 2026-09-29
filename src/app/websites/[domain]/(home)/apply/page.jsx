@@ -1,8 +1,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { FiCheckCircle, FiFileText, FiUserCheck, FiCreditCard, FiArrowRight } from 'react-icons/fi';
-import { SCHOOL_NAME } from '@/lib/secret';
-import GradingScaleTable from '@/component/website/cards/GradingScaleTable';
+import { SCHOOL_NAME } from 'src/lib/database/secret';
+import GradingScaleTable from 'src/component/website/cards/GradingScaleTable';
 
 const ApplyPage = () => {
   const steps = [

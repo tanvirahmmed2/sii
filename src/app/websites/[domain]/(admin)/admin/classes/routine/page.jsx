@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { FiPlus, FiTrash2, FiEdit2, FiX, FiClock, FiLayers } from 'react-icons/fi';
-import RoutineCreateForm from '@/component/forms/RoutineCreateForm';
-import RoutineEditForm from '@/component/forms/RoutineEditForm';
+import RoutineCreateForm from 'src/component/forms/RoutineCreateForm';
+import RoutineEditForm from 'src/component/forms/RoutineEditForm';
 
 const AdminClassRoutinePage = () => {
   const [classes, setClasses] = useState([]);

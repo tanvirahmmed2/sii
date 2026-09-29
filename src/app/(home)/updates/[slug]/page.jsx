@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
-import { SITE_NAME } from '@/lib/db/secret';
+import { SITE_NAME } from 'src/lib/database/secret';
 import {
   BiArrowBack,
   BiCalendar,

@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FiArrowLeft, FiPlusCircle } from 'react-icons/fi';
-import HistoryForm from '@/component/forms/HistoryForm';
+import HistoryForm from 'src/component/forms/HistoryForm';
 
 export default function NewHistoryPage() {
   const router = useRouter();

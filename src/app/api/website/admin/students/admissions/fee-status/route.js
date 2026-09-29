@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import pool from '@/lib/database/db';
-import { isAdmin, isRegister, isCashier, verifyJWT } from '@/lib/middleware/auth';
-import { sendEmail } from '@/lib/database/brevo';
+import pool from 'src/lib/database/db';
+import { isAdmin, isRegister, isCashier, verifyJWT } from 'src/lib/middleware/auth';
+import { sendEmail } from 'src/lib/database/brevo';
 
 export async function PUT(request) {
   let client;

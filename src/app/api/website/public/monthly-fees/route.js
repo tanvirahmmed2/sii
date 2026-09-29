@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/database/db';
+import { query } from 'src/lib/database/db';
 
 // GET all classes and their configured tuition fee rates (Public route)
 export async function GET() {

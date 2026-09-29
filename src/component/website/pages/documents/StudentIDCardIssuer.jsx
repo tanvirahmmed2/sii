@@ -7,7 +7,7 @@ import {
   FiCheckCircle, FiClock, FiFilter, FiCheck, FiUser
 } from 'react-icons/fi';
 import axios from 'axios';
-import { printStudentIDCard } from '@/lib/receipts/student_id_card';
+import { printStudentIDCard } from 'src/lib/receipts/student_id_card';
 
 export default function StudentIDCardIssuer() {
   const [classes, setClasses] = useState([]);

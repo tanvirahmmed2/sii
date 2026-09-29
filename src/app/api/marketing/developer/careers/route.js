@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { hasModulePermission } from '@/lib/middleware/developer';
-import { queryDb } from '@/lib/database/db';
+import { hasModulePermission } from 'src/lib/middleware/developer';
+import { queryDb } from 'src/lib/database/db';
 
 function generateSlug(text) {
   return (text || '')

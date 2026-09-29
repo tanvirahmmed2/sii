@@ -2,7 +2,6 @@
 
 import { useState, useContext } from 'react';
 import Link from 'next/link';
-import { SITE_NAME } from '@/lib/db/secret';
 import {
   BiX,
   BiChevronDown,
@@ -10,7 +9,8 @@ import {
   BiRightArrowAlt,
   BiGridAlt,
 } from 'react-icons/bi';
-import { Context } from '@/components/helper/Context';
+import { Context } from 'src/component/helper/Context';
+import { SITE_NAME } from 'src/lib/database/secret';
 
 export default function Sidebar({ isOpen, onClose }) {
   const { apps = [], creator } = useContext(Context) || {};

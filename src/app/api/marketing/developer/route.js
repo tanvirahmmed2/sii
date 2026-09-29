@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getAuthenticatedUser, hashPassword, comparePassword } from '@/lib/middleware/developer';
-import { queryDb } from '@/lib/database/db';
+import { getAuthenticatedUser, hashPassword, comparePassword } from 'src/lib/middleware/developer';
+import { queryDb } from 'src/lib/database/db';
 
 // ============================================================================
 // GET: View logged-in developer's profile and account details
@@ -216,7 +216,7 @@ export async function PUT(request) {
 
     if (newEmail !== currentDev.email.toLowerCase()) {
       try {
-        const { generateToken, setAdminSessionCookie } = await import('@/lib/middleware/developer');
+        const { generateToken, setAdminSessionCookie } = await import('src/lib/middleware/developer');
         const refreshedToken = generateToken(
           { id: updatedDev.id, email: newEmail, role: updatedDev.role, roleId: updatedDev.role_id },
           '7d'

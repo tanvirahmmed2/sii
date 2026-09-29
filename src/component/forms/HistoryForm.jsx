@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { FiClock, FiCalendar, FiBookOpen, FiInfo, FiSave, FiTrash2, FiPlusCircle } from 'react-icons/fi';
-import TiptapEditor from '@/component/helper/TiptapEditor';
+import TiptapEditor from 'src/component/helper/TiptapEditor';
 
 const formatDateForInput = (dateStr) => {
   if (!dateStr) return '';

@@ -16,7 +16,7 @@ import {
   BiTrendingUp,
   BiSpeaker,
 } from 'react-icons/bi';
-import { SITE_NAME } from '@/lib/db/secret';
+import { SITE_NAME } from 'src/lib/database/secret';
 
 export default function CareersPage() {
   const [careers, setCareers] = useState([]);

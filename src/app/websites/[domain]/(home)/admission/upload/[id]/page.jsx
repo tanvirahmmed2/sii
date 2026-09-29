@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FiUploadCloud, FiCheckCircle, FiAlertCircle, FiArrowLeft, FiUser, FiFileText } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
-import { validateImageDimensions } from '@/lib/imageResizer';
+import { validateImageDimensions } from 'src/lib/imageResizer';
 
 const CandidateUploadPage = () => {
   const params = useParams();

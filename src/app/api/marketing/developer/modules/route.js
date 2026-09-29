@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from '@/lib/database/db';
-import { hasModulePermission } from '@/lib/middleware/developer';
+import { queryDb } from 'src/lib/database/db';
+import { hasModulePermission } from 'src/lib/middleware/developer';
 
 // Explicit set of legacy / archive tables from previous system versions
 const LEGACY_TABLES = new Set([

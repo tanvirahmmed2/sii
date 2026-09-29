@@ -1,4 +1,4 @@
-import { SCHOOL_NAME } from '@/lib/secret';
+import { SCHOOL_NAME } from 'src/lib/database/secret';
 
 function numberToWords(num) {
   const amount = Math.floor(Number(num) || 0);

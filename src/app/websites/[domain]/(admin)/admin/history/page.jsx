@@ -11,7 +11,7 @@ import {
   FiInfo, 
   FiX, 
 } from 'react-icons/fi';
-import HistoryForm from '@/component/forms/HistoryForm';
+import HistoryForm from 'src/component/forms/HistoryForm';
 
 const stripHtml = (html) => {
   if (!html) return '';

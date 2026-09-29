@@ -11,7 +11,7 @@ import {
   BiLoaderAlt,
   BiCheckCircle,
 } from 'react-icons/bi';
-import TiptapEditor from '@/component/website/ui/TiptapEditor';
+import TiptapEditor from 'src/component/website/ui/TiptapEditor';
 
 export default function UpdateDetailPage({ params }) {
   const resolvedParams = use(params);

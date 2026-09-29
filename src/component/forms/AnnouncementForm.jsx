@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FiClock, FiBookOpen, FiMapPin, FiSave, FiTrash2 } from 'react-icons/fi';
-import TiptapEditor from '@/component/helper/TiptapEditor';
+import TiptapEditor from 'src/component/helper/TiptapEditor';
 
 const AnnouncementForm = ({ initialData, onSubmit, onDelete, submitting }) => {
   const [name, setName] = useState('');

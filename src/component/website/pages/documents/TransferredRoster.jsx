@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { FiUsers, FiSearch, FiPrinter } from 'react-icons/fi';
 import axios from 'axios';
-import { printTransferCertificate } from '@/lib/receipts/transfer_certificate';
+import { printTransferCertificate } from 'src/lib/receipts/transfer_certificate';
 
 export default function TransferredRoster() {
   const [students, setStudents] = useState([]);

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/database/db';
+import { query } from 'src/lib/database/db';
 
 // GET /api/teachers/verify?token=<token>
 // Validates a teacher verification token and returns pre-fill data

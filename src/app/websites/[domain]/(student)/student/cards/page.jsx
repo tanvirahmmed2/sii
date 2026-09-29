@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { FiFileText, FiPrinter, FiLock, FiCheckCircle, FiInfo, FiDollarSign, FiUser, FiClock } from 'react-icons/fi';
-import { printAdmitCard } from '@/lib/receipts/admit_card';
+import { printAdmitCard } from 'src/lib/receipts/admit_card';
 
 const StudentAdmitCardsPage = () => {
   const [student, setStudent] = useState(null);

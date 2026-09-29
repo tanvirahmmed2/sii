@@ -4,7 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { FiPlusCircle, FiFileText } from 'react-icons/fi';
 import Link from 'next/link';
-import AdminForm from '@/component/forms/AdminForm';
+import AdminForm from 'src/component/forms/AdminForm';
 
 const CreateNewsPage = () => {
   const router = useRouter();

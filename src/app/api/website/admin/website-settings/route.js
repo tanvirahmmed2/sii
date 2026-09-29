@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/database/db';
-import { isAdmin } from '@/lib/middleware/auth';
-import { SCHOOL_NAME, LOGO_URL, META_TITLE, META_DESCRIPTION } from '@/lib/database/secret';
+import { query } from 'src/lib/database/db';
+import { isAdmin } from 'src/lib/middleware/auth';
+import { SCHOOL_NAME, LOGO_URL, META_TITLE, META_DESCRIPTION } from 'src/lib/database/secret';
 
 // GET Website Settings
 export async function GET() {

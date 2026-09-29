@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import StaffCard from '@/component/website/cards/StaffCard';
+import StaffCard from 'src/component/website/cards/StaffCard';
 import { FiUsers, FiBriefcase } from 'react-icons/fi';
 
 export default function PublicStaffPage() {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useContext } from 'react';
-import { Context } from '@/components/helper/Context';
+import { Context } from 'src/component/helper/Context';
 import {
   BiSearch,
   BiRefresh,

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getStaffUser } from '@/lib/middleware/auth';
-import { query } from '@/lib/database/db';
+import { getStaffUser } from 'src/lib/middleware/auth';
+import { query } from 'src/lib/database/db';
 
 // GET all experiences for the authenticated staff
 export async function GET() {

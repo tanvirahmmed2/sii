@@ -12,7 +12,7 @@ import {
   BiDesktop,
   BiDownload,
 } from 'react-icons/bi';
-import { generateInvoiceData, printReceipt } from '@/lib/invoice';
+import { generateInvoiceData, printReceipt } from 'src/lib/invoice';
 
 
 export default function CreatorPaymentInvoicePage({ params }) {

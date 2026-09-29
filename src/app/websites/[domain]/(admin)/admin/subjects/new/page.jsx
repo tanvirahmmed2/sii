@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { FiPlus, FiTrash2, FiEdit2, FiX, FiBook } from 'react-icons/fi';
-import SubjectCreateForm from '@/component/forms/SubjectCreateForm';
-import SubjectEditForm from '@/component/forms/SubjectEditForm';
+import SubjectCreateForm from 'src/component/forms/SubjectCreateForm';
+import SubjectEditForm from 'src/component/forms/SubjectEditForm';
 
 const AdminSubjectsPage = () => {
   const [subjects, setSubjects] = useState([]);

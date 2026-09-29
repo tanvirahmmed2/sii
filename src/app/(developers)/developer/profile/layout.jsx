@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
-import { isStaff } from '@/lib/middleware/developer';
-import { SITE_NAME } from '@/lib/db/secret';
+import { isStaff } from 'src/lib/middleware/developer';
+import { SITE_NAME } from 'src/lib/database/secret';
 
 export const metadata = {
   title: `Staff Profile | ${SITE_NAME}`,

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { FiBell, FiPlus, FiClock } from 'react-icons/fi';
-import AnnouncementForm from '@/component/forms/AnnouncementForm';
+import AnnouncementForm from 'src/component/forms/AnnouncementForm';
 
 const AdminAnnouncementsPage = () => {
   const [announcement, setAnnouncement] = useState(null);

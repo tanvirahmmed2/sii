@@ -2,8 +2,8 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import CreatorNavbar from '@/component/marketing/creator/Navbar';
-import CreatorSidebar from '@/component/marketing/creator/Sidebar';
+import CreatorNavbar from 'src/component/marketing/creator/Navbar';
+import CreatorSidebar from 'src/component/marketing/creator/Sidebar';
 import { BiLoaderAlt, BiPlus, BiX, BiDesktop, BiCheckCircle } from 'react-icons/bi';
 
 export const CreatorContext = createContext(null);

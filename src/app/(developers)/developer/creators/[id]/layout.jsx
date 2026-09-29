@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
-import { hasModulePermission } from '@/lib/middleware/developer';
-import { SITE_NAME } from '@/lib/db/secret';
+import { hasModulePermission } from 'src/lib/middleware/developer';
+import { SITE_NAME } from 'src/lib/database/secret';
 
 export const metadata = {
   title: `Creator Full Details | ${SITE_NAME}`,

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { clearAdminSessionCookie } from '@/lib/middleware/developer';
-import { DEVELOPER_TOKEN } from '@/lib/database/secret';
+import { clearAdminSessionCookie } from 'src/lib/middleware/developer';
+import { DEVELOPER_TOKEN } from 'src/lib/database/secret';
 
 export async function POST() {
   try {

@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
 import { FiArrowLeft, FiPrinter, FiAward, FiCheckCircle, FiXCircle, FiTrendingUp, FiSliders, FiFilter, FiDownload } from 'react-icons/fi';
-import { SCHOOL_NAME } from '@/lib/secret';
+import { SCHOOL_NAME } from 'src/lib/database/secret';
 
 const MasterMarkSheetContent = () => {
   const searchParams = useSearchParams();

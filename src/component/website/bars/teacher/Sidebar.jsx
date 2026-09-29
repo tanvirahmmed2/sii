@@ -8,8 +8,8 @@ import {
   FiAward, FiDollarSign, FiUsers, FiUser, FiChevronDown, FiChevronRight,
   FiGrid, FiInfo
 } from 'react-icons/fi';
-import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
-import Back from '@/component/button/Back';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
+import Back from 'src/component/button/Back';
 
 const Sidebar = () => {
   const pathname = usePathname();

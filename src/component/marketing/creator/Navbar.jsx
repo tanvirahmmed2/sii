@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { SITE_NAME } from '@/lib/db/secret';
+import { SITE_NAME } from 'src/lib/database/secret';
 import {
   BiMenu,
   BiPlus,

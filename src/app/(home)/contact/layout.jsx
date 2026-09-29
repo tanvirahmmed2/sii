@@ -1,4 +1,4 @@
-import { SITE_NAME } from '@/lib/db/secret'
+import { SITE_NAME } from 'src/lib/database/secret'
 import React from 'react'
 
 export const metadata={

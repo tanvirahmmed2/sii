@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { FiSearch, FiAward, FiPrinter, FiCheckCircle, FiXCircle, FiBookOpen, FiUser, FiInfo, FiCalendar, FiFileText } from 'react-icons/fi';
-import { printSingleMarkSheet } from '@/lib/receipts/singleMarkSheet';
+import { printSingleMarkSheet } from 'src/lib/receipts/singleMarkSheet';
 
 const ResultsPortalPage = () => {
   const [regNo, setRegNo] = useState('');

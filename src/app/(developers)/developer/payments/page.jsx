@@ -18,7 +18,7 @@ import {
   BiReceipt,
   BiShieldQuarter,
 } from 'react-icons/bi';
-import PaymentForm from '@/component/marketing/developer/forms/PaymentForm';
+import PaymentForm from 'src/component/marketing/developer/forms/PaymentForm';
 
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState([]);

@@ -4,8 +4,8 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { FiFile, FiPlus, FiDownload, FiInfo, FiTrash2, FiClock, FiEdit3, FiX, FiCheck } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import TiptapEditor from '@/component/helper/TiptapEditor';
-import RichTextDisplay from '@/component/helper/RichTextDisplay';
+import TiptapEditor from 'src/component/helper/TiptapEditor';
+import RichTextDisplay from 'src/component/helper/RichTextDisplay';
 
 const MaterialsPageContent = () => {
   const searchParams = useSearchParams();

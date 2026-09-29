@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useContext } from 'react';
-import { Context } from '@/components/helper/Context';
+import { Context } from 'src/component/helper/Context';
 import {
   BiSearch,
   BiPlus,
@@ -17,7 +17,7 @@ import {
   BiInfoCircle,
   BiLockAlt,
 } from 'react-icons/bi';
-import FeatureForm from '@/component/marketing/developer/forms/FeatureForm';
+import FeatureForm from 'src/component/marketing/developer/forms/FeatureForm';
 
 export default function AdminFeaturesPage() {
   const { user } = useContext(Context) || {};

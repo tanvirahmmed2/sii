@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useState, useContext } from 'react';
-import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
-import ClubNewsCard from '@/component/website/cards/ClubNewsCard';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
+import ClubNewsCard from 'src/component/website/cards/ClubNewsCard';
 import { FiActivity, FiSearch, FiX, FiFilter, FiFileText } from 'react-icons/fi';
 
 const ClubNewsPage = () => {

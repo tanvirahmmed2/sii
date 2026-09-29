@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getCreatorSession } from '@/lib/middleware/creator';
+import { getCreatorSession } from 'src/lib/middleware/creator';
 
 export default async function CreatorCheckoutLayout({ children }) {
   const session = await getCreatorSession();

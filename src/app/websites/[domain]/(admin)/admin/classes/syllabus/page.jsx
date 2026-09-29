@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { FiPlus, FiTrash2, FiEdit2, FiX, FiLayers, FiFileText, FiDownload, FiExternalLink } from 'react-icons/fi';
-import SyllabusCreateForm from '@/component/forms/SyllabusCreateForm';
-import SyllabusEditForm from '@/component/forms/SyllabusEditForm';
+import SyllabusCreateForm from 'src/component/forms/SyllabusCreateForm';
+import SyllabusEditForm from 'src/component/forms/SyllabusEditForm';
 
 const AdminSyllabusPage = () => {
   const [classes, setClasses] = useState([]);

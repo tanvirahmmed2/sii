@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { queryDb, pool } from '@/lib/database/db';
-import { hasModulePermission } from '@/lib/middleware/developer';
+import { queryDb, pool } from 'src/lib/database/db';
+import { hasModulePermission } from 'src/lib/middleware/developer';
 
 function slugify(text) {
   return text

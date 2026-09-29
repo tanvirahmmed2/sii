@@ -3,9 +3,9 @@
 import { useState, useContext } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ShieldCheckIcon } from '@/component/website/ui/Icons';
-import { SITE_NAME } from '@/lib/db/secret';
-import { Context } from '@/components/helper/Context';
+import { ShieldCheckIcon } from 'src/component/website/ui/Icons';
+import { SITE_NAME } from 'src/lib/database/secret';
+import { Context } from 'src/component/helper/Context';
 
 export default function AdminLoginForm() {
   const router = useRouter();

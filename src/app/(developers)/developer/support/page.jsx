@@ -15,7 +15,7 @@ import {
   BiMessageSquareDetail,
   BiCheckShield,
 } from 'react-icons/bi';
-import { Context } from '@/components/helper/Context';
+import { Context } from 'src/component/helper/Context';
 
 export default function AdminSupportPage() {
   const router = useRouter();

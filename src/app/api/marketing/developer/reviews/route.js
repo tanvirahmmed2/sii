@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from '@/lib/database/db';
-import { hasModulePermission } from '@/lib/middleware/developer';
+import { queryDb } from 'src/lib/database/db';
+import { hasModulePermission } from 'src/lib/middleware/developer';
 
 // GET: Fetch all reviews for developer moderation oversight
 export async function GET(request) {

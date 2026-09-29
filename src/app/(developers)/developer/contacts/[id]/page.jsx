@@ -16,7 +16,7 @@ import {
   BiMessageDetail,
   BiX,
 } from 'react-icons/bi';
-import { Context } from '@/components/helper/Context';
+import { Context } from 'src/component/helper/Context';
 
 export default function ContactDetailPage({ params }) {
   const router = useRouter();

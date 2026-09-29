@@ -20,7 +20,7 @@ import {
   BiFilterAlt,
   BiCalendar,
 } from 'react-icons/bi';
-import { Context } from '@/components/helper/Context';
+import { Context } from 'src/component/helper/Context';
 
 export default function AdminProjectsPage() {
   const router = useRouter();

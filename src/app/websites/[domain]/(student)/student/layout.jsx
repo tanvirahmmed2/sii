@@ -1,8 +1,8 @@
-import Navbar from '@/component/website/bars/student/Navbar'
-import Sidebar from '@/component/website/bars/student/Sidebar'
+import Navbar from 'src/component/website/bars/student/Navbar'
+import Sidebar from 'src/component/website/bars/student/Sidebar'
 import React from 'react'
 import { redirect } from 'next/navigation';
-import { isStudent } from '@/lib/middleware/auth';
+import { isStudent } from 'src/lib/middleware/auth';
 
 export const dynamic = 'force-dynamic';
 

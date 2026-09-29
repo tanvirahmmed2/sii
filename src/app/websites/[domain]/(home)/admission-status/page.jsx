@@ -7,7 +7,7 @@ import {
   FiSearch, FiCheckCircle, FiXCircle, FiClock,
   FiAward, FiPrinter, FiUser, FiMail, FiPhone, FiMapPin, FiLayers, FiFileText
 } from 'react-icons/fi';
-import { printAdmissionFeeReceipt } from '@/lib/receipts/admission_fee';
+import { printAdmissionFeeReceipt } from 'src/lib/receipts/admission_fee';
 
 const AdmissionStatusPage = () => {
   const [query, setQuery] = useState('');

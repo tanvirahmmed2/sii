@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { pool } from '@/lib/database/db';
-import { hasModulePermission } from '@/lib/middleware/developer';
+import { pool } from 'src/lib/database/db';
+import { hasModulePermission } from 'src/lib/middleware/developer';
 
 const ALLOWED_PLATFORMS = ['facebook', 'instagram', 'whatsapp'];
 const ALLOWED_STATUSES = ['OPEN', 'RESOLVED', 'SPAM'];

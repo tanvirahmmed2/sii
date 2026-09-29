@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
-import { getAdminSession } from '@/lib/middleware/developer';
-import { SITE_NAME } from '@/lib/db/secret';
+import { getAdminSession } from 'src/lib/middleware/developer';
+import { SITE_NAME } from 'src/lib/database/secret';
 
 export const metadata = {
   title: `Developer Portal | ${SITE_NAME}`,

@@ -4,7 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { FiUserPlus, FiArrowLeft } from 'react-icons/fi';
 import Link from 'next/link';
-import TeacherCreateForm from '@/component/forms/TeacherCreateForm';
+import TeacherCreateForm from 'src/component/forms/TeacherCreateForm';
 
 const AdminNewTeacherPage = () => {
   const router = useRouter();

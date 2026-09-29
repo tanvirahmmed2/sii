@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { FiPlus, FiTrash2, FiX,  FiPhone, FiMapPin, FiMail, FiUser, FiSearch, FiCheckCircle } from 'react-icons/fi';
-import AdminCreateForm from '@/component/forms/AdminCreateForm';
+import AdminCreateForm from 'src/component/forms/AdminCreateForm';
 
 const AdminAccessPage = () => {
   const [admins, setAdmins] = useState([]);

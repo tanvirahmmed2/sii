@@ -13,7 +13,7 @@ import {
   FiBookOpen
 } from 'react-icons/fi';
 
-import { SCHOOL_NAME } from '@/lib/secret';
+import { SCHOOL_NAME } from 'src/lib/database/secret';
 
 const MissionPage = () => {
   const [settings, setSettings] = useState(null);

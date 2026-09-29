@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/database/db';
-import { isAdmin, isCashier } from '@/lib/middleware/auth';
+import { query } from 'src/lib/database/db';
+import { isAdmin, isCashier } from 'src/lib/middleware/auth';
 
 // GET student fee payment logs (Admin/Cashier only)
 export async function GET(request) {

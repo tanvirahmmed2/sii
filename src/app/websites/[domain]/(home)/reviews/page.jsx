@@ -13,7 +13,7 @@ import {
   BiCheckShield,
   BiCube,
 } from 'react-icons/bi';
-import { SITE_NAME } from '@/lib/db/secret';
+import { SITE_NAME } from 'src/lib/database/secret';
 
 export default function PublicReviewsPage() {
   const [reviews, setReviews] = useState([]);

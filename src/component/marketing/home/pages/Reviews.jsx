@@ -2,7 +2,7 @@
 
 import React, { useContext } from 'react';
 import Link from 'next/link';
-import { Context } from '@/components/helper/Context';
+import { Context } from 'src/component/helper/Context';
 import Review from '../cards/Review';
 import { BiStar, BiChevronRight } from 'react-icons/bi';
 

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import AdminLoginForm from '@/component/forms/AdminLoginForm';
+import AdminLoginForm from 'src/component/forms/AdminLoginForm';
 import { FiHome } from 'react-icons/fi';
 
 const AdminLogin = () => {

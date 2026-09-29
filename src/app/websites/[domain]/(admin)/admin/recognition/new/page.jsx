@@ -4,7 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { FiAward, FiList } from 'react-icons/fi';
 import Link from 'next/link';
-import AdminForm from '@/component/forms/AdminForm';
+import AdminForm from 'src/component/forms/AdminForm';
 
 const CreateRecognitionPage = () => {
   const router = useRouter();

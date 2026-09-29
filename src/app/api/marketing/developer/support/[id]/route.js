@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from '@/lib/database/db';
-import { hasModulePermission } from '@/lib/middleware/developer';
+import { queryDb } from 'src/lib/database/db';
+import { hasModulePermission } from 'src/lib/middleware/developer';
 
 // GET SINGLE SUPPORT TICKET & THREAD (Developer)
 export async function GET(request, context) {

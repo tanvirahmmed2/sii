@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { resolveWebsiteFromRequest, hashPassword } from '@/lib/middleware/user';
-import { queryDb } from '@/lib/database/db';
+import { resolveWebsiteFromRequest, hashPassword } from 'src/lib/middleware/user';
+import { queryDb } from 'src/lib/database/db';
 
 export async function GET(request, context) {
   try {

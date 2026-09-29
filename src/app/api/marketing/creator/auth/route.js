@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { queryDb } from '@/lib/database/db';
-import { SITE_NAME } from '@/lib/database/secret';
+import { queryDb } from 'src/lib/database/db';
+import { SITE_NAME } from 'src/lib/database/secret';
 import {
   authenticateCreator,
   getCreatorSession,
@@ -9,8 +9,8 @@ import {
   setCreatorSessionCookie,
   generateToken,
   hashPassword,
-} from '@/lib/middleware/creator';
-import { sendEmail } from '@/lib/database/brevo';
+} from 'src/lib/middleware/creator';
+import { sendEmail } from 'src/lib/database/brevo';
 
 /**
  * API Route: /api/creator/auth

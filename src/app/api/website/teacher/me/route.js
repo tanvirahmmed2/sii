@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { verifyJWT, comparePassword, hashPassword } from '@/lib/middleware/auth';
-import { query } from '@/lib/database/db';
+import { verifyJWT, comparePassword, hashPassword } from 'src/lib/middleware/auth';
+import { query } from 'src/lib/database/db';
 
 export async function GET() {
   try {

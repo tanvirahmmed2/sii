@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import ExamCreateForm from '@/component/forms/ExamCreateForm';
+import ExamCreateForm from 'src/component/forms/ExamCreateForm';
 
 const AdminNewExamPage = () => {
   const router = useRouter();

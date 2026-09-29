@@ -4,7 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { FiCalendar, FiBookOpen, FiPlus, FiCheck, FiInfo } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import TiptapEditor from '@/component/helper/TiptapEditor';
+import TiptapEditor from 'src/component/helper/TiptapEditor';
 
 const LessonsPageContent = () => {
   const searchParams = useSearchParams();

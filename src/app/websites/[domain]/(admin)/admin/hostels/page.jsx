@@ -17,7 +17,7 @@ import {
   FiArrowRight,
   FiBookOpen
 } from 'react-icons/fi';
-import TiptapEditor from '@/component/helper/TiptapEditor';
+import TiptapEditor from 'src/component/helper/TiptapEditor';
 
 export default function AdminHostelsPage() {
   const [hostels, setHostels] = useState([]);

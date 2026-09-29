@@ -4,7 +4,7 @@ import React, { useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiMenu, FiLogOut, FiUser } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
-import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import Link from 'next/link';
 
 const Navbar = () => {

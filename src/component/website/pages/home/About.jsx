@@ -1,6 +1,6 @@
 'use client';
 
-import { SCHOOL_NAME } from '@/lib/secret';
+import { SCHOOL_NAME } from 'src/lib/database/secret';
 import React from 'react';
 import { FiAward, FiBook, FiCheckCircle } from 'react-icons/fi';
 import { GiCreditsCurrency } from 'react-icons/gi';

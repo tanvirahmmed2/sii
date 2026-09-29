@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/database/db';
-import { isAdmin, isRegister } from '@/lib/middleware/auth';
+import { query } from 'src/lib/database/db';
+import { isAdmin, isRegister } from 'src/lib/middleware/auth';
 
 // PUT update a class routine (Admin only)
 export async function PUT(request, { params }) {

@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { FiPlus, FiTrash2, FiEdit2, FiX, FiLayers } from 'react-icons/fi';
-import ClassCreateForm from '@/component/forms/ClassCreateForm';
-import ClassEditForm from '@/component/forms/ClassEditForm';
-import RichTextDisplay from '@/component/helper/RichTextDisplay';
+import ClassCreateForm from 'src/component/forms/ClassCreateForm';
+import ClassEditForm from 'src/component/forms/ClassEditForm';
+import RichTextDisplay from 'src/component/helper/RichTextDisplay';
 
 const AdminClassesPage = () => {
   const [classes, setClasses] = useState([]);

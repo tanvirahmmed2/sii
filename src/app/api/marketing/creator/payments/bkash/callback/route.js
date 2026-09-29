@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from '@/lib/database/db';
-import { executeBkashPayment } from '@/lib/database/bkash';
+import { queryDb } from 'src/lib/database/db';
+import { executeBkashPayment } from 'src/lib/database/bkash';
 
 export async function GET(request) {
   try {

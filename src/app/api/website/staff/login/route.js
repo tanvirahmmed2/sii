@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { query } from '@/lib/database/db';
-import { comparePassword, signJWT } from '@/lib/middleware/auth';
-import { sendEmail } from '@/lib/database/brevo';
-import { recordLoginLog } from '@/lib/database/logger';
+import { query } from 'src/lib/database/db';
+import { comparePassword, signJWT } from 'src/lib/middleware/auth';
+import { sendEmail } from 'src/lib/database/brevo';
+import { recordLoginLog } from 'src/lib/database/logger';
 
 export async function POST(request) {
   try {

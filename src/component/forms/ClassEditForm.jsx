@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { FiEdit2 } from 'react-icons/fi';
-import TiptapEditor from '@/component/helper/TiptapEditor';
+import TiptapEditor from 'src/component/helper/TiptapEditor';
 
 const ClassEditForm = ({ cls, onSuccess, onCancel }) => {
   const [name, setName] = useState(cls.name);

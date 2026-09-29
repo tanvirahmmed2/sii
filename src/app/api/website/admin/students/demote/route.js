@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/database/db';
-import { isAdmin } from '@/lib/middleware/auth';
+import { query } from 'src/lib/database/db';
+import { isAdmin } from 'src/lib/middleware/auth';
 
 // Helper for class+0+studentnumber format (e.g. 6001, 6002, 6013 for Class 6)
 function generateClassRoll(classNameOrNumeric, seqNumber) {

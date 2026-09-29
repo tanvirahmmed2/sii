@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { FiPlus, FiTrash2, FiEdit2, FiX, FiAward } from 'react-icons/fi';
-import GradeCreateForm from '@/component/forms/GradeCreateForm';
-import GradeEditForm from '@/component/forms/GradeEditForm';
+import GradeCreateForm from 'src/component/forms/GradeCreateForm';
+import GradeEditForm from 'src/component/forms/GradeEditForm';
 
 const AdminGradesPage = () => {
   const [grades, setGrades] = useState([]);

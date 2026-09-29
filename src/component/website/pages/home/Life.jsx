@@ -3,7 +3,7 @@
 import React from 'react';
 import { FiHome, FiCompass, FiTarget } from 'react-icons/fi';
 import Link from 'next/link';
-import { SCHOOL_NAME } from '@/lib/secret';
+import { SCHOOL_NAME } from 'src/lib/database/secret';
 
 const Life = () => {
   let schoolname=SCHOOL_NAME

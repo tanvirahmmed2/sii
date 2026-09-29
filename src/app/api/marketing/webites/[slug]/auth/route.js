@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { queryDb } from '@/lib/database/db';
-import { sendEmail } from '@/lib/database/brevo';
+import { queryDb } from 'src/lib/database/db';
+import { sendEmail } from 'src/lib/database/brevo';
 import {
   resolveWebsiteFromRequest,
   hashPassword,
@@ -10,7 +10,7 @@ import {
   getWebsiteUserSession,
   getUserRolesAndPermissions,
   WEBSITE_AUTH_COOKIE,
-} from '@/lib/middleware/user';
+} from 'src/lib/middleware/user';
 
 export async function GET(request, context) {
   try {

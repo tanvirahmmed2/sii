@@ -4,7 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FiArrowLeft, FiUserPlus } from 'react-icons/fi';
-import StaffCreateForm from '@/component/forms/StaffCreateForm';
+import StaffCreateForm from 'src/component/forms/StaffCreateForm';
 
 const AdminNewStaffPage = () => {
   const router = useRouter();

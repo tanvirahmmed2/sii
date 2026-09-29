@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from '@/lib/database/db';
-import { hasModulePermission } from '@/lib/middleware/developer';
-import { sendEmail } from '@/lib/database/brevo';
-import { SITE_NAME } from '@/lib/database/secret';
+import { queryDb } from 'src/lib/database/db';
+import { hasModulePermission } from 'src/lib/middleware/developer';
+import { sendEmail } from 'src/lib/database/brevo';
+import { SITE_NAME } from 'src/lib/database/secret';
 
 // SEND MESSAGE FROM DEVELOPER / STAFF TO CREATOR
 export async function POST(request, context) {

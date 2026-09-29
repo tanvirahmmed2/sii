@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
-import { getCreatorSession } from '@/lib/middleware/creator';
-import { SITE_NAME } from '@/lib/db/secret';
+import { getCreatorSession } from 'src/lib/middleware/creator';
+import { SITE_NAME } from 'src/lib/database/secret';
 
 export const metadata = {
   title: `Reset Password | ${SITE_NAME}`,

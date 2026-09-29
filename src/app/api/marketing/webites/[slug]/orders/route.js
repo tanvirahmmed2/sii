@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { resolveWebsiteFromRequest } from '@/lib/middleware/user';
-import { queryDb } from '@/lib/database/db';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/user';
+import { queryDb } from 'src/lib/database/db';
 
 export async function POST(request, context) {
   try {

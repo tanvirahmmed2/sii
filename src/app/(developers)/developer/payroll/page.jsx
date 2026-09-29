@@ -15,7 +15,7 @@ import {
   BiDetail,
   BiCheck,
 } from 'react-icons/bi';
-import { Context } from '@/components/helper/Context';
+import { Context } from 'src/component/helper/Context';
 
 export default function DeveloperPayrollPage() {
   const { user } = useContext(Context);

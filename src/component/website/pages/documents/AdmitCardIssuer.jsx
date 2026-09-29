@@ -7,7 +7,7 @@ import {
   FiCalendar, FiArrowLeft, FiCheckSquare, FiSquare, FiUsers
 } from 'react-icons/fi';
 import axios from 'axios';
-import { printAdmitCard } from '@/lib/receipts/admit_card';
+import { printAdmitCard } from 'src/lib/receipts/admit_card';
 
 export default function AdmitCardIssuer() {
   const [exams, setExams] = useState([]);

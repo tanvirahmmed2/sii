@@ -5,8 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { FiFileText, FiCheckCircle, FiCopy, FiMail, FiDollarSign, FiArrowLeft, FiLayers, FiClock, FiCalendar, FiEdit3 } from 'react-icons/fi';
 import Link from 'next/link';
-import AdmissionApplyForm from '@/component/forms/AdmissionApplyForm';
-import { SCHOOL_NAME } from '@/lib/secret';
+import AdmissionApplyForm from 'src/component/forms/AdmissionApplyForm';
+import { SCHOOL_NAME } from 'src/lib/database/secret';
 
 const ApplyFormContent = () => {
   const searchParams = useSearchParams();

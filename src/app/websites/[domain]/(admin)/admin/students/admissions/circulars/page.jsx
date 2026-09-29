@@ -5,7 +5,7 @@ import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 import { FiLayers, FiPlus, FiTrash2, FiEdit2, FiCalendar, FiClock, FiCheckCircle } from 'react-icons/fi';
 
-import AdmissionCircularForm from '@/component/forms/AdmissionCircularForm';
+import AdmissionCircularForm from 'src/component/forms/AdmissionCircularForm';
 
 const CircularsPage = () => {
   const [circulars, setCirculars] = useState([]);

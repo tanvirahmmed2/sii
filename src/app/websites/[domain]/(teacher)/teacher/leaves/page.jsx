@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { FiCalendar, FiPlus, FiCheck, FiX, FiClock } from 'react-icons/fi';
-import TiptapEditor from '@/component/helper/TiptapEditor';
-import RichTextDisplay from '@/component/helper/RichTextDisplay';
+import TiptapEditor from 'src/component/helper/TiptapEditor';
+import RichTextDisplay from 'src/component/helper/RichTextDisplay';
 
 const LeavesPage = () => {
   const [applications, setApplications] = useState([]);

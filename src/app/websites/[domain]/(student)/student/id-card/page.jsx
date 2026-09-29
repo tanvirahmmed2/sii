@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { FiCreditCard, FiPrinter, FiLock, FiCheckCircle, FiUser, FiClock, FiCalendar } from 'react-icons/fi';
-import { printStudentIDCard } from '@/lib/receipts/student_id_card';
+import { printStudentIDCard } from 'src/lib/receipts/student_id_card';
 
 const StudentIDCardPage = () => {
   const [student, setStudent] = useState(null);

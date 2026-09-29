@@ -1,6 +1,6 @@
-import { query } from '@/lib/database/db';
-import { hasModulePermission } from '@/lib/middleware/developer';
-import cloudinary, { uploadToCloudinary, deleteFromCloudinary } from '@/lib/database/cloudinary';
+import { query } from 'src/lib/database/db';
+import { hasModulePermission } from 'src/lib/middleware/developer';
+import cloudinary, { uploadToCloudinary, deleteFromCloudinary } from 'src/lib/database/cloudinary';
 
 function slugify(text) {
   return text

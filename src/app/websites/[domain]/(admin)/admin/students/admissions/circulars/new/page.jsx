@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { FiPlus, FiArrowLeft } from 'react-icons/fi';
-import AdmissionCircularForm from '@/component/forms/AdmissionCircularForm';
+import AdmissionCircularForm from 'src/component/forms/AdmissionCircularForm';
 
 const NewCircularPage = () => {
   const router = useRouter();

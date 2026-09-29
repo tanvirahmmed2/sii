@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { SITE_NAME } from '@/lib/db/secret';
+import { SITE_NAME } from 'src/lib/database/secret';
 import { BiMenu, BiChevronDown, BiGridAlt, BiRightArrowAlt } from 'react-icons/bi';
 import { useContext, useState } from 'react';
-import { Context } from '@/components/helper/Context';
+import { Context } from 'src/component/helper/Context';
 import Sidebar from './Sidebar';
 
 export default function HomeNavbar() {

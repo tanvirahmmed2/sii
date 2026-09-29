@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/database/db';
+import { query } from 'src/lib/database/db';
 
 // GET public staff list & available roles
 export async function GET() {

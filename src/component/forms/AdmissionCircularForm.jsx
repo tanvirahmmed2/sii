@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import TiptapEditor from '@/component/helper/TiptapEditor';
+import TiptapEditor from 'src/component/helper/TiptapEditor';
 
 const AdmissionCircularForm = ({ initialData, onSubmit, onCancel, classes, submitting }) => {
   const [form, setForm] = useState({

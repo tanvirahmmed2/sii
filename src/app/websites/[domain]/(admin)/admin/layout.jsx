@@ -1,8 +1,8 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
-import { isAdmin } from '@/lib/middleware/auth';
-import Navbar from '@/component/website/bars/admin/Navbar';
-import Sidebar from '@/component/website/bars/admin/Sidebar';
+import { isAdmin } from 'src/lib/middleware/auth';
+import Navbar from 'src/component/website/bars/admin/Navbar';
+import Sidebar from 'src/component/website/bars/admin/Sidebar';
 
 export const dynamic = 'force-dynamic';
 

@@ -5,7 +5,7 @@ import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { FiUsers, FiEdit2, FiTrash2, FiAward, FiMail, FiPhone, FiInfo, FiPlus, FiCamera, FiUpload, FiX, FiSearch } from 'react-icons/fi';
 import Link from 'next/link';
-import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 const DESIGNATION_LABELS = {
   chairman: 'Chairman',

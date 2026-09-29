@@ -8,7 +8,7 @@ import {
   ExternalLinkIcon,
   ShieldCheckIcon,
   StarIcon,
-} from '@/component/website/ui/Icons';
+} from 'src/component/website/ui/Icons';
 
 export default function BuilderNavbar({
   subdomain = 'alex-design',

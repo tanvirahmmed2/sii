@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { FiUserX, FiSearch, FiPrinter, FiAlertCircle } from 'react-icons/fi';
 import axios from 'axios';
-import { printTransferCertificate } from '@/lib/receipts/transfer_certificate';
+import { printTransferCertificate } from 'src/lib/receipts/transfer_certificate';
 
 export default function TransferCertificateIssuer() {
   const [students, setStudents] = useState([]);

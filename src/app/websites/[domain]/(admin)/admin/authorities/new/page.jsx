@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { FiUserPlus,  FiUpload, FiArrowLeft, FiCamera } from 'react-icons/fi';
 import Link from 'next/link';
-import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import Image from 'next/image';
 
 

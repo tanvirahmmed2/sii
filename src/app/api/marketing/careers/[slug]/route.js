@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from '@/lib/database/db';
+import { queryDb } from 'src/lib/database/db';
 
 // ============================================================================
 // GET: Public details of a career post by slug

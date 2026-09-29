@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/database/db';
+import { query } from 'src/lib/database/db';
 
 // GET public staff profile by username OR numeric id
 export async function GET(request, { params }) {

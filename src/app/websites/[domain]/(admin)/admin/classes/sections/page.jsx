@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { FiPlus, FiTrash2, FiEdit2, FiX, FiGrid, FiLayers, FiUsers, FiMapPin } from 'react-icons/fi';
-import SectionCreateForm from '@/component/forms/SectionCreateForm';
-import SectionEditForm from '@/component/forms/SectionEditForm';
+import SectionCreateForm from 'src/component/forms/SectionCreateForm';
+import SectionEditForm from 'src/component/forms/SectionEditForm';
 
 const AdminSectionsPage = () => {
   const [sections, setSections] = useState([]);

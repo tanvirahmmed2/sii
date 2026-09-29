@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { BiSearch, BiPlus, BiMinus, BiTrash, BiRefresh } from 'react-icons/bi';
-import WebsiteForm from '@/component/marketing/developer/forms/WebsiteForm';
+import WebsiteForm from 'src/component/marketing/developer/forms/WebsiteForm';
 
 export default function AdminWebsitesPage() {
   const [websites, setWebsites] = useState([]);

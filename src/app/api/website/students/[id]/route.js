@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/database/db';
-import { isAdmin } from '@/lib/middleware/auth';
-import { deleteImage } from '@/lib/database/cloudinary';
+import { query } from 'src/lib/database/db';
+import { isAdmin } from 'src/lib/middleware/auth';
+import { deleteImage } from 'src/lib/database/cloudinary';
 
 // PUT: Update student record (Admin only)
 export async function PUT(request, { params }) {

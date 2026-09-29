@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/database/db';
-import { isAdmin } from '@/lib/middleware/auth';
-import { triggerMonthlyFeeGeneration } from '@/lib/database/fees';
+import { query } from 'src/lib/database/db';
+import { isAdmin } from 'src/lib/middleware/auth';
+import { triggerMonthlyFeeGeneration } from 'src/lib/database/fees';
 
 // GET all students (with class & section filter)
 export async function GET(request) {

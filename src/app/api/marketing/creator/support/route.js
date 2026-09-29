@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from '@/lib/database/db';
-import { getCreatorSession } from '@/lib/middleware/creator';
+import { queryDb } from 'src/lib/database/db';
+import { getCreatorSession } from 'src/lib/middleware/creator';
 
 /**
  * API Route: /api/creator/support

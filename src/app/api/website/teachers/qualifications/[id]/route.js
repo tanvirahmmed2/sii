@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/database/db';
-import { isAdmin, verifyJWT } from '@/lib/middleware/auth';
+import { query } from 'src/lib/database/db';
+import { isAdmin, verifyJWT } from 'src/lib/middleware/auth';
 import { cookies } from 'next/headers';
 
 // Helper to verify if the requester has permission for this teacher's qualifications

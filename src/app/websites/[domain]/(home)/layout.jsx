@@ -1,6 +1,6 @@
-import Footer from '@/component/website/bars/Footer'
-import Navbar from '@/component/website/bars/Navbar'
-import Sidebar from '@/component/website/bars/Sidebar'
+import Footer from 'src/component/website/bars/Footer'
+import Navbar from 'src/component/website/bars/Navbar'
+import Sidebar from 'src/component/website/bars/Sidebar'
 import React from 'react'
 
 const HomeLayout = ({children}) => {

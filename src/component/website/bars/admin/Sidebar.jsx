@@ -10,8 +10,8 @@ import {
   FiSettings, FiShoppingBag, FiTrendingUp, FiTrendingDown,
   FiUser, FiActivity
 } from 'react-icons/fi';
-import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
-import Back from '@/component/button/Back';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
+import Back from 'src/component/button/Back';
 import { BiMoney } from 'react-icons/bi';
 
 const Sidebar = () => {

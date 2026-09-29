@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FiArrowRight, FiBookOpen, FiUsers, FiLayers, FiShield } from 'react-icons/fi';
-import { SCHOOL_NAME } from '@/lib/secret';
+import { SCHOOL_NAME } from 'src/lib/database/secret';
 
 const Hero = () => {
   const [schoolName, setSchoolName] = useState(SCHOOL_NAME);

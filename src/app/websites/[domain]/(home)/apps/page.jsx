@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
 import { BiSearch, BiGridAlt, BiRefresh, BiRocket, BiRightArrowAlt, BiStar } from 'react-icons/bi';
-import HomeAppCard from '@/component/marketing/home/cards/AppCard';
+import HomeAppCard from 'src/component/marketing/home/cards/AppCard';
 
 export default function AppsPage() {
   const [apps, setApps] = useState([]);

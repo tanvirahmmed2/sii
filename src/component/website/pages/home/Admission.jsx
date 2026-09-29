@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { FiCheckCircle, FiArrowRight } from 'react-icons/fi';
-import { SCHOOL_NAME } from '@/lib/secret';
+import { SCHOOL_NAME } from 'src/lib/database/secret';
 
 const Admission = () => {
   return (

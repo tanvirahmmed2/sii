@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { verifyJWT, isStudent } from '@/lib/middleware/auth';
-import { query } from '@/lib/database/db';
+import { verifyJWT, isStudent } from 'src/lib/middleware/auth';
+import { query } from 'src/lib/database/db';
 
 // GET all events and join status for logged-in student
 export async function GET() {

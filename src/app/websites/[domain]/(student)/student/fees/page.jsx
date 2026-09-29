@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { FiDollarSign, FiClock, FiCheck, FiInfo, FiPrinter, FiAlertCircle } from 'react-icons/fi';
-import { printStudentFeeReceipt } from '@/lib/receipts/student_fee';
+import { printStudentFeeReceipt } from 'src/lib/receipts/student_fee';
 
 const FeesPage = () => {
   const [data, setData] = useState({ fees: [], fines: [] });

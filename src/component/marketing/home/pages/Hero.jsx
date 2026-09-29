@@ -14,7 +14,7 @@ import {
   BiCheckShield,
   BiRightArrowAlt,
 } from 'react-icons/bi';
-import { SITE_NAME } from '@/lib/database/secret';
+import { SITE_NAME } from 'src/lib/database/secret';
 
 export default function Hero() {
   const [devicePreview, setDevicePreview] = useState('desktop');

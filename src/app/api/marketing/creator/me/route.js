@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getCreatorSession } from '@/lib/middleware/creator';
+import { getCreatorSession } from 'src/lib/middleware/creator';
 
 export async function GET(request) {
   try {

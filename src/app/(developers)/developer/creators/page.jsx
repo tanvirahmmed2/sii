@@ -17,7 +17,7 @@ import {
   BiCopy,
   BiCheck,
 } from 'react-icons/bi';
-import { Context } from '@/components/helper/Context';
+import { Context } from 'src/component/helper/Context';
 
 export default function AdminCreatorsPage() {
   const { user } = useContext(Context);

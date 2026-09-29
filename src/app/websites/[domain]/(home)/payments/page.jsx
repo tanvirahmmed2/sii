@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { FiSearch, FiDollarSign, FiClock, FiCheck, FiInfo, FiLayers, FiAlertCircle, FiPrinter } from 'react-icons/fi';
-import { printStudentFeeReceipt } from '@/lib/receipts/student_fee';
+import { printStudentFeeReceipt } from 'src/lib/receipts/student_fee';
 
 const PublicPaymentsPage = () => {
   const [regNo, setRegNo] = useState('');

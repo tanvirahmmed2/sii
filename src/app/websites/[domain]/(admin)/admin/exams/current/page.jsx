@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { FiCalendar, FiClock, FiMapPin, FiLayers, FiBook, FiTrash2, FiEdit2, FiX } from 'react-icons/fi';
-import ExamCreateForm from '@/component/forms/ExamCreateForm';
+import ExamCreateForm from 'src/component/forms/ExamCreateForm';
 
 const AdminCurrentExamsPage = () => {
   const [exams, setExams] = useState([]);

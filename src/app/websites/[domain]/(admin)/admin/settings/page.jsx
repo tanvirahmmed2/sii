@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { toast } from 'react-hot-toast';
 import { FiSave, FiSettings, FiMail, FiPhone, FiMapPin, FiGlobe, FiImage } from 'react-icons/fi';
-import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
-import TiptapEditor from '@/component/helper/TiptapEditor';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
+import TiptapEditor from 'src/component/helper/TiptapEditor';
 
 const SettingsPage = () => {
   const context = useContext(TenantWebsiteContext);

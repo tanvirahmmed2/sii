@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { FiMail, FiPhone, FiMapPin } from 'react-icons/fi';
-import { SCHOOL_NAME } from '@/lib/secret';
+import { SCHOOL_NAME } from 'src/lib/database/secret';
 
 const Contact = () => {
   const [settings, setSettings] = useState(null);

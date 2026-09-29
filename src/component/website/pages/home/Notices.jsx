@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { FiInfo, FiArrowRight } from 'react-icons/fi';
 import Link from 'next/link';
-import NoticeCard from '@/component/website/cards/NoticeCard';
+import NoticeCard from 'src/component/website/cards/NoticeCard';
 
 const Notices = () => {
   const [notices, setNotices] = useState([]);

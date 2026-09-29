@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/database/db';
-import { isAdmin, isTeacher } from '@/lib/middleware/auth';
+import { query } from 'src/lib/database/db';
+import { isAdmin, isTeacher } from 'src/lib/middleware/auth';
 
 // GET student marks for entry screen
 export async function GET(request) {

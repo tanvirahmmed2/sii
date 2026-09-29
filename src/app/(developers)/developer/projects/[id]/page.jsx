@@ -24,7 +24,7 @@ import {
   BiEdit,
   BiSave,
 } from 'react-icons/bi';
-import { Context } from '@/components/helper/Context';
+import { Context } from 'src/component/helper/Context';
 
 export default function DeveloperSingleProjectPage() {
   const params = useParams();

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/database/db';
-import { isAdmin } from '@/lib/middleware/auth';
-import { uploadImage } from '@/lib/database/cloudinary';
+import { query } from 'src/lib/database/db';
+import { isAdmin } from 'src/lib/middleware/auth';
+import { uploadImage } from 'src/lib/database/cloudinary';
 
 // GET all collaborations
 export async function GET() {

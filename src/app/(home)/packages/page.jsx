@@ -11,7 +11,7 @@ import {
   BiChevronLeft,
   BiChevronRight,
 } from 'react-icons/bi';
-import Package from '@/component/marketing/home/cards/Package';
+import Package from 'src/component/marketing/home/cards/Package';
 
 function AppPackageRow({ app, packages, billingCycle, currency }) {
   const scrollRef = useRef(null);

@@ -1,9 +1,9 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
-import { isTeacher } from '@/lib/middleware/auth';
-import Navbar from '@/component/website/bars/teacher/Navbar';
-import Sidebar from '@/component/website/bars/teacher/Sidebar';
-import { SCHOOL_NAME } from '@/lib/secret';
+import { isTeacher } from 'src/lib/middleware/auth';
+import Navbar from 'src/component/website/bars/teacher/Navbar';
+import Sidebar from 'src/component/website/bars/teacher/Sidebar';
+import { SCHOOL_NAME } from 'src/lib/database/secret';
 
 const shortName = SCHOOL_NAME.split(" ").map((w) => w[0]).join('');
 

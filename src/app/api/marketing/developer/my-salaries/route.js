@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { authenticateStaff } from '@/lib/middleware/developer';
-import { queryDb } from '@/lib/database/db';
+import { authenticateStaff } from 'src/lib/middleware/developer';
+import { queryDb } from 'src/lib/database/db';
 
 // ============================================================================
 // GET: Fetch personal salary records & payouts for the logged-in developer

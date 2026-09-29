@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { FiAward, FiPrinter, FiLock, FiCheckCircle, FiInfo, FiUser, FiClock } from 'react-icons/fi';
-import { printTestimonial } from '@/lib/receipts/testimonial';
+import { printTestimonial } from 'src/lib/receipts/testimonial';
 
 const StudentTestimonialPage = () => {
   const [student, setStudent] = useState(null);

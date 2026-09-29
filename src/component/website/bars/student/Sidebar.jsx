@@ -7,8 +7,8 @@ import {
   FiHome, FiCalendar, FiClock, FiFileText, FiBook,
   FiAward, FiDollarSign, FiUsers, FiUser, FiCreditCard
 } from 'react-icons/fi';
-import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
-import Back from '@/component/button/Back';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
+import Back from 'src/component/button/Back';
 
 const Sidebar = () => {
   const pathname = usePathname();

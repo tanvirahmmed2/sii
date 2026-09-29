@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { verifyJWT, comparePassword, hashPassword } from '@/lib/middleware/auth';
-import { query } from '@/lib/database/db';
-import { uploadImage, deleteImage } from '@/lib/database/cloudinary';
+import { verifyJWT, comparePassword, hashPassword } from 'src/lib/middleware/auth';
+import { query } from 'src/lib/database/db';
+import { uploadImage, deleteImage } from 'src/lib/database/cloudinary';
 
 // GET logged-in student profile details
 export async function GET() {

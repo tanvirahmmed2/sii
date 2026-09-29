@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { FiArrowRight, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
-import RecognitionCard from '@/component/website/cards/RecognitionCard';
+import RecognitionCard from 'src/component/website/cards/RecognitionCard';
 
 const Recognition = () => {
   const [recognitions, setRecognitions] = useState([]);

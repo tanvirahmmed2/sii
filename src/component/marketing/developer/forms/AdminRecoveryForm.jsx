@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ShieldCheckIcon, CheckCircleIcon } from '@/component/website/ui/Icons';
+import { ShieldCheckIcon, CheckCircleIcon } from 'src/component/website/ui/Icons';
 
 export default function AdminRecoveryForm() {
   const [step, setStep] = useState('request'); // 'request' | 'reset' | 'success'

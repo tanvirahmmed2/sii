@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { hasModulePermission } from '@/lib/middleware/developer';
+import { hasModulePermission } from 'src/lib/middleware/developer';
 
 export default async function AdminAdminsLayout({ children }) {
   const auth = await hasModulePermission(undefined, 'developers');

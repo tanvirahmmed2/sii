@@ -6,8 +6,8 @@ import {
   FiPlus, FiTrash2, FiX, FiAward, FiLayers, FiGrid,
   FiBook, FiUser, FiCalendar, FiUsers, FiRefreshCw
 } from 'react-icons/fi';
-import ClassSubjectAssignForm from '@/component/forms/ClassSubjectAssignForm';
-import ClassTeacherAssignForm from '@/component/forms/ClassTeacherAssignForm';
+import ClassSubjectAssignForm from 'src/component/forms/ClassSubjectAssignForm';
+import ClassTeacherAssignForm from 'src/component/forms/ClassTeacherAssignForm';
 
 const AdminAssignClassesPage = () => {
   const [activeTab, setActiveTab] = useState('subjects'); // 'subjects' or 'classes'

@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { FiBriefcase, FiList, FiLoader } from 'react-icons/fi';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-import TiptapEditor from '@/component/helper/TiptapEditor';
+import TiptapEditor from 'src/component/helper/TiptapEditor';
 
 const EditCollaborationPage = () => {
   const router = useRouter();

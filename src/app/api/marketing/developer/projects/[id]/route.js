@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from '@/lib/database/db';
-import { hasModulePermission, getAuthenticatedUser } from '@/lib/middleware/developer';
+import { queryDb } from 'src/lib/database/db';
+import { hasModulePermission, getAuthenticatedUser } from 'src/lib/middleware/developer';
 
 /**
  * GET /api/developer/projects/[id]

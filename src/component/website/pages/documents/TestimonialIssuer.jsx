@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { FiAward, FiSearch, FiPrinter } from 'react-icons/fi';
 import axios from 'axios';
-import { printTestimonial } from '@/lib/receipts/testimonial';
+import { printTestimonial } from 'src/lib/receipts/testimonial';
 
 export default function TestimonialIssuer() {
   const [students, setStudents] = useState([]);

@@ -13,7 +13,7 @@ import {
 } from 'react-icons/fi';
 
 import Image from 'next/image';
-import { LOGO_URL } from '@/lib/secret';
+import { LOGO_URL } from 'src/lib/database/secret';
 
 const iconList = [FiFlag, FiAward, FiBookmark, FiStar, FiTrendingUp];
 const colorStyles = [

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/database/db';
-import { isAdmin, isTeacher } from '@/lib/middleware/auth';
+import { query } from 'src/lib/database/db';
+import { isAdmin, isTeacher } from 'src/lib/middleware/auth';
 
 export async function POST(request) {
   try {

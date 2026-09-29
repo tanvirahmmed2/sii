@@ -4,9 +4,9 @@ import React, { useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiMenu, FiLogOut, FiUser } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
-import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import Image from 'next/image';
-import { LOGO_URL } from '@/lib/secret';
+import { LOGO_URL } from 'src/lib/database/secret';
 
 const Navbar = () => {
   const router = useRouter();

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { FiAward, FiCalendar, FiUser, FiArrowLeft } from 'react-icons/fi';
-import RichTextDisplay from '@/component/helper/RichTextDisplay';
+import RichTextDisplay from 'src/component/helper/RichTextDisplay';
 import Image from 'next/image';
 
 const RecognitionDetailPage = () => {

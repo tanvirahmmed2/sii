@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ShieldCheckIcon } from '@/component/website/ui/Icons';
-import { SITE_NAME } from '@/lib/db/secret';
+import { ShieldCheckIcon } from 'src/component/website/ui/Icons';
+import { SITE_NAME } from 'src/lib/database/secret';
 
 export default function AdminVerifyForm() {
   const router = useRouter();

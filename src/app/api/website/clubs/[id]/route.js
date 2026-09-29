@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/database/db';
-import { isAdmin, getTeacherUser, getStudentUser } from '@/lib/middleware/auth';
-import { uploadImage, deleteImage } from '@/lib/database/cloudinary';
+import { query } from 'src/lib/database/db';
+import { isAdmin, getTeacherUser, getStudentUser } from 'src/lib/middleware/auth';
+import { uploadImage, deleteImage } from 'src/lib/database/cloudinary';
 
 // GET single club details with restricted notice_info access
 export async function GET(request, { params }) {

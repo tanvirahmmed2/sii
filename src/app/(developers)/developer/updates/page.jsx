@@ -3,7 +3,7 @@
 import { useState, useEffect, useContext } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Context } from '@/components/helper/Context';
+import { Context } from 'src/component/helper/Context';
 import {
   BiSearch,
   BiPlus,

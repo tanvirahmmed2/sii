@@ -1,4 +1,4 @@
-import { SITE_NAME } from '@/lib/db/secret';
+import { SITE_NAME } from 'src/lib/database/secret';
 
 export const metadata = {
   title: `Billing & Payment History | ${SITE_NAME}`,

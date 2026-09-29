@@ -1,6 +1,6 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
-import { isStaff } from '@/lib/middleware/auth';
+import { isStaff } from 'src/lib/middleware/auth';
 
 export const dynamic = 'force-dynamic';
 

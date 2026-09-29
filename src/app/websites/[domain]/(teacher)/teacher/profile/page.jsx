@@ -9,8 +9,8 @@ import {
 } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
-import TiptapEditor from '@/component/helper/TiptapEditor';
-import RichTextDisplay from '@/component/helper/RichTextDisplay';
+import TiptapEditor from 'src/component/helper/TiptapEditor';
+import RichTextDisplay from 'src/component/helper/RichTextDisplay';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const GENDERS = ['Male', 'Female', 'Other'];

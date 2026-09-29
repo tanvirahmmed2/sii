@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { FiUsers } from 'react-icons/fi';
-import { ClubCard } from '@/component/website/cards';
+import { ClubCard } from 'src/component/website/cards';
 
 const ClubsPage = () => {
   const [clubs, setClubs] = useState([]);

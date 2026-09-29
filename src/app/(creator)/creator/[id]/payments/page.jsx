@@ -20,7 +20,7 @@ import {
   BiErrorCircle,
   BiWorld,
 } from 'react-icons/bi';
-import { generateInvoiceData, printReceipt, downloadReceiptFile } from '@/lib/invoice';
+import { generateInvoiceData, printReceipt, downloadReceiptFile } from 'src/lib/invoice';
 
 
 function PaymentsContent() {

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { verifyJWT } from '@/lib/middleware/auth';
-import { query } from '@/lib/database/db';
-import { syncExamStatuses } from '@/lib/database/exams';
+import { verifyJWT } from 'src/lib/middleware/auth';
+import { query } from 'src/lib/database/db';
+import { syncExamStatuses } from 'src/lib/database/exams';
 
 export async function GET() {
   try {

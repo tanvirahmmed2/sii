@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/database/db';
-import { isAdmin, isRegister } from '@/lib/middleware/auth';
-import { uploadImage, deleteImage } from '@/lib/database/cloudinary';
+import { query } from 'src/lib/database/db';
+import { isAdmin, isRegister } from 'src/lib/middleware/auth';
+import { uploadImage, deleteImage } from 'src/lib/database/cloudinary';
 
 function generateSlug(text, id) {
   if (!text) return String(id || '');

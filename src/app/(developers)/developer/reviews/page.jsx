@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useContext, useCallback } from 'react';
 import Link from 'next/link';
-import { Context } from '@/components/helper/Context';
+import { Context } from 'src/component/helper/Context';
 import {
   BiStar,
   BiCheckCircle,

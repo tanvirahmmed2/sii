@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { FiAward, FiBook, FiInfo, FiPrinter, FiCheckCircle } from 'react-icons/fi';
-import { printSingleMarkSheet } from '@/lib/receipts/singleMarkSheet';
+import { printSingleMarkSheet } from 'src/lib/receipts/singleMarkSheet';
 
 const ResultsPage = () => {
   const [data, setData] = useState({ results: [], marks: [] });
