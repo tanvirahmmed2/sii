@@ -17,10 +17,24 @@ export const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL;
 export const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME;
 export const BREVO_API_KEY = process.env.BREVO_API_KEY;
 
-export const SCHOOL_NAME = 'Alpha Institute'
-export const LOGO_URL = '/icon.png'
-export const META_TITLE = "Sky International Institute - Academic Excellence & Growth"
-export const META_DESCRIPTION = 'Manage student enrollments, exam records, gradesheets, timetables, and billing files dynamically.'
+export const SCHOOL_NAME = 'Alpha Institute';
+export const LOGO_URL = '/icon.png';
+export const META_TITLE = "Sky International Institute - Academic Excellence & Growth";
+export const META_DESCRIPTION = 'Manage student enrollments, exam records, gradesheets, timetables, and billing files dynamically.';
 
 export const MONTHLY_FEE_DUE_DAY = parseInt('6', 10);
 
+// Main SaaS Platform Constants
+export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || 'EduCraft SaaS';
+export const SITE_MAIL = process.env.NEXT_PUBLIC_SITE_MAIL || 'support@educraft.io';
+export const SITE_CONTACT = process.env.NEXT_PUBLIC_SITE_CONTACT || '+1 (800) 555-0199';
+export const SITE_ADDRESS = process.env.NEXT_PUBLIC_SITE_ADDRESS || 'Tech Innovation District, 100 Enterprise Way, Suite 400';
+export const LIVE_CHAT_TOKEN = process.env.LIVE_CHAT_TOKEN || 'livechat_secure_secret_token';
+export const COMPANY_NAME = process.env.NEXT_PUBLIC_COMPANY_NAME || 'EduCraft Technologies Inc.';
+export const COMPANY_URL = process.env.NEXT_PUBLIC_COMPANY_URL || 'https://educraft.io';
+
+export const DEVELOPER_TOKEN='hiesci-dev'
+export const CREATOR_TOKEN='hiesci-creator'
+export const TEACHER_TOKEN='hiesci-creator'
+export const STAFF_TOKEN='hiesci-staff'
+export const STUDENT_TOKEN='hiesci-student'

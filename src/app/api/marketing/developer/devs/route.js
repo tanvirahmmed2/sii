@@ -5,11 +5,12 @@ import { sendEmail } from '@/lib/db/mailer';
 import { SITE_NAME } from '@/lib/db/secret';
 
 async function handleCreateAdmin(d) {
-  const name = d.name?.trim();
-  const email = d.email?.trim().toLowerCase();
-  const password = d.password?.trim();
-  const roleSlug = (d.role || 'support').toLowerCase().trim();
-  const isActive = d.isActive !== undefined ? Boolean(d.isActive) : (d.is_active !== undefined ? Boolean(d.is_active) : true);
+  const data = d || {};
+  const name = data.name?.trim();
+  const email = data.email?.trim().toLowerCase();
+  const password = data.password?.trim();
+  const roleSlug = (data.role || 'developer').toLowerCase().trim();
+  const isActive = data.isActive !== undefined ? Boolean(data.isActive) : (data.is_active !== undefined ? Boolean(data.is_active) : true);
 
   if (!name || !email || !password) {
     throw new Error('Full Name, Email Address, and Password are required.');
@@ -22,24 +23,25 @@ async function handleCreateAdmin(d) {
 
   const inputRoleId = data.role_id || data.roleId;
   const roleRes = inputRoleId
-    ? await queryDb('SELECT id, slug, name FROM roles WHERE id = $1 LIMIT 1', [Number(inputRoleId)])
-    : await queryDb('SELECT id, slug, name FROM roles WHERE LOWER(slug) = LOWER($1) LIMIT 1', [roleSlug]);
+    ? await queryDb('SELECT id, slug, name FROM developer_roles WHERE id = $1 LIMIT 1', [Number(inputRoleId)])
+    : await queryDb('SELECT id, slug, name FROM developer_roles WHERE LOWER(slug) = LOWER($1) LIMIT 1', [roleSlug]);
   const roleId = roleRes.rows[0]?.id || 1;
 
   const hashedPassword = await hashPassword(password);
   const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
   const insertRes = await queryDb(
-    `INSERT INTO developers (name, email, password, role_id, is_active, is_verified, verification_code, verification_expires_at)
-     VALUES ($1, $2, $3, $4, $5, FALSE, $6, CURRENT_TIMESTAMP + INTERVAL '24 hours')
-     RETURNING id, name, email, role_id, is_active, is_verified, created_at`,
+    `INSERT INTO developers (name, email, password, role_id, is_active, two_factor_code, two_factor_expires)
+     VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP + INTERVAL '24 hours')
+     RETURNING id, name, email, role_id, is_active, created_at`,
     [name, email, hashedPassword, roleId, isActive, verificationCode]
   );
 
   const newAdmin = {
     ...insertRes.rows[0],
     role: roleRes.rows[0]?.slug || roleSlug,
-    role_name: roleRes.rows[0]?.name || 'Staff',
+    role_name: roleRes.rows[0]?.name || 'Developer',
+    is_verified: true,
     verification_code: verificationCode,
   };
 
@@ -77,14 +79,18 @@ export async function GET() {
   try {
     const [devsRes, rolesRes] = await Promise.all([
       queryDb(`
-        SELECT d.id, d.name, d.email, d.role_id, COALESCE(r.slug, 'developer') AS role, COALESCE(r.name, 'Developer') AS role_name, d.is_active, d.is_verified, d.last_login_at, d.created_at
+        SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url, d.role_id,
+               COALESCE(dr.slug, 'developer') AS role, COALESCE(dr.name, 'Developer') AS role_name,
+               d.is_active, d.last_login_at, d.created_at
         FROM developers d
-        LEFT JOIN roles r ON d.role_id = r.id
+        LEFT JOIN developer_roles dr ON d.role_id = dr.id
         ORDER BY d.id DESC
       `),
-      queryDb(`SELECT id, name, slug, description, is_system FROM roles ORDER BY id ASC`),
+      queryDb(`SELECT id, name, slug, description FROM developer_roles ORDER BY id ASC`).catch(() => ({ rows: [] })),
     ]);
-    return NextResponse.json({ success: true, table: 'developers', records: devsRes.rows, roles: rolesRes.rows });
+
+    const records = devsRes.rows.map((r) => ({ ...r, is_verified: true }));
+    return NextResponse.json({ success: true, table: 'developers', records, roles: rolesRes.rows });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -94,9 +100,9 @@ async function checkLastActiveAdminGuard(targetId, willDeactivateOrDelete = true
   if (!willDeactivateOrDelete) return null;
 
   const adminRes = await queryDb(`
-    SELECT d.id, d.role_id, COALESCE(r.slug, 'developer') AS role, d.is_active
+    SELECT d.id, d.role_id, COALESCE(dr.slug, 'developer') AS role, d.is_active
     FROM developers d
-    LEFT JOIN roles r ON d.role_id = r.id
+    LEFT JOIN developer_roles dr ON d.role_id = dr.id
     WHERE d.id = $1 LIMIT 1
   `, [targetId]);
   if (adminRes.rows.length === 0) {
@@ -110,8 +116,8 @@ async function checkLastActiveAdminGuard(targetId, willDeactivateOrDelete = true
     const countRes = await queryDb(`
       SELECT COUNT(*) as count
       FROM developers d
-      JOIN roles r ON d.role_id = r.id
-      WHERE LOWER(r.slug) = 'admin' AND d.is_active = TRUE
+      JOIN developer_roles dr ON d.role_id = dr.id
+      WHERE LOWER(dr.slug) = 'admin' AND d.is_active = TRUE
     `);
     const activeAdminCount = parseInt(countRes.rows[0].count, 10);
     if (activeAdminCount <= 1) {
@@ -144,7 +150,7 @@ export async function POST(request) {
     const body = await request.json();
     const data = body.data || body.adminData || body;
     if (devCount === 0) {
-      // First user is always admin and verified
+      // First user is always admin
       data.role = 'admin';
     }
 
@@ -183,7 +189,7 @@ export async function PUT(request) {
       const rawRole = body.role || body.newRole;
       const cleanRole = (rawRole || '').toLowerCase().trim();
 
-      const roleRes = await queryDb('SELECT id, slug, name FROM roles WHERE LOWER(slug) = LOWER($1) LIMIT 1', [cleanRole]);
+      const roleRes = await queryDb('SELECT id, slug, name FROM developer_roles WHERE LOWER(slug) = LOWER($1) LIMIT 1', [cleanRole]);
       if (roleRes.rows.length === 0) {
         return NextResponse.json(
           { success: false, error: `Invalid role "${rawRole}". Role not found in database.` },
@@ -201,7 +207,7 @@ export async function PUT(request) {
 
       const res = await queryDb(
         `UPDATE developers SET role_id = $1 WHERE id = $2 
-         RETURNING id, name, email, role_id, is_active, is_verified, created_at`,
+         RETURNING id, name, email, role_id, is_active, created_at`,
         [roleRow.id, targetId]
       );
       if (res.rows.length === 0) {
@@ -209,7 +215,7 @@ export async function PUT(request) {
       }
       return NextResponse.json({
         success: true,
-        record: { ...res.rows[0], role: roleRow.slug, role_name: roleRow.name },
+        record: { ...res.rows[0], is_verified: true, role: roleRow.slug, role_name: roleRow.name },
         message: `Role updated to ${cleanRole}.`,
       });
     }
@@ -233,7 +239,7 @@ export async function PUT(request) {
 
       const res = await queryDb(
         `UPDATE developers SET is_active = $1 WHERE id = $2 
-         RETURNING id, name, email, role_id, is_active, is_verified, created_at`,
+         RETURNING id, name, email, role_id, is_active, created_at`,
         [Boolean(nextActive), targetId]
       );
       if (res.rows.length === 0) {
@@ -241,17 +247,19 @@ export async function PUT(request) {
       }
 
       const fullRes = await queryDb(
-        `SELECT d.id, d.name, d.email, d.role_id, COALESCE(r.slug, 'developer') AS role, COALESCE(r.name, 'Developer') AS role_name,
-                d.is_active, d.is_verified, d.created_at
+        `SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url, d.role_id,
+                COALESCE(dr.slug, 'developer') AS role, COALESCE(dr.name, 'Developer') AS role_name,
+                d.is_active, d.created_at
          FROM developers d
-         LEFT JOIN roles r ON d.role_id = r.id
+         LEFT JOIN developer_roles dr ON d.role_id = dr.id
          WHERE d.id = $1 LIMIT 1`,
         [targetId]
       );
 
+      const record = fullRes.rows[0] || res.rows[0];
       return NextResponse.json({
         success: true,
-        record: fullRes.rows[0] || res.rows[0],
+        record: { ...record, is_verified: true },
         message: `Status updated to ${nextActive ? 'Active' : 'Inactive'}.`,
       });
     }
@@ -264,7 +272,7 @@ export async function PUT(request) {
 
     if (data.role) {
       const cleanRole = data.role.toLowerCase().trim();
-      const roleRes = await queryDb('SELECT id FROM roles WHERE LOWER(slug) = LOWER($1) LIMIT 1', [cleanRole]);
+      const roleRes = await queryDb('SELECT id FROM developer_roles WHERE LOWER(slug) = LOWER($1) LIMIT 1', [cleanRole]);
       if (roleRes.rows.length === 0) {
         return NextResponse.json({ success: false, error: `Invalid role "${data.role}". Role not found in database.` }, { status: 400 });
       }
@@ -287,22 +295,24 @@ export async function PUT(request) {
 
     const res = await queryDb(
       `UPDATE developers SET ${setClauses.join(', ')} WHERE id = $${values.length} 
-       RETURNING id, name, email, role_id, is_active, is_verified, created_at`,
+       RETURNING id, name, email, role_id, is_active, created_at`,
       values
     );
 
     const fullRes = await queryDb(
-      `SELECT d.id, d.name, d.email, d.role_id, COALESCE(r.slug, 'developer') AS role, COALESCE(r.name, 'Developer') AS role_name,
-              d.is_active, d.is_verified, d.created_at
+      `SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url, d.role_id,
+              COALESCE(dr.slug, 'developer') AS role, COALESCE(dr.name, 'Developer') AS role_name,
+              d.is_active, d.created_at
        FROM developers d
-       LEFT JOIN roles r ON d.role_id = r.id
+       LEFT JOIN developer_roles dr ON d.role_id = dr.id
        WHERE d.id = $1 LIMIT 1`,
       [targetId]
     );
 
+    const record = fullRes.rows[0] || res.rows[0];
     return NextResponse.json({
       success: true,
-      record: fullRes.rows[0] || res.rows[0],
+      record: { ...record, is_verified: true },
       message: 'Developer account updated successfully.',
     });
   } catch (error) {

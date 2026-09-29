@@ -1,7 +1,12 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@/components/*": ["./src/component/*"],
+      "@/lib/db/*": ["./src/lib/database/*", "./src/lib/db/*"],
+      "@/lib/secret": ["./src/lib/database/secret.js"]
     }
   }
 }
+

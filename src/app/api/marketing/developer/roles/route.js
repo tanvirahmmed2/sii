@@ -14,8 +14,8 @@ function slugify(text) {
 
 /**
  * GET /api/developer/roles
- * Returns all roles with their assigned permissions and developer counts,
- * plus all available system permissions.
+ * Returns all roles from developer_roles with their assigned permissions and developer counts,
+ * plus all available system module_permissions.
  * Optional query param: ?id=<roleId> for a single role.
  */
 export async function GET(request) {
@@ -30,23 +30,24 @@ export async function GET(request) {
 
     if (roleId) {
       const roleRes = await queryDb(
-        `SELECT r.id, r.name, r.slug, r.description, r.is_system, r.created_at, r.updated_at,
+        `SELECT r.id, r.name, r.slug, r.description, r.created_at, r.updated_at,
                 COUNT(DISTINCT d.id)::int AS developers_count,
-                COUNT(DISTINCT rp.permission_id)::int AS permissions_count,
+                COUNT(DISTINCT drp.permission_id)::int AS permissions_count,
                 COALESCE(
                   json_agg(
                     DISTINCT jsonb_build_object(
-                      'id', p.id,
-                      'name', p.name,
-                      'slug', p.slug,
-                      'folder', p.folder,
-                      'description', p.description
+                      'id', mp.id,
+                      'name', mp.name,
+                      'slug', mp.permission_key,
+                      'folder', dm.slug,
+                      'description', mp.description
                     )
-                  ) FILTER (WHERE p.id IS NOT NULL), '[]'
+                  ) FILTER (WHERE mp.id IS NOT NULL), '[]'
                 ) AS permissions
-         FROM roles r
-         LEFT JOIN role_permissions rp ON r.id = rp.role_id
-         LEFT JOIN permissions p ON rp.permission_id = p.id
+         FROM developer_roles r
+         LEFT JOIN developer_role_permissions drp ON r.id = drp.role_id
+         LEFT JOIN module_permissions mp ON drp.permission_id = mp.id
+         LEFT JOIN developer_modules dm ON mp.module_id = dm.id
          LEFT JOIN developers d ON r.id = d.role_id
          WHERE r.id = $1
          GROUP BY r.id`,
@@ -65,32 +66,33 @@ export async function GET(request) {
 
     // Fetch all roles with aggregated permission counts and developer counts
     const rolesRes = await queryDb(`
-      SELECT r.id, r.name, r.slug, r.description, r.is_system, r.created_at, r.updated_at,
+      SELECT r.id, r.name, r.slug, r.description, r.created_at, r.updated_at,
              COUNT(DISTINCT d.id)::int AS developers_count,
-             COUNT(DISTINCT rp.permission_id)::int AS permissions_count,
+             COUNT(DISTINCT drp.permission_id)::int AS permissions_count,
              COALESCE(
-               array_agg(DISTINCT p.slug) FILTER (WHERE p.slug IS NOT NULL), ARRAY[]::text[]
+               array_agg(DISTINCT mp.permission_key) FILTER (WHERE mp.permission_key IS NOT NULL), ARRAY[]::text[]
              ) AS permission_slugs,
              COALESCE(
-               array_agg(DISTINCT rp.permission_id) FILTER (WHERE rp.permission_id IS NOT NULL), ARRAY[]::int[]
+               array_agg(DISTINCT drp.permission_id) FILTER (WHERE drp.permission_id IS NOT NULL), ARRAY[]::bigint[]
              ) AS permission_ids
-      FROM roles r
-      LEFT JOIN role_permissions rp ON r.id = rp.role_id
-      LEFT JOIN permissions p ON rp.permission_id = p.id
+      FROM developer_roles r
+      LEFT JOIN developer_role_permissions drp ON r.id = drp.role_id
+      LEFT JOIN module_permissions mp ON drp.permission_id = mp.id
       LEFT JOIN developers d ON r.id = d.role_id
-      GROUP BY r.id, r.name, r.slug, r.description, r.is_system, r.created_at, r.updated_at
+      GROUP BY r.id, r.name, r.slug, r.description, r.created_at, r.updated_at
       ORDER BY r.id ASC
     `);
 
-    // Fetch all available system permissions
+    // Fetch all available system permissions from module_permissions
     const permsRes = await queryDb(`
-      SELECT p.id, p.name, p.slug, p.folder, p.description, p.created_at,
-             COUNT(DISTINCT rp.role_id)::int AS roles_count
-      FROM permissions p
-      LEFT JOIN role_permissions rp ON p.id = rp.permission_id
-      GROUP BY p.id, p.name, p.slug, p.folder, p.description, p.created_at
-      ORDER BY COALESCE(p.folder, 'general') ASC, p.name ASC
-    `);
+      SELECT mp.id, mp.name, mp.permission_key AS slug, dm.slug AS folder, mp.description, mp.created_at,
+             COUNT(DISTINCT drp.role_id)::int AS roles_count
+      FROM module_permissions mp
+      JOIN developer_modules dm ON mp.module_id = dm.id
+      LEFT JOIN developer_role_permissions drp ON mp.id = drp.permission_id
+      GROUP BY mp.id, mp.name, mp.permission_key, dm.slug, mp.description, mp.created_at
+      ORDER BY dm.slug ASC, mp.name ASC
+    `).catch(() => ({ rows: [] }));
 
     return NextResponse.json({
       success: true,
@@ -137,7 +139,7 @@ export async function POST(request) {
     }
 
     // Check slug uniqueness
-    const checkSlug = await queryDb('SELECT id FROM roles WHERE LOWER(slug) = LOWER($1)', [slug]);
+    const checkSlug = await queryDb('SELECT id FROM developer_roles WHERE LOWER(slug) = LOWER($1)', [slug]);
     if (checkSlug.rows.length > 0) {
       return NextResponse.json(
         { success: false, error: `Role with slug "${slug}" already exists. Please choose another name or slug.` },
@@ -150,19 +152,18 @@ export async function POST(request) {
       await client.query('BEGIN');
 
       const roleInsert = await client.query(
-        `INSERT INTO roles (name, slug, description, is_system, created_at, updated_at)
-         VALUES ($1, $2, $3, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-         RETURNING id, name, slug, description, is_system, created_at, updated_at`,
+        `INSERT INTO developer_roles (name, slug, description, created_at, updated_at)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+         RETURNING id, name, slug, description, created_at, updated_at`,
         [name, slug, description]
       );
       const newRole = roleInsert.rows[0];
 
       // Assign initial permissions if specified
       if (permissions.length > 0) {
-        // Find permission IDs from slugs or IDs
         const permRows = await client.query(
-          `SELECT id, slug FROM permissions 
-           WHERE id = ANY($1::int[]) OR slug = ANY($2::text[])`,
+          `SELECT id, permission_key FROM module_permissions 
+           WHERE id = ANY($1::bigint[]) OR permission_key = ANY($2::text[])`,
           [
             permissions.filter((p) => typeof p === 'number' || !isNaN(Number(p))).map(Number),
             permissions.map(String),
@@ -171,7 +172,7 @@ export async function POST(request) {
 
         for (const p of permRows.rows) {
           await client.query(
-            `INSERT INTO role_permissions (role_id, permission_id, created_at)
+            `INSERT INTO developer_role_permissions (role_id, permission_id, created_at)
              VALUES ($1, $2, CURRENT_TIMESTAMP)
              ON CONFLICT DO NOTHING`,
             [newRole.id, p.id]
@@ -216,7 +217,7 @@ export async function PUT(request) {
       return NextResponse.json({ success: false, error: 'Role ID is required.' }, { status: 400 });
     }
 
-    const roleRes = await queryDb('SELECT * FROM roles WHERE id = $1', [id]);
+    const roleRes = await queryDb('SELECT * FROM developer_roles WHERE id = $1', [id]);
     if (roleRes.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Role not found.' }, { status: 404 });
     }
@@ -226,11 +227,10 @@ export async function PUT(request) {
     const description = body.description !== undefined ? body.description.trim() : currentRole.description;
     let slug = currentRole.slug;
 
-    // Only allow slug changes for custom (non-system) roles
-    if (!currentRole.is_system && body.slug !== undefined) {
+    if (body.slug !== undefined && currentRole.slug !== 'admin') {
       const cleanSlug = slugify(body.slug);
       if (cleanSlug && cleanSlug !== currentRole.slug) {
-        const checkSlug = await queryDb('SELECT id FROM roles WHERE LOWER(slug) = LOWER($1) AND id != $2', [cleanSlug, id]);
+        const checkSlug = await queryDb('SELECT id FROM developer_roles WHERE LOWER(slug) = LOWER($1) AND id != $2', [cleanSlug, id]);
         if (checkSlug.rows.length > 0) {
           return NextResponse.json(
             { success: false, error: `Slug "${cleanSlug}" is already taken by another role.` },
@@ -250,18 +250,17 @@ export async function PUT(request) {
       await client.query('BEGIN');
 
       await client.query(
-        `UPDATE roles 
+        `UPDATE developer_roles 
          SET name = $1, slug = $2, description = $3, updated_at = CURRENT_TIMESTAMP
          WHERE id = $4`,
         [name, slug, description, id]
       );
 
-      // If permissions array is provided in the request body, synchronize role_permissions
+      // If permissions array is provided in the request body, synchronize developer_role_permissions
       if (Array.isArray(body.permissions)) {
-        // Resolve permission IDs from IDs or slugs
         const permRows = await client.query(
-          `SELECT id, slug FROM permissions 
-           WHERE id = ANY($1::int[]) OR slug = ANY($2::text[])`,
+          `SELECT id, permission_key FROM module_permissions 
+           WHERE id = ANY($1::bigint[]) OR permission_key = ANY($2::text[])`,
           [
             body.permissions.filter((p) => typeof p === 'number' || !isNaN(Number(p))).map(Number),
             body.permissions.map(String),
@@ -272,14 +271,14 @@ export async function PUT(request) {
 
         // Delete permissions not in target list
         await client.query(
-          `DELETE FROM role_permissions WHERE role_id = $1 AND permission_id != ALL($2::int[])`,
+          `DELETE FROM developer_role_permissions WHERE role_id = $1 AND permission_id != ALL($2::bigint[])`,
           [id, targetPermIds.length > 0 ? targetPermIds : [-1]]
         );
 
         // Insert new permissions
         for (const pId of targetPermIds) {
           await client.query(
-            `INSERT INTO role_permissions (role_id, permission_id, created_at)
+            `INSERT INTO developer_role_permissions (role_id, permission_id, created_at)
              VALUES ($1, $2, CURRENT_TIMESTAMP)
              ON CONFLICT DO NOTHING`,
             [id, pId]
@@ -291,12 +290,12 @@ export async function PUT(request) {
 
       const updatedRes = await queryDb(
         `SELECT r.*, 
-                COUNT(DISTINCT rp.permission_id)::int AS permissions_count,
+                COUNT(DISTINCT drp.permission_id)::int AS permissions_count,
                 COUNT(DISTINCT d.id)::int AS developers_count,
-                COALESCE(array_agg(DISTINCT p.slug) FILTER (WHERE p.slug IS NOT NULL), ARRAY[]::text[]) AS permission_slugs
-         FROM roles r
-         LEFT JOIN role_permissions rp ON r.id = rp.role_id
-         LEFT JOIN permissions p ON rp.permission_id = p.id
+                COALESCE(array_agg(DISTINCT mp.permission_key) FILTER (WHERE mp.permission_key IS NOT NULL), ARRAY[]::text[]) AS permission_slugs
+         FROM developer_roles r
+         LEFT JOIN developer_role_permissions drp ON r.id = drp.role_id
+         LEFT JOIN module_permissions mp ON drp.permission_id = mp.id
          LEFT JOIN developers d ON r.id = d.role_id
          WHERE r.id = $1
          GROUP BY r.id`,
@@ -342,15 +341,15 @@ export async function DELETE(request) {
       return NextResponse.json({ success: false, error: 'Role ID is required.' }, { status: 400 });
     }
 
-    const roleRes = await queryDb('SELECT * FROM roles WHERE id = $1', [id]);
+    const roleRes = await queryDb('SELECT * FROM developer_roles WHERE id = $1', [id]);
     if (roleRes.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Role not found.' }, { status: 404 });
     }
 
     const role = roleRes.rows[0];
 
-    // System roles protection
-    if (role.is_system || role.slug === 'admin') {
+    // Admin role protection
+    if (role.slug === 'admin') {
       return NextResponse.json(
         { success: false, error: `System role "${role.name}" cannot be deleted.` },
         { status: 400 }
@@ -373,8 +372,8 @@ export async function DELETE(request) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      await client.query('DELETE FROM role_permissions WHERE role_id = $1', [id]);
-      await client.query('DELETE FROM roles WHERE id = $1', [id]);
+      await client.query('DELETE FROM developer_role_permissions WHERE role_id = $1', [id]);
+      await client.query('DELETE FROM developer_roles WHERE id = $1', [id]);
       await client.query('COMMIT');
 
       return NextResponse.json({

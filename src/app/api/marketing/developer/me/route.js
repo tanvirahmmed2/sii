@@ -17,20 +17,24 @@ export async function GET(request) {
       return NextResponse.json({ success: false, user: null, message: 'Not logged in.' }, { status: 401 });
     }
 
-    const role = (user.role || '').toLowerCase();
     return NextResponse.json({
       success: true,
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
+        phone: user.phone || '',
+        designation: user.designation || 'Software Engineer',
+        avatarUrl: user.avatarUrl || null,
+        bio: user.bio || '',
+        githubProfile: user.githubProfile || '',
+        linkedinProfile: user.linkedinProfile || '',
         role: user.role,
-        roleName: user.role_name || user.role,
+        roleName: user.roleName || user.role,
         permissions: user.permissions || [],
-        isAdmin: (user.permissions || []).includes('developers'),
-        isActive: user.is_active !== false,
-        isVerified: user.is_verified === true,
-        twoFactorEnabled: user.two_factor_enabled || false,
+        isAdmin: Boolean(user.isAdmin),
+        isActive: user.isActive !== false,
+        isVerified: true,
       },
     });
   } catch (error) {
@@ -52,10 +56,12 @@ export async function PUT(request) {
     const data = body.data || body;
 
     const currentRes = await queryDb(
-      `SELECT d.id, d.name, d.email, d.password, d.role_id, COALESCE(r.slug, 'developer') AS role, COALESCE(r.name, 'Developer') AS role_name,
-              d.is_active, d.is_verified, d.two_factor_enabled
+      `SELECT d.id, d.name, d.email, d.phone, d.designation, d.bio, d.avatar_url,
+              d.github_profile, d.linkedin_profile, d.password, d.role_id,
+              COALESCE(dr.slug, 'developer') AS role, COALESCE(dr.name, 'Developer') AS role_name,
+              d.is_active
        FROM developers d
-       LEFT JOIN roles r ON d.role_id = r.id
+       LEFT JOIN developer_roles dr ON d.role_id = dr.id
        WHERE d.id = $1 LIMIT 1`,
       [authUser.id]
     );
@@ -102,11 +108,11 @@ export async function PUT(request) {
       }
     }
 
-    // 3. Two-factor
-    let newTwoFactor = currentDev.two_factor_enabled;
-    if (data.two_factor_enabled !== undefined) {
-      newTwoFactor = Boolean(data.two_factor_enabled);
-    }
+    // 3. Profile fields
+    const newPhone = data.phone !== undefined ? data.phone.trim() : currentDev.phone;
+    const newBio = data.bio !== undefined ? data.bio.trim() : currentDev.bio;
+    const newGithub = data.github_profile !== undefined ? data.github_profile.trim() : currentDev.github_profile;
+    const newLinkedin = data.linkedin_profile !== undefined ? data.linkedin_profile.trim() : currentDev.linkedin_profile;
 
     // 4. Password change
     let newPasswordHash = currentDev.password;
@@ -139,10 +145,10 @@ export async function PUT(request) {
 
     const updateRes = await queryDb(
       `UPDATE developers
-       SET name = $1, email = $2, password = $3, two_factor_enabled = $4, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $5
-       RETURNING id, name, email, role_id, is_active, is_verified, two_factor_enabled, last_login_at, last_login_ip, created_at, updated_at`,
-      [newName, newEmail, newPasswordHash, newTwoFactor, authUser.id]
+       SET name = $1, email = $2, phone = $3, bio = $4, github_profile = $5, linkedin_profile = $6, password = $7, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $8
+       RETURNING id, name, email, phone, designation, bio, avatar_url, github_profile, linkedin_profile, role_id, is_active, last_login_at, created_at, updated_at`,
+      [newName, newEmail, newPhone, newBio, newGithub, newLinkedin, newPasswordHash, authUser.id]
     );
 
     const updated = {
@@ -150,7 +156,6 @@ export async function PUT(request) {
       role: currentDev.role,
       role_name: currentDev.role_name,
     };
-    const role = (updated.role || '').toLowerCase();
 
     const response = NextResponse.json({
       success: true,
@@ -159,27 +164,31 @@ export async function PUT(request) {
         id: updated.id,
         name: updated.name,
         email: updated.email,
+        phone: updated.phone || '',
+        designation: updated.designation || 'Software Engineer',
+        avatarUrl: updated.avatar_url || null,
+        bio: updated.bio || '',
+        githubProfile: updated.github_profile || '',
+        linkedinProfile: updated.linkedin_profile || '',
         role: updated.role,
         roleName: updated.role_name || updated.role,
         permissions: authUser.permissions || [],
-        isAdmin: (authUser.permissions || []).includes('developers'),
+        isAdmin: Boolean(authUser.isAdmin),
         isActive: updated.is_active !== false,
-        isVerified: updated.is_verified === true,
-        twoFactorEnabled: updated.two_factor_enabled || false,
+        isVerified: true,
       },
     });
 
     if (emailChanged) {
       try {
         const refreshedToken = generateToken(
-          { id: updated.id, email: newEmail, role: updated.role },
+          { id: updated.id, email: newEmail, role: updated.role, roleId: updated.role_id },
           '7d'
         );
-        await queryDb('UPDATE session SET token = $1 WHERE developer_id = $2 AND token = $3', [
-          refreshedToken,
-          updated.id,
-          authUser.current_session_token,
-        ]).catch(() => {});
+        await queryDb(
+          'UPDATE developer_login_sessions SET token = $1 WHERE developer_id = $2 AND is_active = TRUE',
+          [refreshedToken, updated.id]
+        ).catch(() => {});
 
         await setAdminSessionCookie(response, refreshedToken);
       } catch (cookieErr) {

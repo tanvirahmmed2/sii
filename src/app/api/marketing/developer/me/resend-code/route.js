@@ -17,7 +17,7 @@ export async function POST(request) {
     const cleanEmail = email.trim().toLowerCase();
 
     const adminRes = await queryDb(
-      `SELECT id, name, email, is_verified 
+      `SELECT id, name, email, is_active 
        FROM developers 
        WHERE LOWER(email) = $1 LIMIT 1`,
       [cleanEmail]
@@ -32,10 +32,10 @@ export async function POST(request) {
 
     const admin = adminRes.rows[0];
 
-    if (admin.is_verified) {
+    if (!admin.is_active) {
       return NextResponse.json(
-        { success: false, error: 'This account is already verified. You can sign in directly.' },
-        { status: 400 }
+        { success: false, error: 'This developer account has been deactivated.' },
+        { status: 403 }
       );
     }
 
@@ -43,7 +43,7 @@ export async function POST(request) {
 
     await queryDb(
       `UPDATE developers 
-       SET verification_code = $1, verification_expires_at = CURRENT_TIMESTAMP + INTERVAL '24 hours' 
+       SET two_factor_code = $1, two_factor_expires = CURRENT_TIMESTAMP + INTERVAL '24 hours', updated_at = CURRENT_TIMESTAMP 
        WHERE id = $2`,
       [newCode, admin.id]
     );

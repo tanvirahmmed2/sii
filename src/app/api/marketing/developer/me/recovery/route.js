@@ -27,7 +27,7 @@ export async function POST(request) {
 
       const adminRes = await queryDb(
         `SELECT * FROM developers 
-         WHERE LOWER(email) = $1 AND forget_token = $2 AND forget_token_expires_at > CURRENT_TIMESTAMP 
+         WHERE LOWER(email) = $1 AND recovery_token = $2 AND recovery_token_expires > CURRENT_TIMESTAMP 
          LIMIT 1`,
         [cleanEmail, token.trim()]
       );
@@ -42,14 +42,14 @@ export async function POST(request) {
       const hashedPassword = await hashPassword(newPassword.trim());
       await queryDb(
         `UPDATE developers 
-         SET password = $1, forget_token = NULL, forget_token_expires_at = NULL 
+         SET password = $1, recovery_token = NULL, recovery_token_expires = NULL 
          WHERE id = $2`,
         [hashedPassword, adminRes.rows[0].id]
       );
 
       // Invalidate existing sessions for security
       try {
-        await queryDb('UPDATE session SET is_revoked = TRUE WHERE developer_id = $1', [adminRes.rows[0].id]);
+        await queryDb('UPDATE developer_login_sessions SET is_active = FALSE WHERE developer_id = $1', [adminRes.rows[0].id]);
       } catch (_) {}
 
       return NextResponse.json({
@@ -65,7 +65,7 @@ export async function POST(request) {
     if (dbAdmin.rows.length > 0) {
       await queryDb(
         `UPDATE developers 
-         SET forget_token = $1, forget_token_expires_at = CURRENT_TIMESTAMP + INTERVAL '1 hour' 
+         SET recovery_token = $1, recovery_token_expires = CURRENT_TIMESTAMP + INTERVAL '1 hour' 
          WHERE id = $2`,
         [generatedToken, dbAdmin.rows[0].id]
       );

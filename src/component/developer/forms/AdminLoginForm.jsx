@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ShieldCheckIcon } from '@/components/ui/Icons';
 import { SITE_NAME } from '@/lib/db/secret';
+import { Context } from '@/components/helper/Context';
 
 export default function AdminLoginForm() {
   const router = useRouter();
+  const context = useContext(Context);
   const [email, setEmail] = useState('support@disibin.com');
   const [password, setPassword] = useState('123');
   const [showPassword, setShowPassword] = useState(false);
@@ -31,6 +33,9 @@ export default function AdminLoginForm() {
       const data = await res.json();
 
       if (res.ok && data.success) {
+        if (context?.fetchCurrentUser) {
+          await context.fetchCurrentUser();
+        }
         router.push('/developer');
         router.refresh();
       } else {

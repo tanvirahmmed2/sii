@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { authenticateAdmin } from '@/lib/middleware/developer';
+import { DEVELOPER_TOKEN } from '@/lib/database/secret';
 
 export async function POST(request) {
   try {
@@ -16,12 +17,27 @@ export async function POST(request) {
     const userAgent = request.headers.get('user-agent') || 'Unknown';
 
     const result = await authenticateAdmin(email, password, { ip, userAgent });
-    return NextResponse.json({
+
+    const response = NextResponse.json({
       success: true,
       admin: result.admin,
       token: result.token,
       message: 'Logged in successfully.',
     });
+
+    const cookieName = DEVELOPER_TOKEN || 'hiesci-dev';
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60,
+    };
+
+    response.cookies.set(cookieName, result.token, cookieOptions);
+    response.cookies.set('dev_admin_token', result.token, cookieOptions);
+
+    return response;
   } catch (error) {
     return NextResponse.json(
       {

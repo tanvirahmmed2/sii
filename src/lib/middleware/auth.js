@@ -1,8 +1,8 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
-import { JWT_SECRET } from './secret';
-import { query } from './db';
+import { JWT_SECRET } from '../database/secret.js';
+import { query } from '../database/db.js';
 
 const DEFAULT_JWT_SECRET = JWT_SECRET || 'fallback_secret_for_dev_mode';
 

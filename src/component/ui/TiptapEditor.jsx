@@ -2,7 +2,6 @@
 
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
 import { useEffect } from 'react';
 import {
@@ -35,9 +34,6 @@ export default function TiptapEditor({
         heading: {
           levels: [1, 2, 3],
         },
-      }),
-      Placeholder.configure({
-        placeholder,
       }),
       Link.configure({
         openOnClick: false,

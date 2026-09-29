@@ -16,7 +16,7 @@ export async function POST(request) {
     const cleanCode = code.toString().trim();
 
     const adminRes = await queryDb(
-      `SELECT id, email, is_verified, verification_code, verification_expires_at 
+      `SELECT id, email, two_factor_code, two_factor_expires 
        FROM developers 
        WHERE LOWER(email) = $1 LIMIT 1`,
       [cleanEmail]
@@ -31,21 +31,21 @@ export async function POST(request) {
 
     const admin = adminRes.rows[0];
 
-    if (admin.is_verified) {
+    if (!admin.two_factor_code) {
       return NextResponse.json({
         success: true,
         message: 'Account is already verified. You can log in.',
       });
     }
 
-    if (!admin.verification_code || admin.verification_code !== cleanCode) {
+    if (admin.two_factor_code !== cleanCode) {
       return NextResponse.json(
         { success: false, error: 'Invalid verification code. Please check and try again.' },
         { status: 400 }
       );
     }
 
-    if (admin.verification_expires_at && new Date(admin.verification_expires_at) < new Date()) {
+    if (admin.two_factor_expires && new Date(admin.two_factor_expires) < new Date()) {
       return NextResponse.json(
         { success: false, error: 'This verification code has expired. Please request a new one.' },
         { status: 400 }
@@ -54,7 +54,7 @@ export async function POST(request) {
 
     await queryDb(
       `UPDATE developers 
-       SET is_verified = TRUE, verification_code = NULL, verification_expires_at = NULL 
+       SET two_factor_code = NULL, two_factor_expires = NULL, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $1`,
       [admin.id]
     );
