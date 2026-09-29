@@ -2,8 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import { JWT_SECRET, DEVELOPER_TOKEN } from '../database/secret.js';
-import { queryDb } from '../db/pg.js';
-
+import { query } from '../database/db.js';
 const DEFAULT_JWT_SECRET = JWT_SECRET || 'developer_superadmin_jwt_secret_key_2026';
 const ADMIN_COOKIE_NAME = DEVELOPER_TOKEN || 'hiesci-dev';
 const FALLBACK_COOKIE_NAME = 'dev_admin_token';
@@ -115,7 +114,7 @@ export async function getAdminSession(request) {
     if (!decoded || !decoded.id) return null;
 
     // Verify against database adhering to schema.psql developers & developer_roles
-    const res = await queryDb(
+    const res = await query(
       `SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url, d.bio,
               d.github_profile, d.linkedin_profile, d.role_id, d.is_active,
               COALESCE(dr.slug, 'developer') as role, 

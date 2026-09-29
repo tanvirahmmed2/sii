@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import { JWT_SECRET } from '../database/secret.js';
-import { queryDb } from '../db/pg.js';
+import { query } from '../database/db.js';
 
 const DEFAULT_JWT_SECRET = JWT_SECRET || 'creator_studio_jwt_secret_key_2026';
 const CREATOR_COOKIE_NAME = 'creator_session_token';
@@ -94,7 +94,7 @@ export async function getCreatorSession(request) {
     const decoded = verifyJWT(token);
     if (!decoded || !decoded.id) return null;
 
-    const res = await queryDb(
+    const res = await query(
       `SELECT id, name, email, phone, bio, avatar_url, is_active, is_verified, created_at
        FROM creators
        WHERE id = $1 LIMIT 1`,

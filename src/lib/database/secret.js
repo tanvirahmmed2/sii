@@ -25,8 +25,8 @@ export const META_DESCRIPTION = 'Manage student enrollments, exam records, grade
 export const MONTHLY_FEE_DUE_DAY = parseInt('6', 10);
 
 // Main SaaS Platform Constants
-export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || 'EduCraft SaaS';
-export const SITE_MAIL = process.env.NEXT_PUBLIC_SITE_MAIL || 'support@educraft.io';
+export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || 'Hiesci';
+export const SITE_MAIL = process.env.NEXT_PUBLIC_SITE_MAIL || 'support@hiesci.io';
 export const SITE_CONTACT = process.env.NEXT_PUBLIC_SITE_CONTACT || '+1 (800) 555-0199';
 export const SITE_ADDRESS = process.env.NEXT_PUBLIC_SITE_ADDRESS || 'Tech Innovation District, 100 Enterprise Way, Suite 400';
 export const LIVE_CHAT_TOKEN = process.env.LIVE_CHAT_TOKEN || 'livechat_secure_secret_token';

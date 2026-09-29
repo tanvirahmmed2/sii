@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { queryDb } from '@/lib/db/pg';
-import { sendEmail } from '@/lib/db/mailer';
 import { SITE_NAME } from '@/lib/db/secret';
 import {
   authenticateCreator,
@@ -11,6 +10,7 @@ import {
   generateToken,
   hashPassword,
 } from '@/lib/middleware/creator';
+import { sendEmail } from '@/lib/database/brevo';
 
 /**
  * API Route: /api/creator/auth
@@ -333,7 +333,7 @@ export async function handleAuthAction(body, request) {
 
     const creator = res.rows[0];
     try {
-      await sendEmail({
+      await brevo({
         to: cleanEmail,
         subject: `Your Password Reset Code: ${recoveryCode} - ${SITE_NAME}`,
         html: `

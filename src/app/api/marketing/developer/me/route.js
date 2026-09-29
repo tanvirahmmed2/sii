@@ -6,7 +6,7 @@ import {
   generateToken,
   setAdminSessionCookie,
 } from '@/lib/middleware/developer';
-import { queryDb } from '@/lib/db/pg';
+import { query } from '@/lib/database/db';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -55,7 +55,7 @@ export async function PUT(request) {
     const body = await request.json().catch(() => ({}));
     const data = body.data || body;
 
-    const currentRes = await queryDb(
+    const currentRes = await query(
       `SELECT d.id, d.name, d.email, d.phone, d.designation, d.bio, d.avatar_url,
               d.github_profile, d.linkedin_profile, d.password, d.role_id,
               COALESCE(dr.slug, 'developer') AS role, COALESCE(dr.name, 'Developer') AS role_name,
@@ -94,7 +94,7 @@ export async function PUT(request) {
       }
 
       if (newEmail !== currentDev.email.toLowerCase()) {
-        const check = await queryDb(
+        const check = await query(
           'SELECT id FROM developers WHERE LOWER(email) = LOWER($1) AND id != $2 LIMIT 1',
           [newEmail, authUser.id]
         );
@@ -143,7 +143,7 @@ export async function PUT(request) {
       newPasswordHash = await hashPassword(data.newPassword.trim());
     }
 
-    const updateRes = await queryDb(
+    const updateRes = await query(
       `UPDATE developers
        SET name = $1, email = $2, phone = $3, bio = $4, github_profile = $5, linkedin_profile = $6, password = $7, updated_at = CURRENT_TIMESTAMP
        WHERE id = $8
@@ -185,7 +185,7 @@ export async function PUT(request) {
           { id: updated.id, email: newEmail, role: updated.role, roleId: updated.role_id },
           '7d'
         );
-        await queryDb(
+        await query(
           'UPDATE developer_login_sessions SET token = $1 WHERE developer_id = $2 AND is_active = TRUE',
           [refreshedToken, updated.id]
         ).catch(() => {});
