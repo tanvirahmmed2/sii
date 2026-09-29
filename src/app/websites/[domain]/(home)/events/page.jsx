@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import EventCard from '@/component/cards/EventCard';
+import EventCard from '@/component/website/cards/EventCard';
 import { FiCalendar } from 'react-icons/fi';
 
 const EventsPage = () => {

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { FiAward, FiArrowLeft } from 'react-icons/fi';
-import RecognitionCard from '@/component/cards/RecognitionCard';
+import RecognitionCard from '@/component/website/cards/RecognitionCard';
 
 const RecognitionsPage = () => {
   const [recognitions, setRecognitions] = useState([]);

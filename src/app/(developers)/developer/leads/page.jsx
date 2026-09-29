@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { BiSearch, BiPlus, BiMinus, BiTrash, BiRefresh } from 'react-icons/bi';
-import LeadForm from '@/components/developer/forms/LeadForm';
+import LeadForm from '@/component/marketing/developer/forms/LeadForm';
 
 export default function AdminLeadsPage() {
   const [leads, setLeads] = useState([]);

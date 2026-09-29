@@ -3,7 +3,7 @@
 import { useState, useContext } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ShieldCheckIcon } from '@/components/ui/Icons';
+import { ShieldCheckIcon } from '@/component/website/ui/Icons';
 import { SITE_NAME } from '@/lib/db/secret';
 import { Context } from '@/components/helper/Context';
 

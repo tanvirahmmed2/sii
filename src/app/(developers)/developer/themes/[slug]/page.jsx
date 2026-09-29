@@ -10,7 +10,7 @@ import {
   BiLoaderAlt,
   BiPalette,
 } from 'react-icons/bi';
-import ThemeForm from '@/components/developer/forms/ThemeForm';
+import ThemeForm from '@/component/marketing/developer/forms/ThemeForm';
 
 export default function ThemeDetailPage({ params }) {
   const resolvedParams = use(params);

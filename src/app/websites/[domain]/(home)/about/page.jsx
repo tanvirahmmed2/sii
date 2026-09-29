@@ -14,7 +14,7 @@ import {
   FiUserCheck,
   FiAward
 } from 'react-icons/fi';
-import AuthorityCard from '@/component/cards/AuthorityCard';
+import AuthorityCard from '@/component/website/cards/AuthorityCard';
 import { SCHOOL_NAME, LOGO_URL } from '@/lib/secret';
 import Image from 'next/image';
 

@@ -1,4 +1,4 @@
-import TestimonialIssuer from '@/component/pages/documents/TestimonialIssuer';
+import TestimonialIssuer from '@/component/website/pages/documents/TestimonialIssuer';
 
 export default function Page() {
   return <TestimonialIssuer />;

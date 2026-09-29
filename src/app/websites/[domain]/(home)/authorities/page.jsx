@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useContext } from 'react';
 import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
-import AuthorityCard from '@/component/cards/AuthorityCard';
+import AuthorityCard from '@/component/website/cards/AuthorityCard';
 import { FiUsers, FiAward, FiBriefcase } from 'react-icons/fi';
 
 const AuthoritiesPage = () => {

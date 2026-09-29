@@ -9,7 +9,7 @@ import {
   BiLoaderAlt,
   BiCube,
 } from 'react-icons/bi';
-import PackageForm from '@/components/developer/forms/PackageForm';
+import PackageForm from '@/component/marketing/developer/forms/PackageForm';
 
 export default function PackageDetailPage({ params }) {
   const resolvedParams = use(params);

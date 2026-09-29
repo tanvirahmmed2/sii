@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { BiPalette, BiSearch, BiGridAlt, BiLayer, BiRefresh } from 'react-icons/bi';
-import Theme from '@/components/home/cards/Theme';
+import Theme from '@/component/marketing/home/cards/Theme';
 
 export default function ThemesPage() {
   const [themes, setThemes] = useState([]);

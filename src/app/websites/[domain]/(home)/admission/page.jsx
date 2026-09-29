@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Life from '@/component/pages/home/Life';
-import { AdmissionCircularCard } from '@/component/cards';
+import Life from '@/component/website/pages/home/Life';
+import { AdmissionCircularCard } from '@/component/website/cards';
 
 const AdmissionPage = () => {
   const [circulars, setCirculars] = useState([]);

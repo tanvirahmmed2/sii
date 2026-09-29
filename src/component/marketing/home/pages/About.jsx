@@ -13,8 +13,8 @@ import Link from 'next/link';
 export const data = [
   { id: 1, title: 'Ready UI Components', number: '110+', icon: BiCube, accent: 'from-blue-500 to-indigo-600' },
   { id: 2, title: 'Responsive Themes', number: '56+', icon: BiPalette, accent: 'from-purple-500 to-pink-600' },
-  { id: 3, title: 'Active Creators', number: '23,000+', icon: BiGroup, accent: 'from-amber-500 to-orange-600' },
-  { id: 4, title: 'Verified Reviews', number: '950+', icon: BiStar, accent: 'from-emerald-500 to-teal-600' },
+  { id: 3, title: 'Active Students', number: '23,000+', icon: BiGroup, accent: 'from-amber-500 to-orange-600' },
+  { id: 4, title: 'Reviews', number: '950+', icon: BiStar, accent: 'from-emerald-500 to-teal-600' },
 ];
 
 export default function About() {
@@ -25,11 +25,11 @@ export default function About() {
           
 
           <h2 className="text-2xl sm:text-4xl lg:text-5xl font-semibold text-slate-900 dark:text-white tracking-tight leading-snug">
-            Simplifying your website building experience with ready-to-use, customizable tools
+            Simplifying website building experience with ready-to-use, customizable tools
           </h2>
 
           <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed font-normal">
-            Whether you are launching your first portfolio, scaling an agency, or running a direct-to-consumer store, our platform gives you the visual freedom and business backend to succeed without technical debt.
+            Whether launching first educational system and hub, our platform gives you the visual freedom and business backend to succeed without technical debt.
           </p>
         </div>
 

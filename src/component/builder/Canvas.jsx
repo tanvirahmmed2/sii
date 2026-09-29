@@ -5,7 +5,7 @@ import {
   PlusIcon,
   CheckCircleIcon,
   StarIcon,
-} from '@/components/ui/Icons';
+} from '@/component/website/ui/Icons';
 
 export default function Canvas({
   sections = [],

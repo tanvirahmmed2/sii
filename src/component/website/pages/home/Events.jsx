@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { FiInfo, FiArrowRight } from 'react-icons/fi';
 import Link from 'next/link';
-import EventCard from '@/component/cards/EventCard';
+import EventCard from '@/component/website/cards/EventCard';
 
 const Events = () => {
   const [events, setEvents] = useState([]);

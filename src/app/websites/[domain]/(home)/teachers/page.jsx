@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import TeacherCard from '@/component/cards/TeacherCard';
+import TeacherCard from '@/component/website/cards/TeacherCard';
 import { FiUser } from 'react-icons/fi';
 
 const TeachersPage = () => {

@@ -8,7 +8,7 @@ import { Context } from '@/components/helper/Context';
 import Sidebar from './Sidebar';
 
 export default function HomeNavbar() {
-  const { apps = [], creator } = useContext(Context) || {};
+  const {  creator } = useContext(Context) || {};
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -36,39 +36,7 @@ export default function HomeNavbar() {
               Themes
             </Link>
 
-            {/* Ecosystem Apps Dropdown */}
-            <div className="relative group flex items-center">
-              <Link
-                href="/apps"
-                className="text-xs xl:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary-light px-3 py-2 rounded-xl  transition-colors flex items-center gap-1"
-              >
-                <span>Apps</span>
-                {apps && apps.length > 0 && (
-                  <BiChevronDown className="text-xs text-slate-400 group-hover:text-secondary transition-transform duration-200 group-hover:rotate-180" />
-                )}
-              </Link>
-
-              {apps && apps.length > 0 && (
-                <div className="absolute left-0 top-full pt-1 hidden group-hover:flex flex-col z-50 animate-in fade-in duration-150">
-                  <div className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200  shadow-2xl border border-slate-100 dark:border-slate-800 min-w-56 overflow-hidden">
-                    
-                    <div className="max-h-64 overflow-y-auto ">
-                      {apps.map((a) => (
-                        <Link
-                          key={a.id}
-                          href={a.path || `/apps/${a.slug}`}
-                          className="px-3.5 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-secondary flex items-center justify-between"
-                        >
-                          <span className="truncate">{a.title}</span>
-                        </Link>
-                      ))}
-                    </div>
-                    
-                  </div>
-                </div>
-              )}
-            </div>
-
+            
             <Link
               href="/packages"
               className="text-xs xl:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary-light px-3 py-2 rounded-xl  transition-colors"

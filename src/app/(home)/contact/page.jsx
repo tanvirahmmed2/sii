@@ -7,7 +7,7 @@ import {
   CheckCircleIcon,
   ShieldCheckIcon,
   ExternalLinkIcon,
-} from '@/components/ui/Icons';
+} from '@/component/website/ui/Icons';
 import { MdMail } from 'react-icons/md';
 import { SITE_ADDRESS, SITE_CONTACT, SITE_MAIL } from '@/lib/db/secret';
 import { BiGlobe } from 'react-icons/bi';

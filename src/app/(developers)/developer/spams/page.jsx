@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { AlertCircleIcon, ShieldCheckIcon, CheckCircleIcon } from '@/components/ui/Icons';
+import { AlertCircleIcon, ShieldCheckIcon, CheckCircleIcon } from '@/component/website/ui/Icons';
 
 export default function AdminSpamModerationPage() {
   const [spams, setSpams] = useState([]);

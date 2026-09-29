@@ -10,7 +10,7 @@ import {
   BiLoaderAlt,
   BiFile,
 } from 'react-icons/bi';
-import BlogForm from '@/components/developer/forms/BlogForm';
+import BlogForm from '@/component/marketing/developer/forms/BlogForm';
 
 export default function BlogDetailPage({ params }) {
   const resolvedParams = use(params);

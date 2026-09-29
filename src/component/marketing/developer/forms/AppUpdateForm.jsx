@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import TiptapEditor from '@/components/ui/TiptapEditor';
+import TiptapEditor from '@/component/website/ui/TiptapEditor';
 import {
   BiEdit,
   BiX,

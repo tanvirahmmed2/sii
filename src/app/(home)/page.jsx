@@ -1,10 +1,10 @@
-import About from '@/components/home/pages/About'
-import Hero from '@/components/home/pages/Hero'
-import LearnMore from '@/components/home/pages/LearnMore'
-import Reviews from '@/components/home/pages/Reviews'
-import Partners from '@/components/home/pages/Partners'
+import About from '@/component/marketing/home/pages/About'
+import Hero from '@/component/marketing/home/pages/Hero'
+import LearnMore from '@/component/marketing/home/pages/LearnMore'
+import Reviews from '@/component/marketing/home/pages/Reviews'
+import Partners from '@/component/marketing/home/pages/Partners'
 import React from 'react'
-import Main from '@/component/home/pages/Main'
+import Main from '@/component/marketing/home/pages/Main'
 
 const page = () => {
   return (

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { BiSearch, BiPlus, BiMinus, BiTrash, BiRefresh } from 'react-icons/bi';
-import SubscriptionForm from '@/components/developer/forms/SubscriptionForm';
+import SubscriptionForm from '@/component/marketing/developer/forms/SubscriptionForm';
 
 export default function AdminSubscriptionsPage() {
   const [subs, setSubs] = useState([]);

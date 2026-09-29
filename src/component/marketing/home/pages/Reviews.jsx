@@ -25,7 +25,7 @@ export default function Reviews() {
           
 
           <h2 className="text-2xl sm:text-4xl lg:text-5xl font-semibold text-slate-900 dark:text-white tracking-tight leading-snug">
-            Trusted by creators, agencies, and online stores worldwide
+            Trusted by authorities and students worldwide
           </h2>
 
           <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed font-normal">

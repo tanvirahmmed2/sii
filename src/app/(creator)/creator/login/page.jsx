@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { BiLoaderAlt, BiLockAlt, BiShieldQuarter, BiEnvelope, BiArrowBack } from 'react-icons/bi';
-import CreatorAuthLayout from '@/components/creator/CreatorAuthLayout';
+import CreatorAuthLayout from '@/component/marketing/creator/CreatorAuthLayout';
 
 export default function CreatorLoginPage() {
   const router = useRouter();

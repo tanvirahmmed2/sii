@@ -17,7 +17,7 @@ import {
   BiInfoCircle,
   BiLockAlt,
 } from 'react-icons/bi';
-import FeatureForm from '@/components/developer/forms/FeatureForm';
+import FeatureForm from '@/component/marketing/developer/forms/FeatureForm';
 
 export default function AdminFeaturesPage() {
   const { user } = useContext(Context) || {};

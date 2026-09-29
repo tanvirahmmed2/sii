@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import AchievementCard from '@/component/cards/AchievementCard';
+import AchievementCard from '@/component/website/cards/AchievementCard';
 import { FiAward } from 'react-icons/fi';
 
 const AchievementsPage = () => {

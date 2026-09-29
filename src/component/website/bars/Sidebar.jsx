@@ -3,7 +3,7 @@
 import React, { useContext, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { TenantWebsiteContext } from '../helper/WebsiteContext';
+import { TenantWebsiteContext } from '../../helper/WebsiteContext';
 import { FiX, FiChevronDown, FiHome, FiInfo, FiBookOpen, FiGrid, FiMail, FiLogIn, FiArrowRight, FiCalendar, FiShield } from 'react-icons/fi';
 import { MdOutlineAnnouncement } from 'react-icons/md';
 import { SCHOOL_NAME } from '@/lib/secret';

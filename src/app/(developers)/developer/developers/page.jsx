@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import AdminForm from '@/components/developer/forms/AdminForm';
+import AdminForm from '@/component/marketing/developer/forms/AdminForm';
 import { BiEdit, BiTrash, BiLockAlt, BiShieldQuarter, BiX, BiCheck, BiUserCheck, BiSearch, BiPlus, BiMinus, BiRefresh } from 'react-icons/bi';
 
 const BASE_ROLE_BADGES = {

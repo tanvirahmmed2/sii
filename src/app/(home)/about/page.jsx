@@ -8,7 +8,7 @@ import {
   UsersIcon,
   CheckCircleIcon,
   ExternalLinkIcon,
-} from '@/components/ui/Icons';
+} from '@/component/website/ui/Icons';
 
 export default function AboutPage() {
   const pillars = [

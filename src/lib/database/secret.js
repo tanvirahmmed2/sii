@@ -24,13 +24,12 @@ export const META_DESCRIPTION = 'Manage student enrollments, exam records, grade
 
 export const MONTHLY_FEE_DUE_DAY = parseInt('6', 10);
 
-// Main SaaS Platform Constants
-export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || 'Hiesci';
-export const SITE_MAIL = process.env.NEXT_PUBLIC_SITE_MAIL || 'support@hiesci.io';
-export const SITE_CONTACT = process.env.NEXT_PUBLIC_SITE_CONTACT || '+1 (800) 555-0199';
-export const SITE_ADDRESS = process.env.NEXT_PUBLIC_SITE_ADDRESS || 'Tech Innovation District, 100 Enterprise Way, Suite 400';
-export const COMPANY_NAME = process.env.NEXT_PUBLIC_COMPANY_NAME || 'EduCraft Technologies Inc.';
-export const COMPANY_URL = process.env.NEXT_PUBLIC_COMPANY_URL || 'https://educraft.io';
+export const SITE_NAME ='Hiesci';
+export const SITE_MAIL ='support@hiesci.io';
+export const SITE_CONTACT ='+1 (800) 555-0199';
+export const SITE_ADDRESS ='Tech Innovation District, 100 Enterprise Way, Suite 400';
+export const COMPANY_NAME ='EduCraft Technologies Inc.';
+export const COMPANY_URL = 'https://educraft.io';
 
 export const DEVELOPER_TOKEN='hiesci-dev'
 export const CREATOR_TOKEN='hiesci-creator'
@@ -39,7 +38,6 @@ export const STAFF_TOKEN='hiesci-staff'
 export const STUDENT_TOKEN='hiesci-student'
 export const LIVE_CHAT_TOKEN='hiesci-live'
 
-// Meta / WhatsApp / Facebook webhook secrets
 export const META_WEBHOOK_VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || 'meta_webhook_verify_token';
 export const META_APP_SECRET = process.env.META_APP_SECRET || '';
 export const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN || '';

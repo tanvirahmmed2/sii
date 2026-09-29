@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import NewsCard from '@/component/cards/NewsCard';
+import NewsCard from '@/component/website/cards/NewsCard';
 import { FiFileText } from 'react-icons/fi';
 
 const NewsPage = () => {

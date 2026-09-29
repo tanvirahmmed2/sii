@@ -19,8 +19,8 @@ import {
   SITE_NAME,
 } from '@/lib/db/secret';
 import { Context } from '@/components/helper/Context';
-import SubscribeForm from '@/components/home/bar/SubscribeForm';
-import TranslateButton from '@/components/ui/TranslateButton';
+import SubscribeForm from '@/component/marketing/home/bar/SubscribeForm';
+import TranslateButton from '@/component/website/ui/TranslateButton';
 
 const Footer = () => {
   const { theme = 'light', toggleTheme, setTheme, creator } = useContext(Context);

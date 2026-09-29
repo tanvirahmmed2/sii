@@ -9,8 +9,8 @@ import {
   FiInfo,
   FiBookOpen
 } from 'react-icons/fi';
-import TeacherCard from '@/component/cards/TeacherCard';
-import SubjectCard from '@/component/cards/SubjectCard';
+import TeacherCard from '@/component/website/cards/TeacherCard';
+import SubjectCard from '@/component/website/cards/SubjectCard';
 
 const ClassDetailsPage = () => {
   const params = useParams();

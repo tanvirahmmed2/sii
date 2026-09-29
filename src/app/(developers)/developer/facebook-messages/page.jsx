@@ -1,6 +1,6 @@
 'use client';
 
-import MetaMessenger from '@/components/developer/meta/MetaMessenger';
+import MetaMessenger from '@/component/marketing/developer/meta/MetaMessenger';
 import { BiLogoFacebookCircle } from 'react-icons/bi';
 
 export default function FacebookMessagesPage() {

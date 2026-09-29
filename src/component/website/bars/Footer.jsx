@@ -4,7 +4,7 @@ import Link from 'next/link';
 import React, { useContext } from 'react';
 import { FaLocationArrow, FaFacebookF, FaTwitter, FaInstagram, FaYoutube } from 'react-icons/fa';
 import { IoCall, IoMail } from 'react-icons/io5';
-import { TenantWebsiteContext } from '../helper/WebsiteContext';
+import { TenantWebsiteContext } from '../../helper/WebsiteContext';
 
 const Footer = () => {
   const { websiteSettings } = useContext(TenantWebsiteContext);

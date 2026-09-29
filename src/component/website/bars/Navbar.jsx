@@ -2,7 +2,7 @@
 
 import React, { useContext } from 'react';
 import Link from 'next/link';
-import { TenantWebsiteContext } from '../helper/WebsiteContext';
+import { TenantWebsiteContext } from '../../helper/WebsiteContext';
 import { MdMenu } from 'react-icons/md';
 import { LOGO_URL, SCHOOL_NAME } from '@/lib/secret';
 import Image from 'next/image';

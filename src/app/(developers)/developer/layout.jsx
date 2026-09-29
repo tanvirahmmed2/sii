@@ -5,8 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { BiLoaderAlt, BiShieldX, BiArrowBack } from 'react-icons/bi';
 import { Context } from '@/components/helper/Context';
-import Navbar from '@/components/developer/Navbar';
-import Sidebar from '@/components/developer/Sidebar';
+import Navbar from '@/component/marketing/developer/Navbar';
+import Sidebar from '@/component/marketing/developer/Sidebar';
 
 /**
  * @deprecated ROLE_PERMISSIONS is deprecated in favor of dynamic permissions stored in the database

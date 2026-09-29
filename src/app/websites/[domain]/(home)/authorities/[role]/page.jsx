@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useContext, use } from 'react';
 import Link from 'next/link';
 import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
-import AuthorityCard from '@/component/cards/AuthorityCard';
+import AuthorityCard from '@/component/website/cards/AuthorityCard';
 import { FiChevronRight, FiShield, FiUsers, FiArrowLeft, FiAlertCircle } from 'react-icons/fi';
 
 const RoleAuthoritiesPage = ({ params: paramsPromise }) => {

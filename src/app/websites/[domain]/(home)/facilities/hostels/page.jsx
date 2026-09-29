@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { FiHome, FiInfo } from 'react-icons/fi';
 import Link from 'next/link';
 import { SCHOOL_NAME } from '@/lib/secret';
-import { HostelsCard } from '@/component/cards';
+import { HostelsCard } from '@/component/website/cards';
 
 const HostelFacilities = () => {
   const [hostels, setHostels] = useState([]);

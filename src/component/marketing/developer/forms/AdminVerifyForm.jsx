@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ShieldCheckIcon } from '@/components/ui/Icons';
+import { ShieldCheckIcon } from '@/component/website/ui/Icons';
 import { SITE_NAME } from '@/lib/db/secret';
 
 export default function AdminVerifyForm() {

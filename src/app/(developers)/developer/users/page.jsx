@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { UsersIcon, StarIcon, MessageSquareIcon, CheckCircleIcon } from '@/components/ui/Icons';
+import { UsersIcon, StarIcon, MessageSquareIcon, CheckCircleIcon } from '@/component/website/ui/Icons';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState([]);

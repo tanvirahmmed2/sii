@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { FiLayers, FiArrowRight, FiBookOpen } from 'react-icons/fi';
-import GradingScaleTable from '@/component/cards/GradingScaleTable';
+import GradingScaleTable from '@/component/website/cards/GradingScaleTable';
 
 const ClassesPage = () => {
   const [classes, setClasses] = useState([]);

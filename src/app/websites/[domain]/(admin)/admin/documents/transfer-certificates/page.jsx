@@ -1,4 +1,4 @@
-import TransferCertificateIssuer from '@/component/pages/documents/TransferCertificateIssuer';
+import TransferCertificateIssuer from '@/component/website/pages/documents/TransferCertificateIssuer';
 
 export default function Page() {
   return <TransferCertificateIssuer />;

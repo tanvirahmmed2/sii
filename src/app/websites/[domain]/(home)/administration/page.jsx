@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { FiUsers, FiAward } from 'react-icons/fi';
-import AuthorityCard from '@/component/cards/AuthorityCard';
+import AuthorityCard from '@/component/website/cards/AuthorityCard';
 
 const AdministrationPage = () => {
   const [members, setMembers] = useState([]);

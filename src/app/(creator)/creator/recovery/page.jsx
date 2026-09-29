@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { BiCheckCircle, BiLoaderAlt, BiKey, BiEnvelope, BiArrowBack, BiLockAlt } from 'react-icons/bi';
-import CreatorAuthLayout from '@/components/creator/CreatorAuthLayout';
+import CreatorAuthLayout from '@/component/marketing/creator/CreatorAuthLayout';
 
 export default function CreatorRecoveryPage() {
   const [step, setStep] = useState(1); // 1: Request Code, 2: Reset Password, 3: Completed

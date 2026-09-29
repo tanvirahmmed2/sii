@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import NoticeCard from '@/component/cards/NoticeCard';
+import NoticeCard from '@/component/website/cards/NoticeCard';
 import { FiBookOpen } from 'react-icons/fi';
 
 const NoticesPage = () => {

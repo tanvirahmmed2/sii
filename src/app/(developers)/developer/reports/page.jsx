@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { BiSearch, BiPlus, BiMinus, BiTrash, BiRefresh } from 'react-icons/bi';
-import ReportForm from '@/components/developer/forms/ReportForm';
+import ReportForm from '@/component/marketing/developer/forms/ReportForm';
 
 export default function AdminReportsPage() {
   const [reports, setReports] = useState([]);
