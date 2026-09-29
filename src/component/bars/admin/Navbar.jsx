@@ -4,12 +4,12 @@ import React, { useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiMenu, FiLogOut, FiUser } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
-import { Context } from '@/component/helper/Context';
+import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
 import Link from 'next/link';
 
 const Navbar = () => {
   const router = useRouter();
-  const { adminSidebar, setAdminSidebar } = useContext(Context);
+  const { adminSidebar, setAdminSidebar } = useContext(TenantWebsiteContext);
   const [admin, setAdmin] = useState(null);
 
   useEffect(() => {

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useContext, use } from 'react';
 import Link from 'next/link';
-import { Context } from '@/component/helper/Context';
+import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
 import AuthorityCard from '@/component/cards/AuthorityCard';
 import { FiChevronRight, FiShield, FiUsers, FiArrowLeft, FiAlertCircle } from 'react-icons/fi';
 
@@ -10,7 +10,7 @@ const RoleAuthoritiesPage = ({ params: paramsPromise }) => {
   const params = use(paramsPromise);
   const roleSlug = params?.role;
 
-  const { designations } = useContext(Context);
+  const { designations } = useContext(TenantWebsiteContext);
   const [roleData, setRoleData] = useState(null);
   const [authorities, setAuthorities] = useState([]);
   const [loading, setLoading] = useState(true);

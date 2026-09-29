@@ -6,10 +6,10 @@ import { toast } from 'react-hot-toast';
 import {
   FiAward, FiPlus, FiEdit2, FiTrash2, FiSearch, FiX, FiLayers, FiRefreshCw
 } from 'react-icons/fi';
-import { Context } from '@/component/helper/Context';
+import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
 
 export default function DesignationsManagementPage() {
-  const { setDesignations: setContextDesignations } = useContext(Context);
+  const { setDesignations: setContextDesignations } = useContext(TenantWebsiteContext);
 
   const [designations, setDesignations] = useState([]);
   const [loading, setLoading] = useState(true);

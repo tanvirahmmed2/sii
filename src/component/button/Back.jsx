@@ -3,15 +3,15 @@
 import React, { useContext } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiArrowLeft, FiRefreshCw, FiArrowRight } from 'react-icons/fi';
-import { Context } from '../helper/Context';
+import { TenantWebsiteContext } from '../helper/WebsiteContext';
 
 const Back = () => {
   const router = useRouter();
-  const context = useContext(Context);
+  const tenantContext = useContext(TenantWebsiteContext);
 
   const handleBack = () => {
-    if (context?.goBack) {
-      context.goBack();
+    if (tenantContext?.goBack) {
+      tenantContext.goBack();
     } else {
       router.back();
     }

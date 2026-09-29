@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useEffect, useState, useContext } from 'react';
-import { Context } from '@/component/helper/Context';
+import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
 import AuthorityCard from '@/component/cards/AuthorityCard';
 import { FiUsers, FiAward, FiBriefcase } from 'react-icons/fi';
 
 const AuthoritiesPage = () => {
-  const { designations: contextDesignations } = useContext(Context);
+  const { designations: contextDesignations } = useContext(TenantWebsiteContext);
 
   const [authorities, setAuthorities] = useState([]);
   const [designations, setDesignations] = useState([]);

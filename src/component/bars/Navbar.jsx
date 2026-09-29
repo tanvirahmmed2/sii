@@ -2,13 +2,13 @@
 
 import React, { useContext } from 'react';
 import Link from 'next/link';
-import { Context } from '../helper/Context';
+import { TenantWebsiteContext } from '../helper/WebsiteContext';
 import { MdMenu } from 'react-icons/md';
 import { LOGO_URL, SCHOOL_NAME } from '@/lib/secret';
 import Image from 'next/image';
 
 const Navbar = () => {
-  const { classes, clubs, designations, sidebar, setSidebar, websiteSettings } = useContext(Context);
+  const { classes, clubs, designations, sidebar, setSidebar, websiteSettings } = useContext(TenantWebsiteContext);
 
   const schoolName = websiteSettings?.school_name || SCHOOL_NAME;
 

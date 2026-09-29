@@ -6,13 +6,13 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { FiUserPlus,  FiUpload, FiArrowLeft, FiCamera } from 'react-icons/fi';
 import Link from 'next/link';
-import { Context } from '@/component/helper/Context';
+import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
 import Image from 'next/image';
 
 
 
 export default function NewAuthorityPage() {
-  const { designations } = useContext(Context);
+  const { designations } = useContext(TenantWebsiteContext);
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({

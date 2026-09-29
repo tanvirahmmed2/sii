@@ -4,13 +4,13 @@ import React, { useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiMenu, FiLogOut, FiUser } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
-import { Context } from '@/component/helper/Context';
+import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
 import Image from 'next/image';
 import { LOGO_URL } from '@/lib/secret';
 
 const Navbar = () => {
   const router = useRouter();
-  const { TeacherSidebar, setTeacherSidebar } = useContext(Context);
+  const { TeacherSidebar, setTeacherSidebar } = useContext(TenantWebsiteContext);
   const [teacher, setTeacher] = useState(null);
   const [loading, setLoading] = useState(true);
 

@@ -5,7 +5,7 @@ import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { FiUsers, FiEdit2, FiTrash2, FiAward, FiMail, FiPhone, FiInfo, FiPlus, FiCamera, FiUpload, FiX, FiSearch } from 'react-icons/fi';
 import Link from 'next/link';
-import { Context } from '@/component/helper/Context';
+import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
 
 const DESIGNATION_LABELS = {
   chairman: 'Chairman',
@@ -28,7 +28,7 @@ const DESIGNATIONS = [
 ];
 
 export default function AuthoritiesListPage() {
-  const { designations } = useContext(Context);
+  const { designations } = useContext(TenantWebsiteContext);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');

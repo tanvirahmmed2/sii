@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useEffect, useState, useContext } from 'react';
-import { Context } from '@/component/helper/Context';
+import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
 import ClubNewsCard from '@/component/cards/ClubNewsCard';
 import { FiActivity, FiSearch, FiX, FiFilter, FiFileText } from 'react-icons/fi';
 
 const ClubNewsPage = () => {
-  const { clubs: contextClubs } = useContext(Context);
+  const { clubs: contextClubs } = useContext(TenantWebsiteContext);
 
   const [clubNewsList, setClubNewsList] = useState([]);
   const [clubs, setClubs] = useState([]);

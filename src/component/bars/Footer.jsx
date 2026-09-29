@@ -4,10 +4,10 @@ import Link from 'next/link';
 import React, { useContext } from 'react';
 import { FaLocationArrow, FaFacebookF, FaTwitter, FaInstagram, FaYoutube } from 'react-icons/fa';
 import { IoCall, IoMail } from 'react-icons/io5';
-import { Context } from '../helper/Context';
+import { TenantWebsiteContext } from '../helper/WebsiteContext';
 
 const Footer = () => {
-  const { websiteSettings } = useContext(Context);
+  const { websiteSettings } = useContext(TenantWebsiteContext);
 
   const schoolName = websiteSettings?.school_name || '';
   const phone = websiteSettings?.contact_phone || '';

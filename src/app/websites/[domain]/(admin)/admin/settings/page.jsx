@@ -3,11 +3,11 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { toast } from 'react-hot-toast';
 import { FiSave, FiSettings, FiMail, FiPhone, FiMapPin, FiGlobe, FiImage } from 'react-icons/fi';
-import { Context } from '@/component/helper/Context';
+import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
 import TiptapEditor from '@/component/helper/TiptapEditor';
 
 const SettingsPage = () => {
-  const context = useContext(Context);
+  const context = useContext(TenantWebsiteContext);
   const [settings, setSettings] = useState({
     school_name: '',
     motto: '',

@@ -8,12 +8,12 @@ import {
   FiAward, FiDollarSign, FiUsers, FiUser, FiChevronDown, FiChevronRight,
   FiGrid, FiInfo
 } from 'react-icons/fi';
-import { Context } from '@/component/helper/Context';
+import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
 import Back from '@/component/button/Back';
 
 const Sidebar = () => {
   const pathname = usePathname();
-  const { TeacherSidebar, setTeacherSidebar } = useContext(Context);
+  const { TeacherSidebar, setTeacherSidebar } = useContext(TenantWebsiteContext);
   const [isClubAdmin, setIsClubAdmin] = useState(false);
   const [clubDropdownOpen, setClubDropdownOpen] = useState(false);
 

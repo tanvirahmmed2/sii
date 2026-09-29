@@ -3,13 +3,13 @@
 import React, { useContext, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Context } from '../helper/Context';
+import { TenantWebsiteContext } from '../helper/WebsiteContext';
 import { FiX, FiChevronDown, FiHome, FiInfo, FiBookOpen, FiGrid, FiMail, FiLogIn, FiArrowRight, FiCalendar, FiShield } from 'react-icons/fi';
 import { MdOutlineAnnouncement } from 'react-icons/md';
 import { SCHOOL_NAME } from '@/lib/secret';
 
 const Sidebar = () => {
-  const { sidebar, setSidebar, classes, clubs, designations, websiteSettings } = useContext(Context);
+  const { sidebar, setSidebar, classes, clubs, designations, websiteSettings } = useContext(TenantWebsiteContext);
   const pathname = usePathname();
 
   const schoolName = websiteSettings?.school_name || SCHOOL_NAME;

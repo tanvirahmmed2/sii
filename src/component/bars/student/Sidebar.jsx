@@ -7,12 +7,12 @@ import {
   FiHome, FiCalendar, FiClock, FiFileText, FiBook,
   FiAward, FiDollarSign, FiUsers, FiUser, FiCreditCard
 } from 'react-icons/fi';
-import { Context } from '@/component/helper/Context';
+import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
 import Back from '@/component/button/Back';
 
 const Sidebar = () => {
   const pathname = usePathname();
-  const { studentSidebar, setStudentSidebar } = useContext(Context);
+  const { studentSidebar, setStudentSidebar } = useContext(TenantWebsiteContext);
   const [isClubMember, setIsClubMember] = useState(false);
 
   useEffect(() => {

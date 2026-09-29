@@ -7,12 +7,12 @@ import {
   FiHome, FiDollarSign, FiUsers, FiSliders, FiActivity, FiCalendar, 
   FiBookOpen, FiCreditCard, FiClock, FiFileText, FiPlus, FiUser
 } from 'react-icons/fi';
-import { Context } from '@/component/helper/Context';
+import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
 import Back from '@/component/button/Back';
 
 const Sidebar = () => {
   const pathname = usePathname();
-  const { staffSidebar, setStaffSidebar } = useContext(Context);
+  const { staffSidebar, setStaffSidebar } = useContext(TenantWebsiteContext);
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 

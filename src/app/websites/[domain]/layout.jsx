@@ -1,6 +1,5 @@
 import React from 'react';
-import { TenantWebsiteProvider } from '@/component/helper/TenantWebsiteContext';
-import { ContextProvider } from '@/component/helper/Context';
+import { TenantWebsiteProvider } from '@/component/helper/WebsiteContext';
 
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
@@ -19,11 +18,9 @@ export default async function TenantWebsiteMasterLayout({ children, params }) {
 
   return (
     <TenantWebsiteProvider slug={slug}>
-      <ContextProvider>
-        <div className="tenant-institute-scope min-h-screen w-full flex flex-col bg-slate-50 text-slate-800 antialiased">
-          {children}
-        </div>
-      </ContextProvider>
+      <div className="tenant-institute-scope min-h-screen w-full flex flex-col bg-slate-50 text-slate-800 antialiased">
+        {children}
+      </div>
     </TenantWebsiteProvider>
   );
 }

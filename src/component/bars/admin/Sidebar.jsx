@@ -10,13 +10,13 @@ import {
   FiSettings, FiShoppingBag, FiTrendingUp, FiTrendingDown,
   FiUser, FiActivity
 } from 'react-icons/fi';
-import { Context } from '@/component/helper/Context';
+import { TenantWebsiteContext } from '@/component/helper/WebsiteContext';
 import Back from '@/component/button/Back';
 import { BiMoney } from 'react-icons/bi';
 
 const Sidebar = () => {
   const pathname = usePathname();
-  const { adminSidebar, setAdminSidebar } = useContext(Context);
+  const { adminSidebar, setAdminSidebar } = useContext(TenantWebsiteContext);
 
   // Dynamic collapsible state
   const [classesOpen, setClassesOpen] = useState(pathname.startsWith('/admin/classes'));
