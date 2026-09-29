@@ -1,143 +1,146 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --primary: #ffa425;
-  --primary-dark: #ff7402;
-  --primary-light: #fcbc54;
-  --secondary: #f4f5f6;
-  --secondary-dark: #0f172a;
-
-  /* Tertiary Colors */
-  --tertiary: #AC2B49;
-  --tertiary-dark: #af042c;
-  --tertiary-light: #b0576c;
+  --primary: #A2AB73;
+  --primary-light: #e0e7be;
+  --primary-dark: #a1b34c;
+  --secondary: #CC3A63;
+  --secondary-light: #e48ea6;
+  --secondary-dark: #ce063e;
+  --light: #ffffff;
+  --dark:#000000;
 }
 
-@theme {
+@theme{
   --color-primary: var(--primary);
-  --color-primary-dark: var(--primary-dark);
   --color-primary-light: var(--primary-light);
+  --color-primary-dark: var(--primary-dark);
   --color-secondary: var(--secondary);
+  --color-secondary-light: var(--secondary-light);
   --color-secondary-dark: var(--secondary-dark);
-
-  /* Tertiary Theme Colors */
-  --color-tertiary: var(--tertiary);
-  --color-tertiary-dark: var(--tertiary-dark);
-  --color-tertiary-light: var(--tertiary-light);
+  --color-light: var(--light);
+  --color-dark: var(--dark);
 }
 
-.bg-primary {
-  background-color: var(--primary, #059669) !important;
-}
-.bg-primary-dark {
-  background-color: var(--primary-dark, #047857) !important;
-}
-.bg-primary-light {
-  background-color: var(--primary-light, #ecfdf5) !important;
+.input-style{
+  padding: 10px 14px;
+  border: solid 1px var(--primary);
+  outline: none;
+  border-radius: 4px;
+  width: 100%;
 }
 
-.text-primary {
-  color: var(--primary, #059669) !important;
-}
-.text-primary-dark {
-  color: var(--primary-dark, #047857) !important;
-}
-
-.border-primary {
-  border-color: var(--primary, #059669) !important;
-}
-.border-primary-light {
-  border-color: #a7f3d0 !important;
+/* Footer Translate Widget Styles */
+.footer-translate-widget .ngtContainer {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
 }
 
-.hover\:bg-primary-dark:hover {
-  background-color: var(--primary-dark, #047857) !important;
+.footer-translate-widget .ngtButton {
+  border-radius: 9999px !important;
+  padding: 5px 12px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.25rem !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
 }
 
-.bg-secondary {
-  background-color: var(--secondary, #ffffff) !important;
-}
-.bg-secondary-dark {
-  background-color: var(--secondary-dark, #0f172a) !important;
-}
-.text-secondary {
-  color: #ffffff !important;
-}
-.text-secondary-dark {
-  color: #0f172a !important;
-}
-.border-secondary {
-  border-color: #ffffff !important;
+.footer-translate-widget .ngtButton:hover {
+  transform: translateY(-1px);
 }
 
-/* Tertiary Classes */
-.bg-tertiary {
-  background-color: var(--tertiary, #6366f1) !important;
-}
-.bg-tertiary-dark {
-  background-color: var(--tertiary-dark, #4338ca) !important;
-}
-.bg-tertiary-light {
-  background-color: var(--tertiary-light, #e0e7ff) !important;
+.footer-translate-widget .ngtOption {
+  font-size: 13px !important;
+  padding: 8px 14px !important;
+  gap: 10px !important;
+  cursor: pointer !important;
+  transition: background 0.15s ease !important;
 }
 
-.text-tertiary {
-  color: var(--tertiary, #6366f1) !important;
-}
-.text-tertiary-dark {
-  color: var(--tertiary-dark, #4338ca) !important;
+.footer-translate-widget .ngtArrow {
+  font-size: 10px !important;
+  margin-left: 2px;
 }
 
-.border-tertiary {
-  border-color: var(--tertiary, #6366f1) !important;
-}
-.border-tertiary-light {
-  border-color: var(--tertiary-light, #e0e7ff) !important;
+/* Ensure footer dropdown always opens upwards into view */
+.footer-translate-widget .ngtMenu {
+  top: auto !important;
+  bottom: calc(100% + 8px) !important;
+  border-radius: 12px !important;
+  min-width: 175px !important;
+  box-shadow: 0 -12px 28px -4px rgba(0, 0, 0, 0.28), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  animation: ngtFadeInUp 0.18s ease-out !important;
 }
 
-.hover\:bg-tertiary-dark:hover {
-  background-color: var(--tertiary-dark, #4338ca) !important;
+@keyframes ngtFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
-/* Rich text styles */
-.rich-text-content h1 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-top: 1rem;
-  margin-bottom: 0.5rem;
+/* Dark Surface Variant (Main platform footer) */
+.footer-translate-widget-dark .ngtContainer {
+  --ngt-bg: rgba(0, 0, 0, 0.25);
+  --ngt-bg-hover: rgba(0, 0, 0, 0.45);
+  --ngt-border: rgba(255, 255, 255, 0.25);
+  --ngt-text: #ffffff;
+  --ngt-menu-bg: rgba(20, 20, 24, 0.95);
+  --ngt-menu-border: rgba(255, 255, 255, 0.15);
+  --ngt-active-bg: rgba(255, 255, 255, 0.15);
 }
-.rich-text-content h2 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin-top: 0.75rem;
-  margin-bottom: 0.5rem;
+
+/* Auto Theme Variant (Tenant websites) */
+.footer-translate-widget-auto .ngtContainer {
+  --ngt-bg: #f8fafc;
+  --ngt-bg-hover: #f1f5f9;
+  --ngt-border: #e2e8f0;
+  --ngt-text: #334155;
+  --ngt-menu-bg: rgba(255, 255, 255, 0.96);
+  --ngt-menu-border: #e2e8f0;
+  --ngt-active-bg: #f1f5f9;
 }
-.rich-text-content p,
-.ProseMirror p {
-  margin: 0 !important;
+
+html.dark .footer-translate-widget-auto .ngtContainer {
+  --ngt-bg: #0f172a;
+  --ngt-bg-hover: #1e293b;
+  --ngt-border: #1e293b;
+  --ngt-text: #cbd5e1;
+  --ngt-menu-bg: rgba(15, 23, 42, 0.96);
+  --ngt-menu-border: #1e293b;
+  --ngt-active-bg: rgba(255, 255, 255, 0.1);
 }
-.rich-text-content ul {
-  list-style-type: disc;
-  padding-left: 1.25rem;
-  margin-bottom: 0.5rem;
+
+/* Google Translate native toolbar suppression */
+.goog-te-banner-frame.skiptranslate,
+.goog-te-banner-frame {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
 }
-.rich-text-content ol {
-  list-style-type: decimal;
-  padding-left: 1.25rem;
-  margin-bottom: 0.5rem;
+
+body {
+  top: 0px !important;
+  position: static !important;
 }
-.rich-text-content strong {
-  font-weight: 700;
+
+#goog-gt-tt,
+.goog-te-balloon-frame {
+  display: none !important;
 }
-.rich-text-content em {
-  font-style: italic;
-}
-.rich-text-content pre {
-  background-color: #f1f5f9;
-  padding: 0.5rem;
-  border-radius: 0.375rem;
-  font-family: monospace;
-  font-size: 0.75rem;
-  margin-bottom: 0.5rem;
-  overflow-x: auto;
+
+.goog-text-highlight {
+  background: none !important;
+  box-shadow: none !important;
 }

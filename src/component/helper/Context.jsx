@@ -11,7 +11,6 @@ export const ContextProvider = ({ children }) => {
   // Main SaaS marketing website sidebar (mobile nav toggle)
   const [sidebar, setSidebar] = useState(false);
 
-  // User session state (for developers, creators, and platform staff)
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState([]);

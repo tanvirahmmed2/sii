@@ -23,7 +23,7 @@ import SubscribeForm from '@/components/home/bar/SubscribeForm';
 import TranslateButton from '@/components/ui/TranslateButton';
 
 const Footer = () => {
-  const { theme = 'light', toggleTheme, setTheme, creator } = useContext(Context) || {};
+  const { theme = 'light', toggleTheme, setTheme, creator } = useContext(Context);
   const isDark = theme === 'dark';
 
   return (
