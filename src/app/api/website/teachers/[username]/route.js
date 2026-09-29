@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { query } from '@/lib/database/db';
 import { isAdmin, hashPassword } from '@/lib/middleware/auth';
 
 // GET a specific teacher (Public by username slug OR numeric id)

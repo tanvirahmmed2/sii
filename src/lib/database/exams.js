@@ -1,4 +1,4 @@
-import { query } from '@/lib/db';
+import { query } from './db.js';
 
 /**
  * Automatically synchronizes exam statuses based on system date (CURRENT_DATE)

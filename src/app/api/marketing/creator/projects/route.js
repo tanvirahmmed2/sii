@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { queryDb } from '@/lib/db/pg';
+import { queryDb } from '@/lib/database/db';
 import { getCreatorSession } from '@/lib/middleware/creator';
 
 /**

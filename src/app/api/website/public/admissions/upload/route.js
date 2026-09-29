@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
-import { uploadImage } from '@/lib/cloudinary';
+import { query } from '@/lib/database/db';
+import { uploadImage } from '@/lib/database/cloudinary';
 
 // GET applicant details by ID for upload portal
 export async function GET(request) {

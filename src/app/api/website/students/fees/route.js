@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import pool, { query } from '@/lib/db';
+import pool, { query } from '@/lib/database/db';
 import { isAdmin, isCashier, verifyJWT } from '@/lib/middleware/auth';
 import { triggerMonthlyFeeGeneration } from '@/lib/database/fees';
 

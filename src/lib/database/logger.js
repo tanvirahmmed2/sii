@@ -1,4 +1,4 @@
-import { query } from '@/lib/db';
+import { query } from './db.js';
 
 /**
  * Records a user login event into the login_logs database table.

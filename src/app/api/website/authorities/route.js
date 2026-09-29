@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { query } from '@/lib/database/db';
 import { isAdmin } from '@/lib/middleware/auth';
-import { uploadImage } from '@/lib/cloudinary';
+import { uploadImage } from '@/lib/database/cloudinary';
 
 // GET all authorities (supports ?role=... or ?designation=... or ?slug=...)
 export async function GET(request) {

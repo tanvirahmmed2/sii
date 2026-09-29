@@ -6,7 +6,7 @@ import {
   generateToken,
   setAdminSessionCookie,
 } from '@/lib/middleware/developer';
-import { queryDb } from '@/lib/db/pg';
+import { queryDb } from '@/lib/database/db';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

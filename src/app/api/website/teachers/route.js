@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { query } from '@/lib/database/db';
 import { isAdmin, getAdminUser } from '@/lib/middleware/auth';
-import { sendEmail } from '@/lib/brevo';
-import { recordActivityLog } from '@/lib/logger';
+import { sendEmail } from '@/lib/database/brevo';
+import { recordActivityLog } from '@/lib/database/logger';
 import crypto from 'crypto';
 
 // GET all teachers

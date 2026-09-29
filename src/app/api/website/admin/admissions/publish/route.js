@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import pool from '@/lib/database/db';
 import { isAdmin } from '@/lib/middleware/auth';
-import { sendEmail } from '@/lib/brevo';
+import { sendEmail } from '@/lib/database/brevo';
 import { triggerMonthlyFeeGeneration } from '@/lib/database/fees';
 
 // POST publish admission results (Admin only)

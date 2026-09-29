@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { query } from '@/lib/database/db';
 
 // GET admission application status by Email or Application ID (Public route)
 export async function GET(request) {

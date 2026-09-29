@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from '@/lib/db/pg';
+import { queryDb } from '@/lib/database/db';
 import { getAuthenticatedUser, hasModulePermission, hashPassword } from '@/lib/middleware/developer';
 
 async function checkLastActiveAdminGuard(targetId, willDeactivateOrDelete = true) {

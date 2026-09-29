@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { hasModulePermission } from '@/lib/middleware/developer';
-import { queryDb } from '@/lib/db/pg';
+import { queryDb } from '@/lib/database/db';
 
 // ============================================================================
 // GET: List recent payroll payments

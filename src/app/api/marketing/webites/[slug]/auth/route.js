@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { queryDb } from '@/lib/db/pg';
-import { sendEmail } from '@/lib/db/mailer';
+import { queryDb } from '@/lib/database/db';
+import { sendEmail } from '@/lib/database/brevo';
 import {
   resolveWebsiteFromRequest,
   hashPassword,

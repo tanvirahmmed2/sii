@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryDb, pool } from '@/lib/db/pg';
+import { queryDb, pool } from '@/lib/database/db';
 import { hasModulePermission } from '@/lib/middleware/developer';
 
 function slugify(text) {

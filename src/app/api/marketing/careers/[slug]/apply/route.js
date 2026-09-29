@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from '@/lib/db/pg';
-import { uploadToCloudinary } from '@/lib/db/cloudinary';
+import { queryDb } from '@/lib/database/db';
+import { uploadToCloudinary } from '@/lib/database/cloudinary';
 
 // ============================================================================
 // POST: Submit job application for a career post

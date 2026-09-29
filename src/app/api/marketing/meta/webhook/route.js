@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { NextResponse } from 'next/server';
-import { pool } from '@/lib/db/pg';
-import { META_WEBHOOK_VERIFY_TOKEN, META_APP_SECRET } from '@/lib/db/secret';
+import { pool } from '@/lib/database/db';
+import { META_WEBHOOK_VERIFY_TOKEN, META_APP_SECRET } from '@/lib/database/secret';
 import { parseIncomingMetaWebhook, verifyMetaWebhookSignature } from '@/lib/meta/graph';
 
 // Max allowed payload size (1MB) to defend against payload exhaustion attacks

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { query } from '@/lib/database/db';
 
 // GET single recognition by slug (public)
 export async function GET(request, { params }) {

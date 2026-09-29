@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from '@/lib/db/pg';
+import { queryDb } from '@/lib/database/db';
 import { getCreatorSession } from '@/lib/middleware/creator';
-import { createPaymentSession } from '@/lib/db/payooner';
-import { executeBkashPayment, usdToBdt, validateBangladeshiMobile, validateBkashOtp, validateBkashPin } from '@/lib/db/bkash';
+import { createPaymentSession } from '@/lib/database/payooner';
+import { executeBkashPayment, usdToBdt, validateBangladeshiMobile, validateBkashOtp, validateBkashPin } from '@/lib/database/bkash';
 
 function isValidLuhn(cardNumber) {
   const digits = String(cardNumber || '').replace(/\D/g, '');

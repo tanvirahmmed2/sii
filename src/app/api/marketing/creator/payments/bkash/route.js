@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from '@/lib/db/pg';
+import { queryDb } from '@/lib/database/db';
 import { getCreatorSession } from '@/lib/middleware/creator';
 import {
   createBkashPayment,
@@ -12,7 +12,7 @@ import {
   validateBkashPin,
   isBkashConfigured,
   USD_TO_BDT_RATE,
-} from '@/lib/db/bkash';
+} from '@/lib/database/bkash';
 
 /**
  * Helper: Resolve Creator Session & Verify Ownership

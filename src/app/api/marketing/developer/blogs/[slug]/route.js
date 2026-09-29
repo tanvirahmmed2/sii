@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from '@/lib/db/pg';
+import { queryDb } from '@/lib/database/db';
 import { hasModulePermission } from '@/lib/middleware/developer';
-import cloudinary, { uploadToCloudinary, deleteFromCloudinary } from '@/lib/db/cloudinary';
+import cloudinary, { uploadToCloudinary, deleteFromCloudinary } from '@/lib/database/cloudinary';
 
 function slugify(text) {
   return (text || '')

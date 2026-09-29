@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { query } from '@/lib/database/db';
 import { isAdmin, isRegister, getAdminUser } from '@/lib/middleware/auth';
-import { uploadImage } from '@/lib/cloudinary';
-import { recordActivityLog } from '@/lib/logger';
+import { uploadImage } from '@/lib/database/cloudinary';
+import { recordActivityLog } from '@/lib/database/logger';
 
 function slugify(text) {
   return text

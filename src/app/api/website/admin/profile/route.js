@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { query } from '@/lib/database/db';
 import { getAdminUser, comparePassword, hashPassword } from '@/lib/middleware/auth';
 
 export async function GET() {

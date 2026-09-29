@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { query } from '@/lib/database/db';
 import { isAdmin, isRegister } from '@/lib/middleware/auth';
 
 // GET all seats (optionally filtered by room_id or hostel_id)

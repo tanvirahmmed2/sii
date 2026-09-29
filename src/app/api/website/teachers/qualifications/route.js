@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { query } from '@/lib/database/db';
 import { isAdmin, verifyJWT } from '@/lib/middleware/auth';
 import { cookies } from 'next/headers';
 

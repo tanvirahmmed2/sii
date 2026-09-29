@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { resolveWebsiteFromRequest } from '@/lib/middleware/user';
-import { queryDb } from '@/lib/db/pg';
+import { queryDb } from '@/lib/database/db';
 
 export async function GET(request, context) {
   try {

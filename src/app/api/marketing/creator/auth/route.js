@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { queryDb } from '@/lib/db/pg';
-import { SITE_NAME } from '@/lib/db/secret';
+import { queryDb } from '@/lib/database/db';
+import { SITE_NAME } from '@/lib/database/secret';
 import {
   authenticateCreator,
   getCreatorSession,

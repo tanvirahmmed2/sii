@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { query } from '@/lib/db';
+import { query } from '@/lib/database/db';
 import { verifyJWT } from '@/lib/middleware/auth';
 
 export async function GET() {

@@ -18,4 +18,8 @@ const pool = global._postgresPool;
 
 export const query = (text, params) => pool.query(text, params);
 
+// Aliases used by marketing routes
+export const queryDb = (text, params) => pool.query(text, params);
+export { pool };
+
 export default pool;

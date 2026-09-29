@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { query } from '@/lib/database/db';
 import { isAdmin, isRegister } from '@/lib/middleware/auth';
 
 export async function PUT(request, { params }) {

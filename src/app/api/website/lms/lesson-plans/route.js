@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { query } from '@/lib/database/db';
 import { isTeacher, isAdmin, isStudent, verifyJWT } from '@/lib/middleware/auth';
 import { cookies } from 'next/headers';
-import { logActivity } from '@/lib/activity_logger';
+import { logActivity } from '@/lib/database/activity_logger';
 
 // GET lesson plans (study plans)
 export async function GET(request) {

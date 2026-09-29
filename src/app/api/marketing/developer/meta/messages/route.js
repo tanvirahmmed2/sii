@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { pool } from '@/lib/db/pg';
+import { pool } from '@/lib/database/db';
 import { hasModulePermission } from '@/lib/middleware/developer';
 import { sendPlatformMessage } from '@/lib/meta/graph';
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from '@/lib/db/pg';
+import { queryDb } from '@/lib/database/db';
 import { hasModulePermission } from '@/lib/middleware/developer';
 
 // Explicit set of legacy / archive tables from previous system versions

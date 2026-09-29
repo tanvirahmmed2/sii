@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifyJWT } from '@/lib/middleware/auth';
-import { query } from '@/lib/db';
+import { query } from '@/lib/database/db';
 
 // GET leave applications submitted by the logged-in teacher
 export async function GET() {

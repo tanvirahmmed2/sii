@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from '@/lib/db/pg';
+import { queryDb } from '@/lib/database/db';
 
 // GET SINGLE TICKET & CONVERSATION THREAD (Creator)
 export async function GET(request, context) {

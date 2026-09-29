@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import { JWT_SECRET } from '../database/secret.js';
-import { query } from '../database/db.js';
+import { query, queryDb } from '../database/db.js';
 
 const DEFAULT_JWT_SECRET = JWT_SECRET || 'creator_studio_jwt_secret_key_2026';
 const CREATOR_COOKIE_NAME = 'creator_session_token';

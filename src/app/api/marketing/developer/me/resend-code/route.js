@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from '@/lib/db/pg';
-import { sendEmail } from '@/lib/db/mailer';
-import { SITE_NAME } from '@/lib/db/secret';
+import { queryDb } from '@/lib/database/db';
+import { sendEmail } from '@/lib/database/brevo';
+import { SITE_NAME } from '@/lib/database/secret';
 
 export async function POST(request) {
   try {

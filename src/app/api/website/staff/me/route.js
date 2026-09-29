@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getStaffUser, comparePassword, hashPassword } from '@/lib/middleware/auth';
-import { query } from '@/lib/db';
+import { query } from '@/lib/database/db';
 
 export const dynamic = 'force-dynamic';
 

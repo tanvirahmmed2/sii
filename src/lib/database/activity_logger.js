@@ -1,4 +1,4 @@
-import { query } from '@/lib/db';
+import { query } from './db.js';
 
 /**
  * Logs system activities to activity_logs table

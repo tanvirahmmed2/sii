@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser, hashPassword, comparePassword } from '@/lib/middleware/developer';
-import { queryDb } from '@/lib/db/pg';
+import { queryDb } from '@/lib/database/db';
 
 // ============================================================================
 // GET: View logged-in developer's profile and account details

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { cookies } from 'next/headers.js';
-import { queryDb } from '@/lib/db/pg';
-import { LIVE_CHAT_TOKEN, SITE_NAME } from '@/lib/db/secret';
+import { queryDb } from '@/lib/database/db';
+import { LIVE_CHAT_TOKEN, SITE_NAME } from '@/lib/database/secret';
 
 const COOKIE_NAME = LIVE_CHAT_TOKEN;
 const COOKIE_MAX_AGE = 60 * 60 * 24; // 24 hours in seconds

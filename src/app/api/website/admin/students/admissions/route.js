@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { query } from '@/lib/database/db';
 import { isAdmin, isRegister, isCashier } from '@/lib/middleware/auth';
-import { uploadImage } from '@/lib/cloudinary';
-import { sendEmail } from '@/lib/brevo';
-import { recordActivityLog } from '@/lib/logger';
+import { uploadImage } from '@/lib/database/cloudinary';
+import { sendEmail } from '@/lib/database/brevo';
+import { recordActivityLog } from '@/lib/database/logger';
 
 // GET Admissions (Admin/Registrar/Cashier only)
 export async function GET(request) {

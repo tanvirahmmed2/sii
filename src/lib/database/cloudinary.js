@@ -44,3 +44,7 @@ export const deleteImage = async (publicId) => {
 };
 
 export default cloudinary;
+
+// Aliases used by marketing routes
+export const uploadToCloudinary = uploadImage;
+export const deleteFromCloudinary = deleteImage;
