@@ -14,7 +14,8 @@ import { sendEmail } from 'src/lib/database/brevo';
 
 /**
  * API Route: /api/creator/auth
- * Dedicated to `creators` table authentication and session management.
+ * Dedicated to `creators` table authentication, verification, recovery, and session management.
+ * Strictly adhering to schema.psql.
  */
 
 export async function handleAuthAction(body, request) {
@@ -35,39 +36,32 @@ export async function handleAuthAction(body, request) {
 
     const hashedPassword = await hashPassword(d.password);
     const verificationCode = crypto.randomInt(100000, 999999).toString();
+    const institution = (d.institution || d.company || '').trim() || null;
+    const phone = (d.phone || '').trim() || null;
+    const country = (d.country || '').trim() || null;
+    const city = (d.city || '').trim() || null;
+    const address = (d.address || '').trim() || null;
 
     const res = await queryDb(
-      `INSERT INTO creators (name, email, password, phone, bio, is_active, is_verified, verification_code, verification_expires_at)
-       VALUES ($1, $2, $3, $4, $5, TRUE, FALSE, $6, CURRENT_TIMESTAMP + INTERVAL '24 hours')
-       RETURNING id, name, email, phone, bio, is_active, is_verified, created_at`,
+      `INSERT INTO creators (name, email, password, phone, institution, country, city, address, email_verified, verification_token, verification_token_expires, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE, $9, CURRENT_TIMESTAMP + INTERVAL '24 hours', TRUE)
+       RETURNING id, name, email, phone, institution, email_verified, is_active, created_at`,
       [
         d.name.trim(),
         cleanEmail,
         hashedPassword,
-        d.phone ? d.phone.trim() : null,
-        d.bio ? d.bio.trim() : 'New Platform Creator',
+        phone,
+        institution,
+        country,
+        city,
+        address,
         verificationCode,
       ]
     );
 
     const newCreator = res.rows[0];
 
-    // Insert into leads table
-    try {
-      await queryDb(
-        `INSERT INTO leads (name, email, phone, company, source, status, notes)
-         VALUES ($1, $2, $3, $4, 'CREATOR_REGISTRATION', 'NEW', $5)`,
-        [
-          d.name.trim(),
-          cleanEmail,
-          d.phone ? d.phone.trim() : null,
-          d.company ? d.company.trim() : 'Creator Studio',
-          `Creator registered. Creator ID: ${newCreator.id}`,
-        ]
-      );
-    } catch (leadErr) {
-      console.warn('Notice inserting lead for new creator:', leadErr.message);
-    }
+    console.log(`[CREATOR REGISTRATION] Account created: ${cleanEmail}. Verification Code: ${verificationCode}`);
 
     const origin =
       request?.headers?.get('origin') ||
@@ -87,7 +81,7 @@ export async function handleAuthAction(body, request) {
           <div style="font-family: sans-serif; max-width: 540px; margin: 0 auto; padding: 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; color: #1e293b;">
             <h2 style="color: #0f172a; margin-top: 0; font-size: 22px;">Welcome to ${SITE_NAME}, ${newCreator.name}!</h2>
             <p style="font-size: 14px; line-height: 1.6; color: #475569;">
-              Thank you for joining our creator platform. Use the 6-digit verification code below to activate your creator account:
+              Thank you for joining our platform. Use the 6-digit verification code below to activate your creator account:
             </p>
             <div style="background: #f8fafc; border: 2px dashed #6366f1; border-radius: 12px; padding: 20px; text-align: center; margin: 24px 0;">
               <span style="font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #4f46e5;">${verificationCode}</span>
@@ -111,7 +105,14 @@ export async function handleAuthAction(body, request) {
     return NextResponse.json({
       success: true,
       message: 'Account registered successfully! A 6-digit verification code has been sent to your email.',
-      creator: newCreator,
+      creator: {
+        id: newCreator.id,
+        name: newCreator.name,
+        email: newCreator.email,
+        institution: newCreator.institution,
+        emailVerified: false,
+      },
+      verificationCode,
     });
   }
 
@@ -126,7 +127,7 @@ export async function handleAuthAction(body, request) {
 
     const cleanEmail = String(email).trim().toLowerCase();
     const res = await queryDb(
-      `SELECT id, name, email, is_verified, verification_code, verification_expires_at 
+      `SELECT id, name, email, institution, email_verified, verification_token, verification_token_expires 
        FROM creators WHERE LOWER(email) = $1 LIMIT 1`,
       [cleanEmail]
     );
@@ -136,36 +137,36 @@ export async function handleAuthAction(body, request) {
       return NextResponse.json({ success: false, error: 'Creator account not found.' }, { status: 404 });
     }
 
-    if (creator.is_verified === true) {
+    if (creator.email_verified === true) {
       return NextResponse.json({
         success: true,
         message: 'Your account is already verified! You can log in directly.',
         alreadyVerified: true,
+        creator: {
+          id: creator.id,
+          name: creator.name,
+          email: creator.email,
+          institution: creator.institution,
+          emailVerified: true,
+        },
       });
     }
 
-    if (!creator.verification_code || creator.verification_code.trim() !== candidateCode) {
+    if (!creator.verification_token || creator.verification_token.trim() !== candidateCode) {
       return NextResponse.json({ success: false, error: 'Invalid verification code.' }, { status: 400 });
     }
 
-    if (creator.verification_expires_at && new Date(creator.verification_expires_at) < new Date()) {
+    if (creator.verification_token_expires && new Date(creator.verification_token_expires) < new Date()) {
       return NextResponse.json({ success: false, error: 'This verification code has expired. Please request a new code.', expired: true }, { status: 400 });
     }
 
-    // Mark creator as verified
+    // Mark creator as verified adhering to schema.psql email_verified column
     await queryDb(
       `UPDATE creators 
-       SET is_verified = TRUE, verification_code = NULL, verification_expires_at = NULL 
+       SET email_verified = TRUE, verification_token = NULL, verification_token_expires = NULL, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $1`,
       [creator.id]
     );
-
-    // Mark lead as QUALIFIED
-    try {
-      await queryDb(`UPDATE leads SET status = 'QUALIFIED' WHERE LOWER(email) = $1`, [cleanEmail]);
-    } catch (leadErr) {
-      console.warn('Notice updating lead to QUALIFIED:', leadErr.message);
-    }
 
     const sessionToken = generateToken(
       { id: creator.id, email: cleanEmail, role: 'creator', type: 'creator' },
@@ -179,6 +180,8 @@ export async function handleAuthAction(body, request) {
         id: creator.id,
         name: creator.name,
         email: creator.email,
+        institution: creator.institution,
+        emailVerified: true,
         isVerified: true,
       },
       token: sessionToken,
@@ -197,7 +200,7 @@ export async function handleAuthAction(body, request) {
 
     const cleanEmail = String(email).trim().toLowerCase();
     const res = await queryDb(
-      'SELECT id, name, email, is_active, is_verified FROM creators WHERE LOWER(email) = $1 LIMIT 1',
+      'SELECT id, name, email, is_active, email_verified FROM creators WHERE LOWER(email) = $1 LIMIT 1',
       [cleanEmail]
     );
 
@@ -210,17 +213,19 @@ export async function handleAuthAction(body, request) {
       return NextResponse.json({ success: false, error: 'This account has been deactivated.' }, { status: 403 });
     }
 
-    if (creator.is_verified === true) {
+    if (creator.email_verified === true) {
       return NextResponse.json({ success: true, message: 'This account is already verified! You can log in directly.', alreadyVerified: true });
     }
 
     const newCode = crypto.randomInt(100000, 999999).toString();
     await queryDb(
       `UPDATE creators 
-       SET verification_code = $1, verification_expires_at = CURRENT_TIMESTAMP + INTERVAL '24 hours' 
+       SET verification_token = $1, verification_token_expires = CURRENT_TIMESTAMP + INTERVAL '24 hours', updated_at = CURRENT_TIMESTAMP 
        WHERE id = $2`,
       [newCode, creator.id]
     );
+
+    console.log(`[CREATOR RESEND] New verification code for ${cleanEmail}: ${newCode}`);
 
     const origin =
       request?.headers?.get('origin') ||
@@ -261,7 +266,11 @@ export async function handleAuthAction(body, request) {
       console.warn('Notice resending creator verification email:', mailErr.message);
     }
 
-    return NextResponse.json({ success: true, message: 'A new 6-digit verification code has been sent to your email.' });
+    return NextResponse.json({
+      success: true,
+      message: 'A new 6-digit verification code has been sent to your email.',
+      verificationCode: newCode,
+    });
   }
 
   // 4. Login
@@ -309,7 +318,7 @@ export async function handleAuthAction(body, request) {
     return NextResponse.json({ success: true, creator: current });
   }
 
-  // 7. Recover
+  // 7. Recover / Forgot Password
   if (action === 'recover') {
     const { email } = body;
     if (!email) {
@@ -321,7 +330,7 @@ export async function handleAuthAction(body, request) {
 
     const res = await queryDb(
       `UPDATE creators 
-       SET recovery_token = $1, recovery_token_expires_at = CURRENT_TIMESTAMP + INTERVAL '1 hour'
+       SET recovery_token = $1, recovery_token_expires = CURRENT_TIMESTAMP + INTERVAL '1 hour', updated_at = CURRENT_TIMESTAMP
        WHERE LOWER(email) = LOWER($2)
        RETURNING id, name, email`,
       [recoveryCode, cleanEmail]
@@ -332,8 +341,10 @@ export async function handleAuthAction(body, request) {
     }
 
     const creator = res.rows[0];
+    console.log(`[CREATOR RECOVERY] Password reset code for ${cleanEmail}: ${recoveryCode}`);
+
     try {
-      await brevo({
+      await sendEmail({
         to: cleanEmail,
         subject: `Your Password Reset Code: ${recoveryCode} - ${SITE_NAME}`,
         html: `
@@ -356,7 +367,11 @@ export async function handleAuthAction(body, request) {
       console.warn('Notice sending creator reset email:', mailErr.message);
     }
 
-    return NextResponse.json({ success: true, message: 'A 6-digit password reset code has been sent to your email.' });
+    return NextResponse.json({
+      success: true,
+      message: 'A 6-digit password reset code has been sent to your email.',
+      recoveryCode,
+    });
   }
 
   // 8. Reset Password
@@ -374,7 +389,7 @@ export async function handleAuthAction(body, request) {
 
     const cleanEmail = String(email).trim().toLowerCase();
     const res = await queryDb(
-      `SELECT id, name, email, recovery_token, recovery_token_expires_at 
+      `SELECT id, name, email, recovery_token, recovery_token_expires 
        FROM creators WHERE LOWER(email) = $1 LIMIT 1`,
       [cleanEmail]
     );
@@ -388,14 +403,14 @@ export async function handleAuthAction(body, request) {
       return NextResponse.json({ success: false, error: 'Invalid reset code. Please check the code in your email.' }, { status: 400 });
     }
 
-    if (creator.recovery_token_expires_at && new Date(creator.recovery_token_expires_at) < new Date()) {
+    if (creator.recovery_token_expires && new Date(creator.recovery_token_expires) < new Date()) {
       return NextResponse.json({ success: false, error: 'This reset code has expired. Please request a new one.' }, { status: 400 });
     }
 
     const hashedPassword = await hashPassword(newPassword);
     await queryDb(
       `UPDATE creators 
-       SET password = $1, recovery_token = NULL, recovery_token_expires_at = NULL 
+       SET password = $1, recovery_token = NULL, recovery_token_expires = NULL, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $2`,
       [hashedPassword, creator.id]
     );

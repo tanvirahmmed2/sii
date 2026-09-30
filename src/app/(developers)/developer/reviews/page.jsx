@@ -6,10 +6,8 @@ import { Context } from 'src/component/helper/Context';
 import {
   BiStar,
   BiCheckCircle,
-  BiXCircle,
   BiTrash,
   BiRefresh,
-  BiCube,
   BiUser,
   BiCheckShield,
   BiTimeFive,
@@ -17,6 +15,9 @@ import {
   BiMessageSquareDetail,
   BiCheck,
   BiX,
+  BiGlobe,
+  BiHeart,
+  BiBuilding,
 } from 'react-icons/bi';
 
 export default function AdminReviewsPage() {
@@ -78,7 +79,7 @@ export default function AdminReviewsPage() {
       const data = await res.json();
       if (data.success) {
         setActionNotice({
-          text: `Review #${reviewId} has been successfully ${newStatus.toLowerCase()}!`,
+          text: `Review #${reviewId} has been successfully updated to ${newStatus.toLowerCase()}!`,
           type: 'success',
         });
         await fetchReviews(false);
@@ -91,6 +92,38 @@ export default function AdminReviewsPage() {
     } catch (err) {
       console.error('Error moderating review:', err);
       setActionNotice({ text: 'Network error while moderating review.', type: 'error' });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleToggleFeatured = async (reviewId, newFeatured) => {
+    if (!canModerate || actionLoadingId) return;
+    setActionLoadingId(reviewId);
+    setActionNotice({ text: '', type: '' });
+
+    try {
+      const res = await fetch('/api/developer/reviews', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reviewId, is_featured: newFeatured }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setActionNotice({
+          text: `Review #${reviewId} ${newFeatured ? 'marked as featured' : 'removed from featured'}.`,
+          type: 'success',
+        });
+        await fetchReviews(false);
+      } else {
+        setActionNotice({
+          text: data.error || 'Failed to update featured state.',
+          type: 'error',
+        });
+      }
+    } catch (err) {
+      console.error('Error toggling featured state:', err);
+      setActionNotice({ text: 'Network error.', type: 'error' });
     } finally {
       setActionLoadingId(null);
     }
@@ -124,35 +157,46 @@ export default function AdminReviewsPage() {
 
   const filteredReviews = reviews.filter((r) => {
     if (statusFilter === 'ALL') return true;
+    if (statusFilter === 'FEATURED') return Boolean(r.is_featured);
+    if (statusFilter === 'APPROVED') return Boolean(r.is_approved);
+    if (statusFilter === 'PENDING') return !r.is_approved;
     return String(r.status).toUpperCase() === statusFilter;
   });
 
   const totalCount = reviews.length;
-  const pendingCount = reviews.filter((r) => String(r.status).toUpperCase() === 'PENDING').length;
-  const approvedCount = reviews.filter((r) => String(r.status).toUpperCase() === 'APPROVED').length;
-  const rejectedCount = reviews.filter((r) => String(r.status).toUpperCase() === 'REJECTED').length;
+  const pendingCount = reviews.filter((r) => !r.is_approved).length;
+  const approvedCount = reviews.filter((r) => Boolean(r.is_approved)).length;
+  const featuredCount = reviews.filter((r) => Boolean(r.is_featured)).length;
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto animate-in fade-in duration-200">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Reviews Moderation</h1>
             <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-              Admin & Manager Approval
+              Admin & Staff Oversight
             </span>
           </div>
           <p className="text-xs text-slate-500">
-            Review and approve authentic client reviews submitted by creators per subscription. Approved reviews appear on the public /reviews page and homepage.
+            Moderate creator testimonials. Creator submissions start as <strong>Pending</strong> and become publicly visible on /reviews once approved.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
+          <Link
+            href="/reviews"
+            target="_blank"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+          >
+            <BiGlobe className="text-base" />
+            <span>Public Page</span>
+          </Link>
           <button
             type="button"
             onClick={() => fetchReviews(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-xs font-semibold transition-colors cursor-pointer shadow-xs"
           >
             <BiRefresh className="text-base" />
             <span>Refresh</span>
@@ -223,31 +267,36 @@ export default function AdminReviewsPage() {
         </div>
 
         <div
-          onClick={() => setStatusFilter('REJECTED')}
+          onClick={() => setStatusFilter('FEATURED')}
           className={`bg-white border rounded-2xl p-4 shadow-xs cursor-pointer transition-all ${
-            statusFilter === 'REJECTED' ? 'border-rose-600 ring-2 ring-rose-600/10' : 'border-slate-200 hover:border-slate-300'
+            statusFilter === 'FEATURED' ? 'border-indigo-600 ring-2 ring-indigo-600/10' : 'border-slate-200 hover:border-slate-300'
           }`}
         >
-          <div className="text-xs font-semibold text-rose-600 mb-1">Rejected</div>
-          <div className="text-2xl font-black text-rose-700">{rejectedCount}</div>
+          <div className="text-xs font-semibold text-indigo-600 mb-1">Featured Testimonials</div>
+          <div className="text-2xl font-black text-indigo-700">{featuredCount}</div>
         </div>
       </div>
 
       {/* Filter Tabs */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-          {['ALL', 'PENDING', 'APPROVED', 'REJECTED'].map((st) => (
+          {[
+            { key: 'ALL', label: 'All Reviews' },
+            { key: 'PENDING', label: `Pending (${pendingCount})` },
+            { key: 'APPROVED', label: `Approved (${approvedCount})` },
+            { key: 'FEATURED', label: `Featured (${featuredCount})` },
+          ].map((tab) => (
             <button
-              key={st}
+              key={tab.key}
               type="button"
-              onClick={() => setStatusFilter(st)}
+              onClick={() => setStatusFilter(tab.key)}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0 ${
-                statusFilter === st
+                statusFilter === tab.key
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              {st}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -276,9 +325,7 @@ export default function AdminReviewsPage() {
           </div>
         ) : (
           filteredReviews.map((rev) => {
-            const isApproved = rev.status === 'APPROVED';
-            const isRejected = rev.status === 'REJECTED';
-            const isPending = rev.status === 'PENDING';
+            const isApproved = Boolean(rev.is_approved);
             const isProcessing = actionLoadingId === rev.id;
 
             return (
@@ -302,23 +349,31 @@ export default function AdminReviewsPage() {
                       className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border ${
                         isApproved
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : isRejected
-                          ? 'bg-rose-50 text-rose-700 border-rose-200'
                           : 'bg-amber-50 text-amber-700 border-amber-200'
                       }`}
                     >
-                      {rev.status}
+                      {isApproved ? 'Approved & Live' : 'Pending Approval'}
                     </span>
+
+                    {rev.is_featured && (
+                      <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border bg-indigo-50 text-indigo-700 border-indigo-200">
+                        Featured
+                      </span>
+                    )}
 
                     <span className="font-mono text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
                       Review #{rev.id}
                     </span>
 
-                    <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
-                      <BiCube className="text-indigo-600" />
-                      <span>{rev.package_name}</span>
-                      <span className="text-slate-400 font-mono">(Sub #{rev.subscription_id})</span>
-                    </span>
+                    {(rev.institution_name || rev.package_name) && (
+                      <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+                        <BiBuilding className="text-slate-400" />
+                        <span>{rev.institution_name || rev.package_name}</span>
+                        {rev.website_name && (
+                          <span className="text-slate-400 font-mono">({rev.website_name})</span>
+                        )}
+                      </span>
+                    )}
                   </div>
 
                   {/* Title & Comment */}
@@ -329,45 +384,42 @@ export default function AdminReviewsPage() {
                   )}
 
                   <p className="text-xs text-slate-700 leading-relaxed italic bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
-                    &ldquo;{rev.comment}&rdquo;
+                    &ldquo;{rev.review_text || rev.comment}&rdquo;
                   </p>
 
                   {/* Creator Info Footer */}
                   <div className="flex items-center justify-between gap-3 text-xs text-slate-500 pt-1 flex-wrap">
                     <div className="flex items-center gap-2">
-                      {rev.creator_avatar ? (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img
-                          src={rev.creator_avatar}
-                          alt={rev.creator_name}
-                          className="w-6 h-6 rounded-full object-cover border border-slate-200"
-                        />
-                      ) : (
-                        <div className="w-6 h-6 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-[10px]">
-                          {rev.creator_name?.charAt(0)?.toUpperCase() || 'C'}
-                        </div>
-                      )}
+                      <div className="w-6 h-6 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-[10px]">
+                        {(rev.reviewer_name || rev.creator_name || 'C').charAt(0).toUpperCase()}
+                      </div>
                       <span>
-                        By <strong className="text-slate-800">{rev.creator_name}</strong> ({rev.creator_email})
+                        By <strong className="text-slate-800">{rev.reviewer_name || rev.creator_name || 'Creator'}</strong>
+                        {rev.creator_email && ` (${rev.creator_email})`}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-3 text-[11px] text-slate-400">
-                      <span>Submitted {new Date(rev.created_at).toLocaleDateString()}</span>
-                      {rev.approved_by_name && (
-                        <span className="text-emerald-700 font-medium">
-                          • {rev.status === 'APPROVED' ? 'Approved' : 'Reviewed'} by {rev.approved_by_name} ({rev.approved_by_role})
+                      <span>Submitted: {new Date(rev.created_at).toLocaleDateString([], {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}</span>
+                      {rev.creator_id && (
+                        <span className="font-mono text-[10px]">
+                          Creator ID: #{rev.creator_id}
                         </span>
                       )}
                     </div>
                   </div>
                 </div>
 
-                {/* Moderation Controls (Admin & Manager only) */}
-                <div className="flex items-center gap-2 self-end md:self-start shrink-0 pt-2 md:pt-0">
+                {/* Moderation Controls (Admin & Staff with 'reviews' permission) */}
+                <div className="flex items-center gap-2 self-end md:self-start shrink-0 pt-2 md:pt-0 flex-wrap">
                   {canModerate ? (
                     <>
-                      {!isApproved && (
+                      {/* Approve Button */}
+                      {!isApproved ? (
                         <button
                           type="button"
                           disabled={isProcessing}
@@ -382,34 +434,49 @@ export default function AdminReviewsPage() {
                           )}
                           <span>Approve</span>
                         </button>
-                      )}
-
-                      {!isRejected && (
+                      ) : (
                         <button
                           type="button"
                           disabled={isProcessing}
-                          onClick={() => handleModerate(rev.id, 'REJECTED')}
+                          onClick={() => handleModerate(rev.id, 'PENDING')}
                           className="flex items-center gap-1 px-3.5 py-2 rounded-xl border border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
-                          title="Reject review"
+                          title="Set back to pending"
                         >
-                          <BiX className="text-base" />
-                          <span>Reject</span>
+                          <BiTimeFive className="text-base" />
+                          <span>Unapprove</span>
                         </button>
                       )}
 
+                      {/* Featured Toggle */}
+                      <button
+                        type="button"
+                        disabled={isProcessing}
+                        onClick={() => handleToggleFeatured(rev.id, !rev.is_featured)}
+                        className={`flex items-center gap-1 px-3 py-2 rounded-xl border text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 ${
+                          rev.is_featured
+                            ? 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100'
+                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                        title={rev.is_featured ? 'Remove from featured' : 'Highlight as featured review'}
+                      >
+                        <BiHeart className={rev.is_featured ? 'fill-current text-indigo-600' : ''} />
+                        <span>{rev.is_featured ? 'Featured' : 'Feature'}</span>
+                      </button>
+
+                      {/* Delete */}
                       <button
                         type="button"
                         disabled={isProcessing}
                         onClick={() => handleDelete(rev.id)}
                         className="p-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50"
-                        title="Delete review"
+                        title="Permanently delete review"
                       >
                         <BiTrash className="text-base" />
                       </button>
                     </>
                   ) : (
                     <span className="text-[11px] font-medium text-slate-400 italic">
-                      Admin/Manager only
+                      Reviews permission required
                     </span>
                   )}
                 </div>
@@ -421,3 +488,4 @@ export default function AdminReviewsPage() {
     </div>
   );
 }
+

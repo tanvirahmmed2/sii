@@ -3,13 +3,23 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { BiLoaderAlt, BiLockAlt, BiShieldQuarter, BiEnvelope, BiArrowBack } from 'react-icons/bi';
+import {
+  BiLoaderAlt,
+  BiLockAlt,
+  BiShieldQuarter,
+  BiEnvelope,
+  BiArrowBack,
+  BiCheckCircle,
+  BiErrorCircle,
+} from 'react-icons/bi';
+import { FiEye, FiEyeOff } from 'react-icons/fi';
 import CreatorAuthLayout from 'src/component/marketing/creator/CreatorAuthLayout';
 
 export default function CreatorLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [is2FARequired, setIs2FARequired] = useState(false);
 
@@ -28,7 +38,7 @@ export default function CreatorLoginPage() {
     setResendMsg('');
 
     try {
-      const res = await fetch('/api/creator', {
+      const res = await fetch('/api/creator/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -75,12 +85,12 @@ export default function CreatorLoginPage() {
     setError('');
 
     try {
-      const res = await fetch('/api/creator', {
+      const res = await fetch('/api/creator/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'resend_verification',
-          email: targetEmail,
+          email: targetEmail.trim(),
         }),
       });
       const data = await res.json();
@@ -100,7 +110,7 @@ export default function CreatorLoginPage() {
     <CreatorAuthLayout
       badge="Creator Studio"
       headline="Welcome Back to Your Studio"
-      description="Access your visual site builder, manage live projects, monitor client inquiries, and scale your commerce operations."
+      description="Access your visual site builder, manage live projects, monitor client inquiries, and scale your digital operations."
       features={[
         'Drag-and-drop website editor with instant global publishing',
         'Built-in store engine with zero commission and instant payouts',
@@ -122,43 +132,50 @@ export default function CreatorLoginPage() {
         href: '/creator/register',
       }}
     >
-      <div className="w-full p-7 sm:p-9 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xl shadow-slate-200/40 dark:shadow-none space-y-6">
+      <div className="w-full p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xl shadow-slate-200/40 dark:shadow-none space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          
+          <div className="w-12 h-12 rounded-2xl bg-secondary/10 dark:bg-secondary/20 text-secondary flex items-center justify-center text-2xl mx-auto border border-secondary/20">
+            {is2FARequired ? <BiShieldQuarter /> : <BiLockAlt />}
+          </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-            {is2FARequired ? 'Security Verification' : 'Creator Login'}
+            {is2FARequired ? 'Security Verification' : 'Creator Sign In'}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             {is2FARequired
-              ? 'Enter the 6-digit verification code sent to your email.'
-              : 'Access your creator dashboard, manage portfolios, and scale your brand.'}
+              ? `Enter the 6-digit verification code sent to ${email}.`
+              : 'Sign in to access your creator dashboard and website builder.'}
           </p>
         </div>
 
-        {/* Alerts */}
+        {/* Success / Info Alert */}
         {resendMsg && (
-          <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
-            {resendMsg}
+          <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-medium flex items-start gap-2.5">
+            <BiCheckCircle className="text-base text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            <span>{resendMsg}</span>
           </div>
         )}
 
+        {/* Error Alert */}
         {error && (
-          <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold space-y-2">
-            <p>{error}</p>
+          <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs font-medium space-y-2.5">
+            <div className="flex items-start gap-2.5">
+              <BiErrorCircle className="text-base text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
             {isUnverified && (
-              <div className="pt-2 flex flex-col gap-2">
+              <div className="pt-2 flex flex-col gap-2 border-t border-rose-200/60 dark:border-rose-800/60">
                 <Link
                   href={`/creator/verify?email=${encodeURIComponent(unverifiedEmail || email)}`}
-                  className="w-full py-2 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-center transition-colors text-[11px]"
+                  className="w-full py-2 px-3 rounded-lg bg-secondary hover:bg-secondary-dark text-white font-bold text-center transition-colors text-xs shadow-xs"
                 >
-                  Go to Verification Page →
+                  Verify Email Address Now →
                 </Link>
                 <button
                   type="button"
                   onClick={handleResend}
                   disabled={resending}
-                  className="w-full py-1.5 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer text-[11px]"
+                  className="w-full py-1.5 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer text-xs"
                 >
                   {resending ? (
                     <>
@@ -179,65 +196,95 @@ export default function CreatorLoginPage() {
           {!is2FARequired ? (
             <>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Email Address
                 </label>
                 <div className="relative">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400 text-base">
+                    <BiEnvelope />
+                  </span>
                   <input
                     type="email"
                     required
+                    autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-slate-900 dark:focus:border-white transition-colors"
+                    placeholder="creator@example.com"
+                    className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-colors"
                   />
                 </div>
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center justify-between mb-1.5">
                   <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                     Password
                   </label>
                   <Link
                     href="/creator/recovery"
-                    className="text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:underline"
+                    className="text-xs text-secondary hover:text-secondary-dark dark:hover:text-secondary-light hover:underline font-medium transition-colors"
                   >
                     Forgot password?
                   </Link>
                 </div>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-slate-900 dark:focus:border-white transition-colors"
-                />
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400 text-base">
+                    <BiLockAlt />
+                  </span>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-11 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer text-sm"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <FiEyeOff /> : <FiEye />}
+                  </button>
+                </div>
               </div>
             </>
           ) : (
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                6-Digit Security Code
-              </label>
-              <input
-                type="text"
-                required
-                maxLength={6}
-                value={twoFactorCode}
-                onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ''))}
-                placeholder="123456"
-                autoFocus
-                className="w-full text-center tracking-[8px] font-mono text-xl font-bold bg-slate-50 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-600 transition-colors"
-              />
-              <div className="mt-2 text-right">
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  6-Digit Security Code
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={6}
+                  value={twoFactorCode}
+                  onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="123456"
+                  autoFocus
+                  className="w-full text-center tracking-[10px] font-mono text-2xl font-bold bg-slate-50 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-colors"
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-xs pt-1">
                 <button
                   type="button"
                   onClick={() => setIs2FARequired(false)}
-                  className="text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white inline-flex items-center gap-1 cursor-pointer"
+                  className="text-slate-500 hover:text-slate-900 dark:hover:text-white inline-flex items-center gap-1 cursor-pointer font-medium"
                 >
                   <BiArrowBack className="text-xs" /> Back to password
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending}
+                  className="text-secondary hover:text-secondary-dark dark:hover:text-secondary-light hover:underline font-semibold cursor-pointer disabled:opacity-50"
+                >
+                  {resending ? 'Resending...' : 'Resend code'}
                 </button>
               </div>
             </div>
@@ -246,35 +293,35 @@ export default function CreatorLoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
+            className="w-full py-2.5 rounded-xl bg-secondary hover:bg-secondary-dark text-white text-xs font-bold shadow-md shadow-secondary/25 hover:shadow-secondary/35 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 mt-2"
           >
             {loading ? (
               <>
                 <BiLoaderAlt className="animate-spin text-base" />
-                <span>{is2FARequired ? 'Verifying...' : 'Authenticating...'}</span>
+                <span>{is2FARequired ? 'Verifying Code...' : 'Signing In...'}</span>
               </>
             ) : (
-              <span>{is2FARequired ? 'Verify & Continue →' : 'Login →'}</span>
+              <span>{is2FARequired ? 'Verify & Continue →' : 'Sign In →'}</span>
             )}
           </button>
         </form>
 
-        {/* Footer */}
+        {/* Footer Links */}
         <div className="text-center pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Don&apos;t have an account yet?{' '}
+            Don&apos;t have a creator account yet?{' '}
             <Link
               href="/creator/register"
-              className="font-semibold text-slate-900 dark:text-white hover:underline"
+              className="font-semibold text-secondary hover:text-secondary-dark dark:hover:text-secondary-light hover:underline transition-colors"
             >
               Create Account
             </Link>
           </p>
           <p className="text-[11px] text-slate-400">
-            Have a verification code?{' '}
+            Received a 6-digit confirmation code?{' '}
             <Link
               href="/creator/verify"
-              className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+              className="text-slate-600 dark:text-slate-300 hover:text-secondary hover:underline font-medium transition-colors"
             >
               Verify Email Here
             </Link>

@@ -7,23 +7,27 @@ export async function GET() {
     const res = await queryDb(
       `SELECT r.id,
               r.creator_id,
-              r.subscription_id,
+              r.website_id,
+              r.reviewer_name,
+              r.institution_name,
               r.rating,
               r.title,
-              r.comment,
-              r.status,
+              r.review_text,
+              r.review_text AS comment,
+              r.is_featured,
+              r.is_approved,
+              'APPROVED' AS status,
               r.created_at,
-              c.name AS creator_name,
+              COALESCE(c.name, r.reviewer_name) AS creator_name,
               NULL::text AS creator_avatar,
-              c.bio AS creator_bio,
-              p.name AS package_name,
+              COALESCE(p.name, r.institution_name, 'SaaS Client') AS package_name,
               p.slug AS package_slug
        FROM reviews r
-       JOIN creators c ON r.creator_id = c.id
-       JOIN subscription s ON r.subscription_id = s.id
-       JOIN packages p ON s.package_id = p.id
-       WHERE r.status = 'APPROVED'
-       ORDER BY r.created_at DESC, r.id DESC`
+       LEFT JOIN creators c ON r.creator_id = c.id
+       LEFT JOIN websites w ON r.website_id = w.id
+       LEFT JOIN packages p ON w.package_id = p.id
+       WHERE r.is_approved = TRUE
+       ORDER BY r.is_featured DESC, r.created_at DESC, r.id DESC`
     );
 
     const reviews = res.rows || [];

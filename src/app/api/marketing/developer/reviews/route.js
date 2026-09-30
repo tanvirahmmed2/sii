@@ -17,26 +17,46 @@ export async function GET(request) {
     const statusParam = searchParams.get('status');
 
     let queryText = `
-      SELECT r.*,
-             c.name AS creator_name,
+      SELECT r.id,
+             r.creator_id,
+             r.website_id,
+             r.reviewer_name,
+             r.institution_name,
+             r.rating,
+             r.title,
+             r.review_text,
+             r.review_text AS comment,
+             r.is_featured,
+             r.is_approved,
+             CASE WHEN r.is_approved = TRUE THEN 'APPROVED' ELSE 'PENDING' END AS status,
+             r.created_at,
+             r.updated_at,
+             COALESCE(c.name, r.reviewer_name) AS creator_name,
              c.email AS creator_email,
              NULL::text AS creator_avatar,
-             p.name AS package_name,
-             p.slug AS package_slug,
-             d.name AS approved_by_name,
-             COALESCE(dr.slug, 'developer') AS approved_by_role
+             w.name AS website_name,
+             w.subdomain AS website_subdomain,
+             COALESCE(p.name, r.institution_name, 'SaaS Client') AS package_name,
+             p.slug AS package_slug
       FROM reviews r
-      JOIN creators c ON r.creator_id = c.id
-      JOIN subscription s ON r.subscription_id = s.id
-      JOIN packages p ON s.package_id = p.id
-      LEFT JOIN developers d ON r.approved_by_developer_id = d.id
-      LEFT JOIN roles dr ON d.role_id = dr.id
+      LEFT JOIN creators c ON r.creator_id = c.id
+      LEFT JOIN websites w ON r.website_id = w.id
+      LEFT JOIN packages p ON w.package_id = p.id
     `;
 
     const params = [];
     if (statusParam && statusParam !== 'ALL') {
-      params.push(statusParam.toUpperCase());
-      queryText += ' WHERE r.status = $1';
+      const upper = statusParam.toUpperCase();
+      if (upper === 'APPROVED') {
+        params.push(true);
+        queryText += ' WHERE r.is_approved = $1';
+      } else if (upper === 'PENDING' || upper === 'REJECTED') {
+        params.push(false);
+        queryText += ' WHERE r.is_approved = $1';
+      } else if (upper === 'FEATURED') {
+        params.push(true);
+        queryText += ' WHERE r.is_featured = $1';
+      }
     }
 
     queryText += ' ORDER BY r.created_at DESC, r.id DESC';
@@ -57,7 +77,7 @@ export async function GET(request) {
   }
 }
 
-// PUT: Moderate review status
+// PUT: Moderate review status (approve or set pending) and featured state
 export async function PUT(request) {
   try {
     const auth = await hasModulePermission(request, 'reviews');
@@ -82,24 +102,33 @@ export async function PUT(request) {
       );
     }
 
-    if (!['APPROVED', 'REJECTED', 'PENDING'].includes(status)) {
+    // Determine is_approved
+    let isApproved = null;
+    if (body.is_approved !== undefined) {
+      isApproved = Boolean(body.is_approved);
+    } else if (status === 'APPROVED') {
+      isApproved = true;
+    } else if (status === 'PENDING' || status === 'REJECTED') {
+      isApproved = false;
+    }
+
+    if (isApproved === null && body.is_featured === undefined) {
       return NextResponse.json(
         { success: false, error: 'Status must be APPROVED, REJECTED, or PENDING' },
         { status: 400 }
       );
     }
 
-    const reviewerDeveloperId = auth.staff.id;
+    const isFeatured = body.is_featured !== undefined ? Boolean(body.is_featured) : null;
 
     const res = await queryDb(
       `UPDATE reviews
-       SET status = $1,
-           approved_by_developer_id = $2,
-           approved_at = CASE WHEN $1 IN ('APPROVED', 'REJECTED') THEN CURRENT_TIMESTAMP ELSE NULL END,
+       SET is_approved = COALESCE($1, is_approved),
+           is_featured = COALESCE($2, is_featured),
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $3
-       RETURNING *`,
-      [status, reviewerDeveloperId, reviewId]
+       RETURNING id, creator_id, website_id, reviewer_name, institution_name, rating, title, review_text, review_text AS comment, is_featured, is_approved, CASE WHEN is_approved = TRUE THEN 'APPROVED' ELSE 'PENDING' END AS status, created_at, updated_at`,
+      [isApproved, isFeatured, reviewId]
     );
 
     if (res.rows.length === 0) {
@@ -109,11 +138,14 @@ export async function PUT(request) {
       );
     }
 
+    const updatedRow = res.rows[0];
+    const newStatus = updatedRow.is_approved ? 'APPROVED' : 'PENDING';
+
     return NextResponse.json({
       success: true,
-      message: `Review #${reviewId} has been successfully updated to ${status}.`,
-      review: res.rows[0],
-      record: res.rows[0],
+      message: `Review #${reviewId} has been successfully updated to ${newStatus}.`,
+      review: updatedRow,
+      record: updatedRow,
     });
   } catch (error) {
     console.error('Error in PUT /api/developer/reviews:', error);

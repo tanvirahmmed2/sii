@@ -27,12 +27,9 @@ export default function CreatorAuthLayout({
 }) {
   return (
     <div className="h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors lg:flex lg:flex-row">
-      {/* ======================================================== */}
-      {/* LEFT COLUMN: Brand Hero, Visual Showcase & Social Proof  */}
-      {/* Shown ONLY on larger screens (lg: and above)             */}
-      {/* ======================================================== */}
+
       <div className="hidden lg:flex lg:w-1/2 xl:w-5/12 relative overflow-hidden bg-primary-dark text-white p-8 sm:p-12 lg:p-16 flex-col justify-between border-r border-slate-800 shrink-0">
-        
+
         <div className="relative z-10 flex items-center justify-between">
           <Link
             href="/"
@@ -51,7 +48,7 @@ export default function CreatorAuthLayout({
 
         {/* Center: Headline & Creator Value Pillars */}
         <div className="relative z-10 my-10 sm:my-14 space-y-6">
-          
+
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-white leading-tight">
             {headline}
           </h2>
@@ -74,7 +71,7 @@ export default function CreatorAuthLayout({
 
       </div>
       <div className="flex-1 min-h-screen flex flex-col justify-center lg:justify-between px-4 py-8 sm:px-6 lg:p-12 xl:p-16 bg-slate-50 dark:bg-slate-950 lg:bg-slate-50/70 lg:dark:bg-slate-900/60 overflow-y-auto">
-        
+
 
         {/* Form Container (Centered with max-w-md width) */}
         <div className="max-w-md w-full mx-auto my-auto py-2 sm:py-4 h-screen">

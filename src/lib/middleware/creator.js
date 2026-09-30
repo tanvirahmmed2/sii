@@ -95,7 +95,7 @@ export async function getCreatorSession(request) {
     if (!decoded || !decoded.id) return null;
 
     const res = await query(
-      `SELECT id, name, email, phone, bio, avatar_url, is_active, is_verified, created_at
+      `SELECT *
        FROM creators
        WHERE id = $1 LIMIT 1`,
       [decoded.id]
@@ -109,10 +109,11 @@ export async function getCreatorSession(request) {
       name: c.name,
       email: c.email,
       phone: c.phone,
-      bio: c.bio,
-      avatarUrl: c.avatar_url,
+      institution: c.institution || null,
+      bio: c.bio || null,
+      avatarUrl: c.avatar_url || null,
       isActive: c.is_active,
-      isVerified: c.is_verified,
+      isVerified: c.is_verified || c.email_verified || false,
       createdAt: c.created_at,
     };
   } catch (error) {
@@ -150,12 +151,30 @@ export async function authenticateCreator(email, password, { ip = '127.0.0.1', u
     throw new Error('Incorrect email or password.');
   }
 
-  if (!creator.is_verified) {
+  const isVerified = Boolean(creator.email_verified || creator.is_verified);
+  if (!isVerified) {
     const err = new Error('Please verify your email address to access your creator studio.');
     err.unverified = true;
     err.email = creator.email;
     err.status = 403;
     throw err;
+  }
+
+  // Handle 2FA if active code is present
+  if (creator.two_factor_code && creator.two_factor_expires && new Date(creator.two_factor_expires) > new Date()) {
+    if (!twoFactorCode) {
+      const err = new Error('Two-factor authentication code required.');
+      err.twoFactorRequired = true;
+      err.status = 401;
+      throw err;
+    }
+    if (String(twoFactorCode).trim() !== String(creator.two_factor_code).trim()) {
+      const err = new Error('Invalid two-factor authentication code.');
+      err.twoFactorRequired = true;
+      err.twoFactorInvalid = true;
+      err.status = 401;
+      throw err;
+    }
   }
 
   const token = generateToken({
@@ -165,15 +184,14 @@ export async function authenticateCreator(email, password, { ip = '127.0.0.1', u
     type: 'creator',
   });
 
-  // Record session in creator_login_sessions
+  // Update last_login_at
   try {
     await queryDb(
-      `INSERT INTO creator_login_sessions (creator_id, session_token, ip_address, user_agent, expires_at)
-       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP + INTERVAL '7 days')`,
-      [creator.id, token, ip, userAgent]
+      `UPDATE creators SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1`,
+      [creator.id]
     );
   } catch (e) {
-    console.warn('Notice saving creator session:', e.message);
+    // Non-blocking
   }
 
   // Set cookie
@@ -185,8 +203,9 @@ export async function authenticateCreator(email, password, { ip = '127.0.0.1', u
       name: creator.name,
       email: creator.email,
       phone: creator.phone,
-      bio: creator.bio,
-      isVerified: creator.is_verified,
+      institution: creator.institution,
+      isVerified: true,
+      emailVerified: true,
     },
     token,
   };

@@ -269,7 +269,7 @@ const Footer = () => {
               <div className="inline-flex items-center p-0.5 rounded-full bg-black/40 border border-white/20 backdrop-blur-md">
                 <button
                   type="button"
-                  onClick={() => (setTheme ? setTheme('light') : toggleTheme())}
+                  onClick={() => (typeof setTheme === 'function' ? setTheme('light') : typeof toggleTheme === 'function' ? toggleTheme() : null)}
                   className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
                     !isDark
                       ? 'bg-white text-slate-900 shadow-md scale-105'
@@ -283,10 +283,10 @@ const Footer = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => (setTheme ? setTheme('dark') : toggleTheme())}
+                  onClick={() => (typeof setTheme === 'function' ? setTheme('dark') : typeof toggleTheme === 'function' ? toggleTheme() : null)}
                   className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
                     isDark
-                      ? 'bg-purple-600 text-white shadow-md scale-105'
+                      ? 'bg-secondary text-white shadow-md scale-105'
                       : 'text-slate-300 hover:text-white'
                   }`}
                   title="Switch to Dark Mode"
