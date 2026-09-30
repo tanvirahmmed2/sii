@@ -16,6 +16,7 @@ import { SITE_NAME, LIVE_CHAT_TOKEN } from 'src/lib/database/secret';
 const COOKIE_NAME = LIVE_CHAT_TOKEN || 'hiesci-live';
 const COOKIE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+// Cookie Helpers
 function getLiveCookie() {
   if (typeof document === 'undefined') return null;
   try {
@@ -96,8 +97,23 @@ export default function LiveChatPopup() {
   const [sending, setSending] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [sessionRemainingHours, setSessionRemainingHours] = useState(24);
+
+  // Dragging state (null = default primary bottom-left position)
+  const [position, setPosition] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+
   const messagesEndRef = useRef(null);
   const lastMessageCountRef = useRef(0);
+  const launcherRef = useRef(null);
+
+  const dragRef = useRef({
+    startX: 0,
+    startY: 0,
+    initialX: 0,
+    initialY: 0,
+    hasMoved: false,
+    isDragging: false,
+  });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -109,6 +125,148 @@ export default function LiveChatPopup() {
       setUnreadCount(0);
     }
   }, [messages, isOpen]);
+
+  // Load saved icon drag position from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('hiesci_live_chat_icon_pos');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+          const btnSize = 56;
+          const margin = 12;
+          const maxX = window.innerWidth - btnSize - margin;
+          const maxY = window.innerHeight - btnSize - margin;
+          setPosition({
+            x: Math.min(Math.max(parsed.x, margin), maxX),
+            y: Math.min(Math.max(parsed.y, margin), maxY),
+          });
+        }
+      }
+    } catch (_) {}
+  }, []);
+
+  // Window resize handler: clamp icon within viewport if dragged and update localStorage
+  useEffect(() => {
+    const handleResize = () => {
+      setPosition((prev) => {
+        if (!prev) return null;
+        const btnSize = 56;
+        const margin = 16;
+        const maxX = window.innerWidth - btnSize - margin;
+        const maxY = window.innerHeight - btnSize - margin;
+        const clamped = {
+          x: Math.min(Math.max(prev.x, margin), Math.max(margin, maxX)),
+          y: Math.min(Math.max(prev.y, margin), Math.max(margin, maxY)),
+        };
+        try {
+          localStorage.setItem('hiesci_live_chat_icon_pos', JSON.stringify(clamped));
+        } catch (_) {}
+        return clamped;
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Pointer drag start
+  const handlePointerDown = (clientX, clientY) => {
+    if (!launcherRef.current) return;
+    const rect = launcherRef.current.getBoundingClientRect();
+    dragRef.current = {
+      startX: clientX,
+      startY: clientY,
+      initialX: rect.left,
+      initialY: rect.top,
+      hasMoved: false,
+      isDragging: true,
+      currentPos: null,
+    };
+    setIsDragging(true);
+  };
+
+  // Pointer drag move
+  const handlePointerMove = useCallback((clientX, clientY) => {
+    if (!dragRef.current.isDragging) return;
+    const deltaX = clientX - dragRef.current.startX;
+    const deltaY = clientY - dragRef.current.startY;
+
+    if (!dragRef.current.hasMoved && Math.hypot(deltaX, deltaY) > 5) {
+      dragRef.current.hasMoved = true;
+    }
+
+    if (dragRef.current.hasMoved) {
+      const btnSize = 56;
+      const margin = 12;
+      const newX = dragRef.current.initialX + deltaX;
+      const newY = dragRef.current.initialY + deltaY;
+
+      const maxX = window.innerWidth - btnSize - margin;
+      const maxY = window.innerHeight - btnSize - margin;
+
+      const clampedPos = {
+        x: Math.min(Math.max(newX, margin), maxX),
+        y: Math.min(Math.max(newY, margin), maxY),
+      };
+
+      dragRef.current.currentPos = clampedPos;
+      setPosition(clampedPos);
+    }
+  }, []);
+
+  // Pointer drag end
+  const handlePointerUp = useCallback(() => {
+    if (!dragRef.current.isDragging) return;
+    const moved = dragRef.current.hasMoved;
+    const finalPos = dragRef.current.currentPos;
+    dragRef.current.isDragging = false;
+    setIsDragging(false);
+
+    // If dragged and moved, persist position to localStorage
+    if (moved && finalPos) {
+      try {
+        localStorage.setItem('hiesci_live_chat_icon_pos', JSON.stringify(finalPos));
+      } catch (_) {}
+    }
+
+    // If user clicked without dragging, toggle chat popup open/closed
+    if (!moved) {
+      setIsOpen((prev) => !prev);
+    }
+  }, []);
+
+  // Attach global mouse and touch events while dragging
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const onMouseMove = (e) => {
+      handlePointerMove(e.clientX, e.clientY);
+    };
+    const onMouseUp = () => {
+      handlePointerUp();
+    };
+
+    const onTouchMove = (e) => {
+      if (e.touches && e.touches[0]) {
+        handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+    const onTouchEnd = () => {
+      handlePointerUp();
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchend', onTouchEnd);
+
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [isDragging, handlePointerMove, handlePointerUp]);
 
   // Initial load: check 24-hour cookie session
   useEffect(() => {
@@ -214,20 +372,20 @@ export default function LiveChatPopup() {
         typeof navigator !== 'undefined' && navigator.userAgent.includes('Windows')
           ? 'Windows'
           : typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac')
-            ? 'macOS'
-            : typeof navigator !== 'undefined' && navigator.userAgent.includes('Android')
-              ? 'Android'
-              : typeof navigator !== 'undefined' && navigator.userAgent.includes('iPhone')
-                ? 'iOS'
-                : 'Linux/Other',
+          ? 'macOS'
+          : typeof navigator !== 'undefined' && navigator.userAgent.includes('Android')
+          ? 'Android'
+          : typeof navigator !== 'undefined' && navigator.userAgent.includes('iPhone')
+          ? 'iOS'
+          : 'Linux/Other',
       browser:
         typeof navigator !== 'undefined' && navigator.userAgent.includes('Chrome')
           ? 'Chrome'
           : typeof navigator !== 'undefined' && navigator.userAgent.includes('Firefox')
-            ? 'Firefox'
-            : typeof navigator !== 'undefined' && navigator.userAgent.includes('Safari')
-              ? 'Safari'
-              : 'Browser',
+          ? 'Firefox'
+          : typeof navigator !== 'undefined' && navigator.userAgent.includes('Safari')
+          ? 'Safari'
+          : 'Browser',
     };
 
     try {
@@ -339,13 +497,63 @@ export default function LiveChatPopup() {
     lastMessageCountRef.current = 0;
   };
 
+  // Compute smart positioning for the popup window relative to icon
+  const getPopupStyle = () => {
+    if (typeof window === 'undefined') return {};
+    if (!position) {
+      // Primary default placement: bottom-left
+      return {
+        position: 'fixed',
+        left: '32px',
+        bottom: '96px',
+        width: 'min(420px, calc(100vw - 32px))',
+        height: 'min(540px, 82vh)',
+        zIndex: 60,
+      };
+    }
+
+    const popupWidth = Math.min(420, window.innerWidth - 32);
+    const popupHeight = Math.min(540, window.innerHeight * 0.82);
+    const btnSize = 56;
+    const margin = 16;
+
+    // Horizontal placement
+    let left = position.x;
+    if (left + popupWidth > window.innerWidth - margin) {
+      left = window.innerWidth - popupWidth - margin;
+    }
+    if (left < margin) left = margin;
+
+    // Vertical placement: open above button if enough room, otherwise below
+    let top = position.y - popupHeight - 12;
+    if (top < margin) {
+      top = position.y + btnSize + 12;
+    }
+    if (top + popupHeight > window.innerHeight - margin) {
+      top = window.innerHeight - popupHeight - margin;
+    }
+    if (top < margin) top = margin;
+
+    return {
+      position: 'fixed',
+      left: `${left}px`,
+      top: `${top}px`,
+      width: `${popupWidth}px`,
+      height: `${popupHeight}px`,
+      zIndex: 60,
+    };
+  };
+
   return (
-    <div className="fixed bottom-6 left-8 z-50 font-sans">
+    <>
       {/* Expanded Chat Popup Window */}
       {isOpen && (
-        <div className="mb-4 w-[360px] sm:w-[420px] h-[540px] max-h-[82vh] bg-white border border-slate-200 shadow-2xl rounded-3xl flex flex-col overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-bottom-5">
+        <div
+          style={getPopupStyle()}
+          className="bg-white border border-slate-200 shadow-2xl rounded-3xl flex flex-col overflow-hidden transition-all duration-200 animate-in fade-in slide-in-from-bottom-3 font-sans"
+        >
           {/* Header */}
-          <div className="bg-slate-900 px-4 py-3.5 text-white flex items-center justify-between border-b border-slate-800">
+          <div className="bg-slate-900 px-4 py-3.5 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="relative">
                 <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
@@ -456,15 +664,14 @@ export default function LiveChatPopup() {
               </div>
 
               <div className="flex items-center justify-center gap-2 text-[10px] text-slate-500 pt-4 border-t border-slate-200/60">
-                
-                <span>24-hour persistent cookie session will be established</span>
+                <span>🔒 24-hour persistent cookie session will be established</span>
               </div>
             </div>
           ) : (
             /* STEP 2: Live Conversation Stream */
             <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
               {/* Session Status Banner */}
-              <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 text-[11px] text-slate-600 flex items-center justify-between">
+              <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 text-[11px] text-slate-600 flex items-center justify-between shrink-0">
                 <span className="truncate">
                   Chatting as <strong className="text-slate-800">{chatSession.visitor_name}</strong>
                 </span>
@@ -489,19 +696,20 @@ export default function LiveChatPopup() {
                         </span>
                       </div>
                       <div
-                        className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed shadow-2xs ${isVisitor
+                        className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed shadow-2xs ${
+                          isVisitor
                             ? 'bg-slate-900 text-white rounded-br-xs'
                             : 'bg-white text-slate-900 border border-slate-200 rounded-bl-xs'
-                          }`}
+                        }`}
                       >
                         {msg.message}
                       </div>
                       <span className="text-[9px] text-slate-400 mt-0.5 px-1">
                         {msg.created_at
                           ? new Date(msg.created_at).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
                           : ''}
                       </span>
                     </div>
@@ -513,7 +721,7 @@ export default function LiveChatPopup() {
               {/* Message Input Footer */}
               <form
                 onSubmit={handleSendMessage}
-                className="p-3 bg-white border-t border-slate-200 flex items-center gap-2"
+                className="p-3 bg-white border-t border-slate-200 flex items-center gap-2 shrink-0"
               >
                 <input
                   type="text"
@@ -541,29 +749,61 @@ export default function LiveChatPopup() {
         </div>
       )}
 
-      {/* Floating Launcher Button */}
-      <div className="flex justify-end">
+      {/* Floating Draggable Launcher Button */}
+      <div
+        ref={launcherRef}
+        style={
+          position
+            ? {
+                position: 'fixed',
+                left: `${position.x}px`,
+                top: `${position.y}px`,
+                zIndex: 70,
+                touchAction: 'none',
+              }
+            : {
+                position: 'fixed',
+                left: '32px',
+                bottom: '24px',
+                zIndex: 70,
+                touchAction: 'none',
+              }
+        }
+        className={`font-sans select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+      >
         <button
           type="button"
-          onClick={() => setIsOpen((prev) => !prev)}
-          className="relative flex items-center justify-center w-14 h-14 rounded-full bg-slate-900 hover:bg-slate-800 text-white shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer group"
-          aria-label="Open live chat support"
+          onMouseDown={(e) => {
+            if (e.button !== 0) return;
+            e.preventDefault();
+            handlePointerDown(e.clientX, e.clientY);
+          }}
+          onTouchStart={(e) => {
+            if (e.touches && e.touches[0]) {
+              handlePointerDown(e.touches[0].clientX, e.touches[0].clientY);
+            }
+          }}
+          className={`relative flex items-center justify-center w-14 h-14 rounded-full bg-slate-900 hover:bg-slate-800 text-white shadow-2xl hover:scale-105 active:scale-95 transition-transform duration-150 select-none ${
+            isDragging ? 'cursor-grabbing scale-105 shadow-indigo-500/30' : 'cursor-grab'
+          }`}
+          aria-label="Live chat support (click to chat or drag anywhere)"
+          title={isDragging ? 'Dragging...' : 'Click to chat, or drag anywhere on screen'}
         >
           {isOpen ? (
-            <BiX className="text-2xl" />
+            <BiX className="text-2xl pointer-events-none" />
           ) : (
             <>
-              <BiMessageRoundedDots className="text-2xl" />
+              <BiMessageRoundedDots className="text-2xl pointer-events-none" />
 
-              {/* Online Pulse */}
-              <span className="absolute -top-1 -right-1 flex h-4 w-4">
+              {/* Online Pulse Indicator */}
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 pointer-events-none">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-white"></span>
               </span>
 
-              {/* Unread message count badge */}
+              {/* Unread Message Count Badge */}
               {unreadCount > 0 && (
-                <span className="absolute -top-2 -left-2 bg-rose-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-bounce">
+                <span className="absolute -top-2 -left-2 bg-rose-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-bounce pointer-events-none">
                   {unreadCount}
                 </span>
               )}
@@ -571,6 +811,6 @@ export default function LiveChatPopup() {
           )}
         </button>
       </div>
-    </div>
+    </>
   );
 }

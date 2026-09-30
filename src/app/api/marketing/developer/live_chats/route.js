@@ -167,6 +167,18 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Chat ID and message are required.' }, { status: 400 });
     }
 
+    // Check if chat is closed
+    const chatCheck = await queryDb('SELECT id, status FROM live_chats WHERE id = $1 LIMIT 1', [chatId]);
+    if (chatCheck.rows.length === 0) {
+      return NextResponse.json({ success: false, error: 'Chat session not found' }, { status: 404 });
+    }
+    if (chatCheck.rows[0].status === 'CLOSED') {
+      return NextResponse.json(
+        { success: false, error: 'This chat session is closed. Reopen the chat to send messages.' },
+        { status: 400 }
+      );
+    }
+
     const staffId = auth.user?.id || null;
     const staffName = auth.user?.name || 'Support';
 

@@ -161,6 +161,10 @@ CREATE TABLE IF NOT EXISTS packages (
     slug VARCHAR(100) UNIQUE NOT NULL,
     tagline VARCHAR(255),
     description TEXT,
+    monthly_price_usd DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (monthly_price_usd >= 0.00),
+    yearly_price_usd DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (yearly_price_usd >= 0.00),
+    monthly_price_bdt DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (monthly_price_bdt >= 0.00),
+    yearly_price_bdt DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (yearly_price_bdt >= 0.00),
     monthly_price DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (monthly_price >= 0.00),
     yearly_price DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (yearly_price >= 0.00),
     discount_percentage DECIMAL(5, 2) DEFAULT 0.00 CHECK (discount_percentage >= 0.00 AND discount_percentage <= 100.00),
@@ -168,6 +172,7 @@ CREATE TABLE IF NOT EXISTS packages (
     max_teachers INT DEFAULT 30,
     max_staff INT DEFAULT 20,
     max_storage_mb INT DEFAULT 5120,
+    max_websites INT DEFAULT 1,
     features JSONB DEFAULT '[]'::jsonb,
     is_popular BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
@@ -176,6 +181,13 @@ CREATE TABLE IF NOT EXISTS packages (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Idempotent column migrations for existing packages table
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS monthly_price_usd DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS yearly_price_usd DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS monthly_price_bdt DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS yearly_price_bdt DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS max_websites INT DEFAULT 1;
 
 DROP TRIGGER IF EXISTS update_packages_updated_at ON packages;
 CREATE TRIGGER update_packages_updated_at
@@ -201,6 +213,22 @@ DROP TRIGGER IF EXISTS update_tenant_modules_updated_at ON tenant_modules;
 CREATE TRIGGER update_tenant_modules_updated_at
     BEFORE UPDATE ON tenant_modules
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Seed Standard Educational Tenant Modules Catalog
+INSERT INTO tenant_modules (name, slug, description, icon, is_active) VALUES
+('Student Information System (SIS)', 'sis', 'Complete student profiles, enrollment, records, and student ID management', 'BiUser', true),
+('Attendance Tracker', 'attendance', 'Daily automated student & staff attendance with SMS alerts and biometric support', 'BiCalendarCheck', true),
+('Examinations & Report Cards', 'exams', 'Exam scheduling, question banks, online marks entry, and automated report cards', 'BiAward', true),
+('LMS & Study Materials', 'lms', 'Digital syllabus, lecture notes, homework submission, and online video classes', 'BiBookOpen', true),
+('Fees & Online Collections', 'fees', 'Tuition fee voucher generation, bKash/Nagad/Cards online payment gateway integration', 'BiCreditCard', true),
+('Accounting & Financial Ledger', 'accounting', 'Institutional accounting, income/expense tracking, ledger, and balance sheets', 'BiLineChart', true),
+('Staff & Payroll Management', 'staff-payroll', 'Teacher/employee profiles, leave management, monthly payroll and payslips', 'BiGroup', true),
+('Routine & Class Scheduling', 'routine', 'Weekly dynamic routine generator, period management, and teacher load allocation', 'BiTime', true),
+('Notice & Broadcast System', 'notices', 'Instant school broadcast notices, SMS/email announcements to parents', 'BiBell', true),
+('Hostel & Dormitory', 'hostel', 'Hostel room allocations, fee tracking, and hostel warden logs', 'BiBuilding', true),
+('Transport & Fleet Tracking', 'transport', 'Vehicle routes, stops, driver contacts, and student transport fees', 'BiBus', true),
+('Public Institutional Website', 'website-builder', 'Dynamic frontend CMS, school landing page, about, achievements, and gallery', 'BiDesktop', true)
+ON CONFLICT (slug) DO NOTHING;
 
 -- ----------------------------------------------------------------------------
 -- 10. PACKAGE MODULES TABLE (Tenant Modules included in Packages)
