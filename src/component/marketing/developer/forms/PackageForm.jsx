@@ -16,7 +16,7 @@ import {
   BiGroup,
   BiSearch,
   BiStar,
-  BiShieldCheck,
+  BiCheckShield,
   BiInfoCircle,
   BiCalendarCheck,
   BiAward,
@@ -775,7 +775,7 @@ export default function PackageForm({
                 />
                 <div>
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                    <BiShieldCheck className="text-emerald-500" />
+                    <BiCheckShield className="text-emerald-500" />
                     <span>Active &amp; Published</span>
                   </span>
                 </div>

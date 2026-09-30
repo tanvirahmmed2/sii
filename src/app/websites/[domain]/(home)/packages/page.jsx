@@ -1,453 +1,187 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import {
   BiLoaderAlt,
-  BiGridAlt,
-  BiLayer,
   BiPackage,
   BiRefresh,
-  BiChevronLeft,
-  BiChevronRight,
+  BiCheckCircle,
+  BiSupport,
+  BiRocket,
+  BiCheckShield,
+  BiServer,
+  BiMessageSquareDetail,
+  BiPhoneCall,
+  BiEnvelope,
+  BiX,
 } from 'react-icons/bi';
 import Package from 'src/component/marketing/home/cards/Package';
+import { SITE_MAIL, SITE_CONTACT } from 'src/lib/database/secret';
 
-function AppPackageRow({ app, packages, billingCycle, currency }) {
-  const scrollRef = useRef(null);
-
-  const scroll = (direction) => {
-    if (scrollRef.current) {
-      const scrollAmount = 360;
-      scrollRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth',
-      });
-    }
-  };
-
-  // Sort packages from lower to higher price dynamically according to active currency & billing cycle
-  const sortedPackages = useMemo(() => {
-    return [...(packages || [])].sort((a, b) => {
-      const priceA =
-        currency === 'BDT'
-          ? billingCycle === 'YEARLY'
-            ? Number(a.yearlyPriceBdt ?? 0)
-            : Number(a.monthlyPriceBdt ?? 0)
-          : billingCycle === 'YEARLY'
-          ? Number(a.yearlyPriceUsd ?? 0)
-          : Number(a.monthlyPriceUsd ?? 0);
-
-      const priceB =
-        currency === 'BDT'
-          ? billingCycle === 'YEARLY'
-            ? Number(b.yearlyPriceBdt ?? 0)
-            : Number(b.monthlyPriceBdt ?? 0)
-          : billingCycle === 'YEARLY'
-          ? Number(b.yearlyPriceUsd ?? 0)
-          : Number(b.monthlyPriceUsd ?? 0);
-
-      if (priceA !== priceB) return priceA - priceB;
-      return (Number(a.id) || 0) - (Number(b.id) || 0);
-    });
-  }, [packages, billingCycle, currency]);
-
-  if (!sortedPackages || sortedPackages.length === 0) return null;
-
-  return (
-    <section className="space-y-4 rounded-3xl bg-slate-50/70 dark:bg-slate-900/40 transition-all">
-      {/* Row Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/70 dark:border-slate-800">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="w-8 h-8 rounded-xl bg-secondary/10 text-secondary border border-secondary/20 flex items-center justify-center text-lg shrink-0">
-              <BiLayer />
-            </div>
-            <h2 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
-              {app.title}
-            </h2>
-            <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-primary/20 text-slate-800 dark:text-primary-light border border-primary/30">
-              {sortedPackages.length} {sortedPackages.length === 1 ? 'Tier' : 'Tiers'}
-            </span>
-          </div>
-          {app.short_description && (
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
-              {app.short_description}
-            </p>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3">
-          {app.slug && app.slug !== 'global' && (
-            <Link
-              href={`/apps/${app.slug}`}
-              className="text-xs font-semibold text-secondary hover:text-secondary-dark flex items-center gap-1 hover:underline"
-            >
-              <span>Explore App</span>
-              <span>&rarr;</span>
-            </Link>
-          )}
-
-          {/* Desktop Left/Right Controls */}
-          <div className="hidden sm:flex items-center gap-1.5 pl-2 border-l border-slate-200 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={() => scroll('left')}
-              className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-secondary hover:border-secondary/40 transition-all shadow-xs cursor-pointer"
-              title="Scroll left"
-            >
-              <BiChevronLeft className="text-xl" />
-            </button>
-            <button
-              type="button"
-              onClick={() => scroll('right')}
-              className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-secondary hover:border-secondary/40 transition-all shadow-xs cursor-pointer"
-              title="Scroll right"
-            >
-              <BiChevronRight className="text-xl" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Swipeable Single-Line Container (No Wrap Grid) */}
-      <div className="relative">
-        <div
-          ref={scrollRef}
-          className="flex flex-nowrap overflow-x-auto gap-6 pb-4 pt-2 px-1 scroll-smooth snap-x snap-mandatory touch-pan-x cursor-grab active:cursor-grabbing select-none"
-          style={{
-            WebkitOverflowScrolling: 'touch',
-            scrollbarWidth: 'thin',
-          }}
-        >
-          {sortedPackages.map((pkg, idx) => {
-            const price =
-              currency === 'BDT'
-                ? billingCycle === 'YEARLY'
-                  ? pkg.yearlyPriceBdt
-                  : pkg.monthlyPriceBdt
-                : billingCycle === 'YEARLY'
-                ? pkg.yearlyPriceUsd
-                : pkg.monthlyPriceUsd;
-
-            const hasExplicitPopular = sortedPackages.some((p) => Boolean(p.is_popular || p.popular));
-            const isPopular = hasExplicitPopular
-              ? Boolean(pkg.is_popular || pkg.popular)
-              : sortedPackages.length >= 3 && idx === 1;
-
-            return (
-              <Package
-                key={pkg.id}
-                pkg={{ ...pkg, popular: isPopular }}
-                price={price}
-                billingCycle={billingCycle}
-                currency={currency}
-              />
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Mobile Touch Swipe Guidance */}
-      <div className="sm:hidden flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500 pt-1">
-        <span className="flex items-center gap-1 font-medium">
-          <span>&larr;</span>
-          <span>Swipe cards horizontally</span>
-          <span>&rarr;</span>
-        </span>
-        <span>{sortedPackages.length} plans (arranged low to high)</span>
-      </div>
-    </section>
-  );
-}
-
-export default function PackagesPage() {
+export default function TenantDomainPackagesPage() {
   const [currency, setCurrency] = useState('USD');
   const [billingCycle, setBillingCycle] = useState('MONTHLY');
   const [packages, setPackages] = useState([]);
-  const [apps, setApps] = useState([]);
-  const [selectedApp, setSelectedApp] = useState('ALL');
   const [loading, setLoading] = useState(true);
+  const [creator, setCreator] = useState(null);
 
-  const fetchPackagesAndApps = async () => {
+  // Quick Custom Package Inquiry Modal state
+  const [showInquiryModal, setShowInquiryModal] = useState(false);
+  const [inquiryName, setInquiryName] = useState('');
+  const [inquiryEmail, setInquiryEmail] = useState('');
+  const [inquirySchool, setInquirySchool] = useState('');
+  const [inquiryStudents, setInquiryStudents] = useState('');
+  const [inquiryMessage, setInquiryMessage] = useState('');
+  const [inquirySubmitting, setInquirySubmitting] = useState(false);
+  const [inquirySuccess, setInquirySuccess] = useState(false);
+  const [inquiryError, setInquiryError] = useState('');
+
+  // 1. Fetch available packages
+  const fetchPackages = async () => {
     try {
       setLoading(true);
       const res = await fetch('/api/packages');
       const data = await res.json();
       if (data.success && Array.isArray(data.packages)) {
-        const mapped = data.packages.map((p, idx) => {
-          const monthlyUsd =
-            Number(
-              p.monthly_price_usd !== undefined
-                ? p.monthly_price_usd
-                : p.price_in_cents
-                ? p.price_in_cents / 100
-                : 0
-            ) || 0;
-          const yearlyUsd = Number(p.yearly_price_usd) || Math.round(monthlyUsd * 10);
-          const monthlyBdt = Number(p.monthly_price_bdt) || Math.round(monthlyUsd * 120);
-          const yearlyBdt = Number(p.yearly_price_bdt) || Math.round(monthlyBdt * 10);
-
-          const feats =
-            Array.isArray(p.features) && p.features.length > 0
-              ? p.features.map((f) => f.name || f.description || f)
-              : Array.isArray(p.allowed_modules) && p.allowed_modules.length > 0
-              ? p.allowed_modules.map((m) => `Includes ${m} Module`)
-              : ['Standard Website Provisioning', 'Creator Dashboard Access'];
-
-          return {
-            id: p.id,
-            app_id: p.app_id,
-            app_title: p.app_title,
-            app_slug: p.app_slug,
-            name: p.name,
-            slug: p.slug,
-            description: p.description || 'Complete website & portfolio creation package.',
-            monthlyPriceUsd: monthlyUsd,
-            yearlyPriceUsd: yearlyUsd,
-            monthlyPriceBdt: monthlyBdt,
-            yearlyPriceBdt: yearlyBdt,
-            maxWebsites: Number(p.max_websites ?? p.max_portfolios ?? 1),
-            maxPortfolios: Number(p.max_websites ?? p.max_portfolios ?? 1),
-            max_websites: Number(p.max_websites ?? p.max_portfolios ?? 1),
-            popular: Boolean(p.is_popular),
-            features: feats,
-            cta: `Get ${p.name}`,
-          };
-        });
-        setPackages(mapped);
-        setApps(data.apps || []);
+        setPackages(data.packages);
       } else {
         setPackages([]);
-        setApps([]);
       }
     } catch (err) {
       console.error('Failed to load packages:', err);
       setPackages([]);
-      setApps([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    let isMounted = true;
-    fetch('/api/packages')
+    fetchPackages();
+
+    // Check creator session
+    fetch('/api/creator/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'me' }),
+    })
       .then((res) => res.json())
       .then((data) => {
-        if (!isMounted) return;
-        if (data.success && Array.isArray(data.packages)) {
-          const mapped = data.packages.map((p, idx) => {
-            const monthlyUsd =
-              Number(
-                p.monthly_price_usd !== undefined
-                  ? p.monthly_price_usd
-                  : p.price_in_cents
-                  ? p.price_in_cents / 100
-                  : 0
-              ) || 0;
-            const yearlyUsd = Number(p.yearly_price_usd) || Math.round(monthlyUsd * 10);
-            const monthlyBdt = Number(p.monthly_price_bdt) || Math.round(monthlyUsd * 120);
-            const yearlyBdt = Number(p.yearly_price_bdt) || Math.round(monthlyBdt * 10);
-
-            const feats =
-              Array.isArray(p.features) && p.features.length > 0
-                ? p.features.map((f) => f.name || f.description || f)
-                : Array.isArray(p.allowed_modules) && p.allowed_modules.length > 0
-                ? p.allowed_modules.map((m) => `Includes ${m} Module`)
-                : ['Standard Website Provisioning', 'Creator Dashboard Access'];
-
-            return {
-              id: p.id,
-              app_id: p.app_id,
-              app_title: p.app_title,
-              app_slug: p.app_slug,
-              name: p.name,
-              slug: p.slug,
-              description: p.description || 'Complete website & portfolio creation package.',
-              monthlyPriceUsd: monthlyUsd,
-              yearlyPriceUsd: yearlyUsd,
-              monthlyPriceBdt: monthlyBdt,
-              yearlyPriceBdt: yearlyBdt,
-              maxWebsites: Number(p.max_websites ?? p.max_portfolios ?? 1),
-              maxPortfolios: Number(p.max_websites ?? p.max_portfolios ?? 1),
-              max_websites: Number(p.max_websites ?? p.max_portfolios ?? 1),
-              popular: Boolean(p.is_popular),
-              features: feats,
-              cta: `Get ${p.name}`,
-            };
-          });
-          setPackages(mapped);
-          setApps(data.apps || []);
-        } else {
-          setPackages([]);
-          setApps([]);
+        if (data.success && data.creator) {
+          setCreator(data.creator);
+          setInquiryName(data.creator.name || '');
+          setInquiryEmail(data.creator.email || '');
         }
       })
-      .catch((err) => {
-        if (!isMounted) return;
-        console.error('Failed to load packages:', err);
-        setPackages([]);
-        setApps([]);
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
-
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const q = params.get('app') || params.get('app_id');
-      if (q) {
-        setTimeout(() => setSelectedApp(q), 0);
-      }
-    }
-
-    return () => {
-      isMounted = false;
-    };
+      .catch(() => setCreator(null));
   }, []);
 
-  // Group packages by application so each app gets its own separate row
-  const appRows = useMemo(() => {
-    const grouped = new Map();
+  // Sort packages from lowest to highest price based on currency and billing cycle
+  const sortedPackages = useMemo(() => {
+    return [...(packages || [])].sort((a, b) => {
+      const priceA =
+        currency === 'BDT'
+          ? billingCycle === 'YEARLY'
+            ? Number(a.yearly_price_bdt ?? 0)
+            : Number(a.monthly_price_bdt ?? 0)
+          : billingCycle === 'YEARLY'
+          ? Number(a.yearly_price_usd ?? 0)
+          : Number(a.monthly_price_usd ?? 0);
 
-    apps.forEach((app) => {
-      grouped.set(String(app.id), {
-        app,
-        packages: [],
-      });
+      const priceB =
+        currency === 'BDT'
+          ? billingCycle === 'YEARLY'
+            ? Number(b.yearly_price_bdt ?? 0)
+            : Number(b.monthly_price_bdt ?? 0)
+          : billingCycle === 'YEARLY'
+          ? Number(b.yearly_price_usd ?? 0)
+          : Number(b.monthly_price_usd ?? 0);
+
+      if (priceA !== priceB) return priceA - priceB;
+      return (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0);
     });
+  }, [packages, billingCycle, currency]);
 
-    const unassigned = [];
+  // Handle custom package inquiry submission
+  const handleInquirySubmit = async (e) => {
+    e.preventDefault();
+    setInquirySubmitting(true);
+    setInquiryError('');
+    setInquirySuccess(false);
 
-    packages.forEach((pkg) => {
-      const key = pkg.app_id ? String(pkg.app_id) : null;
-      if (key && grouped.has(key)) {
-        grouped.get(key).packages.push(pkg);
-      } else if (key) {
-        if (!grouped.has(key)) {
-          grouped.set(key, {
-            app: {
-              id: pkg.app_id,
-              title: pkg.app_title || `Application #${pkg.app_id}`,
-              slug: pkg.app_slug || `app-${pkg.app_id}`,
-              short_description: 'Ecosystem application plans and subscriptions.',
-            },
-            packages: [],
-          });
+    try {
+      if (creator?.id) {
+        const res = await fetch('/api/creator', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'create_ticket',
+            creatorId: Number(creator.id),
+            subject: `Custom Package Request: ${inquirySchool || 'Enterprise Plan'}`,
+            category: 'BILLING',
+            priority: 'HIGH',
+            message: `Custom Package Inquiry from Creator #${creator.id} (${creator.name} / ${creator.email}):
+Institution: ${inquirySchool || 'N/A'}
+Estimated Student Count: ${inquiryStudents || 'Not specified'}
+Requirements:
+${inquiryMessage}`,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setInquirySuccess(true);
+        } else {
+          setInquiryError(data.error || 'Failed to submit support ticket.');
         }
-        grouped.get(key).packages.push(pkg);
       } else {
-        unassigned.push(pkg);
+        const res = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: inquiryName,
+            email: inquiryEmail,
+            subject: `Custom Package Inquiry: ${inquirySchool || 'Enterprise Plan'}`,
+            message: `Custom Institutional Package Request:
+Institution / Organization: ${inquirySchool}
+Estimated Students: ${inquiryStudents}
+Contact Person: ${inquiryName} (${inquiryEmail})
+Requirements:
+${inquiryMessage}`,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setInquirySuccess(true);
+        } else {
+          setInquiryError(data.error || 'Failed to send inquiry.');
+        }
       }
-    });
-
-    let result = Array.from(grouped.values()).filter(
-      (item) => item.packages.length > 0
-    );
-
-    if (unassigned.length > 0) {
-      result.push({
-        app: {
-          id: 'global',
-          title: 'Global Platform Plans',
-          slug: 'global',
-          short_description: 'Universal subscription tiers providing access across the platform.',
-        },
-        packages: unassigned,
-      });
+    } catch (err) {
+      setInquiryError('A network error occurred. Please try again.');
+    } finally {
+      setInquirySubmitting(false);
     }
-
-    // Sort packages inside each app row from lower to higher price
-    result.forEach((item) => {
-      item.packages.sort((a, b) => {
-        const priceA =
-          currency === 'BDT'
-            ? billingCycle === 'YEARLY'
-              ? Number(a.yearlyPriceBdt ?? 0)
-              : Number(a.monthlyPriceBdt ?? 0)
-            : billingCycle === 'YEARLY'
-            ? Number(a.yearlyPriceUsd ?? 0)
-            : Number(a.monthlyPriceUsd ?? 0);
-
-        const priceB =
-          currency === 'BDT'
-            ? billingCycle === 'YEARLY'
-              ? Number(b.yearlyPriceBdt ?? 0)
-              : Number(b.monthlyPriceBdt ?? 0)
-            : billingCycle === 'YEARLY'
-            ? Number(b.yearlyPriceUsd ?? 0)
-            : Number(b.monthlyPriceUsd ?? 0);
-
-        if (priceA !== priceB) return priceA - priceB;
-        return (Number(a.id) || 0) - (Number(b.id) || 0);
-      });
-    });
-
-    if (selectedApp !== 'ALL') {
-      result = result.filter(
-        (item) =>
-          String(item.app.id) === String(selectedApp) ||
-          item.app.slug === selectedApp
-      );
-    }
-
-    return result;
-  }, [apps, packages, selectedApp, currency, billingCycle]);
+  };
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-16 space-y-14">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-16 space-y-16 max-w-7xl mx-auto">
       {/* Header Section */}
-      <div className="text-center max-w-7xl mx-auto space-y-4">
-        
+      <div className="text-center max-w-3xl mx-auto space-y-4">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-secondary/10 text-secondary border border-secondary/20">
+          <BiRocket className="text-sm" />
+          <span>Transparent Pricing & Plans</span>
+        </span>
 
-        <h1 className="text-4xl sm:text-5xl font-semibold text-slate-900 dark:text-white tracking-tight">
-          Invest in Your Digital Identity
+        <h1 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+          Invest in Your Educational Excellence
         </h1>
 
-        <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
-          Select subscription packages categorized by application. Every tier includes zero-latency portfolio isolation, real-time drag-and-drop studio, and instant subdomain activation.
+        <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+          Predictable subscription tiers designed for schools, academies, colleges, and training institutes. Every plan includes automated student records, dedicated portal isolation, and instant subdomain provisioning.
         </p>
 
-        {/* Application Category Filter Tabs */}
-        <div className="flex flex-wrap items-center justify-center gap-2 pt-4">
-          <button
-            type="button"
-            onClick={() => setSelectedApp('ALL')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-              selectedApp === 'ALL'
-                ? 'bg-secondary text-white shadow-md shadow-secondary/25'
-                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-secondary/40 hover:text-secondary'
-            }`}
-          >
-            <BiGridAlt className="text-sm" />
-            <span>All Applications</span>
-            <span className="text-[10px] opacity-75 ml-0.5">({packages.length})</span>
-          </button>
-
-          {apps.map((app) => {
-            const count = packages.filter((p) => String(p.app_id) === String(app.id)).length;
-            return (
-              <button
-                key={app.id}
-                type="button"
-                onClick={() => setSelectedApp(String(app.id))}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  selectedApp === String(app.id)
-                    ? 'bg-secondary text-white shadow-md shadow-secondary/25'
-                    : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-secondary/40 hover:text-secondary'
-                }`}
-              >
-                <BiLayer className="text-sm" />
-                <span>{app.title}</span>
-                <span className="text-[10px] opacity-75 ml-0.5">({count})</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Controls: Billing Cycle and Currency Switcher */}
-        <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+        {/* Currency & Billing Toggle Controls */}
+        <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
           {/* Currency Switcher */}
           <div className="bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 inline-flex items-center gap-1.5 text-xs font-semibold shadow-xs">
             <button
@@ -497,7 +231,7 @@ export default function PackagesPage() {
               }`}
             >
               <span>Annual Billing</span>
-              <span className="text-[10px] bg-primary/25 text-slate-900 dark:text-primary-light border border-primary/40 px-1.5 py-0.5 rounded-md font-semibold">
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded-md font-bold">
                 SAVE 20%
               </span>
             </button>
@@ -505,16 +239,16 @@ export default function PackagesPage() {
         </div>
       </div>
 
-      {/* Rows of Packages grouped by Application (No Grid) */}
+      {/* Packages Grid */}
       {loading ? (
         <div className="py-24 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 max-w-xl mx-auto shadow-xs">
           <BiLoaderAlt className="animate-spin text-4xl text-secondary mx-auto" />
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 font-semibold">
-            Loading subscription plans...
+            Loading subscription packages...
           </p>
         </div>
-      ) : appRows.length === 0 ? (
-        <div className="py-16 text-center max-w-md mx-auto space-y-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-xs">
+      ) : sortedPackages.length === 0 ? (
+        <div className="py-16 text-center max-w-md mx-auto space-y-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-xs">
           <div className="w-14 h-14 mx-auto rounded-2xl bg-secondary/10 flex items-center justify-center text-secondary text-2xl border border-secondary/20">
             <BiPackage />
           </div>
@@ -522,29 +256,26 @@ export default function PackagesPage() {
             No Packages Found
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            {selectedApp !== 'ALL'
-              ? 'There are currently no active packages registered under this application.'
-              : 'Subscription tiers will appear here once published in the administrative system.'}
+            Subscription tiers will appear here once published in the administrative system.
           </p>
-          {selectedApp !== 'ALL' && (
-            <button
-              type="button"
-              onClick={() => setSelectedApp('ALL')}
-              className="text-xs font-semibold text-secondary hover:text-secondary-dark hover:underline cursor-pointer pt-1"
-            >
-              View All Applications
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={fetchPackages}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-secondary hover:bg-secondary-dark transition-all cursor-pointer"
+          >
+            <BiRefresh className="text-base" />
+            <span>Refresh Plans</span>
+          </button>
         </div>
       ) : (
-        <div className="space-y-10 max-w-7xl mx-auto">
+        <div className="space-y-6">
           <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 px-1">
             <span>
-              Showing {appRows.length} application {appRows.length === 1 ? 'category' : 'categories'} ({packages.length} total tiers)
+              Showing {sortedPackages.length} available {sortedPackages.length === 1 ? 'plan' : 'plans'} (arranged from lowest to highest)
             </span>
             <button
               type="button"
-              onClick={fetchPackagesAndApps}
+              onClick={fetchPackages}
               className="flex items-center gap-1 hover:text-secondary transition-colors cursor-pointer"
             >
               <BiRefresh className="text-sm" />
@@ -552,28 +283,345 @@ export default function PackagesPage() {
             </button>
           </div>
 
-          {/* Render each application in its own distinct row */}
-          {appRows.map(({ app, packages: rowPackages }) => (
-            <AppPackageRow
-              key={app.id}
-              app={app}
-              packages={rowPackages}
-              billingCycle={billingCycle}
-              currency={currency}
-            />
-          ))}
+          {/* Pricing Cards Grid */}
+          <div className={`grid gap-8 ${
+            sortedPackages.length === 1
+              ? 'max-w-md mx-auto grid-cols-1'
+              : sortedPackages.length === 2
+              ? 'max-w-3xl mx-auto grid-cols-1 md:grid-cols-2'
+              : sortedPackages.length === 3
+              ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+              : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+          }`}>
+            {sortedPackages.map((pkg, idx) => {
+              const price =
+                currency === 'BDT'
+                  ? billingCycle === 'YEARLY'
+                    ? pkg.yearly_price_bdt
+                    : pkg.monthly_price_bdt
+                  : billingCycle === 'YEARLY'
+                  ? pkg.yearly_price_usd
+                  : pkg.monthly_price_usd;
+
+              const hasExplicitPopular = sortedPackages.some((p) => Boolean(p.is_popular));
+              const isPopular = hasExplicitPopular
+                ? Boolean(pkg.is_popular)
+                : sortedPackages.length >= 3 && idx === 1;
+
+              return (
+                <Package
+                  key={pkg.id}
+                  pkg={{ ...pkg, popular: isPopular }}
+                  price={price}
+                  billingCycle={billingCycle}
+                  currency={currency}
+                />
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {/* Guarantee Banner */}
-      <div className="p-6 rounded-3xl bg-primary/10 dark:bg-slate-900/60 border border-primary/20 text-center space-y-2 max-w-3xl mx-auto shadow-xs">
-        <h4 className="font-semibold text-slate-900 dark:text-white text-base">
-          All packages include instant website provisioning
-        </h4>
-        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-          When you complete checkout, your invoice is generated with Payoneer settlement. Once paid, your subscription activates and your dedicated subdomain website is provisioned immediately.
-        </p>
+      {/* Feature Guarantee & Trust Badges */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-200/70 dark:border-slate-800">
+        <div className="flex items-start gap-3.5 p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 shadow-xs">
+          <div className="w-10 h-10 rounded-xl bg-primary/20 text-secondary flex items-center justify-center text-xl shrink-0">
+            <BiRocket />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white">Instant Provisioning</h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              Subdomain, SSL encryption, and institutional databases are initialized automatically upon checkout settlement.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-3.5 p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 shadow-xs">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0">
+            <BiCheckShield />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white">Full Data Isolation</h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              Every institution operates with separated security boundaries, automated audit logs, and encrypted cloud backups.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-3.5 p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 shadow-xs">
+          <div className="w-10 h-10 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center text-xl shrink-0">
+            <BiServer />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white">99.9% High Availability</h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              Enterprise-grade uptime with geo-redundant server clusters ensuring seamless online classes, exams, and attendance.
+            </p>
+          </div>
+        </div>
       </div>
+
+      {/* ------------------------------------------------------------------------ */}
+      {/* CUSTOM PACKAGE & CREATOR SUPPORT CARD (AT THE BOTTOM)                    */}
+      {/* ------------------------------------------------------------------------ */}
+      <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-slate-900 via-slate-900 to-indigo-950 text-white p-8 sm:p-10 lg:p-12 shadow-2xl border border-indigo-500/20">
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-secondary/20 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 -mb-20 w-64 h-64 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+          <div className="space-y-4 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-white/10 text-white border border-white/15 backdrop-blur-md">
+              <BiSupport className="text-secondary text-sm" />
+              <span>Enterprise & Custom Institutional Packages</span>
+            </div>
+
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white leading-snug">
+              Need a Custom Package for Your Educational Network?
+            </h2>
+
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              Managing a multi-campus school, large university, or district education board? Require custom student capacity, dedicated cloud VPS or on-premise servers, custom tenant modules, or legacy SIS data migration?
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 text-xs text-slate-200">
+              <div className="flex items-center gap-2">
+                <BiCheckCircle className="text-emerald-400 text-base shrink-0" />
+                <span>Custom Student, Teacher & Staff Quotas</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <BiCheckCircle className="text-emerald-400 text-base shrink-0" />
+                <span>Dedicated High-Availability Server Clusters</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <BiCheckCircle className="text-emerald-400 text-base shrink-0" />
+                <span>Bespoke Tenant Modules & API Integrations</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <BiCheckCircle className="text-emerald-400 text-base shrink-0" />
+                <span>Direct 24/7 Creator Support & Dedicated SLA</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:w-80 shrink-0 bg-white/5 backdrop-blur-md p-6 rounded-2xl border border-white/10 flex flex-col gap-3.5">
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-white">Creator Support Desk</h3>
+              <p className="text-[11px] text-slate-300">
+                Talk directly with our technical architecture & creator support team.
+              </p>
+            </div>
+
+            {creator?.id ? (
+              <Link
+                href={`/creator/${creator.id}/tickets`}
+                className="w-full py-3 px-4 rounded-xl font-bold text-xs bg-secondary hover:bg-secondary-dark text-white flex items-center justify-center gap-2 transition-all shadow-lg shadow-secondary/30 cursor-pointer"
+              >
+                <BiSupport className="text-base" />
+                <span>Open Creator Support Ticket</span>
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowInquiryModal(true)}
+                className="w-full py-3 px-4 rounded-xl font-bold text-xs bg-secondary hover:bg-secondary-dark text-white flex items-center justify-center gap-2 transition-all shadow-lg shadow-secondary/30 cursor-pointer"
+              >
+                <BiSupport className="text-base" />
+                <span>Request Custom Package</span>
+              </button>
+            )}
+
+            <Link
+              href="/contact?subject=Custom+Institutional+Package+Request"
+              className="w-full py-2.5 px-4 rounded-xl font-semibold text-xs bg-white/10 hover:bg-white/20 text-white border border-white/15 flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <BiMessageSquareDetail className="text-sm" />
+              <span>Contact via Contact Page</span>
+            </Link>
+
+            <div className="pt-2 border-t border-white/10 flex flex-col gap-1.5 text-[11px] text-slate-300">
+              {SITE_MAIL && (
+                <div className="flex items-center gap-2 truncate">
+                  <BiEnvelope className="text-secondary shrink-0 text-xs" />
+                  <a href={`mailto:${SITE_MAIL}`} className="hover:text-white transition-colors truncate">
+                    {SITE_MAIL}
+                  </a>
+                </div>
+              )}
+              {SITE_CONTACT && (
+                <div className="flex items-center gap-2 truncate">
+                  <BiPhoneCall className="text-secondary shrink-0 text-xs" />
+                  <a href={`tel:${SITE_CONTACT}`} className="hover:text-white transition-colors truncate">
+                    {SITE_CONTACT}
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* QUICK CUSTOM PACKAGE INQUIRY MODAL */}
+      {showInquiryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative">
+            <button
+              type="button"
+              onClick={() => {
+                setShowInquiryModal(false);
+                setInquirySuccess(false);
+                setInquiryError('');
+              }}
+              className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <BiX className="text-2xl" />
+            </button>
+
+            {inquirySuccess ? (
+              <div className="text-center py-6 space-y-4">
+                <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center text-3xl mx-auto">
+                  <BiCheckCircle />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                  Custom Request Received!
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-sm mx-auto">
+                  Thank you! Our Creator Support team has received your custom plan inquiry and will review your institution's specifications shortly.
+                </p>
+                {creator?.id && (
+                  <Link
+                    href={`/creator/${creator.id}/tickets`}
+                    className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-bold text-xs bg-secondary text-white hover:bg-secondary-dark transition-all"
+                  >
+                    <span>View Support Tickets</span>
+                  </Link>
+                )}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowInquiryModal(false);
+                      setInquirySuccess(false);
+                    }}
+                    className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                  >
+                    Close Window
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleInquirySubmit} className="space-y-4">
+                <div className="space-y-1 pr-6">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-secondary">
+                    Creator Support Desk
+                  </span>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                    Custom Package Inquiry
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Let us know what limits, modules, and hosting capabilities your institution needs.
+                  </p>
+                </div>
+
+                {inquiryError && (
+                  <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs">
+                    {inquiryError}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                      Your Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={inquiryName}
+                      onChange={(e) => setInquiryName(e.target.value)}
+                      placeholder="e.g. Dr. Tanvir"
+                      className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                      Email Address *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={inquiryEmail}
+                      onChange={(e) => setInquiryEmail(e.target.value)}
+                      placeholder="contact@school.edu"
+                      className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                      Institution Name
+                    </label>
+                    <input
+                      type="text"
+                      value={inquirySchool}
+                      onChange={(e) => setInquirySchool(e.target.value)}
+                      placeholder="e.g. Oxford Grammar School"
+                      className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                      Estimated Students
+                    </label>
+                    <input
+                      type="text"
+                      value={inquiryStudents}
+                      onChange={(e) => setInquiryStudents(e.target.value)}
+                      placeholder="e.g. 2,500+"
+                      className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                    Requirements & Modules Needed *
+                  </label>
+                  <textarea
+                    rows={4}
+                    required
+                    value={inquiryMessage}
+                    onChange={(e) => setInquiryMessage(e.target.value)}
+                    placeholder="Describe desired modules (SIS, LMS, biometric attendance, custom domain, SMS gateway, dedicated VPS, etc.)..."
+                    className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-secondary resize-none"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowInquiryModal(false)}
+                    className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={inquirySubmitting}
+                    className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-secondary hover:bg-secondary-dark transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5 shadow-md shadow-secondary/25"
+                  >
+                    {inquirySubmitting && <BiLoaderAlt className="animate-spin text-sm" />}
+                    <span>{inquirySubmitting ? 'Sending...' : 'Send Inquiry to Support'}</span>
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
