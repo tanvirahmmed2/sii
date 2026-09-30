@@ -28,7 +28,7 @@ export const ROLE_PERMISSIONS = {
   ],
   developer: [
     'overview', 'websites', 'themes', 'packages', 'features',
-    'apps', 'spams', 'reports', 'blogs', 'support', 'projects', 'profile', 'settings', 'chats', 'tasks', 'notices', 'my-salaries', 'tutorials', 'faqs', 'updates', 'policies'
+    'apps', 'spams', 'reports', 'blogs', 'support', 'live-chats', 'projects', 'profile', 'settings', 'chats', 'tasks', 'notices', 'my-salaries', 'tutorials', 'faqs', 'updates', 'policies'
   ],
   marketer: [
     'overview', 'blogs', 'themes', 'leads',
