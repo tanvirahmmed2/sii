@@ -71,7 +71,7 @@ export default function CreatorLoginPage() {
         setUnverifiedEmail(data.email || email);
       }
     } catch (_) {
-      setError('Server error during sign in. Please try again.');
+      setError('Server error during Login. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -135,16 +135,14 @@ export default function CreatorLoginPage() {
       <div className="w-full p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xl shadow-slate-200/40 dark:shadow-none space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-secondary/10 dark:bg-secondary/20 text-secondary flex items-center justify-center text-2xl mx-auto border border-secondary/20">
-            {is2FARequired ? <BiShieldQuarter /> : <BiLockAlt />}
-          </div>
+          
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-            {is2FARequired ? 'Security Verification' : 'Creator Sign In'}
+            {is2FARequired ? 'Security Verification' : 'Creator LogIn'}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             {is2FARequired
               ? `Enter the 6-digit verification code sent to ${email}.`
-              : 'Sign in to access your creator dashboard and website builder.'}
+              : 'Login to access your creator dashboard and website builder.'}
           </p>
         </div>
 
@@ -301,7 +299,7 @@ export default function CreatorLoginPage() {
                 <span>{is2FARequired ? 'Verifying Code...' : 'Signing In...'}</span>
               </>
             ) : (
-              <span>{is2FARequired ? 'Verify & Continue →' : 'Sign In →'}</span>
+              <span>{is2FARequired ? 'Verify & Continue →' : 'LogIn →'}</span>
             )}
           </button>
         </form>

@@ -127,7 +127,7 @@ export default function CreatorRegisterPage() {
         }}
         topRightLink={{
           prompt: 'Already verified?',
-          text: 'Sign In',
+          text: 'Login',
           href: '/creator/login',
         }}
       >
@@ -173,7 +173,7 @@ export default function CreatorRegisterPage() {
               href="/creator/login"
               className="w-full block py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold shadow-xs transition-all text-center"
             >
-              Proceed to Sign In
+              Proceed to Login
             </Link>
 
             <button
@@ -220,17 +220,15 @@ export default function CreatorRegisterPage() {
       }}
       topRightLink={{
         prompt: 'Already have an account?',
-        text: 'Sign In',
+        text: 'Login',
         href: '/creator/login',
       }}
     >
       <div className="w-full p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xl shadow-slate-200/40 dark:shadow-none space-y-5">
         <div className="text-center space-y-1.5">
-          <div className="w-12 h-12 rounded-2xl bg-secondary/10 dark:bg-secondary/20 text-secondary flex items-center justify-center text-2xl mx-auto border border-secondary/20">
-            <BiUserPlus />
-          </div>
+          
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-            Create Creator Account
+            Create Account
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Start building your custom website and digital creator presence.
@@ -401,7 +399,7 @@ export default function CreatorRegisterPage() {
               href="/creator/login"
               className="font-semibold text-secondary hover:text-secondary-dark dark:hover:text-secondary-light hover:underline transition-colors"
             >
-              Sign In
+              Login
             </Link>
           </p>
         </div>

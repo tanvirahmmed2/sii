@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { BiGlobe, BiChevronDown, BiCheck } from 'react-icons/bi';
-import { useGoogleTranslate } from 'next-google-translate';
+import { useGoogleTranslate } from 'src/component/helper/GoogleTranslateProvider';
 
 export const SUPPORTED_LANGUAGES = [
   { label: 'English', value: 'en|en', short: 'en', flag: '🇺🇸' },

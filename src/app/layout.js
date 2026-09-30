@@ -2,7 +2,7 @@ import "./globals.css";
 import { ContextProvider } from "src/component/helper/Context";
 import ToastProvider from "src/component/helper/ToastProvider";
 import { SCHOOL_NAME, META_TITLE, META_DESCRIPTION } from "src/lib/database/secret";
-import { GoogleTranslateProvider } from "next-google-translate";
+import GoogleTranslateProvider from "src/component/helper/GoogleTranslateProvider";
 
 const shortName = SCHOOL_NAME.split(" ").map((w) => w[0]).join('');
 
