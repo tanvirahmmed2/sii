@@ -20,8 +20,8 @@ export default function BlogsPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/blogs');
-      const data = await res.json();
+      const res = await fetch('/api/marketing/blogs');
+      const data = res.ok ? await res.json() : { success: false };
       if (data?.success && Array.isArray(data?.blogs)) {
         setBlogs(data.blogs);
       } else {
@@ -36,8 +36,8 @@ export default function BlogsPage() {
 
   useEffect(() => {
     let isMounted = true;
-    fetch('/api/blogs')
-      .then((res) => res.json())
+    fetch('/api/marketing/blogs')
+      .then((res) => (res.ok ? res.json() : { success: false }))
       .then((data) => {
         if (!isMounted) return;
         if (data?.success && Array.isArray(data?.blogs)) {

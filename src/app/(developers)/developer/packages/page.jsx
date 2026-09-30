@@ -41,7 +41,7 @@ export default function AdminPackagesPage() {
   const fetchPackages = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/developer/packages');
+      const res = await fetch('/api/marketing/developer/packages');
       const data = await res.json();
       if (data.success) {
         setPackages(data.records || []);
@@ -64,7 +64,7 @@ export default function AdminPackagesPage() {
     }
     setTogglingId(pkg.id);
     try {
-      const res = await fetch('/api/developer/packages', {
+      const res = await fetch('/api/marketing/developer/packages', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: pkg.id }),
@@ -95,7 +95,7 @@ export default function AdminPackagesPage() {
     }
     setDeletingId(id);
     try {
-      const res = await fetch('/api/developer/packages', {
+      const res = await fetch('/api/marketing/developer/packages', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),

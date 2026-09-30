@@ -28,12 +28,12 @@ export default function ContactPage() {
     setError(null);
 
     try {
-      const res = await fetch('/api/contact', {
+      const res = await fetch('/api/marketing/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, subject, message }),
       });
-      const data = await res.json();
+      const data = res.ok ? await res.json() : { success: false, error: 'Failed to send message.' };
       if (data.success) {
         setSubmitted(true);
         setName('');

@@ -9,6 +9,7 @@ const Main = () => {
                 loop
                 muted
                 playsInline
+                suppressHydrationWarning
                 className="absolute inset-0 w-full h-full object-cover z-0 scale-110 select-none pointer-events-none"
             >
                 <source src="/hero_video.mp4" type="video/mp4" />

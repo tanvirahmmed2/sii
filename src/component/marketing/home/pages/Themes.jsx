@@ -22,8 +22,8 @@ export default function Themes() {
     async function loadData() {
       try {
         setLoading(true);
-        const res = await fetch('/api/themes');
-        const data = await res.json();
+        const res = await fetch('/api/marketing/themes');
+        const data = res.ok ? await res.json() : { success: false };
         if (data.success) {
           setThemes(data.themes || []);
           setApps(data.apps || []);

@@ -25,8 +25,8 @@ export default function UpdatesPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/updates');
-      const data = await res.json();
+      const res = await fetch('/api/marketing/updates');
+      const data = res.ok ? await res.json() : { success: false };
       if (data?.success && Array.isArray(data?.updates)) {
         setUpdates(data.updates);
       } else {
@@ -41,8 +41,8 @@ export default function UpdatesPage() {
 
   useEffect(() => {
     let isMounted = true;
-    fetch('/api/updates')
-      .then((res) => res.json())
+    fetch('/api/marketing/updates')
+      .then((res) => (res.ok ? res.json() : { success: false }))
       .then((data) => {
         if (!isMounted) return;
         if (data?.success && Array.isArray(data?.updates)) {

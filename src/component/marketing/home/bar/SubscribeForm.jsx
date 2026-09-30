@@ -34,13 +34,13 @@ export default function SubscribeForm({ source = 'HOME_FOOTER' }) {
     setStatus({ type: '', message: '' });
 
     try {
-      const res = await fetch('/api/subscribers', {
+      const res = await fetch('/api/marketing/subscribers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: cleanEmail, source }),
       });
 
-      const data = await res.json();
+      const data = res.ok ? await res.json() : { success: false, message: 'Subscription request failed.' };
 
       if (data.success) {
         if (data.alreadySubscribed) {

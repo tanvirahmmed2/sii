@@ -53,7 +53,7 @@ export default function PackageForm({
   initialData = null,
   onSuccess,
   onCancel,
-  apiEndpoint = '/api/developer/packages',
+  apiEndpoint = '/api/marketing/developer/packages',
 }) {
   const isEditing = Boolean(initialData?.id);
 
@@ -109,7 +109,7 @@ export default function PackageForm({
     let isMounted = true;
     setLoadingModules(true);
 
-    fetch('/api/developer/tenant-modules')
+    fetch('/api/marketing/developer/tenant-modules')
       .then((res) => res.json())
       .then((data) => {
         if (!isMounted) return;
@@ -262,7 +262,7 @@ export default function PackageForm({
         isEditing && initialData?.id
           ? apiEndpoint.includes('/[slug]') || apiEndpoint.endsWith(`/${initialData.slug}`)
             ? apiEndpoint
-            : `/api/developer/packages?id=${initialData.id}`
+            : `/api/marketing/developer/packages?id=${initialData.id}`
           : apiEndpoint;
 
       const res = await fetch(targetUrl, {

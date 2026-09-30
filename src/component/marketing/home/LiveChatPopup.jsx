@@ -274,11 +274,11 @@ export default function LiveChatPopup() {
     const cookie = getLiveCookie();
 
     const url = cookie?.chatId || cookie?.sessionId
-      ? `/api/live_chats?chatId=${cookie.chatId || ''}&sessionId=${cookie.sessionId || ''}`
-      : '/api/live_chats';
+      ? `/api/marketing/live_chats?chatId=${cookie.chatId || ''}&sessionId=${cookie.sessionId || ''}`
+      : '/api/marketing/live_chats';
 
     fetch(url)
-      .then((res) => res.json())
+      .then((res) => (res.ok ? res.json() : { success: false }))
       .then((data) => {
         if (!isMounted) return;
         if (data.success && data.chat && data.chat.status !== 'CLOSED') {
@@ -324,7 +324,8 @@ export default function LiveChatPopup() {
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/live_chats?chatId=${chatSession.id}`);
+        const res = await fetch(`/api/marketing/live_chats?chatId=${chatSession.id}`);
+        if (!res.ok) return;
         const data = await res.json();
         if (data.success && data.chat) {
           if (data.chat.status === 'CLOSED') {
@@ -389,7 +390,7 @@ export default function LiveChatPopup() {
     };
 
     try {
-      const res = await fetch('/api/live_chats', {
+      const res = await fetch('/api/marketing/live_chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -399,7 +400,7 @@ export default function LiveChatPopup() {
           device,
         }),
       });
-      const data = await res.json();
+      const data = res.ok ? await res.json() : { success: false, error: 'Request failed' };
 
       if (data.success && data.chat) {
         setChatSession(data.chat);
@@ -452,7 +453,7 @@ export default function LiveChatPopup() {
     lastMessageCountRef.current += 1;
 
     try {
-      const res = await fetch('/api/live_chats', {
+      const res = await fetch('/api/marketing/live_chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -462,7 +463,7 @@ export default function LiveChatPopup() {
           message: text,
         }),
       });
-      const data = await res.json();
+      const data = res.ok ? await res.json() : { success: false };
       if (data.success && data.message) {
         setMessages((prev) =>
           prev.map((m) => (m.id === tempMsg.id ? data.message : m))
@@ -479,7 +480,7 @@ export default function LiveChatPopup() {
   const handleEndChat = async () => {
     if (!confirm('Are you sure you want to end this live chat session? Your 24-hour cookie and session history will be cleared.')) return;
     try {
-      await fetch('/api/live_chats', {
+      await fetch('/api/marketing/live_chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

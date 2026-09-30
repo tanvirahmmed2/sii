@@ -41,7 +41,7 @@ export default function TenantDomainPackagesPage() {
   const fetchPackages = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/packages');
+      const res = await fetch('/api/marketing/packages');
       const data = await res.json();
       if (data.success && Array.isArray(data.packages)) {
         setPackages(data.packages);
@@ -60,7 +60,7 @@ export default function TenantDomainPackagesPage() {
     fetchPackages();
 
     // Check creator session
-    fetch('/api/creator/auth', {
+    fetch('/api/marketing/creator/auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'me' }),
@@ -111,7 +111,7 @@ export default function TenantDomainPackagesPage() {
 
     try {
       if (creator?.id) {
-        const res = await fetch('/api/creator', {
+        const res = await fetch('/api/marketing/creator', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -127,14 +127,14 @@ Requirements:
 ${inquiryMessage}`,
           }),
         });
-        const data = await res.json();
+        const data = res.ok ? await res.json() : { success: false, error: 'Failed to submit support ticket.' };
         if (data.success) {
           setInquirySuccess(true);
         } else {
           setInquiryError(data.error || 'Failed to submit support ticket.');
         }
       } else {
-        const res = await fetch('/api/contact', {
+        const res = await fetch('/api/marketing/contact', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

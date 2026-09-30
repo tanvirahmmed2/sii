@@ -42,7 +42,7 @@ export default function PackageDetailPage({ params }) {
 
   useEffect(() => {
     let isMounted = true;
-    fetch(`/api/developer/packages/${encodeURIComponent(slug)}`)
+    fetch(`/api/marketing/developer/packages/${encodeURIComponent(slug)}`)
       .then((res) => res.json())
       .then((data) => {
         if (!isMounted) return;
@@ -73,7 +73,7 @@ export default function PackageDetailPage({ params }) {
 
     try {
       setDeleting(true);
-      const res = await fetch(`/api/developer/packages/${encodeURIComponent(slug)}`, {
+      const res = await fetch(`/api/marketing/developer/packages/${encodeURIComponent(slug)}`, {
         method: 'DELETE',
       });
       const data = await res.json();

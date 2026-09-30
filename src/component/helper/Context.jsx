@@ -69,10 +69,7 @@ export const ContextProvider = ({ children }) => {
   const fetchCurrentUser = useCallback(async () => {
     try {
       // Check developer/staff session
-      let devRes = await fetch('/api/developer/me').catch(() => null);
-      if (!devRes || !devRes.ok) {
-        devRes = await fetch('/api/marketing/developer/me').catch(() => null);
-      }
+      const devRes = await fetch('/api/marketing/developer/me').catch(() => null);
       if (devRes && devRes.ok) {
         const devData = await devRes.json();
         if (devData.success && devData.user) {
@@ -105,7 +102,7 @@ export const ContextProvider = ({ children }) => {
 
   const fetchReviews = useCallback(async () => {
     try {
-      const res = await fetch('/api/reviews');
+      const res = await fetch('/api/marketing/reviews');
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.reviews)) {

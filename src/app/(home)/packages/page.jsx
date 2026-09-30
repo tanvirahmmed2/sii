@@ -42,7 +42,7 @@ export default function PackagesPage() {
   const fetchPackages = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/packages');
+      const res = await fetch('/api/marketing/packages');
       const data = await res.json();
       if (data.success && Array.isArray(data.packages)) {
         setPackages(data.packages);
@@ -61,7 +61,7 @@ export default function PackagesPage() {
     fetchPackages();
 
     // Check creator session to personalize Creator Support link
-    fetch('/api/creator/auth', {
+    fetch('/api/marketing/creator/auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'me' }),
@@ -113,7 +113,7 @@ export default function PackagesPage() {
     try {
       if (creator?.id) {
         // Submit directly to Creator Support Tickets system
-        const res = await fetch('/api/creator', {
+        const res = await fetch('/api/marketing/creator', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -129,7 +129,7 @@ Requirements:
 ${inquiryMessage}`,
           }),
         });
-        const data = await res.json();
+        const data = res.ok ? await res.json() : { success: false, error: 'Failed to submit support ticket.' };
         if (data.success) {
           setInquirySuccess(true);
         } else {
@@ -137,7 +137,7 @@ ${inquiryMessage}`,
         }
       } else {
         // Submit via contact API
-        const res = await fetch('/api/contact', {
+        const res = await fetch('/api/marketing/contact', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

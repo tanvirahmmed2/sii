@@ -22,8 +22,8 @@ export default function FaqsPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/faqs');
-      const data = await res.json();
+      const res = await fetch('/api/marketing/faqs');
+      const data = res.ok ? await res.json() : { success: false };
       if (data?.success && Array.isArray(data?.faqs)) {
         setFaqs(data.faqs);
       } else {
@@ -38,8 +38,8 @@ export default function FaqsPage() {
 
   useEffect(() => {
     let isMounted = true;
-    fetch('/api/faqs')
-      .then((res) => res.json())
+    fetch('/api/marketing/faqs')
+      .then((res) => (res.ok ? res.json() : { success: false }))
       .then((data) => {
         if (!isMounted) return;
         if (data?.success && Array.isArray(data?.faqs)) {

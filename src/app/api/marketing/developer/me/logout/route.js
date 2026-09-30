@@ -22,7 +22,6 @@ export async function POST(request) {
     await clearAdminSessionCookie();
     const response = NextResponse.json({ success: true, message: 'Logged out successfully.' });
 
-    const cookieName = DEVELOPER_TOKEN || 'hiesci-dev';
     const clearOptions = { path: '/', maxAge: 0, expires: new Date(0) };
 
     response.cookies.set(cookieName, '', clearOptions);

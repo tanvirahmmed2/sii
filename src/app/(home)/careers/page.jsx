@@ -31,8 +31,8 @@ export default function CareersPage() {
     async function loadCareers() {
       try {
         setLoading(true);
-        const res = await fetch('/api/careers');
-        const data = await res.json();
+        const res = await fetch('/api/marketing/careers');
+        const data = res.ok ? await res.json() : { success: false };
         if (data.success) {
           setCareers(data.careers || []);
           setDepartments(data.departments || []);

@@ -50,8 +50,8 @@ export default function CareerDetailPage({ params }) {
     async function loadJob() {
       try {
         setLoading(true);
-        const res = await fetch(`/api/careers/${slug}`);
-        const data = await res.json();
+        const res = await fetch(`/api/marketing/careers/${slug}`);
+        const data = res.ok ? await res.json() : { success: false };
         if (data.success && data.career) {
           setCareer(data.career);
         } else {
@@ -112,12 +112,12 @@ export default function CareerDetailPage({ params }) {
         formData.append('resume_url', form.resume_url.trim());
       }
 
-      const res = await fetch(`/api/careers/${slug}/apply`, {
+      const res = await fetch(`/api/marketing/careers/${slug}/apply`, {
         method: 'POST',
         body: formData,
       });
 
-      const data = await res.json();
+      const data = res.ok ? await res.json() : { success: false, error: 'Application request failed.' };
       if (data.success) {
         setSubmitSuccess(true);
       } else {

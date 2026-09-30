@@ -27,8 +27,8 @@ export default function SingleUpdatePage({ params }) {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`/api/updates?slug=${encodeURIComponent(slug)}`);
-        const data = await res.json();
+        const res = await fetch(`/api/marketing/updates?slug=${encodeURIComponent(slug)}`);
+        const data = res.ok ? await res.json() : { success: false };
         if (data.success && data.update) {
           setUpdate(data.update);
           setRecentUpdates(data.recentUpdates || []);

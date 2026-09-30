@@ -59,7 +59,7 @@ function CheckoutContent() {
 
   // 2. Fetch available packages
   useEffect(() => {
-    fetch('/api/packages')
+    fetch('/api/marketing/packages')
       .then((res) => res.json())
       .then((data) => {
         const list = data.packages || [];
