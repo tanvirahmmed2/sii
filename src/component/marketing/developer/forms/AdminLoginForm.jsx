@@ -10,7 +10,7 @@ import { Context } from 'src/component/helper/Context';
 export default function AdminLoginForm() {
   const router = useRouter();
   const context = useContext(Context);
-  const [email, setEmail] = useState('support@disibin.com');
+  const [email, setEmail] = useState('tanvir@gmail.com');
   const [password, setPassword] = useState('123');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -91,7 +91,7 @@ export default function AdminLoginForm() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="support@disibin.com"
+            placeholder="tanvir@gmail.com"
             className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
           />
         </div>

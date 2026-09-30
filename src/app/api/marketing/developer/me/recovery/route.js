@@ -62,14 +62,19 @@ export async function POST(request) {
     const generatedToken = 'rec_' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
     const dbAdmin = await queryDb('SELECT * FROM developers WHERE LOWER(email) = $1 LIMIT 1', [cleanEmail]);
-    if (dbAdmin.rows.length > 0) {
-      await queryDb(
-        `UPDATE developers 
-         SET recovery_token = $1, recovery_token_expires = CURRENT_TIMESTAMP + INTERVAL '1 hour' 
-         WHERE id = $2`,
-        [generatedToken, dbAdmin.rows[0].id]
+    if (dbAdmin.rows.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No developer account found with this email address.' },
+        { status: 404 }
       );
     }
+
+    await queryDb(
+      `UPDATE developers 
+       SET recovery_token = $1, recovery_token_expires = CURRENT_TIMESTAMP + INTERVAL '1 hour', updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $2`,
+      [generatedToken, dbAdmin.rows[0].id]
+    );
 
     // Attempt to send email via Brevo
     try {

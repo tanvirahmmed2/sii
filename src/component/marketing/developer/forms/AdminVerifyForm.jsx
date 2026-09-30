@@ -125,7 +125,7 @@ export default function AdminVerifyForm() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="admin@domain.com"
+            placeholder="tanvir@gmail.com"
             className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
           />
         </div>

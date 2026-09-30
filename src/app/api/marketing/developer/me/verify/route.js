@@ -54,7 +54,7 @@ export async function POST(request) {
 
     await queryDb(
       `UPDATE developers 
-       SET two_factor_code = NULL, two_factor_expires = NULL, updated_at = CURRENT_TIMESTAMP 
+       SET two_factor_code = NULL, two_factor_expires = NULL, is_active = TRUE, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $1`,
       [admin.id]
     );

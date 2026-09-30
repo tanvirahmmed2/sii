@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import { JWT_SECRET, DEVELOPER_TOKEN } from '../database/secret.js';
-import { query } from '../database/db.js';
+import { query, queryDb } from '../database/db.js';
 const DEFAULT_JWT_SECRET = JWT_SECRET || 'developer_superadmin_jwt_secret_key_2026';
 const ADMIN_COOKIE_NAME = DEVELOPER_TOKEN || 'hiesci-dev';
 const FALLBACK_COOKIE_NAME = 'dev_admin_token';
@@ -129,6 +129,29 @@ export async function getAdminSession(request) {
     const dev = res.rows[0];
 
     if (!dev.is_active) return null;
+
+    // Check developer_login_sessions for revocation and activity
+    if (token) {
+      try {
+        const sessRes = await query(
+          `SELECT is_active, expires_at FROM developer_login_sessions WHERE token = $1 LIMIT 1`,
+          [token]
+        );
+        if (sessRes.rows.length > 0) {
+          const s = sessRes.rows[0];
+          if (s.is_active === false) return null;
+          if (s.expires_at && new Date(s.expires_at) < new Date()) return null;
+
+          // Touch last_active_at asynchronously
+          query(
+            `UPDATE developer_login_sessions SET last_active_at = CURRENT_TIMESTAMP WHERE token = $1`,
+            [token]
+          ).catch(() => {});
+        }
+      } catch (e) {
+        // Fallback if session table isn't accessible
+      }
+    }
 
     // Fetch granular permissions from developer_role_permissions
     let permissions = [];
@@ -287,8 +310,8 @@ export async function authenticateAdmin(email, password, { ip = '127.0.0.1', use
     throw new Error('Invalid email or password.');
   }
 
-  // Check if 2FA code is actively pending
-  if (dev.two_factor_code && dev.two_factor_expires && new Date(dev.two_factor_expires) > new Date()) {
+  // Check if verification code is pending
+  if (dev.two_factor_code) {
     const err = new Error('Please enter your 6-digit verification code before logging in.');
     err.unverified = true;
     err.email = dev.email;

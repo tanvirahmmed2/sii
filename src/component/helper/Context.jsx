@@ -22,8 +22,11 @@ export const ContextProvider = ({ children }) => {
   const fetchCurrentUser = useCallback(async () => {
     try {
       // Check developer/staff session
-      const devRes = await fetch('/api/marketing/developer/me');
-      if (devRes.ok) {
+      let devRes = await fetch('/api/developer/me').catch(() => null);
+      if (!devRes || !devRes.ok) {
+        devRes = await fetch('/api/marketing/developer/me').catch(() => null);
+      }
+      if (devRes && devRes.ok) {
         const devData = await devRes.json();
         if (devData.success && devData.user) {
           setUser(devData.user);
