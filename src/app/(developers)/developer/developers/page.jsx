@@ -343,30 +343,30 @@ export default function AdminAdminsPage() {
     }
   };
 
-  // Resend Verification Code
+  // Resend Verification Link
   const handleResendCode = async (email) => {
     try {
       setResendingEmail(email);
       setActionNotice({ text: '', type: 'info' });
-      const res = await fetch('/api/marketing/developer', {
+      const res = await fetch('/api/marketing/developer/me/resend-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'resend_code', email }),
+        body: JSON.stringify({ email }),
       });
       const data = await res.json();
       if (data.success) {
         setActionNotice({
-          text: `Verification code successfully resent to ${email} via Brevo.`,
+          text: `Verification activation link successfully resent to ${email} via Brevo.`,
           type: 'success',
         });
       } else {
         setActionNotice({
-          text: data.error || 'Failed to resend verification code.',
+          text: data.error || 'Failed to resend verification link.',
           type: 'error',
         });
       }
     } catch (err) {
-      setActionNotice({ text: 'Network error resending code.', type: 'error' });
+      setActionNotice({ text: 'Network error resending verification link.', type: 'error' });
     } finally {
       setResendingEmail(null);
       setTimeout(() => setActionNotice({ text: '', type: 'info' }), 6000);
@@ -804,15 +804,16 @@ export default function AdminAdminsPage() {
                         ) : (
                           <div className="flex items-center gap-2">
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                              Pending Code
+                              Unverified
                             </span>
                             <button
                               type="button"
                               disabled={resendingEmail === admin.email}
                               onClick={() => handleResendCode(admin.email)}
                               className="text-[10px] text-secondary hover:underline font-semibold disabled:opacity-50 cursor-pointer"
+                              title="Resend activation link via email"
                             >
-                              {resendingEmail === admin.email ? 'Sending...' : 'Resend'}
+                              {resendingEmail === admin.email ? 'Sending...' : 'Resend Link'}
                             </button>
                           </div>
                         )}

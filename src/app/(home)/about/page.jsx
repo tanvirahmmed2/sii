@@ -85,12 +85,6 @@ export default function AboutPage() {
           >
             Explore Pricing & Packages →
           </Link>
-          <Link
-            href="/themes"
-            className="px-6 py-3 rounded-xl bg-primary text-light text-xs font-semibold  transition-all"
-          >
-            Browse Themes Gallery
-          </Link>
         </div>
       </div>
     </div>

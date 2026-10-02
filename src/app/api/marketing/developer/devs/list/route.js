@@ -46,7 +46,7 @@ export async function GET(request) {
       queryDb(`
         SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url, d.role_id,
                COALESCE(dr.slug, 'developer') AS role, COALESCE(dr.name, 'Developer') AS role_name,
-               d.is_active, d.last_login_at, d.created_at
+               d.is_active, COALESCE(d.email_verified, FALSE) AS email_verified, d.last_login_at, d.created_at
         FROM developers d
         LEFT JOIN developer_roles dr ON d.role_id = dr.id
         ORDER BY d.id DESC
@@ -58,7 +58,7 @@ export async function GET(request) {
       `).catch(() => ({ rows: [] })),
     ]);
 
-    const records = devsRes.rows.map((r) => ({ ...r, is_verified: true }));
+    const records = devsRes.rows.map((r) => ({ ...r, is_verified: Boolean(r.email_verified) }));
 
     return NextResponse.json({
       success: true,

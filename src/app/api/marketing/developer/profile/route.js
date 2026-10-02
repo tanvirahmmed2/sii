@@ -11,7 +11,7 @@ import { queryDb } from 'src/lib/database/db';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // ============================================================================
-// GET: Fetch authenticated developer profile, stats, and audit logs
+// GET: Fetch authenticated developer complete profile, stats, sessions & audit
 // ============================================================================
 export async function GET(request) {
   try {
@@ -24,10 +24,10 @@ export async function GET(request) {
     }
 
     const devRes = await queryDb(
-      `SELECT d.id, d.name, d.email, d.phone, d.designation, d.bio, d.avatar_url,
+      `SELECT d.id, d.name, d.email, d.phone, d.designation, d.bio, d.avatar_url, d.avatar_id,
               d.github_profile, d.linkedin_profile, d.role_id,
               COALESCE(dr.slug, 'developer') AS role, COALESCE(dr.name, 'Developer') AS role_name,
-              d.is_active, d.last_login_at, d.created_at, d.updated_at
+              d.is_active, d.email_verified, d.last_login_at, d.created_at, d.updated_at
        FROM developers d
        LEFT JOIN developer_roles dr ON d.role_id = dr.id
        WHERE d.id = $1
@@ -44,15 +44,18 @@ export async function GET(request) {
 
     const developer = devRes.rows[0];
 
-    // Count active sessions
+    // Fetch active login sessions with current session identification
+    const currentToken = authUser.token || '';
     const sessionRes = await queryDb(
-      `SELECT COUNT(*)::int AS active_count
+      `SELECT id, ip_address, user_agent, expires_at, last_active_at, created_at,
+              CASE WHEN token = $2 THEN true ELSE false END AS is_current
        FROM developer_login_sessions
-       WHERE developer_id = $1 AND is_active = TRUE AND expires_at > CURRENT_TIMESTAMP`,
-      [developer.id]
-    ).catch(() => ({ rows: [{ active_count: 1 }] }));
+       WHERE developer_id = $1 AND is_active = TRUE AND expires_at > CURRENT_TIMESTAMP
+       ORDER BY CASE WHEN token = $2 THEN 0 ELSE 1 END, last_active_at DESC`,
+      [developer.id, currentToken]
+    ).catch(() => ({ rows: [] }));
 
-    const activeSessions = sessionRes.rows[0]?.active_count || 1;
+    const activeSessions = sessionRes.rows.length || 1;
 
     // Fetch recent login history
     const loginRes = await queryDb(
@@ -60,19 +63,49 @@ export async function GET(request) {
        FROM developer_login_activities
        WHERE developer_id = $1
        ORDER BY id DESC
-       LIMIT 10`,
+       LIMIT 15`,
       [developer.id]
     ).catch(() => ({ rows: [] }));
+
+    // Fetch granular permissions with module details
+    let rolePermissions = [];
+    if (developer.role_id) {
+      const permRes = await queryDb(
+        `SELECT dm.name AS module_name, dm.slug AS module_slug, mp.name AS permission_name, mp.permission_key, mp.description
+         FROM developer_role_permissions drp
+         JOIN module_permissions mp ON drp.permission_id = mp.id
+         JOIN developer_modules dm ON mp.module_id = dm.id
+         WHERE drp.role_id = $1
+         ORDER BY dm.name ASC, mp.name ASC`,
+        [developer.role_id]
+      ).catch(() => ({ rows: [] }));
+      rolePermissions = permRes.rows || [];
+    }
+
+    // Fetch operational stats (assigned tickets, ticket replies)
+    const statsRes = await queryDb(
+      `SELECT 
+        (SELECT COUNT(*)::int FROM support_tickets WHERE assigned_developer_id = $1) AS assigned_tickets,
+        (SELECT COUNT(*)::int FROM ticket_replies WHERE developer_id = $1) AS ticket_replies_count
+      `,
+      [developer.id]
+    ).catch(() => ({ rows: [{ assigned_tickets: 0, ticket_replies_count: 0 }] }));
+
+    const stats = statsRes.rows[0] || { assigned_tickets: 0, ticket_replies_count: 0 };
 
     return NextResponse.json({
       success: true,
       developer: {
         ...developer,
-        isVerified: true,
+        is_verified: Boolean(developer.email_verified),
+        isVerified: Boolean(developer.email_verified),
         permissions: authUser.permissions || [],
+        rolePermissions,
         isAdmin: Boolean(authUser.isAdmin),
+        stats,
       },
       activeSessions,
+      sessionsList: sessionRes.rows,
       recentLogins: loginRes.rows,
     });
   } catch (error) {
@@ -99,9 +132,10 @@ export async function PUT(request) {
 
     // Load current developer record including password hash
     const currentRes = await queryDb(
-      `SELECT d.id, d.name, d.email, d.phone, d.bio, d.avatar_url, d.github_profile, d.linkedin_profile, d.password, d.role_id,
+      `SELECT d.id, d.name, d.email, d.phone, d.designation, d.bio, d.avatar_url, d.avatar_id,
+              d.github_profile, d.linkedin_profile, d.password, d.role_id,
               COALESCE(dr.slug, 'developer') AS role, COALESCE(dr.name, 'Developer') AS role_name,
-              d.is_active
+              d.is_active, d.email_verified
        FROM developers d
        LEFT JOIN developer_roles dr ON d.role_id = dr.id
        WHERE d.id = $1 LIMIT 1`,
@@ -152,9 +186,11 @@ export async function PUT(request) {
 
     // 3. Profile details
     const newPhone = data.phone !== undefined ? data.phone.trim() : currentDev.phone;
+    const newDesignation = data.designation !== undefined ? data.designation.trim() : currentDev.designation;
     const newBio = data.bio !== undefined ? data.bio.trim() : currentDev.bio;
     const newGithub = data.github_profile !== undefined ? data.github_profile.trim() : currentDev.github_profile;
     const newLinkedin = data.linkedin_profile !== undefined ? data.linkedin_profile.trim() : currentDev.linkedin_profile;
+    const newAvatarUrl = data.avatar_url !== undefined ? data.avatar_url.trim() : currentDev.avatar_url;
 
     // 4. Password Change
     let newPasswordHash = currentDev.password;
@@ -191,14 +227,16 @@ export async function PUT(request) {
        SET name = $1,
            email = $2,
            phone = $3,
-           bio = $4,
-           github_profile = $5,
-           linkedin_profile = $6,
-           password = $7,
+           designation = $4,
+           bio = $5,
+           github_profile = $6,
+           linkedin_profile = $7,
+           avatar_url = $8,
+           password = $9,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $8
-       RETURNING id, name, email, phone, designation, bio, avatar_url, github_profile, linkedin_profile, role_id, is_active, last_login_at, created_at, updated_at`,
-      [newName, newEmail, newPhone, newBio, newGithub, newLinkedin, newPasswordHash, authUser.id]
+       WHERE id = $10
+       RETURNING id, name, email, phone, designation, bio, avatar_url, avatar_id, github_profile, linkedin_profile, role_id, is_active, email_verified, last_login_at, created_at, updated_at`,
+      [newName, newEmail, newPhone, newDesignation, newBio, newGithub, newLinkedin, newAvatarUrl, newPasswordHash, authUser.id]
     );
 
     const updatedDev = {
@@ -212,7 +250,8 @@ export async function PUT(request) {
       message: 'Developer profile updated successfully.',
       developer: {
         ...updatedDev,
-        isVerified: true,
+        is_verified: Boolean(updatedDev.email_verified),
+        isVerified: Boolean(updatedDev.email_verified),
         permissions: authUser.permissions || [],
         isAdmin: Boolean(authUser.isAdmin),
       },
@@ -231,7 +270,7 @@ export async function PUT(request) {
         permissions: authUser.permissions || [],
         isAdmin: Boolean(authUser.isAdmin),
         isActive: updatedDev.is_active !== false,
-        isVerified: true,
+        isVerified: Boolean(updatedDev.email_verified),
       },
     });
 
@@ -256,6 +295,48 @@ export async function PUT(request) {
     return response;
   } catch (error) {
     console.error('Error updating developer profile:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+// ============================================================================
+// DELETE: Revoke other sessions or a specific session
+// ============================================================================
+export async function DELETE(request) {
+  try {
+    const authUser = await getAuthenticatedUser(request);
+    if (!authUser) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const sessionId = searchParams.get('sessionId');
+    const revokeOthers = searchParams.get('revokeOthers') === 'true';
+
+    if (revokeOthers) {
+      const currentToken = authUser.token || '';
+      await queryDb(
+        `UPDATE developer_login_sessions
+         SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
+         WHERE developer_id = $1 AND token != $2`,
+        [authUser.id, currentToken]
+      );
+      return NextResponse.json({ success: true, message: 'All other active sessions revoked successfully.' });
+    }
+
+    if (sessionId) {
+      await queryDb(
+        `UPDATE developer_login_sessions
+         SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
+         WHERE developer_id = $1 AND id = $2`,
+        [authUser.id, sessionId]
+      );
+      return NextResponse.json({ success: true, message: 'Session revoked successfully.' });
+    }
+
+    return NextResponse.json({ success: false, error: 'Session ID or action required.' }, { status: 400 });
+  } catch (error) {
+    console.error('Error revoking session:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

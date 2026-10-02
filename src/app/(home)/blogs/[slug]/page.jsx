@@ -132,7 +132,7 @@ export default function SingleBlogPage({ params }) {
   return (
     <main className="min-h-screen bg-slate-50/70 dark:bg-slate-950/70">
       <div className="w-full space-y-10">
-        {/* 1. TOP: Summary Banner (matching /apps/[slug]) */}
+        {/* 1. TOP: Summary Banner */}
         {(blog.summary || blog.excerpt) && (
           <section className="bg-primary-light dark:bg-primary-dark border border-primary/20 dark:border-primary-dark/30 p-6 sm:p-8 shadow-xs space-y-3">
             <p className="text-lg text-center sm:text-2xl font-semibold py-8 sm:py-12 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto text-slate-900 dark:text-dark leading-relaxed tracking-tight">
@@ -194,12 +194,9 @@ export default function SingleBlogPage({ params }) {
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
                   {blog.app_title && (
-                    <Link
-                      href={`/apps/${blog.app_slug}`}
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-secondary/10 text-secondary border border-secondary/20 hover:bg-secondary/20 transition-colors"
-                    >
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-secondary/10 text-secondary border border-secondary/20">
                       <BiRocket className="text-xs" /> {blog.app_title}
-                    </Link>
+                    </span>
                   )}
                   {blog.author_name && (
                     <span className="flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-300">
@@ -227,16 +224,6 @@ export default function SingleBlogPage({ params }) {
                   {copied ? <BiCheck className="text-emerald-500 text-base" /> : <BiShareAlt className="text-base" />}
                   <span>{copied ? 'Link Copied!' : 'Share Article'}</span>
                 </button>
-
-                {blog.app_slug && (
-                  <Link
-                    href={`/apps/${blog.app_slug}`}
-                    className="px-5 py-2.5 rounded-xl bg-secondary hover:bg-secondary-dark text-white text-xs font-semibold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <span>View App</span>
-                    <BiRightArrowAlt className="text-base" />
-                  </Link>
-                )}
               </div>
             </div>
           </section>
@@ -337,7 +324,7 @@ export default function SingleBlogPage({ params }) {
             </div>
           )}
 
-          {/* 6. THEN: EXPLORE ECOSYSTEM CARDS (matching /apps/[slug]) */}
+          {/* 6. THEN: EXPLORE SOLUTIONS CARDS */}
           <section className="space-y-6 pt-2">
             <div className="pb-1">
               <h2 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white">
@@ -348,55 +335,28 @@ export default function SingleBlogPage({ params }) {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Go to Themes Card */}
-              <div className="bg-linear-to-br from-primary/10 via-white dark:via-slate-900 to-primary-dark/10 border border-primary/20 dark:border-primary/30 rounded-3xl p-6 sm:p-8 flex flex-col justify-between gap-6 shadow-xs hover:shadow-lg transition-all group">
+            <div className="grid grid-cols-1 gap-6">
+              {/* Go to Packages Card */}
+              <div className="bg-linear-to-br from-primary/10 via-white dark:via-slate-900 to-primary-dark/10 border border-primary/20 dark:border-primary/30 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6 shadow-xs hover:shadow-lg transition-all group">
                 <div className="space-y-3">
                   <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary-dark dark:text-primary-light border border-primary/20 flex items-center justify-center text-2xl font-semibold">
-                    <BiPalette />
+                    <BiPackage />
                   </div>
                   <div>
                     <h3 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-white">
-                      Explore Themes
+                      Explore Platform Packages &amp; Pricing
                     </h3>
                     <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                      Browse modern, responsive themes built for creator storefronts, portfolios, and blogs with fluid styling.
+                      Choose the perfect subscription package with all modules, priority support, and custom setups.
                     </p>
                   </div>
                 </div>
 
                 <Link
-                  href="/themes"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-primary hover:bg-primary-dark text-slate-950 dark:text-white font-semibold text-xs sm:text-sm shadow-md transition-all group-hover:gap-3 cursor-pointer"
+                  href="/packages"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-primary hover:bg-primary-dark text-slate-950 dark:text-white font-semibold text-xs sm:text-sm shadow-md transition-all group-hover:gap-3 cursor-pointer shrink-0"
                 >
-                  <span>Go to Themes</span>
-                  <BiRightArrowAlt className="text-lg" />
-                </Link>
-              </div>
-
-              {/* Go to Applications Card */}
-              <div className="bg-linear-to-br from-secondary/10 via-white dark:via-slate-900 to-secondary-dark/10 border border-secondary/20 dark:border-secondary/30 rounded-3xl p-6 sm:p-8 flex flex-col justify-between gap-6 shadow-xs hover:shadow-lg transition-all group">
-                <div className="space-y-3">
-                  <div className="w-12 h-12 rounded-2xl bg-secondary/10 text-secondary border border-secondary/20 flex items-center justify-center text-2xl font-semibold">
-                    <BiGridAlt />
-                  </div>
-                  <div>
-                    <h3 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-white">
-                      {blog.app_title ? `About ${blog.app_title}` : 'Turnkey Applications'}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                      {blog.app_title
-                        ? `Deploy ${blog.app_title} with integrated databases, instant hosting, and customized components.`
-                        : 'Explore all pre-integrated ecosystem applications ready to deploy to your workspace.'}
-                    </p>
-                  </div>
-                </div>
-
-                <Link
-                  href={blog.app_slug ? `/apps/${blog.app_slug}` : '/apps'}
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-secondary hover:bg-secondary-dark text-white font-semibold text-xs sm:text-sm shadow-md transition-all group-hover:gap-3 cursor-pointer"
-                >
-                  <span>{blog.app_title ? `Explore ${blog.app_title}` : 'Browse Apps'}</span>
+                  <span>Go to Packages</span>
                   <BiRightArrowAlt className="text-lg" />
                 </Link>
               </div>

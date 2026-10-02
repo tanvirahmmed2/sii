@@ -4,8 +4,6 @@ import { useState, useContext } from 'react';
 import Link from 'next/link';
 import {
   BiX,
-  BiChevronDown,
-  BiChevronUp,
   BiRightArrowAlt,
   BiGridAlt,
 } from 'react-icons/bi';
@@ -13,8 +11,7 @@ import { Context } from 'src/component/helper/Context';
 import { SITE_NAME } from 'src/lib/database/secret';
 
 export default function Sidebar({ isOpen, onClose }) {
-  const { apps = [], creator } = useContext(Context) || {};
-  const [appsOpen, setAppsOpen] = useState(false);
+  const { creator } = useContext(Context) || {};
 
   return (
     <>
@@ -56,51 +53,6 @@ export default function Sidebar({ isOpen, onClose }) {
 
           {/* Navigation links */}
           <nav className="flex flex-col p-4 space-y-1">
-            <Link
-              href="/themes"
-              onClick={onClose}
-              className="px-3.5 py-2.5 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:text-secondary hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition-colors text-sm"
-            >
-              Themes
-            </Link>
-
-            {/* Apps with expandable sub-items */}
-            <div>
-              <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition-colors">
-                <Link
-                  href="/apps"
-                  onClick={onClose}
-                  className="font-medium text-slate-700 dark:text-slate-300 hover:text-secondary transition-colors flex-1 text-sm"
-                >
-                  Apps
-                </Link>
-                {apps && apps.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setAppsOpen((prev) => !prev)}
-                    className="p-1 text-slate-500 hover:text-secondary transition-colors cursor-pointer"
-                    aria-label="Toggle apps sub-menu"
-                  >
-                    {appsOpen ? <BiChevronUp className="text-xl" /> : <BiChevronDown className="text-xl" />}
-                  </button>
-                )}
-              </div>
-
-              {appsOpen && apps && apps.length > 0 && (
-                <div className="ml-4 pl-3 border-l-2 border-secondary/30 flex flex-col space-y-1 mt-1">
-                  {apps.map((app) => (
-                    <Link
-                      key={app.id}
-                      href={app.path || `/apps/${app.slug}`}
-                      onClick={onClose}
-                      className="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400 hover:text-secondary rounded-lg transition-colors"
-                    >
-                      {app.title}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
 
             <Link
               href="/packages"

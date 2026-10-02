@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import { SITE_NAME } from 'src/lib/database/secret';
-import { BiMenu, BiChevronDown, BiGridAlt, BiRightArrowAlt } from 'react-icons/bi';
+import { BiMenu, BiGridAlt, BiRightArrowAlt } from 'react-icons/bi';
 import { useContext, useState } from 'react';
 import { Context } from 'src/component/helper/Context';
 import Sidebar from './Sidebar';
 
 export default function HomeNavbar() {
-  const {  creator } = useContext(Context) || {};
+  const { creator } = useContext(Context) || {};
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -30,21 +30,25 @@ export default function HomeNavbar() {
           {/* Desktop Navigation Links */}
           <div className="hidden lg:flex items-center gap-1 xl:gap-1.5">
             <Link
-              href="/themes"
-              className="text-xs xl:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary-light px-3 py-2 rounded-xl  transition-colors"
-            >
-              Themes
-            </Link>
-
-            
-            <Link
               href="/packages"
-              className="text-xs xl:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary-light px-3 py-2 rounded-xl  transition-colors"
+              className="text-xs xl:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary-light px-3 py-2 rounded-xl transition-colors"
             >
               Packages
             </Link>
 
-        
+            <Link
+              href="/about"
+              className="text-xs xl:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary-light px-3 py-2 rounded-xl transition-colors"
+            >
+              About
+            </Link>
+
+            <Link
+              href="/reviews"
+              className="text-xs xl:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary-light px-3 py-2 rounded-xl transition-colors"
+            >
+              Reviews
+            </Link>
           </div>
         </div>
 
@@ -56,7 +60,7 @@ export default function HomeNavbar() {
           <div className="hidden md:flex items-center gap-1.5 lg:gap-2">
             <Link
               href="/contact"
-              className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary-light px-3 py-2 rounded-xl  transition-colors"
+              className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary-light px-3 py-2 rounded-xl transition-colors"
             >
               Contact
             </Link>
@@ -72,7 +76,7 @@ export default function HomeNavbar() {
               <>
                 <Link
                   href="/creator/login"
-                  className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary-light px-3 py-2 rounded-xl  transition-colors"
+                  className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary-light px-3 py-2 rounded-xl transition-colors"
                 >
                   Login
                 </Link>

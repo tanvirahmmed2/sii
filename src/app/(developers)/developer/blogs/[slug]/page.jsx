@@ -34,11 +34,6 @@ export default function BlogDetailPage({ params }) {
       } else {
         setError(data.error || 'Blog article not found');
       }
-
-      const appsRes = await fetch('/api/marketing/developer/apps');
-      const appsData = await appsRes.json();
-      if (appsData.apps) setApps(appsData.apps);
-      else if (appsData.records) setApps(appsData.records);
     } catch (err) {
       console.error('Error fetching blog details:', err);
       setError(err.message || 'Failed to load article');
@@ -67,15 +62,6 @@ export default function BlogDetailPage({ params }) {
         setError(err.message || 'Failed to load article');
         setLoading(false);
       });
-
-    fetch('/api/marketing/developer/apps')
-      .then((res) => res.json())
-      .then((appsData) => {
-        if (!active) return;
-        if (appsData.apps) setApps(appsData.apps);
-        else if (appsData.records) setApps(appsData.records);
-      })
-      .catch(() => {});
 
     return () => {
       active = false;

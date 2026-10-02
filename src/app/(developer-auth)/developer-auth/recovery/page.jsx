@@ -1,14 +1,11 @@
 import AdminRecoveryForm from 'src/component/marketing/developer/forms/AdminRecoveryForm';
+import { SITE_NAME } from 'src/lib/database/secret';
 
 export const metadata = {
-  title: 'Admin Password Recovery | PortfolioCraft SaaS',
-  description: 'Generate security recovery token and reset super admin password.',
+  title: `Password Recovery | ${SITE_NAME}`,
+  description: `Reset developer access credentials for ${SITE_NAME}.`,
 };
 
 export default function AdminRecoveryPage() {
-  return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4">
-      <AdminRecoveryForm />
-    </div>
-  );
+  return <AdminRecoveryForm />;
 }

@@ -45,10 +45,10 @@ export default function Hero() {
                 <BiRightArrowAlt className="text-lg" />
               </Link>
               <Link
-                href="/themes"
+                href="/packages"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/80 font-bold text-sm transition-all duration-200 shadow-xs"
               >
-                <span>Explore Live Themes</span>
+                <span>Explore Packages</span>
               </Link>
             </div>
 

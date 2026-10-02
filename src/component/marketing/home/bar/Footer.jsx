@@ -71,22 +71,6 @@ const Footer = () => {
             <ul className="space-y-2.5 text-xs text-slate-300 dark:text-slate-400">
               <li>
                 <Link
-                  href="/themes"
-                  className="hover:text-white transition-colors"
-                >
-                  Themes
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/apps"
-                  className="hover:text-white transition-colors"
-                >
-                  Ecosystem Apps
-                </Link>
-              </li>
-              <li>
-                <Link
                   href="/packages"
                   className="hover:text-white transition-colors"
                 >

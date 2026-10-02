@@ -12,7 +12,7 @@ import Link from 'next/link';
 
 export const data = [
   { id: 1, title: 'Ready UI Components', number: '110+', icon: BiCube, accent: 'from-blue-500 to-indigo-600' },
-  { id: 2, title: 'Responsive Themes', number: '56+', icon: BiPalette, accent: 'from-purple-500 to-pink-600' },
+  { id: 2, title: 'Integrated Applications', number: '50+', icon: BiCube, accent: 'from-purple-500 to-pink-600' },
   { id: 3, title: 'Active Students', number: '23,000+', icon: BiGroup, accent: 'from-amber-500 to-orange-600' },
   { id: 4, title: 'Reviews', number: '950+', icon: BiStar, accent: 'from-emerald-500 to-teal-600' },
 ];

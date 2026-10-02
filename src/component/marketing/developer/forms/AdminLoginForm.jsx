@@ -1,27 +1,44 @@
 'use client';
 
-import { useState, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { ShieldCheckIcon } from 'src/component/website/ui/Icons';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { SITE_NAME } from 'src/lib/database/secret';
 import { Context } from 'src/component/helper/Context';
 
 export default function AdminLoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const context = useContext(Context);
-  const [email, setEmail] = useState('tanvir@gmail.com');
+
+  const initialVerified = searchParams.get('verified') === 'true';
+  const initialEmailParam = searchParams.get('email') || '';
+
+  const [email, setEmail] = useState(initialEmailParam || 'tanvir@gmail.com');
   const [password, setPassword] = useState('123');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [verifiedSuccess, setVerifiedSuccess] = useState(initialVerified);
   const [unverifiedInfo, setUnverifiedInfo] = useState(null);
+  const [resending, setResending] = useState(false);
+  const [resendNotice, setResendNotice] = useState('');
+
+  useEffect(() => {
+    if (initialEmailParam) {
+      setEmail(initialEmailParam);
+    }
+    if (initialVerified) {
+      setVerifiedSuccess(true);
+    }
+  }, [initialEmailParam, initialVerified]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     setUnverifiedInfo(null);
+    setResendNotice('');
 
     try {
       const res = await fetch('/api/marketing/developer/me/login', {
@@ -42,7 +59,7 @@ export default function AdminLoginForm() {
         if (data.unverified) {
           setUnverifiedInfo({
             email: data.email || email,
-            message: data.error || 'This admin account is not verified. Please verify your email with the 6-digit code.',
+            message: data.error || 'Your developer account has not been verified yet. Please check your email for the activation link.',
           });
         } else {
           setError(data.error || 'Authentication failed. Please check your credentials.');
@@ -55,51 +72,110 @@ export default function AdminLoginForm() {
     }
   };
 
+  const handleResendLink = async () => {
+    const targetEmail = unverifiedInfo?.email || email;
+    if (!targetEmail) return;
+
+    setResending(true);
+    setResendNotice('');
+
+    try {
+      const res = await fetch('/api/marketing/developer/me/resend-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: targetEmail }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setResendNotice('A new verification activation link has been sent to your email.');
+      } else {
+        setError(data.error || 'Failed to resend verification link.');
+      }
+    } catch (err) {
+      setError('Network error resending verification link.');
+    } finally {
+      setResending(false);
+    }
+  };
+
   return (
-    <div className="max-w-md w-full p-8 rounded-3xl bg-white border border-slate-200 shadow-xl space-y-6">
-      <div className="text-center space-y-2">
-        <div className="w-12 h-12 rounded-2xl bg-secondary/10 text-secondary flex items-center justify-center mx-auto mb-2 border border-secondary/20">
-          <ShieldCheckIcon className="w-7 h-7" />
-        </div>
-        <h1 className="text-2xl font-bold text-slate-900">{SITE_NAME} Admin Access</h1>
-        <p className="text-xs text-slate-500">Restricted administrative gateway for platform operators.</p>
+    <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 shadow-xs space-y-5">
+      <div className="space-y-1">
+        <h1 className="text-xl font-medium text-slate-900 dark:text-white">
+          {SITE_NAME} Developer Access
+        </h1>
+        <p className="text-xs font-normal text-slate-500 dark:text-slate-400">
+          Sign in to the developer administration console.
+        </p>
       </div>
 
+      {verifiedSuccess && (
+        <div className="p-3 rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-xs font-normal space-y-0.5">
+          <p className="font-medium">Account verified successfully.</p>
+          <p>Your administrator account is now active. Please sign in below.</p>
+        </div>
+      )}
+
       {unverifiedInfo && (
-        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 space-y-3">
-          <div className="text-xs font-semibold">{unverifiedInfo.message}</div>
-          <Link
-            href={`/developer-auth/verify?email=${encodeURIComponent(unverifiedInfo.email)}`}
-            className="inline-flex items-center justify-center w-full py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors shadow-sm"
-          >
-            Enter 6-Digit Verification Code →
-          </Link>
+        <div className="p-3 rounded border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 text-xs font-normal space-y-2">
+          <p>{unverifiedInfo.message}</p>
+
+          {resendNotice ? (
+            <p className="text-emerald-700 dark:text-emerald-300 font-medium">
+              {resendNotice}
+            </p>
+          ) : (
+            <div className="flex items-center gap-3 pt-1">
+              <button
+                type="button"
+                onClick={handleResendLink}
+                disabled={resending}
+                className="px-3 py-1.5 rounded border border-amber-600 bg-amber-600 text-white text-xs font-medium hover:bg-amber-700 disabled:opacity-50 cursor-pointer"
+              >
+                {resending ? 'Sending Link...' : 'Resend Verification Link'}
+              </button>
+
+              <Link
+                href={`/developer-auth/verify?email=${encodeURIComponent(unverifiedInfo.email)}`}
+                className="text-xs text-amber-800 dark:text-amber-300 hover:underline font-normal"
+              >
+                Enter code manually
+              </Link>
+            </div>
+          )}
         </div>
       )}
 
       {error && !unverifiedInfo && (
-        <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+        <div className="p-3 rounded border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 text-xs font-normal">
           {error}
         </div>
       )}
 
       <form onSubmit={handleLogin} className="space-y-4">
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">Admin Email</label>
+        <div className="space-y-1">
+          <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">
+            Email Address
+          </label>
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="tanvir@gmail.com"
-            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+            placeholder="developer@company.com"
+            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
           />
         </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-semibold text-slate-700">Password</label>
-            <Link href="/developer-auth/recovery" className="text-xs text-secondary hover:underline">
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-normal text-slate-700 dark:text-slate-300">
+              Password
+            </label>
+            <Link
+              href="/developer-auth/recovery"
+              className="text-xs font-normal text-slate-500 dark:text-slate-400 hover:underline"
+            >
               Forgot password?
             </Link>
           </div>
@@ -109,12 +185,12 @@ export default function AdminLoginForm() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors pr-12"
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800 pr-12"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500 hover:text-slate-800"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-normal text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
             >
               {showPassword ? 'Hide' : 'Show'}
             </button>
@@ -124,15 +200,18 @@ export default function AdminLoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3 rounded-xl bg-secondary hover:bg-secondary-dark disabled:opacity-50 text-white text-sm font-semibold shadow-md shadow-secondary/20 transition-all cursor-pointer"
+          className="w-full py-2.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium disabled:opacity-50 transition-colors cursor-pointer"
         >
-          {loading ? 'Authenticating...' : 'Sign In to Admin Portal'}
+          {loading ? 'Authenticating...' : 'Sign In'}
         </button>
       </form>
 
-      <div className="text-center pt-2">
-        <Link href="/" className="text-xs text-slate-500 hover:text-slate-700">
-          ← Return to Platform Home
+      <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-center">
+        <Link
+          href="/"
+          className="text-xs font-normal text-slate-500 dark:text-slate-400 hover:underline"
+        >
+          Return to Home
         </Link>
       </div>
     </div>

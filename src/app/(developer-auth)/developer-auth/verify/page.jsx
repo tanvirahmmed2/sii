@@ -1,17 +1,16 @@
 import { Suspense } from 'react';
 import AdminVerifyForm from 'src/component/marketing/developer/forms/AdminVerifyForm';
+import { SITE_NAME } from 'src/lib/database/secret';
 
 export const metadata = {
-  title: 'Admin Account Verification | PortfolioCraft SaaS',
-  description: 'Verify administrator access code sent via Brevo email.',
+  title: `Developer Account Verification | ${SITE_NAME}`,
+  description: `Verify administrator access code for ${SITE_NAME}.`,
 };
 
 export default function AdminVerifyPage() {
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4">
-      <Suspense fallback={<div className="text-sm text-slate-400">Loading verification portal...</div>}>
-        <AdminVerifyForm />
-      </Suspense>
-    </div>
+    <Suspense fallback={<div className="text-xs text-slate-500">Loading...</div>}>
+      <AdminVerifyForm />
+    </Suspense>
   );
 }

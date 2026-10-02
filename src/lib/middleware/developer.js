@@ -172,10 +172,10 @@ export async function getAdminSession(request) {
 
     // Standard fallback modules if not explicitly configured in role_permissions
     const standardModules = {
-      admin: ['overview', 'developers', 'roles', 'team', 'creators', 'users', 'websites', 'blogs', 'themes', 'packages', 'features', 'modules', 'purchases', 'payments', 'subscriptions', 'payroll', 'my-salaries', 'live-chats', 'chats', 'contacts', 'support', 'projects', 'reports', 'reviews', 'spams', 'leads', 'subscribers', 'apps', 'profile', 'settings', 'faqs', 'updates', 'tasks', 'notices', 'tutorials', 'careers', 'policies'],
-      manager: ['overview', 'creators', 'users', 'websites', 'packages', 'features', 'purchases', 'payments', 'subscriptions', 'live-chats', 'chats', 'contacts', 'support', 'projects', 'my-salaries', 'reports', 'reviews', 'leads', 'subscribers', 'apps', 'profile', 'settings', 'faqs', 'updates', 'tasks', 'notices', 'tutorials', 'careers', 'policies'],
-      developer: ['overview', 'websites', 'themes', 'packages', 'features', 'apps', 'spams', 'reports', 'blogs', 'support', 'live-chats', 'projects', 'profile', 'settings', 'chats', 'tasks', 'notices', 'my-salaries', 'tutorials', 'faqs', 'updates', 'policies'],
-      marketer: ['overview', 'blogs', 'themes', 'leads', 'packages', 'reviews', 'profile', 'settings', 'chats', 'tasks', 'notices', 'my-salaries', 'tutorials', 'faqs', 'updates', 'policies'],
+      admin: ['overview', 'developers', 'roles', 'team', 'creators', 'users', 'websites', 'blogs', 'packages', 'features', 'modules', 'purchases', 'payments', 'subscriptions', 'payroll', 'my-salaries', 'live-chats', 'chats', 'contacts', 'support', 'projects', 'reports', 'reviews', 'spams', 'leads', 'subscribers', 'profile', 'settings', 'faqs', 'updates', 'tasks', 'notices', 'tutorials', 'careers', 'policies'],
+      manager: ['overview', 'creators', 'users', 'websites', 'packages', 'features', 'purchases', 'payments', 'subscriptions', 'live-chats', 'chats', 'contacts', 'support', 'projects', 'my-salaries', 'reports', 'reviews', 'leads', 'subscribers', 'profile', 'settings', 'faqs', 'updates', 'tasks', 'notices', 'tutorials', 'careers', 'policies'],
+      developer: ['overview', 'websites', 'packages', 'features', 'spams', 'reports', 'blogs', 'support', 'live-chats', 'projects', 'profile', 'settings', 'chats', 'tasks', 'notices', 'my-salaries', 'tutorials', 'faqs', 'updates', 'policies'],
+      marketer: ['overview', 'blogs', 'leads', 'packages', 'reviews', 'profile', 'settings', 'chats', 'tasks', 'notices', 'my-salaries', 'tutorials', 'faqs', 'updates', 'policies'],
       support: ['overview', 'live-chats', 'chats', 'contacts', 'support', 'reports', 'reviews', 'users', 'creators', 'subscribers', 'profile', 'settings', 'tasks', 'notices', 'my-salaries', 'tutorials', 'faqs', 'updates', 'policies'],
     };
 
@@ -200,6 +200,7 @@ export async function getAdminSession(request) {
       isVerified: true,
       permissions: allPermissions,
       isAdmin: ['admin', 'superadmin', 'manager', 'developer'].includes(roleSlug),
+      token,
     };
   } catch (error) {
     console.error('Error fetching admin session:', error);
@@ -310,9 +311,9 @@ export async function authenticateAdmin(email, password, { ip = '127.0.0.1', use
     throw new Error('Invalid email or password.');
   }
 
-  // Check if verification code is pending
-  if (dev.two_factor_code) {
-    const err = new Error('Please enter your 6-digit verification code before logging in.');
+  // Check if account email is verified
+  if (dev.email_verified === false || dev.verification_token) {
+    const err = new Error('Your developer account has not been verified yet. Please check your email for the activation link.');
     err.unverified = true;
     err.email = dev.email;
     throw err;

@@ -174,8 +174,6 @@ export default function AdminOverviewPage() {
       category: 'Content & Design',
       items: [
         { label: 'Blog Articles', path: '/developer/blogs', desc: 'Platform articles, guides, and releases' },
-        { label: 'Themes Gallery', path: '/developer/themes', desc: 'Design templates and layout presets' },
-        { label: 'Ecosystem Apps', path: '/developer/apps', desc: 'Active platform applications and integrations' },
       ],
     },
     {

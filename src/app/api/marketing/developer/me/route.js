@@ -110,9 +110,11 @@ export async function PUT(request) {
 
     // 3. Profile fields
     const newPhone = data.phone !== undefined ? data.phone.trim() : currentDev.phone;
+    const newDesignation = data.designation !== undefined ? data.designation.trim() : currentDev.designation;
     const newBio = data.bio !== undefined ? data.bio.trim() : currentDev.bio;
     const newGithub = data.github_profile !== undefined ? data.github_profile.trim() : currentDev.github_profile;
     const newLinkedin = data.linkedin_profile !== undefined ? data.linkedin_profile.trim() : currentDev.linkedin_profile;
+    const newAvatarUrl = data.avatar_url !== undefined ? data.avatar_url.trim() : currentDev.avatar_url;
 
     // 4. Password change
     let newPasswordHash = currentDev.password;
@@ -145,10 +147,10 @@ export async function PUT(request) {
 
     const updateRes = await query(
       `UPDATE developers
-       SET name = $1, email = $2, phone = $3, bio = $4, github_profile = $5, linkedin_profile = $6, password = $7, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $8
+       SET name = $1, email = $2, phone = $3, designation = $4, bio = $5, github_profile = $6, linkedin_profile = $7, avatar_url = $8, password = $9, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $10
        RETURNING id, name, email, phone, designation, bio, avatar_url, github_profile, linkedin_profile, role_id, is_active, last_login_at, created_at, updated_at`,
-      [newName, newEmail, newPhone, newBio, newGithub, newLinkedin, newPasswordHash, authUser.id]
+      [newName, newEmail, newPhone, newDesignation, newBio, newGithub, newLinkedin, newAvatarUrl, newPasswordHash, authUser.id]
     );
 
     const updated = {

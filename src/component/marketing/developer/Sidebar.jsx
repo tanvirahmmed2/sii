@@ -73,7 +73,6 @@ export const ADMIN_NAV_SECTIONS = [
   {
     title: 'Content & Design',
     links: [
-      { href: '/developer/themes', label: 'Themes', icon: BiPalette },
       { href: '/developer/blogs', label: 'Blogs', icon: BiFile },
       { href: '/developer/policies', label: 'Company Policies', icon: BiCheckShield },
       { href: '/developer/updates', label: 'Product Updates', icon: BiBell },
@@ -112,7 +111,6 @@ export const ADMIN_NAV_SECTIONS = [
   {
     title: 'Platform & Settings',
     links: [
-      { href: '/developer/apps', label: 'Ecosystem Apps', icon: BiGridAlt },
       { href: '/developer/modules', label: 'Database Modules', icon: BiGridAlt },
       { href: '/developer/spams', label: 'Spam Defense', icon: BiShieldX },
       { href: '/developer/settings', label: 'Settings', icon: BiCog },

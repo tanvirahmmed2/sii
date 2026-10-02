@@ -4,7 +4,9 @@ import { hashPassword, hasModulePermission } from 'src/lib/middleware/developer'
 import { sendEmail } from 'src/lib/database/brevo';
 import { SITE_NAME } from 'src/lib/database/secret';
 
-async function handleCreateAdmin(d) {
+import crypto from 'crypto';
+
+async function handleCreateAdmin(d, request) {
   const data = d || {};
   const name = data.name?.trim();
   const email = data.email?.trim().toLowerCase();
@@ -28,48 +30,78 @@ async function handleCreateAdmin(d) {
   const roleId = roleRes.rows[0]?.id || 1;
 
   const hashedPassword = await hashPassword(password);
+  const verificationToken = crypto.randomBytes(32).toString('hex');
   const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
   const insertRes = await queryDb(
-    `INSERT INTO developers (name, email, password, role_id, is_active, two_factor_code, two_factor_expires)
-     VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP + INTERVAL '24 hours')
-     RETURNING id, name, email, role_id, is_active, created_at`,
-    [name, email, hashedPassword, roleId, isActive, verificationCode]
+    `INSERT INTO developers (
+       name, email, password, role_id, is_active, email_verified,
+       verification_token, verification_token_expires, two_factor_code, two_factor_expires
+     )
+     VALUES ($1, $2, $3, $4, $5, FALSE, $6, CURRENT_TIMESTAMP + INTERVAL '24 hours', $7, CURRENT_TIMESTAMP + INTERVAL '24 hours')
+     RETURNING id, name, email, role_id, is_active, email_verified, created_at`,
+    [name, email, hashedPassword, roleId, isActive, verificationToken, verificationCode]
   );
+
+  const origin =
+    request?.headers?.get('origin') ||
+    (request?.headers?.get('host')
+      ? `${request.headers.get('x-forwarded-proto') || 'http'}://${request.headers.get('host')}`
+      : '') ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    'http://localhost:3000';
+
+  const verifyUrl = `${origin}/developer-auth/verify?token=${verificationToken}&email=${encodeURIComponent(email)}`;
 
   const newAdmin = {
     ...insertRes.rows[0],
     role: roleRes.rows[0]?.slug || roleSlug,
     role_name: roleRes.rows[0]?.name || 'Developer',
-    is_verified: true,
+    is_verified: false,
+    verification_link: verifyUrl,
     verification_code: verificationCode,
   };
 
   try {
     await sendEmail({
       to: email,
-      subject: `Admin Account Verification Code - ${SITE_NAME}`,
+      subject: `Verify Your Developer Account - ${SITE_NAME}`,
       html: `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 540px; margin: 0 auto; padding: 32px 24px; background: #0f172a; color: #f8fafc; border-radius: 20px; border: 1px solid #1e293b;">
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px; background: #0f172a; color: #f8fafc; border-radius: 20px; border: 1px solid #1e293b;">
           <div style="text-align: center; margin-bottom: 24px;">
-            <h1 style="color: #6366f1; font-size: 24px; margin: 0 0 8px 0;">${SITE_NAME} Admin Portal</h1>
-            <p style="color: #94a3b8; font-size: 14px; margin: 0;">Administrative Account Verification</p>
+            <h1 style="color: #6366f1; font-size: 24px; margin: 0 0 8px 0; font-weight: 800;">${SITE_NAME} Developer Portal</h1>
+            <p style="color: #94a3b8; font-size: 14px; margin: 0;">Account Verification & Activation</p>
           </div>
-          <div style="background: #1e293b; padding: 24px; border-radius: 12px; margin-bottom: 24px; border: 1px solid #334155;">
-            <p style="margin-top: 0; color: #cbd5e1; font-size: 14px;">Hello <strong>${name}</strong>,</p>
-            <p style="color: #94a3b8; font-size: 14px; line-height: 1.6;">An administrator account has been created for you. To activate your account and access the admin portal, please verify your email address using the 6-digit security code below:</p>
-            <div style="text-align: center; padding: 18px; margin: 20px 0; background: #0b0f19; border-radius: 10px; border: 1px dashed #6366f1;">
-              <span style="font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #38bdf8; font-family: monospace;">${verificationCode}</span>
+          <div style="background: #1e293b; padding: 28px; border-radius: 14px; margin-bottom: 24px; border: 1px solid #334155;">
+            <p style="margin-top: 0; color: #cbd5e1; font-size: 15px;">Hello <strong>${name}</strong>,</p>
+            <p style="color: #94a3b8; font-size: 14px; line-height: 1.6;">
+              An administrator account has been created for you on <strong>${SITE_NAME}</strong> with the role of <strong>${newAdmin.role_name}</strong>.
+            </p>
+            <p style="color: #94a3b8; font-size: 14px; line-height: 1.6;">
+              To activate your account and set up access, please click the button below to verify your email address:
+            </p>
+            <div style="text-align: center; margin: 28px 0;">
+              <a href="${verifyUrl}" style="background: #4f46e5; color: #ffffff; padding: 14px 32px; text-decoration: none; font-size: 14px; font-weight: 700; border-radius: 12px; display: inline-block; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);">
+                Verify & Activate Account →
+              </a>
             </div>
-            <p style="margin-bottom: 0; font-size: 12px; color: #64748b; text-align: center;">This code will expire in 24 hours. Keep this confidential.</p>
+            <div style="background: #0b0f19; padding: 14px; border-radius: 8px; border: 1px dashed #475569; margin: 20px 0; word-break: break-all; font-size: 12px; color: #94a3b8;">
+              <span style="color: #64748b; display: block; margin-bottom: 4px;">Direct Link:</span>
+              <a href="${verifyUrl}" style="color: #38bdf8; text-decoration: underline;">${verifyUrl}</a>
+            </div>
+            <p style="margin-bottom: 0; font-size: 12px; color: #64748b; text-align: center;">
+              This activation link is valid for 24 hours. Keep this link confidential.
+            </p>
           </div>
-          <p style="font-size: 12px; color: #64748b; text-align: center; margin: 0;">If you did not expect this invitation, please contact security immediately.</p>
+          <p style="font-size: 12px; color: #64748b; text-align: center; margin: 0;">
+            If you did not expect this invitation, please ignore this email or contact support.
+          </p>
         </div>
       `,
-      text: `Hello ${name},\n\nYour admin account verification code is: ${verificationCode}\n\nThis code expires in 24 hours.\n\nPlease enter this code to activate your account on ${SITE_NAME}.`,
+      text: `Hello ${name},\n\nAn administrator account was created for you on ${SITE_NAME}.\n\nPlease click the link below to verify your email and activate your account:\n${verifyUrl}\n\nThis link expires in 24 hours.`,
     });
   } catch (mailErr) {
-    console.warn('Brevo email sending notice during admin creation:', mailErr.message);
+    console.warn('Brevo email sending notice during developer creation:', mailErr.message);
   }
 
   return newAdmin;
@@ -81,7 +113,7 @@ export async function GET() {
       queryDb(`
         SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url, d.role_id,
                COALESCE(dr.slug, 'developer') AS role, COALESCE(dr.name, 'Developer') AS role_name,
-               d.is_active, d.last_login_at, d.created_at
+               d.is_active, COALESCE(d.email_verified, FALSE) AS email_verified, d.last_login_at, d.created_at
         FROM developers d
         LEFT JOIN developer_roles dr ON d.role_id = dr.id
         ORDER BY d.id DESC
@@ -89,7 +121,7 @@ export async function GET() {
       queryDb(`SELECT id, name, slug, description FROM developer_roles ORDER BY id ASC`).catch(() => ({ rows: [] })),
     ]);
 
-    const records = devsRes.rows.map((r) => ({ ...r, is_verified: true }));
+    const records = devsRes.rows.map((r) => ({ ...r, is_verified: Boolean(r.email_verified) }));
     return NextResponse.json({ success: true, table: 'developers', records, roles: rolesRes.rows });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -154,13 +186,13 @@ export async function POST(request) {
       data.role = 'admin';
     }
 
-    const newAdmin = await handleCreateAdmin(data);
+    const newAdmin = await handleCreateAdmin(data, request);
 
     return NextResponse.json({
       success: true,
       admin: newAdmin,
       record: newAdmin,
-      message: 'Admin account created successfully. Verification code sent via email.',
+      message: 'Developer account created successfully. A verification link has been sent to the developer email.',
     });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 400 });

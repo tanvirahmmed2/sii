@@ -1,14 +1,16 @@
+import { Suspense } from 'react';
 import AdminLoginForm from 'src/component/marketing/developer/forms/AdminLoginForm';
+import { SITE_NAME } from 'src/lib/database/secret';
 
 export const metadata = {
-  title: 'Super Admin Login | PortfolioCraft SaaS',
-  description: 'Restricted administrative gateway for SaaS operators.',
+  title: `Developer Login | ${SITE_NAME}`,
+  description: `Restricted administrative gateway for ${SITE_NAME} operators and developers.`,
 };
 
 export default function AdminLoginPage() {
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4">
+    <Suspense fallback={<div className="text-xs text-slate-500">Loading...</div>}>
       <AdminLoginForm />
-    </div>
+    </Suspense>
   );
 }
