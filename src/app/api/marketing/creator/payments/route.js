@@ -46,25 +46,25 @@ export async function GET(request) {
     if (paymentIdParam) {
       const singleRes = await queryDb(
         `SELECT pay.*, 
+                (pay.amount * 100)::bigint AS amount_in_cents,
                 p.name AS package_name, 
                 p.slug AS package_slug, 
                 p.description AS package_description,
-                COALESCE(p.max_websites, p.max_portfolios, 1) AS max_websites,
-                p.billing_interval, 
-                p.price_in_cents AS package_price,
+                COALESCE(p.max_websites, 1) AS max_websites,
+                pu.billing_cycle AS billing_interval, 
+                (COALESCE(p.monthly_price_usd, p.monthly_price, 0) * 100)::int AS package_price,
                 p.monthly_price_usd,
                 p.yearly_price_usd,
                 p.monthly_price_bdt,
                 p.yearly_price_bdt,
-                s.status AS subscription_status,
-                s.current_period_start,
-                s.current_period_end,
+                pu.status AS subscription_status,
+                pu.period_start AS current_period_start,
+                pu.period_end AS current_period_end,
                 pu.notes AS purchase_notes,
                 pu.status AS purchase_status
-         FROM payment pay
-         LEFT JOIN packages p ON pay.package_id = p.id
-         LEFT JOIN subscription s ON pay.subscription_id = s.id
+         FROM payments pay
          LEFT JOIN purchases pu ON pay.purchase_id = pu.id
+         LEFT JOIN packages p ON pu.package_id = p.id
          WHERE pay.id = $1 AND pay.creator_id = $2
          LIMIT 1`,
         [Number(paymentIdParam), creatorId]
@@ -77,7 +77,7 @@ export async function GET(request) {
       const paymentRecord = singleRes.rows[0];
 
       // Compute package prices for both gateways
-      const isYearly = String(paymentRecord.billing_interval || '').toUpperCase() === 'YEARLY';
+      const isYearly = String(paymentRecord.billing_interval || '').toLowerCase() === 'yearly';
       paymentRecord.package_bdt_price = isYearly
         ? Number(paymentRecord.yearly_price_bdt || 0) || 3000
         : Number(paymentRecord.monthly_price_bdt || 0) || 300;
@@ -85,37 +85,32 @@ export async function GET(request) {
         ? Number(paymentRecord.yearly_price_usd || 0) || 30
         : Number(paymentRecord.monthly_price_usd || 0) || 3;
 
-      // Fetch transaction logs for this payment
-      const txRes = await queryDb(
-        `SELECT * FROM payment_transactions WHERE payment_id = $1 ORDER BY id DESC`,
-        [paymentRecord.id]
-      ).catch(() => ({ rows: [] }));
-
       return NextResponse.json({
         success: true,
         payment: paymentRecord,
-        transactions: txRes.rows,
+        transactions: [],
       });
     }
 
     // All payments for creator
     const res = await queryDb(
       `SELECT pay.*, 
+              (pay.amount * 100)::bigint AS amount_in_cents,
               p.name AS package_name, 
               p.slug AS package_slug, 
-              p.billing_interval, 
+              pu.billing_cycle AS billing_interval, 
               p.monthly_price_usd,
               p.yearly_price_usd,
               p.monthly_price_bdt,
               p.yearly_price_bdt,
-              s.status AS subscription_status
-       FROM payment pay
-       LEFT JOIN packages p ON pay.package_id = p.id
-       LEFT JOIN subscription s ON pay.subscription_id = s.id
+              pu.status AS subscription_status
+       FROM payments pay
+       LEFT JOIN purchases pu ON pay.purchase_id = pu.id
+       LEFT JOIN packages p ON pu.package_id = p.id
        WHERE pay.creator_id = $1
        ORDER BY pay.id DESC`,
       [creatorId]
-    );
+    ).catch(() => ({ rows: [] }));
 
     return NextResponse.json({ success: true, payments: res.rows });
   } catch (error) {
@@ -149,15 +144,16 @@ export async function handlePaymentsAction(body, sessionCreator, request = null)
     // Fetch payment and package pricing record
     const payRes = await queryDb(
       `SELECT pay.*, 
+              pu.package_id,
+              pu.billing_cycle,
               p.name AS package_name, 
-              p.billing_interval, 
-              p.price_in_cents AS pkg_price,
               p.monthly_price_usd,
               p.yearly_price_usd,
               p.monthly_price_bdt,
               p.yearly_price_bdt
-       FROM payment pay
-       LEFT JOIN packages p ON pay.package_id = p.id
+       FROM payments pay
+       LEFT JOIN purchases pu ON pay.purchase_id = pu.id
+       LEFT JOIN packages p ON pu.package_id = p.id
        WHERE pay.id = $1 AND pay.creator_id = $2
        LIMIT 1`,
       [paymentId, creatorId]
@@ -168,7 +164,7 @@ export async function handlePaymentsAction(body, sessionCreator, request = null)
       return NextResponse.json({ success: false, error: 'Payment invoice not found or unauthorized' }, { status: 404 });
     }
 
-    if (payment.status === 'COMPLETED') {
+    if (payment.status === 'successful' || payment.status === 'COMPLETED') {
       return NextResponse.json({
         success: true,
         message: 'This invoice is already paid and completed.',
@@ -176,7 +172,7 @@ export async function handlePaymentsAction(body, sessionCreator, request = null)
       });
     }
 
-    const isYearly = String(payment.billing_interval || '').toUpperCase() === 'YEARLY';
+    const isYearly = String(payment.billing_cycle || '').toLowerCase() === 'yearly';
     const packageBdtPrice = isYearly
       ? Number(payment.yearly_price_bdt || 3000)
       : Number(payment.monthly_price_bdt || 300);
@@ -307,77 +303,56 @@ export async function handlePaymentsAction(body, sessionCreator, request = null)
       }
     }
 
-    // Determine duration interval: MONTHLY = 30 days, YEARLY = 365 days
+    // Determine duration interval: monthly = 30 days, yearly = 365 days
     const durationInterval = isYearly ? "INTERVAL '365 days'" : "INTERVAL '30 days'";
+    const finalAmount = finalCurrency === 'BDT' ? packageBdtPrice : packageUsdPrice;
 
-    // Create and activate subscription
-    const subRes = await queryDb(
-      `INSERT INTO subscription (creator_id, package_id, status, current_period_start, current_period_end)
-       VALUES ($1, $2, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ${durationInterval})
-       RETURNING *`,
-      [creatorId, payment.package_id]
-    );
-    const subscription = subRes.rows[0];
-
-    // Mark payment as COMPLETED and update exact currency and amount
+    // 1. Mark payment as successful adhering to schema check constraint
     const updatedPayRes = await queryDb(
-      `UPDATE payment 
-       SET status = 'COMPLETED', 
-           subscription_id = $1, 
-           payment_method = $2,
-           amount_in_cents = $3,
-           currency = $4,
-           transaction_id = COALESCE(NULLIF($5, ''), transaction_id),
+      `UPDATE payments 
+       SET status = 'successful', 
+           payment_method = $1,
+           amount = $2,
+           currency = $3,
+           transaction_id = COALESCE(NULLIF($4, ''), transaction_id),
+           gateway_response = $5,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $6
        RETURNING *`,
-      [subscription.id, paymentMethod, finalAmountCents, finalCurrency, finalTxnId, payment.id]
+      [paymentMethod, finalAmount, finalCurrency, finalTxnId, JSON.stringify(gatewayResponse), payment.id]
     );
     const completedPayment = updatedPayRes.rows[0];
 
-    // Mark purchase as COMPLETED if attached
+    // 2. Mark linked purchase as completed with period start/end dates
     let completedPurchase = null;
     if (payment.purchase_id) {
       const puRes = await queryDb(
         `UPDATE purchases 
-         SET status = 'COMPLETED', payment_id = $1, updated_at = CURRENT_TIMESTAMP 
-         WHERE id = $2 
+         SET status = 'completed', 
+             period_start = CURRENT_TIMESTAMP,
+             period_end = CURRENT_TIMESTAMP + ${durationInterval},
+             updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $1 
          RETURNING *`,
-        [payment.id, payment.purchase_id]
+        [payment.purchase_id]
       );
       completedPurchase = puRes.rows[0];
     }
 
-    // Log transaction record
-    await queryDb(
-      `INSERT INTO payment_transactions (payment_id, creator_id, purchase_id, transaction_id, gateway, amount_in_cents, currency, status, gateway_response, metadata)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'SUCCESS', $8, $9)`,
-      [
-        payment.id,
-        creatorId,
-        payment.purchase_id,
-        finalTxnId,
-        paymentMethod,
-        finalAmountCents,
-        finalCurrency,
-        JSON.stringify(gatewayResponse),
-        JSON.stringify({
-          subscription_id: subscription.id,
-          paid_at: new Date().toISOString(),
-          payment_method: paymentMethod,
-          final_currency: finalCurrency,
-          final_amount: finalCurrency === 'BDT' ? packageBdtPrice : packageUsdPrice,
-        }),
-      ]
-    ).catch((err) => console.warn('Payment transaction log warning:', err.message));
-
-
     return NextResponse.json({
       success: true,
       message: `${paymentMethod === 'BKASH' ? 'bKash' : 'Payoneer'} payment completed successfully. Your package subscription is now active!`,
-      payment: completedPayment,
+      payment: {
+        ...completedPayment,
+        status: 'successful',
+        amount_in_cents: finalAmountCents,
+      },
       purchase: completedPurchase,
-      subscription,
+      subscription: completedPurchase ? {
+        ...completedPurchase,
+        current_period_start: completedPurchase.period_start,
+        current_period_end: completedPurchase.period_end,
+      } : null,
       payoneerRedirectUrl: gatewayResponse?.redirectUrl || null,
       trxId: finalTxnId,
     });

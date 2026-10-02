@@ -19,7 +19,7 @@ export default function LiveChatMessageForm({ chats = [], onSuccess, onCancel })
     setError('');
 
     try {
-      const res = await fetch('/api/developer/live_chats', {
+      const res = await fetch('/api/marketing/developer/live_chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

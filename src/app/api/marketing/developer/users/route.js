@@ -8,8 +8,22 @@ export async function GET(request) {
     if (!auth.success) {
       return NextResponse.json({ success: false, error: auth.message }, { status: auth.status });
     }
-    const res = await queryDb('SELECT * FROM users ORDER BY id DESC').catch(() => ({ rows: [] }));
-    return NextResponse.json({ success: true, users: res.rows, records: res.rows });
+    let res = await queryDb('SELECT * FROM users ORDER BY id DESC').catch(() => null);
+    if (!res || !res.rows) {
+      res = await queryDb(
+        `SELECT ws.id, ws.name, ws.email, ws.phone, ws.is_active, ws.created_at, 
+                w.name AS website_name, r.name AS role_name,
+                FALSE AS is_banned,
+                0 AS reviews_count,
+                0 AS comments_count
+         FROM website_staffs ws
+         LEFT JOIN websites w ON ws.website_id = w.id
+         LEFT JOIN website_staff_roles r ON ws.role_id = r.id
+         ORDER BY ws.id DESC`
+      ).catch(() => ({ rows: [] }));
+    }
+    const users = res.rows || [];
+    return NextResponse.json({ success: true, users, records: users });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { BiTrendingUp, BiCheck, BiX } from 'react-icons/bi';
 
-export default function LeadForm({ onSuccess, onCancel, apiEndpoint = '/api/developer/leads' }) {
+export default function LeadForm({ onSuccess, onCancel, apiEndpoint = '/api/marketing/developer/leads' }) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',

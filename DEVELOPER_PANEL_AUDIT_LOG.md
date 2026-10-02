@@ -100,9 +100,75 @@
 ---
 
 ## 3. Discovered Issues & Bugs Log
-*(Continuously appended as each page and API is inspected)*
+
+### A. Routing & Direct Path Resolution
+1. **API Route Mismatch (`/api/developer/*` & `/api/creator/*` vs `/api/marketing/...`)**:
+   - Rather than using a middleware rewrite, `src/middleware.js` was completely removed per instructions.
+   - All 85 frontend pages, layouts, and forms across both the developer and creator panels were updated to call the full canonical paths directly:
+     - `/api/marketing/developer/...`
+     - `/api/marketing/creator/...`
+   - Zero non-marketing API calls remain in the frontend client code.
+
+### B. Schema Table & Column Inconsistencies
+1. **`developer_roles` vs non-existent `roles` table**: Multiple backend routes (`permissions/route.js`, `contacts/route.js`, `payroll/route.js`, `my-salaries/route.js`, `notices/route.js`, `tasks/route.js`, `tutorials/route.js`) joined with `roles dr ON d.role_id = dr.id`. In `psql/schema.psql`, the table is strictly `developer_roles`.
+   - *Fix*: Updated all SQL joins across developer routes to `developer_roles dr ON d.role_id = dr.id`.
+2. **`permissions` table**: Several routes queried `permissions` and `role_permissions`. In `psql/schema.psql`, RBAC permissions are structured as `developer_modules`, `module_permissions`, `developer_roles`, and `developer_role_permissions`.
+   - *Fix*: Completely rebuilt `permissions/route.js` to query `module_permissions mp JOIN developer_modules dm ON mp.module_id = dm.id`.
+3. **`contacts` table check constraints & columns**: In `contacts/route.js` and `contacts/reply/route.js`, queries attempted to update non-existent column `reply` and `replied_by_developer_id`, and set status `'REPLIED'` which violated the check constraint `CHECK (status IN ('new', 'read', 'in_progress', 'replied', 'closed'))`.
+   - *Fix*: Updated to use `assigned_developer_id`, `admin_notes`, and lowercase status `'replied'`.
+4. **`policies` table columns**: `policies/route.js` attempted to read and write `is_published`. In `schema.psql`, table 20 has `is_active BOOLEAN DEFAULT TRUE`.
+   - *Fix*: Mapped `is_active` in SQL queries and aliased `is_active AS is_published` to maintain seamless compatibility with `src/app/(developers)/developer/policies/page.jsx`.
+5. **`subscribers` table columns**: `subscribers/route.js` attempted to update `status` column. In `schema.psql`, table 12 has `is_active BOOLEAN DEFAULT TRUE`, `subscribed_at`, `unsubscribed_at`.
+   - *Fix*: Mapped `is_active` to `status` ('SUBSCRIBED' / 'UNSUBSCRIBED') and updated PUT to update `is_active` and `unsubscribed_at`.
+6. **`features` vs `tenant_modules`**: `features/route.js` queried legacy table `feature` and `packages_feature`. In `schema.psql`, Table 9 is `tenant_modules` and Table 10 is `package_modules`.
+   - *Fix*: Re-aligned `features/route.js` to query and mutate `tenant_modules` (`name`, `slug AS key`, `description`, `icon`, `is_active`) and join with `package_modules`.
+7. **`tasks` vs `developer_tasks`**: `tasks/route.js` queried non-existent `tasks` table with `assigned_to_developer_id`. In `schema.psql`, Table 4 is `developer_tasks` with column `developer_id`.
+   - *Fix*: Updated queries to query `developer_tasks` with fallback to `tasks`, aliasing `developer_id AS assigned_to_developer_id`. Fixed missing import of `authenticateStaff` in `tasks/[id]/route.js`.
+8. **`supports` vs `support`**: Several developer and creator routes queried `support`. In `schema.psql`, Table 22 is `supports`. `support_messages` sender_type check constraint requires lowercase `('creator', 'developer', 'system')`. Attachments table `support_images` references `message_id`.
+   - *Fix*: Normalized all queries to `supports`, lowercase sender types, and `support_images (message_id)`.
+9. **`purchases` & `payments` plural schema alignment**:
+   - `purchases`: status check constraint `('pending', 'completed', 'failed', 'refunded', 'cancelled')`.
+   - `payments`: status check constraint `('pending', 'successful', 'failed', 'refunded', 'cancelled')`.
+   - Fixed creator and developer purchase/payment routes to use lowercase status values and map amounts cleanly.
+10. **`live_chats` & `live_chat_messages`**:
+    - Synchronized `live_chats` schema with indexes on `creator_id`, `website_id`, `assigned_developer_id`, and `status`.
+
+### C. Authentication & Session Object Robustness
+1. **`auth.staff` vs `auth.user` runtime TypeError**: Middleware function `hasModulePermission` returns `{ success: true, user: session }`. Accessing `auth.staff.id` threw runtime exceptions in payroll, my-salaries, contacts, notices, and tasks.
+   - *Fix*: Changed all staff accesses to `auth.user?.id || auth.staff?.id` and `auth.user?.permissions || auth.staff?.permissions`.
 
 ---
 
 ## 4. Remediation Progress & Verification
-*(Continuously updated as fixes are applied)*
+
+| Module / Component | Files Remediated | Schema / API Alignment Status | Verification Result |
+|---|---|---|---|
+| Routing & Direct API Path Resolution | 85 caller files across developer and creator panels | Explicit canonical paths `/api/marketing/developer/*` & `/api/marketing/creator/*` | PASS |
+| DB Schema Harmonization | `psql/schema.psql` | `live_chats` & `live_chat_messages` indexes and columns aligned | PASS |
+| RBAC Permissions | `src/app/api/marketing/developer/permissions/route.js` | `module_permissions`, `developer_modules`, `developer_roles`, `developer_role_permissions` | PASS |
+| Roles Management | `src/app/api/marketing/developer/roles/route.js` | `developer_roles`, `developer_role_permissions`, transactional assignments | PASS |
+| Developers Team | `src/app/api/marketing/developer/devs/route.js`, `devs/list/route.js` | `developers`, `developer_roles` join, 2FA code generation | PASS |
+| Contacts CRM | `src/app/api/marketing/developer/contacts/route.js`, `[id]/route.js`, `reply/route.js` | `contacts` (`assigned_developer_id`, `admin_notes`, lowercase `'replied'`) | PASS |
+| Payroll & Salaries | `src/app/api/marketing/developer/payroll/route.js`, `my-salaries/route.js` | `developer_roles`, safe query guards, `auth.user?.id` fix | PASS |
+| Creators / Clients | `src/app/api/marketing/developer/creators/route.js`, `[id]/route.js` | `creators` (`institution`, 2FA check), `purchases`, `payments`, `supports` | PASS |
+| Customer Support Tickets | `src/app/api/marketing/developer/support/route.js`, `[id]/route.js`, `messages/route.js` | `supports`, `support_messages` (`sender_type` lowercase), `support_images` | PASS |
+| Tasks & Sprints | `src/app/api/marketing/developer/tasks/route.js`, `[id]/route.js`, `comments/route.js` | `developer_tasks`, `developer_roles`, `authenticateStaff` import fixed | PASS |
+| Company Policies | `src/app/api/marketing/developer/policies/route.js`, `src/app/(developers)/developer/policies/page.jsx` | `policies` (`is_active` mapped to `is_published`) | PASS |
+| Newsletter Subscribers | `src/app/api/marketing/developer/subscribers/route.js`, `src/app/(developers)/developer/subscribers/page.jsx` | `subscribers` (`is_active` mapped to `SUBSCRIBED`/`UNSUBSCRIBED`) | PASS |
+| Features Catalog | `src/app/api/marketing/developer/features/route.js` | `tenant_modules`, `package_modules` (`name`, `slug AS key`, `icon`) | PASS |
+| Company Notices | `src/app/api/marketing/developer/notices/route.js` | `notices`, `developer_roles`, `auth.user` fix | PASS |
+| Video Tutorials | `src/app/api/marketing/developer/tutorials/route.js` | `tutorials`, `developer_roles`, `auth.user` fix | PASS |
+| End-Users Directory | `src/app/api/marketing/developer/users/route.js` | Fallback to `website_staffs` & `website_staff_roles` with safe query guards | PASS |
+| Ecosystem Apps | `src/app/api/marketing/developer/apps/route.js` | `tenant_modules` query for canonical modules, safe error catches | PASS |
+| Product Reviews | `src/app/api/marketing/developer/reviews/route.js` | `reviews` joined with `creators`, `websites`, `packages` | PASS |
+| Live Chats | `src/app/api/marketing/developer/live_chats/route.js` | `live_chats`, `live_chat_messages`, `developers` | PASS |
+| Creator Overview & Billing | `src/app/api/marketing/creator/route.js` | `purchases`, `payments`, `websites`, `packages`, stats calculation | PASS |
+| Creator Subscriptions & Purchases | `src/app/api/marketing/creator/subscriptions/route.js`, `purchases/route.js` | `purchases`, `packages`, `payments` | PASS |
+| Creator Billing & Invoices | `src/app/api/marketing/creator/payments/route.js`, `src/app/(creator)/creator/[id]/payments/page.jsx` | Case-insensitive `successful`, `completed`, `pending`, `unpaid` | PASS |
+| Creator Hosted Websites | `src/app/api/marketing/creator/websites/route.js`, `src/app/(creator)/creator/[id]/webites/page.jsx` | `websites` (`slug`, `subdomain`, `theme`, `primary_color`, `is_maintenance_mode`) | PASS |
+| Creator Website Settings & Team | `src/app/api/marketing/creator/website-settings/route.js`, `website-team/route.js` | `website_settings`, `website_staffs`, `website_staff_roles` | PASS |
+| Creator Support Tickets | `src/app/api/marketing/creator/support/route.js`, `tickets/[ticketId]/route.js` | `supports`, `support_messages`, `support_images` | PASS |
+| Creator Custom Projects | `src/app/api/marketing/creator/projects/route.js`, `projects/[projectId]/route.js` | `projects`, `project_messages`, `developer_roles` | PASS |
+| Creator Profile & 2FA | `src/app/api/marketing/creator/profile/route.js`, `me/route.js` | `creators` (`institution`, `two_factor_code`) | PASS |
+| Overview Dashboards | `src/app/(developers)/developer/page.jsx`, `src/app/(developers)/developer/purchases/page.jsx`, `contacts/page.jsx` | Case-insensitive counts, revenue in cents/dollars normalized | PASS |
+

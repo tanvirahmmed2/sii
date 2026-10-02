@@ -37,7 +37,7 @@ function CheckoutContent() {
     async function checkCreatorSession() {
       setCheckingAuth(true);
       try {
-        const res = await fetch('/api/creator/auth', {
+        const res = await fetch('/api/marketing/creator/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'me' }),
@@ -104,7 +104,7 @@ function CheckoutContent() {
 
     try {
       // Create UNPAID purchase and UNPAID payment invoice
-      const res = await fetch('/api/creator/purchases', {
+      const res = await fetch('/api/marketing/creator/purchases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

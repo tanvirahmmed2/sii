@@ -6,6 +6,7 @@ import { queryDb } from 'src/lib/database/db';
 // ============================================================================
 export async function GET(request, context) {
   try {
+
     const { slug } = await context.params;
 
     if (!slug) {
@@ -40,7 +41,10 @@ export async function GET(request, context) {
       LIMIT 1
       `,
       [slug]
-    );
+    ).catch((err) => {
+      console.warn('career details query error:', err.message);
+      return { rows: [] };
+    });
 
     if (res.rows.length === 0) {
       return NextResponse.json(

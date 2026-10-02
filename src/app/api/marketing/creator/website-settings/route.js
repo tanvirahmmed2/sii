@@ -28,16 +28,24 @@ export async function GET(request) {
     }
 
     const res = await queryDb(
-      `SELECT ws.*, w.name AS website_name, w.subdomain, w.custom_domain, w.is_published
-       FROM website_settings ws
-       JOIN websites w ON ws.website_id = w.id
-       WHERE ws.website_id = $1
+      `SELECT ws.*, 
+              w.name AS website_name, 
+              w.name AS site_title,
+              COALESCE(ws.motto, 'Modern Educational Hub') AS tagline,
+              w.subdomain, 
+              w.custom_domain, 
+              w.primary_color,
+              w.theme,
+              (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published
+       FROM websites w
+       LEFT JOIN website_settings ws ON ws.website_id = w.id
+       WHERE w.id = $1
        LIMIT 1`,
       [websiteId]
     );
 
     if (res.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Website settings not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Website not found' }, { status: 404 });
     }
 
     return NextResponse.json({ success: true, settings: res.rows[0] });
@@ -65,71 +73,92 @@ export async function POST(request) {
       }
     }
 
-    const updates = [];
-    const values = [];
-    let idx = 1;
+    // 1. Update websites table attributes if provided
+    const websiteUpdates = [];
+    const websiteValues = [];
+    let wIdx = 1;
 
-    const fields = [
-      'site_title',
-      'tagline',
-      'contact_email',
-      'contact_phone',
-      'primary_color',
-      'secondary_color',
-      'font_family',
-      'currency',
-      'social_links',
-      'seo_config',
-    ];
-
-    for (const field of fields) {
-      if (body[field] !== undefined) {
-        updates.push(`${field} = $${idx++}`);
-        if (typeof body[field] === 'object' && body[field] !== null) {
-          values.push(JSON.stringify(body[field]));
-        } else {
-          values.push(body[field]);
-        }
-      }
+    if (body.site_title || body.name || body.website_name) {
+      websiteUpdates.push(`name = $${wIdx++}`);
+      websiteValues.push((body.site_title || body.name || body.website_name).trim());
+    }
+    if (body.primary_color) {
+      websiteUpdates.push(`primary_color = $${wIdx++}`);
+      websiteValues.push(body.primary_color);
+    }
+    if (body.theme) {
+      websiteUpdates.push(`theme = $${wIdx++}`);
+      websiteValues.push(body.theme);
+    }
+    if (body.is_published !== undefined) {
+      websiteUpdates.push(`status = $${wIdx++}`);
+      websiteValues.push(body.is_published ? 'active' : 'suspended');
     }
 
-    if (updates.length === 0) {
-      return NextResponse.json({ success: true, message: 'No changes provided' });
+    if (websiteUpdates.length > 0) {
+      websiteValues.push(websiteId);
+      await queryDb(
+        `UPDATE websites SET ${websiteUpdates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${wIdx}`,
+        websiteValues
+      ).catch((err) => console.warn('Websites update notice:', err.message));
     }
 
-    values.push(websiteId);
+    // 2. Update website_settings table attributes
+    const contactPhone = body.contact_phone !== undefined ? body.contact_phone : body.contactPhone;
+    const contactEmail = body.contact_email !== undefined ? body.contact_email : body.contactEmail;
+    const address = body.address;
+    const motto = body.motto || body.tagline;
+    const mission = body.mission;
+    const vision = body.vision;
+    const history = body.history;
+    const mapUrl = body.map_url || body.mapUrl;
+    const facebookUrl = body.facebook_url || body.facebookUrl;
+    const twitterUrl = body.twitter_url || body.twitterUrl;
+    const instagramUrl = body.instagram_url || body.instagramUrl;
+    const youtubeUrl = body.youtube_url || body.youtubeUrl;
+
     const res = await queryDb(
-      `UPDATE website_settings 
-       SET ${updates.join(', ')} 
-       WHERE website_id = $${idx} 
-       RETURNING *`,
-      values
+      `INSERT INTO website_settings (
+        website_id, contact_phone, contact_email, address, motto, mission, vision, history, map_url, facebook_url, twitter_url, instagram_url, youtube_url
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      ON CONFLICT (website_id) DO UPDATE SET
+        contact_phone = COALESCE(EXCLUDED.contact_phone, website_settings.contact_phone),
+        contact_email = COALESCE(EXCLUDED.contact_email, website_settings.contact_email),
+        address = COALESCE(EXCLUDED.address, website_settings.address),
+        motto = COALESCE(EXCLUDED.motto, website_settings.motto),
+        mission = COALESCE(EXCLUDED.mission, website_settings.mission),
+        vision = COALESCE(EXCLUDED.vision, website_settings.vision),
+        history = COALESCE(EXCLUDED.history, website_settings.history),
+        map_url = COALESCE(EXCLUDED.map_url, website_settings.map_url),
+        facebook_url = COALESCE(EXCLUDED.facebook_url, website_settings.facebook_url),
+        twitter_url = COALESCE(EXCLUDED.twitter_url, website_settings.twitter_url),
+        instagram_url = COALESCE(EXCLUDED.instagram_url, website_settings.instagram_url),
+        youtube_url = COALESCE(EXCLUDED.youtube_url, website_settings.youtube_url),
+        updated_at = CURRENT_TIMESTAMP
+      RETURNING *`,
+      [
+        websiteId,
+        contactPhone || null,
+        contactEmail || null,
+        address || null,
+        motto || null,
+        mission || null,
+        vision || null,
+        history || null,
+        mapUrl || null,
+        facebookUrl || null,
+        twitterUrl || null,
+        instagramUrl || null,
+        youtubeUrl || null,
+      ]
     );
 
-    if (res.rows.length === 0) {
-      // Insert if not yet created
-      const insertRes = await queryDb(
-        `INSERT INTO website_settings (
-          website_id, site_title, tagline, contact_email, contact_phone, 
-          primary_color, secondary_color, font_family, currency
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        RETURNING *`,
-        [
-          websiteId,
-          body.site_title || 'My Portfolio & Store',
-          body.tagline || 'Modern Showcase',
-          body.contact_email || null,
-          body.contact_phone || null,
-          body.primary_color || '#6366f1',
-          body.secondary_color || '#4f46e5',
-          body.font_family || 'Inter',
-          body.currency || 'USD',
-        ]
-      );
-      return NextResponse.json({ success: true, settings: insertRes.rows[0], message: 'Settings created successfully' });
-    }
-
-    return NextResponse.json({ success: true, settings: res.rows[0], message: 'Website settings updated successfully' });
+    return NextResponse.json({
+      success: true,
+      settings: res.rows[0],
+      message: 'Website settings updated successfully',
+    });
   } catch (error) {
     console.error('Website Settings POST API error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

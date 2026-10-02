@@ -79,39 +79,8 @@ const DEFAULT_TENANT_MODULES = [
   },
 ];
 
-// Ensure table exists and has seed data
-async function ensureTenantModulesCatalog() {
-  await queryDb(`
-    CREATE TABLE IF NOT EXISTS tenant_modules (
-      id BIGSERIAL PRIMARY KEY,
-      name VARCHAR(100) UNIQUE NOT NULL,
-      slug VARCHAR(100) UNIQUE NOT NULL,
-      description TEXT,
-      icon VARCHAR(100),
-      is_active BOOLEAN DEFAULT TRUE,
-      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-    )
-  `).catch((err) => console.warn('tenant_modules table check:', err.message));
-
-  const check = await queryDb('SELECT COUNT(*)::int AS count FROM tenant_modules').catch(() => ({ rows: [{ count: 0 }] }));
-  const count = check.rows[0]?.count || 0;
-
-  if (count === 0) {
-    for (const mod of DEFAULT_TENANT_MODULES) {
-      await queryDb(
-        `INSERT INTO tenant_modules (name, slug, description, icon, is_active)
-         VALUES ($1, $2, $3, $4, true)
-         ON CONFLICT (slug) DO NOTHING`,
-        [mod.name, mod.slug, mod.description, mod.icon]
-      ).catch((e) => console.warn(`Error seeding tenant module ${mod.slug}:`, e.message));
-    }
-  }
-}
-
 export async function GET(request) {
   try {
-    await ensureTenantModulesCatalog();
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
@@ -156,8 +125,6 @@ export async function POST(request) {
     if (!auth.success) {
       return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
     }
-
-    await ensureTenantModulesCatalog();
 
     const body = await request.json();
     const data = body.data || body;

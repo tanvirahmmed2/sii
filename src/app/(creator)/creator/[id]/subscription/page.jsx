@@ -68,7 +68,7 @@ function SubscriptionContent() {
         setTimeout(() => {
           setSelectedWebsiteForSettings(matched);
           setLoadingSettings(true);
-          fetch(`/api/creator/website-settings?websiteId=${matched.id}`)
+          fetch(`/api/marketing/creator/website-settings?websiteId=${matched.id}`)
             .then((r) => r.json())
             .then((data) => {
               if (data.success && data.settings) {
@@ -105,7 +105,7 @@ function SubscriptionContent() {
     setSettingsErr('');
 
     try {
-      const res = await fetch(`/api/creator/website-settings?websiteId=${website.id}`);
+      const res = await fetch(`/api/marketing/creator/website-settings?websiteId=${website.id}`);
       const data = await res.json();
       if (data.success && data.settings) {
         setSiteSettings(data.settings);
@@ -137,7 +137,7 @@ function SubscriptionContent() {
     setSettingsErr('');
 
     try {
-      const res = await fetch('/api/creator/website-settings', {
+      const res = await fetch('/api/marketing/creator/website-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -171,7 +171,7 @@ function SubscriptionContent() {
     setTeamErr('');
 
     try {
-      const res = await fetch(`/api/creator/website-team?websiteId=${website.id}`);
+      const res = await fetch(`/api/marketing/creator/website-team?websiteId=${website.id}`);
       const data = await res.json();
       if (data.success) {
         setTeamData(data);
@@ -196,7 +196,7 @@ function SubscriptionContent() {
     setTeamErr('');
 
     try {
-      const res = await fetch('/api/creator/website-team', {
+      const res = await fetch('/api/marketing/creator/website-team', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -233,7 +233,7 @@ function SubscriptionContent() {
   const handleDeleteUser = async (userId) => {
     if (!confirm('Are you sure you want to remove this user from this website?')) return;
     try {
-      const res = await fetch('/api/creator/website-team', {
+      const res = await fetch('/api/marketing/creator/website-team', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

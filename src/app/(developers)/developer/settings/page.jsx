@@ -40,7 +40,7 @@ export default function DeveloperSettingsPage() {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/developer/profile');
+      const res = await fetch('/api/marketing/developer/profile');
       const data = await res.json();
       if (data.success && data.developer) {
         setProfile({
@@ -73,7 +73,7 @@ export default function DeveloperSettingsPage() {
     setSavingProfile(true);
 
     try {
-      const res = await fetch('/api/developer/profile', {
+      const res = await fetch('/api/marketing/developer/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -126,7 +126,7 @@ export default function DeveloperSettingsPage() {
     setSavingSecurity(true);
 
     try {
-      const res = await fetch('/api/developer/profile', {
+      const res = await fetch('/api/marketing/developer/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

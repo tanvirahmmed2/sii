@@ -18,13 +18,13 @@ export async function GET(request) {
     let queryParams = [];
 
     if (statusParam && statusParam !== 'ALL') {
-      queryParams.push(statusParam);
-      whereClauses.push(`s.status = $${queryParams.length}`);
+      queryParams.push(statusParam.toLowerCase());
+      whereClauses.push(`LOWER(s.status) = $${queryParams.length}`);
     }
 
     if (priorityParam && priorityParam !== 'ALL') {
-      queryParams.push(priorityParam);
-      whereClauses.push(`s.priority = $${queryParams.length}`);
+      queryParams.push(priorityParam.toLowerCase());
+      whereClauses.push(`LOWER(s.priority) = $${queryParams.length}`);
     }
 
     const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
@@ -34,10 +34,10 @@ export async function GET(request) {
         s.id,
         s.ticket_number,
         s.creator_id,
-        s.requester_name,
-        s.requester_email,
+        c.name AS requester_name,
+        c.email AS requester_email,
         s.subject,
-        s.category,
+        'General' AS category,
         s.priority,
         s.status,
         s.assigned_developer_id,
@@ -54,15 +54,19 @@ export async function GET(request) {
           WHERE support_id = s.id 
           ORDER BY created_at DESC LIMIT 1
         ) AS last_message,
-        (
-          SELECT created_at FROM support_messages 
-          WHERE support_id = s.id 
-          ORDER BY created_at DESC LIMIT 1
+        COALESCE(
+          (
+            SELECT created_at FROM support_messages 
+            WHERE support_id = s.id 
+            ORDER BY created_at DESC LIMIT 1
+          ),
+          s.last_message_at,
+          s.created_at
         ) AS last_message_at
-      FROM support s
+      FROM supports s
       LEFT JOIN creators c ON s.creator_id = c.id
       LEFT JOIN developers d ON s.assigned_developer_id = d.id
-      LEFT JOIN roles dr ON d.role_id = dr.id
+      LEFT JOIN developer_roles dr ON d.role_id = dr.id
       ${whereSql}
       ORDER BY s.updated_at DESC
     `, queryParams).catch(() => ({ rows: [] }));
@@ -71,11 +75,11 @@ export async function GET(request) {
     const statsRes = await queryDb(`
       SELECT 
         COUNT(*)::int AS total,
-        COUNT(CASE WHEN status = 'OPEN' THEN 1 END)::int AS open,
-        COUNT(CASE WHEN status = 'IN_PROGRESS' THEN 1 END)::int AS in_progress,
-        COUNT(CASE WHEN status = 'RESOLVED' THEN 1 END)::int AS resolved,
-        COUNT(CASE WHEN status = 'CLOSED' THEN 1 END)::int AS closed
-      FROM support
+        COUNT(CASE WHEN LOWER(status) = 'open' THEN 1 END)::int AS open,
+        COUNT(CASE WHEN LOWER(status) = 'in_progress' THEN 1 END)::int AS in_progress,
+        COUNT(CASE WHEN LOWER(status) = 'resolved' THEN 1 END)::int AS resolved,
+        COUNT(CASE WHEN LOWER(status) = 'closed' THEN 1 END)::int AS closed
+      FROM supports
     `).catch(() => ({ rows: [{ total: 0, open: 0, in_progress: 0, resolved: 0, closed: 0 }] }));
 
     return NextResponse.json({
@@ -105,15 +109,15 @@ export async function PUT(request) {
       return NextResponse.json({ success: false, error: 'Ticket ID is required.' }, { status: 400 });
     }
 
-    const status = body.status;
-    const priority = body.priority;
+    const status = body.status ? body.status.toLowerCase() : null;
+    const priority = body.priority ? body.priority.toLowerCase() : null;
     const assignedDeveloperId = body.assigned_developer_id !== undefined ? body.assigned_developer_id : undefined;
 
     const res = await queryDb(`
-      UPDATE support
+      UPDATE supports
       SET status = COALESCE($1, status),
           priority = COALESCE($2, priority),
-          assigned_developer_id = CASE WHEN $3::text IS NOT NULL THEN $4::int ELSE assigned_developer_id END,
+          assigned_developer_id = CASE WHEN $3::text IS NOT NULL THEN $4::bigint ELSE assigned_developer_id END,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = $5
       RETURNING *
@@ -158,7 +162,7 @@ export async function DELETE(request) {
       return NextResponse.json({ success: false, error: 'ID is required.' }, { status: 400 });
     }
 
-    const res = await queryDb('DELETE FROM support WHERE id = $1 RETURNING id', [id]);
+    const res = await queryDb('DELETE FROM supports WHERE id = $1 RETURNING id', [id]);
     if (res.rowCount === 0) {
       return NextResponse.json({ success: false, error: 'Ticket not found.' }, { status: 404 });
     }

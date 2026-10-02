@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -12,6 +12,8 @@ import {
   BiArrowBack,
   BiCheckShield,
   BiCube,
+  BiChevronLeft,
+  BiChevronRight,
 } from 'react-icons/bi';
 import { SITE_NAME } from 'src/lib/database/secret';
 
@@ -24,14 +26,34 @@ export default function PublicReviewsPage() {
   });
   const [loading, setLoading] = useState(true);
   const [starFilter, setStarFilter] = useState('ALL');
+  const [page, setPage] = useState(1);
+  const limit = 9;
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 9,
+    total: 0,
+    totalPages: 1,
+    hasMore: false,
+  });
 
   useEffect(() => {
     let ignore = false;
-    fetch('/api/marketing/reviews')
+    setLoading(true);
+
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+    if (starFilter && starFilter !== 'ALL') {
+      params.set('rating', starFilter);
+    }
+
+    fetch(`/api/marketing/reviews?${params.toString()}`)
       .then((res) => (res.ok ? res.json() : { success: false }))
       .then((data) => {
         if (!ignore && data.success) {
           setReviews(data.reviews || []);
+          if (data.pagination) setPagination(data.pagination);
           if (data.stats) setStats(data.stats);
         }
       })
@@ -43,12 +65,12 @@ export default function PublicReviewsPage() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [page, limit, starFilter]);
 
-  const filteredReviews = reviews.filter((rev) => {
-    if (starFilter === 'ALL') return true;
-    return Number(rev.rating) === Number(starFilter);
-  });
+  const handleFilterChange = (filter) => {
+    setStarFilter(filter);
+    setPage(1);
+  };
 
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 w-full space-y-12">
@@ -91,7 +113,7 @@ export default function PublicReviewsPage() {
             return (
               <div
                 key={rating}
-                onClick={() => setStarFilter(String(rating))}
+                onClick={() => handleFilterChange(String(rating))}
                 className="flex items-center gap-3 text-xs cursor-pointer group hover:opacity-80"
               >
                 <span className="w-12 font-bold text-slate-700 flex items-center gap-1 shrink-0">
@@ -117,20 +139,20 @@ export default function PublicReviewsPage() {
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
           <button
             type="button"
-            onClick={() => setStarFilter('ALL')}
+            onClick={() => handleFilterChange('ALL')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               starFilter === 'ALL'
                 ? 'bg-slate-900 text-white shadow-xs'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
             }`}
           >
-            All Reviews ({reviews.length})
+            All Reviews ({stats.totalApproved})
           </button>
           {[5, 4, 3, 2, 1].map((r) => (
             <button
               key={r}
               type="button"
-              onClick={() => setStarFilter(String(r))}
+              onClick={() => handleFilterChange(String(r))}
               className={`flex items-center gap-1 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 starFilter === String(r)
                   ? 'bg-slate-900 text-white shadow-xs'
@@ -144,7 +166,7 @@ export default function PublicReviewsPage() {
         </div>
 
         <span className="text-xs text-slate-400 font-medium">
-          Showing {filteredReviews.length} of {reviews.length} reviews
+          Showing {reviews.length} of {pagination.total || 0} reviews (Page {pagination.page} of {pagination.totalPages || 1})
         </span>
       </div>
 
@@ -154,7 +176,7 @@ export default function PublicReviewsPage() {
           <BiLoaderAlt className="animate-spin text-4xl text-slate-700" />
           <p className="text-xs font-semibold">Loading verified reviews...</p>
         </div>
-      ) : filteredReviews.length === 0 ? (
+      ) : reviews.length === 0 ? (
         <div className="py-16 text-center bg-white border border-slate-200 rounded-3xl p-8 max-w-md mx-auto space-y-3">
           <BiMessageSquareDetail className="text-4xl text-slate-300 mx-auto" />
           <h3 className="text-base font-bold text-slate-800">No reviews found</h3>
@@ -166,7 +188,7 @@ export default function PublicReviewsPage() {
           {starFilter !== 'ALL' && (
             <button
               type="button"
-              onClick={() => setStarFilter('ALL')}
+              onClick={() => handleFilterChange('ALL')}
               className="text-xs font-bold text-slate-900 underline cursor-pointer"
             >
               Show all reviews
@@ -175,7 +197,7 @@ export default function PublicReviewsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredReviews.map((rev) => (
+          {reviews.map((rev) => (
             <div
               key={rev.id}
               className="bg-white border border-slate-200 hover:border-slate-300 rounded-3xl p-6 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-5 group"
@@ -205,9 +227,9 @@ export default function PublicReviewsPage() {
                   </h3>
                 )}
 
-                {/* Review Comment */}
+                {/* Review Comment / Text */}
                 <p className="text-xs text-slate-600 leading-relaxed italic">
-                  &ldquo;{rev.comment}&rdquo;
+                  &ldquo;{rev.comment || rev.review_text}&rdquo;
                 </p>
               </div>
 
@@ -217,24 +239,24 @@ export default function PublicReviewsPage() {
                   {rev.creator_avatar ? (
                     <Image
                       src={rev.creator_avatar}
-                      alt={rev.creator_name || 'Reviewer'}
+                      alt={rev.creator_name || rev.reviewer_name || 'Reviewer'}
                       width={40}
                       height={40}
                       className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
                     />
                   ) : (
                     <div className="w-10 h-10 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-xs shrink-0">
-                      {rev.creator_name?.charAt(0)?.toUpperCase() || 'C'}
+                      {(rev.creator_name || rev.reviewer_name || 'C').charAt(0).toUpperCase()}
                     </div>
                   )}
 
                   <div className="min-w-0">
                     <h4 className="text-xs font-bold text-slate-900 truncate">
-                      {rev.creator_name}
+                      {rev.creator_name || rev.reviewer_name || 'Verified Client'}
                     </h4>
                     <p className="text-[10px] text-slate-500 truncate flex items-center gap-1">
                       <BiCube className="text-indigo-500" />
-                      <span>{rev.package_name || 'Subscriber'}</span>
+                      <span>{rev.package_name || rev.institution_name || 'Subscriber'}</span>
                     </p>
                   </div>
                 </div>
@@ -248,6 +270,70 @@ export default function PublicReviewsPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {!loading && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-6">
+          <button
+            type="button"
+            disabled={page <= 1}
+            onClick={() => {
+              setPage((prev) => Math.max(1, prev - 1));
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-xs"
+          >
+            <BiChevronLeft className="text-base" />
+            <span>Previous</span>
+          </button>
+
+          <div className="flex items-center gap-1">
+            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+              .filter((p) => {
+                if (p === 1 || p === pagination.totalPages) return true;
+                return Math.abs(p - page) <= 2;
+              })
+              .map((p, idx, arr) => {
+                const prev = arr[idx - 1];
+                const showEllipsis = prev && p - prev > 1;
+                return (
+                  <React.Fragment key={p}>
+                    {showEllipsis && (
+                      <span className="px-2 text-slate-400 text-xs select-none">...</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPage(p);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className={`w-9 h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        page === p
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+          </div>
+
+          <button
+            type="button"
+            disabled={page >= pagination.totalPages}
+            onClick={() => {
+              setPage((prev) => Math.min(pagination.totalPages, prev + 1));
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-xs"
+          >
+            <span>Next</span>
+            <BiChevronRight className="text-base" />
+          </button>
         </div>
       )}
 

@@ -13,7 +13,10 @@ export async function GET(request) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentDevId = auth.staff.id;
+    const currentDevId = auth.user?.id || auth.staff?.id;
+    if (!currentDevId) {
+      return NextResponse.json({ success: false, error: 'User identifier not found.' }, { status: 401 });
+    }
 
     // 1. Fetch developer salary periods
     const salariesRes = await queryDb(`
@@ -46,7 +49,7 @@ export async function GET(request) {
       LEFT JOIN developers proc ON pp.processed_by_developer_id = proc.id
       WHERE dp.developer_id = $1
       ORDER BY p.pay_period_start DESC, dp.id DESC
-    `, [currentDevId]);
+    `, [currentDevId]).catch(() => ({ rows: [] }));
 
     // 2. Compute aggregate metrics for this developer
     const statsRes = await queryDb(`
@@ -57,7 +60,7 @@ export async function GET(request) {
         COUNT(*)::int AS total_cycles
       FROM developer_payrolls
       WHERE developer_id = $1
-    `, [currentDevId]);
+    `, [currentDevId]).catch(() => ({ rows: [] }));
 
     return NextResponse.json({
       success: true,

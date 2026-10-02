@@ -10,20 +10,23 @@ export async function GET(request) {
     }
 
     const res = await queryDb(`
-      SELECT c.id, c.name, c.email, c.phone, c.bio, c.is_active, c.is_verified, c.two_factor_enabled, c.created_at,
+      SELECT c.id, c.name, c.email, c.phone, c.institution, c.country, c.city, c.address,
+             c.institution AS bio, c.is_active, c.email_verified AS is_verified,
+             (CASE WHEN c.two_factor_code IS NOT NULL THEN true ELSE false END) AS two_factor_enabled,
+             c.last_login_at, c.created_at,
              COUNT(DISTINCT w.id)::int AS websites_count,
              p.name AS current_package,
-             s.status AS subscription_status
+             pu.status AS subscription_status
       FROM creators c
       LEFT JOIN websites w ON w.creator_id = c.id
       LEFT JOIN LATERAL (
-        SELECT sub.package_id, sub.status 
-        FROM subscription sub 
-        WHERE sub.creator_id = c.id 
-        ORDER BY sub.id DESC LIMIT 1
-      ) s ON true
-      LEFT JOIN packages p ON p.id = s.package_id
-      GROUP BY c.id, p.name, s.status
+        SELECT psub.package_id, psub.status 
+        FROM purchases psub 
+        WHERE psub.creator_id = c.id 
+        ORDER BY psub.id DESC LIMIT 1
+      ) pu ON true
+      LEFT JOIN packages p ON p.id = pu.package_id
+      GROUP BY c.id, p.name, pu.status
       ORDER BY c.id DESC
     `).catch(() => ({ rows: [] }));
 

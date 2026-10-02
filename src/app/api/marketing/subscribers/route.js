@@ -9,6 +9,7 @@ export async function POST(request) {
     const body = await request.json().catch(() => ({}));
     const email = body.email?.trim()?.toLowerCase();
     const source = (body.source || 'HOME_FOOTER').trim();
+    const name = body.name?.trim() || null;
 
     if (!email) {
       return NextResponse.json(
@@ -24,15 +25,19 @@ export async function POST(request) {
       );
     }
 
-    // Check if email already exists in subscribers table
+    // Check if email already exists in subscribers table (Table 12)
     const existing = await queryDb(
-      'SELECT id, email, status, source FROM subscribers WHERE LOWER(email) = LOWER($1) LIMIT 1',
+      `SELECT id, email, name, source, is_active, created_at, updated_at,
+              CASE WHEN is_active THEN 'SUBSCRIBED' ELSE 'UNSUBSCRIBED' END AS status
+       FROM subscribers 
+       WHERE LOWER(email) = LOWER($1) 
+       LIMIT 1`,
       [email]
-    );
+    ).catch(() => ({ rows: [] }));
 
     if (existing.rows.length > 0) {
       const sub = existing.rows[0];
-      if (sub.status === 'SUBSCRIBED') {
+      if (sub.is_active) {
         return NextResponse.json({
           success: true,
           alreadySubscribed: true,
@@ -44,9 +49,9 @@ export async function POST(request) {
       // Re-activate previously unsubscribed email
       const updated = await queryDb(
         `UPDATE subscribers 
-         SET status = 'SUBSCRIBED', source = $1, subscribed_at = CURRENT_TIMESTAMP 
+         SET is_active = TRUE, source = $1, updated_at = CURRENT_TIMESTAMP 
          WHERE id = $2 
-         RETURNING id, email, status, source, subscribed_at`,
+         RETURNING id, email, is_active, source, created_at, updated_at, 'SUBSCRIBED' AS status`,
         [source, sub.id]
       );
 
@@ -57,12 +62,12 @@ export async function POST(request) {
       });
     }
 
-    // Insert new subscriber record
+    // Insert new subscriber record according to psql/schema.psql Table 12
     const res = await queryDb(
-      `INSERT INTO subscribers (email, status, source, subscribed_at) 
-       VALUES ($1, 'SUBSCRIBED', $2, CURRENT_TIMESTAMP) 
-       RETURNING id, email, status, source, subscribed_at`,
-      [email, source]
+      `INSERT INTO subscribers (email, name, source, is_active) 
+       VALUES ($1, $2, $3, TRUE) 
+       RETURNING id, email, name, source, is_active, created_at, updated_at, 'SUBSCRIBED' AS status`,
+      [email, name, source]
     );
 
     return NextResponse.json(
@@ -90,25 +95,30 @@ export async function GET(request) {
 
     if (email) {
       const res = await queryDb(
-        'SELECT id, email, status, subscribed_at FROM subscribers WHERE LOWER(email) = LOWER($1) LIMIT 1',
+        `SELECT id, email, is_active, created_at 
+         FROM subscribers 
+         WHERE LOWER(email) = LOWER($1) 
+         LIMIT 1`,
         [email]
-      );
+      ).catch(() => ({ rows: [] }));
+
       if (res.rows.length === 0) {
         return NextResponse.json({ success: true, isSubscribed: false });
       }
       return NextResponse.json({
         success: true,
-        isSubscribed: res.rows[0].status === 'SUBSCRIBED',
-        status: res.rows[0].status,
+        isSubscribed: Boolean(res.rows[0].is_active),
+        status: res.rows[0].is_active ? 'SUBSCRIBED' : 'UNSUBSCRIBED',
       });
     }
 
     const countRes = await queryDb(
-      "SELECT count(*) FROM subscribers WHERE status = 'SUBSCRIBED'"
-    );
+      'SELECT count(*) FROM subscribers WHERE is_active = TRUE'
+    ).catch(() => ({ rows: [{ count: '0' }] }));
+
     return NextResponse.json({
       success: true,
-      totalSubscribers: parseInt(countRes.rows[0].count, 10) || 0,
+      totalSubscribers: parseInt(countRes.rows[0]?.count || '0', 10) || 0,
     });
   } catch (error) {
     return NextResponse.json(

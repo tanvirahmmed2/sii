@@ -36,7 +36,7 @@ export default function CreatorPurchasesPage() {
     setErrorMsg('');
 
     try {
-      const res = await fetch('/api/creator', {
+      const res = await fetch('/api/marketing/creator', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

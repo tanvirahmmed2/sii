@@ -46,7 +46,7 @@ export default function CreatorSingleTicketPage() {
     try {
       if (showLoading) setLoading(true);
       setError('');
-      const res = await fetch(`/api/creator/tickets/${ticketId}`);
+      const res = await fetch(`/api/marketing/creator/tickets/${ticketId}`);
       const data = await res.json();
       if (data.success && data.ticket) {
         setTicket(data.ticket);
@@ -92,7 +92,7 @@ export default function CreatorSingleTicketPage() {
     setSendingReply(true);
 
     try {
-      const res = await fetch(`/api/creator/tickets/${ticketId}`, {
+      const res = await fetch(`/api/marketing/creator/tickets/${ticketId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -161,7 +161,7 @@ export default function CreatorSingleTicketPage() {
     );
   }
 
-  const isResolved = ticket.status === 'RESOLVED' || ticket.status === 'CLOSED';
+  const isResolved = ['RESOLVED', 'CLOSED'].includes(String(ticket.status || '').toUpperCase());
 
   const statusColors = {
     OPEN: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -191,7 +191,7 @@ export default function CreatorSingleTicketPage() {
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{ticket.subject}</h1>
             <span
               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${
-                statusColors[ticket.status] || statusColors.OPEN
+                statusColors[String(ticket.status || '').toUpperCase()] || statusColors.OPEN
               }`}
             >
               {ticket.status}
@@ -253,7 +253,8 @@ export default function CreatorSingleTicketPage() {
             </div>
           ) : (
             messages.map((m) => {
-              const isStaff = m.sender_type === 'DEVELOPER' || m.sender_type === 'ADMIN';
+              const sender = String(m.sender_type || '').toLowerCase();
+              const isStaff = ['developer', 'admin', 'staff', 'support', 'system'].includes(sender);
 
               return (
                 <div

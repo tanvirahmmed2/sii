@@ -25,7 +25,7 @@ export default function PackageDetailPage({ params }) {
     try {
       setLoading(true);
       setError('');
-      const res = await fetch(`/api/developer/packages/${encodeURIComponent(slug)}`);
+      const res = await fetch(`/api/marketing/developer/packages/${encodeURIComponent(slug)}`);
       const data = await res.json();
       if (data.success && data.record) {
         setPkg(data.record);

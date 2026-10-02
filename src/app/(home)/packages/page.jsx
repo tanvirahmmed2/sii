@@ -79,24 +79,20 @@ export default function PackagesPage() {
 
   // Sort packages from lowest to highest price based on currency and billing cycle
   const sortedPackages = useMemo(() => {
-    return [...(packages || [])].sort((a, b) => {
-      const priceA =
-        currency === 'BDT'
-          ? billingCycle === 'YEARLY'
-            ? Number(a.yearly_price_bdt ?? 0)
-            : Number(a.monthly_price_bdt ?? 0)
-          : billingCycle === 'YEARLY'
-          ? Number(a.yearly_price_usd ?? 0)
-          : Number(a.monthly_price_usd ?? 0);
+    const getPrice = (pkg) => {
+      if (currency === 'BDT') {
+        return billingCycle === 'YEARLY'
+          ? Number(pkg.yearly_price_bdt ?? (pkg.yearly_price ? pkg.yearly_price * 120 : 0))
+          : Number(pkg.monthly_price_bdt ?? (pkg.monthly_price ? pkg.monthly_price * 120 : 0));
+      }
+      return billingCycle === 'YEARLY'
+        ? Number(pkg.yearly_price_usd ?? pkg.yearly_price ?? 0)
+        : Number(pkg.monthly_price_usd ?? pkg.monthly_price ?? 0);
+    };
 
-      const priceB =
-        currency === 'BDT'
-          ? billingCycle === 'YEARLY'
-            ? Number(b.yearly_price_bdt ?? 0)
-            : Number(b.monthly_price_bdt ?? 0)
-          : billingCycle === 'YEARLY'
-          ? Number(b.yearly_price_usd ?? 0)
-          : Number(b.monthly_price_usd ?? 0);
+    return [...(packages || [])].sort((a, b) => {
+      const priceA = getPrice(a);
+      const priceB = getPrice(b);
 
       if (priceA !== priceB) return priceA - priceB;
       return (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0);
@@ -300,11 +296,11 @@ ${inquiryMessage}`,
               const price =
                 currency === 'BDT'
                   ? billingCycle === 'YEARLY'
-                    ? pkg.yearly_price_bdt
-                    : pkg.monthly_price_bdt
+                    ? (pkg.yearly_price_bdt ?? (pkg.yearly_price ? pkg.yearly_price * 120 : 0))
+                    : (pkg.monthly_price_bdt ?? (pkg.monthly_price ? pkg.monthly_price * 120 : 0))
                   : billingCycle === 'YEARLY'
-                  ? pkg.yearly_price_usd
-                    : pkg.monthly_price_usd;
+                  ? (pkg.yearly_price_usd ?? pkg.yearly_price ?? 0)
+                  : (pkg.monthly_price_usd ?? pkg.monthly_price ?? 0);
 
               const hasExplicitPopular = sortedPackages.some((p) => Boolean(p.is_popular));
               const isPopular = hasExplicitPopular

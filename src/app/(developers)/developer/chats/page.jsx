@@ -50,7 +50,7 @@ export default function DeveloperChatsPage() {
   const fetchChats = async () => {
     try {
       setLoadingChats(true);
-      const res = await fetch('/api/developer/chats');
+      const res = await fetch('/api/marketing/developer/chats');
       const data = await res.json();
       if (data.success) {
         setChats(data.chats || []);
@@ -72,7 +72,7 @@ export default function DeveloperChatsPage() {
   const fetchMessages = async (chatId) => {
     try {
       setLoadingMessages(true);
-      const res = await fetch(`/api/developer/chats/${chatId}/messages`);
+      const res = await fetch(`/api/marketing/developer/chats/${chatId}/messages`);
       const data = await res.json();
       if (data.success) {
         setMessages(data.messages || []);
@@ -109,7 +109,7 @@ export default function DeveloperChatsPage() {
           : [],
       };
 
-      const res = await fetch(`/api/developer/chats/${selectedChat.id}/messages`, {
+      const res = await fetch(`/api/marketing/developer/chats/${selectedChat.id}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -133,7 +133,7 @@ export default function DeveloperChatsPage() {
 
   const handleStartDirectChat = async (recipientId) => {
     try {
-      const res = await fetch('/api/developer/chats', {
+      const res = await fetch('/api/marketing/developer/chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'DIRECT', recipient_developer_id: recipientId }),
@@ -154,7 +154,7 @@ export default function DeveloperChatsPage() {
     e.preventDefault();
     if (!groupTitle.trim()) return;
     try {
-      const res = await fetch('/api/developer/chats', {
+      const res = await fetch('/api/marketing/developer/chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

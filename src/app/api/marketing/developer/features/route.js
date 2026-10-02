@@ -7,8 +7,8 @@ function generateFeatureKey(text) {
     .toString()
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/(^_|_$)/g, '');
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
 }
 
 export async function GET(request) {
@@ -18,27 +18,28 @@ export async function GET(request) {
 
     if (id) {
       const res = await queryDb(
-        `SELECT f.*,
-                COUNT(pf.package_id)::int AS packages_count,
+        `SELECT tm.id, tm.name, tm.slug AS key, tm.slug, tm.description, tm.icon, tm.is_active,
+                COUNT(pm.package_id)::int AS packages_count,
                 COALESCE(
                   json_agg(
                     json_build_object(
                       'package_id', p.id,
-                      'package_name', p.name,
-                      'value', pf.value,
-                      'is_enabled', pf.is_enabled
+                      'package_name', p.name
                     )
                   ) FILTER (WHERE p.id IS NOT NULL),
                   '[]'::json
                 ) AS packages
-         FROM feature f
-         LEFT JOIN packages_feature pf ON f.id = pf.feature_id
-         LEFT JOIN packages p ON pf.package_id = p.id
-         WHERE f.id = $1
-         GROUP BY f.id
+         FROM tenant_modules tm
+         LEFT JOIN package_modules pm ON tm.id = pm.tenant_module_id
+         LEFT JOIN packages p ON pm.package_id = p.id
+         WHERE tm.id = $1
+         GROUP BY tm.id
          LIMIT 1`,
         [Number(id)]
-      );
+      ).catch(async () => {
+        // Fallback to legacy feature table if tenant_modules query fails
+        return await queryDb('SELECT id, name, key, description FROM feature WHERE id = $1', [Number(id)]).catch(() => ({ rows: [] }));
+      });
 
       if (res.rows.length === 0) {
         return NextResponse.json({ success: false, error: 'Feature not found' }, { status: 404 });
@@ -47,15 +48,18 @@ export async function GET(request) {
     }
 
     const res = await queryDb(
-      `SELECT f.*,
-              COUNT(pf.package_id)::int AS packages_count
-       FROM feature f
-       LEFT JOIN packages_feature pf ON f.id = pf.feature_id
-       GROUP BY f.id
-       ORDER BY f.id ASC`
-    ).catch(() => ({ rows: [] }));
+      `SELECT tm.id, tm.name, tm.slug AS key, tm.slug, tm.description, tm.icon, tm.is_active,
+              COUNT(pm.package_id)::int AS packages_count
+       FROM tenant_modules tm
+       LEFT JOIN package_modules pm ON tm.id = pm.tenant_module_id
+       GROUP BY tm.id
+       ORDER BY tm.id ASC`
+    ).catch(async () => {
+      // Fallback to legacy feature table if tenant_modules query fails
+      return await queryDb('SELECT id, name, key, description FROM feature ORDER BY id ASC').catch(() => ({ rows: [] }));
+    });
 
-    return NextResponse.json({ success: true, table: 'feature', records: res.rows });
+    return NextResponse.json({ success: true, table: 'tenant_modules', records: res.rows });
   } catch (error) {
     console.error('Error fetching features:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -73,29 +77,29 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    // CREATE FEATURE
     const data = body.data || body;
     const name = (data.name || '').trim();
     if (!name) {
       return NextResponse.json({ success: false, error: 'Feature name is required' }, { status: 400 });
     }
 
-    let key = generateFeatureKey(data.key || name);
-    if (!key) key = `feat_${Date.now()}`;
+    let slug = generateFeatureKey(data.key || data.slug || name);
+    if (!slug) slug = `feat-${Date.now()}`;
 
-    // Ensure unique key
-    const keyCheck = await queryDb('SELECT id FROM feature WHERE key = $1 LIMIT 1', [key]);
+    // Ensure unique slug
+    const keyCheck = await queryDb('SELECT id FROM tenant_modules WHERE LOWER(slug) = LOWER($1) LIMIT 1', [slug]);
     if (keyCheck.rows.length > 0) {
-      key = `${key}_${Date.now().toString().slice(-4)}`;
+      slug = `${slug}-${Date.now().toString().slice(-4)}`;
     }
 
     const description = data.description || '';
+    const icon = data.icon || 'BiCube';
 
     const res = await queryDb(
-      `INSERT INTO feature (name, key, description)
-       VALUES ($1, $2, $3)
-       RETURNING *`,
-      [name, key, description]
+      `INSERT INTO tenant_modules (name, slug, description, icon, is_active)
+       VALUES ($1, $2, $3, $4, TRUE)
+       RETURNING id, name, slug AS key, slug, description, icon, is_active`,
+      [name, slug, description, icon]
     );
 
     return NextResponse.json(
@@ -130,7 +134,7 @@ export async function PUT(request) {
       return NextResponse.json({ success: false, error: 'Feature ID is required' }, { status: 400 });
     }
 
-    const existingRes = await queryDb('SELECT * FROM feature WHERE id = $1', [Number(id)]);
+    const existingRes = await queryDb('SELECT * FROM tenant_modules WHERE id = $1', [Number(id)]);
     if (existingRes.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Feature not found' }, { status: 404 });
     }
@@ -142,27 +146,28 @@ export async function PUT(request) {
       return NextResponse.json({ success: false, error: 'Feature name cannot be empty' }, { status: 400 });
     }
 
-    let key = data.key !== undefined ? generateFeatureKey(data.key) : current.key;
-    if (!key) {
-      key = generateFeatureKey(name) || `feat_${Date.now()}`;
+    let slug = data.key !== undefined || data.slug !== undefined ? generateFeatureKey(data.key || data.slug) : current.slug;
+    if (!slug) {
+      slug = generateFeatureKey(name) || `feat-${Date.now()}`;
     }
 
-    const keyConflict = await queryDb('SELECT id FROM feature WHERE key = $1 AND id != $2 LIMIT 1', [key, Number(id)]);
+    const keyConflict = await queryDb('SELECT id FROM tenant_modules WHERE LOWER(slug) = LOWER($1) AND id != $2 LIMIT 1', [slug, Number(id)]);
     if (keyConflict.rows.length > 0) {
       return NextResponse.json(
-        { success: false, error: `Feature key "${key}" is already in use by another feature.` },
+        { success: false, error: `Feature slug/key "${slug}" is already in use by another feature.` },
         { status: 400 }
       );
     }
 
     const description = data.description !== undefined ? data.description : current.description;
+    const icon = data.icon !== undefined ? data.icon : current.icon;
 
     const res = await queryDb(
-      `UPDATE feature
-       SET name = $1, key = $2, description = $3
-       WHERE id = $4
-       RETURNING *`,
-      [name, key, description, Number(id)]
+      `UPDATE tenant_modules
+       SET name = $1, slug = $2, description = $3, icon = $4, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $5
+       RETURNING id, name, slug AS key, slug, description, icon, is_active`,
+      [name, slug, description, icon, Number(id)]
     );
 
     return NextResponse.json({
@@ -196,7 +201,7 @@ export async function DELETE(request) {
       return NextResponse.json({ success: false, error: 'Feature ID is required' }, { status: 400 });
     }
 
-    const res = await queryDb('DELETE FROM feature WHERE id = $1 RETURNING id, name, key', [Number(id)]);
+    const res = await queryDb('DELETE FROM tenant_modules WHERE id = $1 RETURNING id, name, slug AS key, slug', [Number(id)]);
     if (res.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Feature not found or already deleted' }, { status: 404 });
     }

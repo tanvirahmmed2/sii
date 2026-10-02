@@ -36,7 +36,7 @@ export default function AdminFeaturesPage() {
   const fetchFeatures = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/developer/features');
+      const res = await fetch('/api/marketing/developer/features');
       const data = await res.json();
       if (data.success) {
         setFeatures(data.records || []);
@@ -87,7 +87,7 @@ export default function AdminFeaturesPage() {
     }
     setDeletingId(id);
     try {
-      const res = await fetch('/api/developer/features', {
+      const res = await fetch('/api/marketing/developer/features', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),

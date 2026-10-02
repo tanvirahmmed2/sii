@@ -24,7 +24,7 @@ export default function BlogForm({
   apps = [],
   onSuccess,
   onCancel,
-  apiEndpoint = '/api/developer/blogs',
+  apiEndpoint = '/api/marketing/developer/blogs',
 }) {
   const currentBlog = blog || initialData;
   const isEditing = Boolean(currentBlog?.id);

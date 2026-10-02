@@ -40,7 +40,7 @@ export default function DeveloperUpdatesPage() {
     if (!canManage || creating) return;
     try {
       setCreating(true);
-      const res = await fetch('/api/developer/updates', {
+      const res = await fetch('/api/marketing/developer/updates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -64,7 +64,7 @@ export default function DeveloperUpdatesPage() {
   const fetchUpdates = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/developer/updates');
+      const res = await fetch('/api/marketing/developer/updates');
       const data = await res.json();
       if (data.success) {
         setUpdates(data.records || []);
@@ -78,7 +78,7 @@ export default function DeveloperUpdatesPage() {
 
   useEffect(() => {
     let active = true;
-    fetch('/api/developer/updates')
+    fetch('/api/marketing/developer/updates')
       .then((res) => res.json())
       .then((data) => {
         if (!active) return;
@@ -110,7 +110,7 @@ export default function DeveloperUpdatesPage() {
 
     try {
       setDeletingId(id);
-      const res = await fetch(`/api/developer/updates?id=${id}`, {
+      const res = await fetch(`/api/marketing/developer/updates?id=${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();

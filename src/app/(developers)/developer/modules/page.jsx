@@ -39,7 +39,7 @@ export default function AdminDatabaseModulesPage() {
   const fetchModules = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/developer/modules?filter=all`);
+      const res = await fetch(`/api/marketing/developer/modules?filter=all`);
       const data = await res.json();
       if (data.success) {
         setModules(data.modules || []);
@@ -64,7 +64,7 @@ export default function AdminDatabaseModulesPage() {
     setInspectData(null);
     setInspectTab('schema');
     try {
-      const res = await fetch(`/api/developer/modules?table=${encodeURIComponent(tableName)}`);
+      const res = await fetch(`/api/marketing/developer/modules?table=${encodeURIComponent(tableName)}`);
       const data = await res.json();
       if (data.success) {
         setInspectData(data);

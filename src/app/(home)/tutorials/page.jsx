@@ -203,7 +203,8 @@ export default function TutorialsPage() {
           /* Tutorials Grid */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-8">
             {filteredTutorials.map((tut) => {
-              const videoId = extractYoutubeId(tut.youtube_link);
+              const videoLink = tut.youtube_link || tut.video_url;
+              const videoId = extractYoutubeId(videoLink);
               const thumbUrl = videoId
                 ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
                 : null;
@@ -291,9 +292,9 @@ export default function TutorialsPage() {
                 {activeVideo.title}
               </h3>
               <div className="flex items-center gap-2 shrink-0">
-                {activeVideo.youtube_link && (
+                {(activeVideo.youtube_link || activeVideo.video_url) && (
                   <a
-                    href={activeVideo.youtube_link}
+                    href={activeVideo.youtube_link || activeVideo.video_url}
                     target="_blank"
                     rel="noreferrer"
                     className="p-1.5 rounded-lg bg-white/10 text-white/80 hover:text-white hover:bg-white/20 text-sm transition-colors"
@@ -315,10 +316,10 @@ export default function TutorialsPage() {
 
             {/* Video Iframe Container */}
             <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black shadow-inner">
-              {extractYoutubeId(activeVideo.youtube_link) ? (
+              {extractYoutubeId(activeVideo.youtube_link || activeVideo.video_url) ? (
                 <iframe
                   src={`https://www.youtube-nocookie.com/embed/${extractYoutubeId(
-                    activeVideo.youtube_link
+                    activeVideo.youtube_link || activeVideo.video_url
                   )}?autoplay=1&rel=0`}
                   title={activeVideo.title}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

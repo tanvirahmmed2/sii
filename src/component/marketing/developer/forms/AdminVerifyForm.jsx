@@ -39,7 +39,7 @@ export default function AdminVerifyForm() {
     setSuccess('');
 
     try {
-      const res = await fetch('/api/developer/me/verify', {
+      const res = await fetch('/api/marketing/developer/me/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code }),
@@ -72,7 +72,7 @@ export default function AdminVerifyForm() {
     setSuccess('');
 
     try {
-      const res = await fetch('/api/developer/me/resend-code', {
+      const res = await fetch('/api/marketing/developer/me/resend-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

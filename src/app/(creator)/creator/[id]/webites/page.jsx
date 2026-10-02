@@ -106,7 +106,7 @@ function WebsitesContent() {
     }
 
     try {
-      const res = await fetch('/api/creator/websites', {
+      const res = await fetch('/api/marketing/creator/websites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -150,7 +150,7 @@ function WebsitesContent() {
     setUpdateErr('');
 
     try {
-      const res = await fetch('/api/creator/websites', {
+      const res = await fetch('/api/marketing/creator/websites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -194,7 +194,7 @@ function WebsitesContent() {
 
     setDeletingId(websiteId);
     try {
-      const res = await fetch('/api/creator/websites', {
+      const res = await fetch('/api/marketing/creator/websites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

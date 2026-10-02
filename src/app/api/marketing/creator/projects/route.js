@@ -42,7 +42,7 @@ export async function GET(request) {
       LEFT JOIN developers d ON p.assigned_developer_id = d.id
       WHERE p.creator_id = $1
       ORDER BY p.updated_at DESC, p.id DESC
-    `, [creatorId]);
+    `, [creatorId]).catch(() => ({ rows: [] }));
 
     const statsRes = await queryDb(`
       SELECT 
@@ -54,7 +54,7 @@ export async function GET(request) {
         COUNT(*) FILTER (WHERE payment_status IN ('UNPAID', 'PENDING_QUOTE', 'PARTIAL'))::int AS pending_payment
       FROM project 
       WHERE creator_id = $1
-    `, [creatorId]);
+    `, [creatorId]).catch(() => ({ rows: [{ total: 0, pending_review: 0, in_progress: 0, completed: 0, paid: 0, pending_payment: 0 }] }));
 
     return NextResponse.json({
       success: true,
@@ -90,14 +90,15 @@ export async function POST(request) {
       title,
       description,
       category = 'CUSTOM_WEBSITE',
-      estimatedBudget = 0,
       currency = 'USD',
       priority = 'MEDIUM',
       deadline = null,
-      initialMessage = '',
-      imageUrl = null,
       fileName = null,
     } = body;
+
+    const rawBudget = body.budget_in_cents !== undefined ? Number(body.budget_in_cents) / 100 : (body.estimatedBudget !== undefined ? Number(body.estimatedBudget) : 0);
+    const initialMessage = body.initial_message || body.initialMessage || '';
+    const imageUrl = body.image_url || body.imageUrl || null;
 
     const cleanTitle = (title || '').trim();
     const cleanDesc = (description || '').trim();
@@ -107,7 +108,7 @@ export async function POST(request) {
     }
 
     const projectNum = `PRJ-${Date.now().toString().slice(-6)}-${crypto.randomInt(100, 999)}`;
-    const budgetCents = Math.round(Number(estimatedBudget) * 100) || 0;
+    const budgetCents = Math.round(Number(rawBudget) * 100) || 0;
 
     const projRes = await queryDb(`
       INSERT INTO project (

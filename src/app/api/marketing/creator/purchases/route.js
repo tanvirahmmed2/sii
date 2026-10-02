@@ -30,15 +30,17 @@ export async function GET(request) {
                 p.name AS package_name, 
                 p.slug AS package_slug, 
                 p.description AS package_description,
-                COALESCE(p.max_websites, p.max_portfolios, 1) AS max_websites,
-                p.max_portfolios,
+                COALESCE(p.max_websites, 1) AS max_websites,
+                COALESCE(p.max_websites, 1) AS max_portfolios,
+                pay.id AS payment_id,
                 pay.status AS payment_status, 
                 pay.transaction_id,
                 pay.payment_method,
-                pay.amount_in_cents AS payment_amount
+                pay.amount AS payment_amount,
+                (COALESCE(pay.amount, pu.total_amount, 0) * 100)::bigint AS amount_in_cents
          FROM purchases pu
          LEFT JOIN packages p ON pu.package_id = p.id
-         LEFT JOIN payment pay ON pay.purchase_id = pu.id
+         LEFT JOIN payments pay ON pay.purchase_id = pu.id
          WHERE pu.id = $1 AND pu.creator_id = $2
          LIMIT 1`,
         [Number(purchaseIdParam), creatorId]
@@ -56,19 +58,22 @@ export async function GET(request) {
       `SELECT pu.*, 
               p.name AS package_name, 
               p.slug AS package_slug, 
-              COALESCE(p.max_websites, p.max_portfolios, 1) AS max_websites,
-              p.max_portfolios,
+              COALESCE(p.max_websites, 1) AS max_websites,
+              COALESCE(p.max_websites, 1) AS max_portfolios,
+              pay.id AS payment_id,
               pay.status AS payment_status, 
               pay.transaction_id,
               pay.payment_method,
-              pay.created_at AS payment_date
+              pay.payment_date,
+              pay.created_at AS payment_created_at,
+              (COALESCE(pay.amount, pu.total_amount, 0) * 100)::bigint AS amount_in_cents
        FROM purchases pu
        LEFT JOIN packages p ON pu.package_id = p.id
-       LEFT JOIN payment pay ON pay.purchase_id = pu.id
+       LEFT JOIN payments pay ON pay.purchase_id = pu.id
        WHERE pu.creator_id = $1
        ORDER BY pu.id DESC`,
       [creatorId]
-    );
+    ).catch(() => ({ rows: [] }));
 
     return NextResponse.json({ success: true, purchases: res.rows });
   } catch (error) {
@@ -89,11 +94,11 @@ export async function handlePurchasesAction(body, sessionCreator) {
     return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
   }
 
-  // 1. Create Purchase Order (creates UNPAID purchase and UNPAID payment invoice)
+  // 1. Create Purchase Order (creates pending purchase and pending payment invoice)
   if (action === 'create_order' || !action) {
     const packageId = Number(body.packageId);
     const paymentMethod = body.paymentMethod || 'PAYONEER';
-    const billingInterval = (body.billingInterval || '').toUpperCase();
+    const billingCycle = (body.billingInterval || body.billingCycle || 'monthly').toLowerCase();
     const subdomain = (body.subdomain || '').trim().toLowerCase();
     const websiteName = (body.websiteName || '').trim();
     const notes = body.notes || '';
@@ -108,63 +113,42 @@ export async function handlePurchasesAction(body, sessionCreator) {
       return NextResponse.json({ success: false, error: 'Selected package does not exist or is inactive' }, { status: 404 });
     }
 
-    const interval = billingInterval || pkg.billing_interval || 'MONTHLY';
-    let priceInCents = Number(pkg.price_in_cents || 0);
-    if (interval === 'YEARLY' && pkg.yearly_price_usd) {
-      priceInCents = Math.round(Number(pkg.yearly_price_usd) * 100);
-    } else if (pkg.monthly_price_usd) {
-      priceInCents = Math.round(Number(pkg.monthly_price_usd) * 100);
+    const isYearly = billingCycle === 'yearly';
+    let baseAmount = isYearly 
+      ? Number(pkg.yearly_price_usd || pkg.yearly_price || 0)
+      : Number(pkg.monthly_price_usd || pkg.monthly_price || 0);
+    if (!baseAmount && pkg.price_in_cents) {
+      baseAmount = Number(pkg.price_in_cents) / 100;
     }
-    const currency = pkg.currency || 'USD';
-    const priceWhole = Math.round(priceInCents / 100);
-
-    // Generate unique transaction identifier
-    const txnId = 'ORD_' + Date.now().toString(36).toUpperCase() + '_' + Math.random().toString(36).substring(2, 7).toUpperCase();
-
-    // Create UNPAID payment invoice
-    const payRes = await queryDb(
-      `INSERT INTO payment (creator_id, package_id, amount_in_cents, currency, payment_method, transaction_id, status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'UNPAID')
-       RETURNING *`,
-      [creatorId, packageId, priceInCents, currency, paymentMethod, txnId]
-    );
-    const payment = payRes.rows[0];
+    const currency = 'USD';
+    const purchaseCode = 'ORD_' + Date.now().toString(36).toUpperCase() + '_' + Math.random().toString(36).substring(2, 6).toUpperCase();
 
     // Metadata for provisioning website upon payment
     const purchaseNotes = JSON.stringify({
       notes: notes || 'Package checkout order',
       subdomain: subdomain || '',
       websiteName: websiteName || '',
-      billingInterval: interval,
+      billingCycle: isYearly ? 'yearly' : 'monthly',
     });
 
-    // Create UNPAID purchase record linked to payment
+    // 1. Create pending purchase record first
     const puRes = await queryDb(
-      `INSERT INTO purchases (creator_id, package_id, payment_id, price, amount_in_cents, currency, billing_interval, status, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'UNPAID', $8)
+      `INSERT INTO purchases (creator_id, package_id, purchase_code, billing_cycle, base_amount, total_amount, status, notes)
+       VALUES ($1, $2, $3, $4, $5, $5, 'pending', $6)
        RETURNING *`,
-      [creatorId, packageId, payment.id, priceWhole, priceInCents, currency, interval, purchaseNotes]
+      [creatorId, packageId, purchaseCode, isYearly ? 'yearly' : 'monthly', baseAmount, purchaseNotes]
     );
     const purchase = puRes.rows[0];
 
-    // Link payment back to purchase
-    await queryDb('UPDATE payment SET purchase_id = $1 WHERE id = $2', [purchase.id, payment.id]);
-
-    // Create initial transaction tracking entry
-    await queryDb(
-      `INSERT INTO payment_transactions (payment_id, creator_id, purchase_id, transaction_id, gateway, amount_in_cents, currency, status, metadata)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', $8)`,
-      [
-        payment.id,
-        creatorId,
-        purchase.id,
-        txnId,
-        paymentMethod,
-        priceInCents,
-        currency,
-        JSON.stringify({ order_created_at: new Date().toISOString(), package_name: pkg.name }),
-      ]
-    ).catch((err) => console.warn('Payment transaction log warning:', err.message));
+    // 2. Generate unique transaction identifier and create pending payment linked to purchase
+    const txnId = 'TXN_' + Date.now().toString(36).toUpperCase() + '_' + Math.random().toString(36).substring(2, 7).toUpperCase();
+    const payRes = await queryDb(
+      `INSERT INTO payments (purchase_id, creator_id, transaction_id, amount, currency, payment_method, status, payment_date)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending', CURRENT_TIMESTAMP)
+       RETURNING *`,
+      [purchase.id, creatorId, txnId, baseAmount, currency, paymentMethod]
+    );
+    const payment = payRes.rows[0];
 
     return NextResponse.json({
       success: true,

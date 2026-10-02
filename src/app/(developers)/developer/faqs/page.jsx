@@ -38,7 +38,7 @@ export default function DeveloperFaqsPage() {
   const fetchFaqs = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/developer/faqs');
+      const res = await fetch('/api/marketing/developer/faqs');
       const data = await res.json();
       if (data.success) {
         setFaqs(data.records || []);
@@ -52,7 +52,7 @@ export default function DeveloperFaqsPage() {
 
   useEffect(() => {
     let active = true;
-    fetch('/api/developer/faqs')
+    fetch('/api/marketing/developer/faqs')
       .then((res) => res.json())
       .then((data) => {
         if (!active) return;
@@ -126,7 +126,7 @@ export default function DeveloperFaqsPage() {
       const method = editingFaq ? 'PUT' : 'POST';
       const payload = editingFaq ? { id: editingFaq.id, ...formData } : formData;
 
-      const res = await fetch('/api/developer/faqs', {
+      const res = await fetch('/api/marketing/developer/faqs', {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -155,7 +155,7 @@ export default function DeveloperFaqsPage() {
     if (!confirm(`Are you sure you want to permanently delete "${question || 'this FAQ'}"?`)) return;
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/developer/faqs?id=${id}`, {
+      const res = await fetch(`/api/marketing/developer/faqs?id=${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();

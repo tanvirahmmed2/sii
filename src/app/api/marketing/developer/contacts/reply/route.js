@@ -36,10 +36,10 @@ export async function POST(request) {
     }
 
     const contact = contactRes.rows[0];
-    const dev = auth.staff;
+    const dev = auth.user || auth.staff || {};
 
     // Send email using mailer
-    const emailSubject = `Re: ${contact.subject || 'Your Inquiry'} - ${SITE_NAME || 'PortfolioBuilder'}`;
+    const emailSubject = `Re: ${contact.subject || 'Your Inquiry'} - ${SITE_NAME || 'Platform'}`;
     const formattedReplyHtml = replyText
       .split('\n')
       .map((p) => p.trim())
@@ -53,7 +53,7 @@ export async function POST(request) {
           <!-- Header -->
           <div style="border-bottom: 1px solid #f1f5f9; padding-bottom: 20px; margin-bottom: 24px;">
             <span style="display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6366f1; background: #eef2ff; padding: 4px 10px; border-radius: 9999px; margin-bottom: 10px;">Official Response</span>
-            <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #0f172a;">${SITE_NAME || 'PortfolioBuilder'} Support Team</h2>
+            <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #0f172a;">${SITE_NAME || 'Support'} Team</h2>
           </div>
 
           <!-- Greeting -->
@@ -67,7 +67,7 @@ export async function POST(request) {
           <p style="margin: 0 0 24px 0; font-size: 14px; color: #64748b;">
             Best regards,<br />
             <strong style="color: #0f172a;">${dev.name || 'Support Team'}</strong><br />
-            <span style="font-size: 12px; color: #94a3b8; text-transform: capitalize;">${dev.role || 'Support'} Team • ${SITE_NAME || 'PortfolioBuilder'}</span>
+            <span style="font-size: 12px; color: #94a3b8; text-transform: capitalize;">${dev.role || 'Developer'} Team • ${SITE_NAME || 'Platform'}</span>
           </p>
 
           <!-- Original Message Box -->
@@ -81,7 +81,7 @@ export async function POST(request) {
         <!-- Footer -->
         <div style="text-align: center; margin-top: 24px; font-size: 12px; color: #94a3b8;">
           This message was sent to ${contact.email} regarding your contact submission.<br />
-          © ${new Date().getFullYear()} ${SITE_NAME || 'PortfolioBuilder'}. All rights reserved.
+          © ${new Date().getFullYear()} ${SITE_NAME || 'Platform'}. All rights reserved.
         </div>
       </div>
     `;
@@ -91,7 +91,7 @@ export async function POST(request) {
         to: contact.email,
         subject: emailSubject,
         html: emailHtml,
-        text: `Hello ${contact.name},\n\n${replyText}\n\nBest regards,\n${dev.name} (${dev.role})\n${SITE_NAME}\n\n--- Your Original Message ---\n${contact.message}`,
+        text: `Hello ${contact.name},\n\n${replyText}\n\nBest regards,\n${dev.name || 'Support'} (${dev.role || 'Developer'})\n${SITE_NAME || 'Platform'}\n\n--- Your Original Message ---\n${contact.message}`,
       });
     } catch (mailErr) {
       console.error('Failed to send contact reply email via mailer:', mailErr);
@@ -107,13 +107,13 @@ export async function POST(request) {
     // Update contact record in DB
     const updateRes = await queryDb(
       `UPDATE contacts
-       SET reply = $1,
-           status = 'REPLIED',
-           replied_by_developer_id = $2,
+       SET admin_notes = $1,
+           status = 'replied',
+           assigned_developer_id = $2,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $3
-       RETURNING *`,
-      [replyText, dev.id, id]
+       RETURNING *, admin_notes AS reply`,
+      [replyText, dev.id || null, id]
     );
 
     const updated = updateRes.rows[0];
@@ -123,6 +123,7 @@ export async function POST(request) {
       message: 'Reply sent successfully and inquiry marked as replied.',
       record: {
         ...updated,
+        reply: replyText,
         replied_by_name: dev.name,
         replied_by_email: dev.email,
         replied_by_role: dev.role,

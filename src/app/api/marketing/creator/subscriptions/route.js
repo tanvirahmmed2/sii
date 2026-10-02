@@ -22,37 +22,45 @@ export async function GET(request) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
-    // Parallel fetch: active subscription and all historical subscriptions
+    // Parallel fetch: active subscription and all historical subscriptions from purchases table
     const [activeSubRes, allSubsRes] = await Promise.all([
       queryDb(
-        `SELECT s.*, 
+        `SELECT pu.*, 
+                pu.period_start AS current_period_start,
+                pu.period_end AS current_period_end,
                 p.name AS package_name, 
                 p.slug AS package_slug, 
                 p.description AS package_description, 
-                p.price_in_cents, 
-                p.currency, 
-                p.billing_interval, 
-                COALESCE(p.max_websites, p.max_portfolios, 1) AS max_websites,
-                p.max_portfolios
-         FROM subscription s
-         JOIN packages p ON s.package_id = p.id
-         WHERE s.creator_id = $1 AND s.status = 'ACTIVE'
-         ORDER BY s.id DESC LIMIT 1`,
+                COALESCE(p.monthly_price_usd, p.monthly_price, 0) AS price,
+                (COALESCE(p.monthly_price_usd, p.monthly_price, 0) * 100)::int AS price_in_cents, 
+                'USD' AS currency, 
+                pu.billing_cycle AS billing_interval, 
+                COALESCE(p.max_websites, 1) AS max_websites,
+                COALESCE(p.max_websites, 1) AS max_portfolios
+         FROM purchases pu
+         JOIN packages p ON pu.package_id = p.id
+         WHERE pu.creator_id = $1 
+           AND pu.status IN ('completed', 'active')
+           AND (pu.period_end IS NULL OR pu.period_end > CURRENT_TIMESTAMP)
+         ORDER BY pu.id DESC LIMIT 1`,
         [creatorId]
-      ),
+      ).catch(() => ({ rows: [] })),
       queryDb(
-        `SELECT s.*, 
+        `SELECT pu.*, 
+                pu.period_start AS current_period_start,
+                pu.period_end AS current_period_end,
                 p.name AS package_name, 
-                p.price_in_cents, 
-                p.billing_interval,
-                COALESCE(p.max_websites, p.max_portfolios, 1) AS max_websites,
-                p.max_portfolios
-         FROM subscription s
-         JOIN packages p ON s.package_id = p.id
-         WHERE s.creator_id = $1
-         ORDER BY s.id DESC`,
+                p.slug AS package_slug,
+                (COALESCE(p.monthly_price_usd, p.monthly_price, 0) * 100)::int AS price_in_cents, 
+                pu.billing_cycle AS billing_interval,
+                COALESCE(p.max_websites, 1) AS max_websites,
+                COALESCE(p.max_websites, 1) AS max_portfolios
+         FROM purchases pu
+         JOIN packages p ON pu.package_id = p.id
+         WHERE pu.creator_id = $1
+         ORDER BY pu.id DESC`,
         [creatorId]
-      ),
+      ).catch(() => ({ rows: [] })),
     ]);
 
     const activeSub = activeSubRes.rows[0] || null;
@@ -72,7 +80,7 @@ export async function GET(request) {
       subscription: activeSub,
       subscriptions,
       daysRemaining,
-      hasActivePackage: Boolean(activeSub && activeSub.status === 'ACTIVE' && daysRemaining > 0),
+      hasActivePackage: Boolean(activeSub && ['completed', 'active'].includes(activeSub.status) && daysRemaining > 0),
     });
   } catch (error) {
     console.error('Subscriptions GET API error:', error);
@@ -95,7 +103,7 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
   // Direct purchase subscription action
   if (action === 'purchase_subscription' || action === 'purchase') {
     const packageId = Number(body.packageId);
-    const paymentMethod = body.paymentMethod || 'CARD';
+    const paymentMethod = body.paymentMethod || 'Stripe';
 
     if (!packageId) {
       return NextResponse.json({ success: false, error: 'Package ID is required.' }, { status: 400 });
@@ -107,37 +115,47 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
       return NextResponse.json({ success: false, error: 'Selected package does not exist.' }, { status: 404 });
     }
 
-    const isYearly = String(pkg.billing_interval).toUpperCase() === 'YEARLY';
+    const isYearly = String(pkg.billing_interval || body.billingCycle || '').toLowerCase() === 'yearly';
+    const billingCycle = isYearly ? 'yearly' : 'monthly';
+    const baseAmount = isYearly ? Number(pkg.yearly_price_usd || pkg.yearly_price || 0) : Number(pkg.monthly_price_usd || pkg.monthly_price || 0);
     const durationInterval = isYearly ? "INTERVAL '365 days'" : "INTERVAL '30 days'";
+    const purchaseCode = 'PUR-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
 
-    const subRes = await queryDb(
-      `INSERT INTO subscription (creator_id, package_id, status, current_period_start, current_period_end)
-       VALUES ($1, $2, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ${durationInterval})
+    // 1. Insert into purchases table
+    const puRes = await queryDb(
+      `INSERT INTO purchases (creator_id, package_id, purchase_code, billing_cycle, base_amount, total_amount, status, period_start, period_end, notes)
+       VALUES ($1, $2, $3, $4, $5, $5, 'completed', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ${durationInterval}, $6)
        RETURNING *`,
-      [creatorId, packageId]
+      [creatorId, packageId, purchaseCode, billingCycle, baseAmount, `Direct purchase of ${pkg.name}`]
     );
-    const subscription = subRes.rows[0];
+    const purchase = puRes.rows[0];
 
+    // 2. Insert into payments table
     const txnId = 'TXN_' + Date.now().toString(36).toUpperCase() + '_' + Math.random().toString(36).substring(2, 7).toUpperCase();
     const payRes = await queryDb(
-      `INSERT INTO payment (creator_id, package_id, subscription_id, amount_in_cents, currency, payment_method, transaction_id, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'COMPLETED')
+      `INSERT INTO payments (purchase_id, creator_id, transaction_id, amount, currency, payment_method, status, payment_date)
+       VALUES ($1, $2, $3, $4, 'USD', $5, 'successful', CURRENT_TIMESTAMP)
        RETURNING *`,
-      [creatorId, packageId, subscription.id, pkg.price_in_cents, pkg.currency || 'USD', paymentMethod, txnId]
+      [purchase.id, creatorId, txnId, baseAmount, paymentMethod]
     );
 
     return NextResponse.json({
       success: true,
-      subscription,
+      subscription: {
+        ...purchase,
+        current_period_start: purchase.period_start,
+        current_period_end: purchase.period_end,
+      },
+      purchase,
       payment: payRes.rows[0],
     });
   }
 
   // Cancel active subscription
   if (action === 'cancel') {
-    const subId = Number(body.subscriptionId);
+    const subId = Number(body.subscriptionId || body.id);
     const res = await queryDb(
-      `UPDATE subscription SET status = 'CANCELLED' WHERE id = $1 AND creator_id = $2 RETURNING *`,
+      `UPDATE purchases SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND creator_id = $2 RETURNING *`,
       [subId, creatorId]
     );
     return NextResponse.json({ success: true, subscription: res.rows[0] });

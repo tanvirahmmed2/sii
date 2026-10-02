@@ -66,7 +66,7 @@ export default function DeveloperPayrollPage() {
   const fetchPayrolls = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/developer/payroll');
+      const res = await fetch('/api/marketing/developer/payroll');
       const data = await res.json();
       if (data.success) {
         setPayrolls(data.payrolls || []);
@@ -98,7 +98,7 @@ export default function DeveloperPayrollPage() {
   const fetchPayrollDetail = async (id) => {
     try {
       setDetailLoading(true);
-      const res = await fetch(`/api/developer/payroll/${id}`);
+      const res = await fetch(`/api/marketing/developer/payroll/${id}`);
       const data = await res.json();
       if (data.success) {
         setPayrollDetail(data);
@@ -120,7 +120,7 @@ export default function DeveloperPayrollPage() {
     e.preventDefault();
     try {
       setSaving(true);
-      const res = await fetch('/api/developer/payroll', {
+      const res = await fetch('/api/marketing/developer/payroll', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(createForm),
@@ -145,7 +145,7 @@ export default function DeveloperPayrollPage() {
     if (!targetItemToPay) return;
     try {
       setSaving(true);
-      const res = await fetch('/api/developer/payroll/payments', {
+      const res = await fetch('/api/marketing/developer/payroll/payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -177,7 +177,7 @@ export default function DeveloperPayrollPage() {
   const handleDeletePayroll = async (id) => {
     if (!confirm('Are you sure you want to delete this payroll run and all its allocations?')) return;
     try {
-      const res = await fetch(`/api/developer/payroll/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/marketing/developer/payroll/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         showToastMsg('Payroll run deleted successfully.');

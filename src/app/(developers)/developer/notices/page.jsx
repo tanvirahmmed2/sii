@@ -37,7 +37,7 @@ export default function DeveloperNoticesPage() {
   const fetchNotices = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/developer/notices');
+      const res = await fetch('/api/marketing/developer/notices');
       const data = await res.json();
       if (data.success) {
         setNotices(data.notices || []);
@@ -58,7 +58,7 @@ export default function DeveloperNoticesPage() {
     e.preventDefault();
     try {
       setSavingNotice(true);
-      const res = await fetch('/api/developer/notices', {
+      const res = await fetch('/api/marketing/developer/notices', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(createForm),
@@ -87,7 +87,7 @@ export default function DeveloperNoticesPage() {
 
   const handleTogglePin = async (notice) => {
     try {
-      const res = await fetch(`/api/developer/notices/${notice.id}`, {
+      const res = await fetch(`/api/marketing/developer/notices/${notice.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_pinned: !notice.is_pinned }),
@@ -104,7 +104,7 @@ export default function DeveloperNoticesPage() {
   const handleDeleteNotice = async (id) => {
     if (!confirm('Are you sure you want to delete this notice?')) return;
     try {
-      const res = await fetch(`/api/developer/notices/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/marketing/developer/notices/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         fetchNotices();

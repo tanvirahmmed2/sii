@@ -23,7 +23,7 @@ export default function ReportForm({ onSuccess, onCancel }) {
     setError('');
 
     try {
-      const res = await fetch('/api/developer/reports', {
+      const res = await fetch('/api/marketing/developer/reports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

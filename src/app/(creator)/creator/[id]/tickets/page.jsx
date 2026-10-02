@@ -35,7 +35,7 @@ export default function CreatorTicketsPage() {
     setErr('');
 
     try {
-      const res = await fetch('/api/creator', {
+      const res = await fetch('/api/marketing/creator', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -270,14 +270,14 @@ export default function CreatorTicketsPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded-full border font-bold text-[10px] uppercase ${priorityColors[t.priority] || priorityColors.MEDIUM}`}>
+                        <span className={`px-2 py-0.5 rounded-full border font-bold text-[10px] uppercase ${priorityColors[String(t.priority || '').toUpperCase()] || priorityColors.MEDIUM}`}>
                           {t.priority || 'MEDIUM'}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                            statusColors[t.status] || 'bg-blue-50 text-blue-700 border-blue-200'
+                            statusColors[String(t.status || '').toUpperCase()] || 'bg-blue-50 text-blue-700 border-blue-200'
                           }`}
                         >
                           {t.status || 'OPEN'}

@@ -28,7 +28,7 @@ export default function MySalariesPage() {
   const fetchSalaries = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/developer/my-salaries');
+      const res = await fetch('/api/marketing/developer/my-salaries');
       const data = await res.json();
       if (data.success) {
         setSalaries(data.salaries || []);

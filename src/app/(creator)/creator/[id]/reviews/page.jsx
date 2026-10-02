@@ -46,7 +46,7 @@ export default function CreatorReviewsPage() {
     try {
       if (showLoading) setLoading(true);
       setErrorMsg('');
-      const res = await fetch('/api/creator/reviews');
+      const res = await fetch('/api/marketing/creator/reviews');
       const data = await res.json();
       if (data.success) {
         setReview(data.review || null);
@@ -65,7 +65,7 @@ export default function CreatorReviewsPage() {
 
   useEffect(() => {
     let ignore = false;
-    fetch('/api/creator/reviews')
+    fetch('/api/marketing/creator/reviews')
       .then((res) => res.json())
       .then((data) => {
         if (!ignore && data.success) {
@@ -124,7 +124,7 @@ export default function CreatorReviewsPage() {
 
     try {
       const method = isEditing ? 'PUT' : 'POST';
-      const res = await fetch('/api/creator/reviews', {
+      const res = await fetch('/api/marketing/creator/reviews', {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -164,7 +164,7 @@ export default function CreatorReviewsPage() {
     setSuccessMsg('');
 
     try {
-      const res = await fetch('/api/creator/reviews', {
+      const res = await fetch('/api/marketing/creator/reviews', {
         method: 'DELETE',
       });
       const data = await res.json();

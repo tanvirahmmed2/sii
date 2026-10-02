@@ -24,7 +24,7 @@ export default function WebsiteForm({ onSuccess, onCancel }) {
     const subdomain = formData.subdomain || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
     try {
-      const res = await fetch('/api/developer/websites', {
+      const res = await fetch('/api/marketing/developer/websites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

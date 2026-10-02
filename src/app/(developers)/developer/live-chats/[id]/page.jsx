@@ -55,7 +55,7 @@ export default function SingleLiveChatPage() {
     try {
       if (showLoading) setLoading(true);
       setError('');
-      const res = await fetch(`/api/developer/live_chats?chatId=${chatId}`);
+      const res = await fetch(`/api/marketing/developer/live_chats?chatId=${chatId}`);
       const data = await res.json();
       if (data.success && data.chat) {
         setChat(data.chat);
@@ -104,7 +104,7 @@ export default function SingleLiveChatPage() {
     setSendingReply(true);
 
     try {
-      const res = await fetch('/api/developer/live_chats', {
+      const res = await fetch('/api/marketing/developer/live_chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -143,7 +143,7 @@ export default function SingleLiveChatPage() {
     if (!chatId || statusLoading) return;
     setStatusLoading(true);
     try {
-      const res = await fetch('/api/developer/live_chats', {
+      const res = await fetch('/api/marketing/developer/live_chats', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -170,7 +170,7 @@ export default function SingleLiveChatPage() {
     setAssignLoading(true);
     try {
       const devId = developerId ? Number(developerId) : null;
-      const res = await fetch('/api/developer/live_chats', {
+      const res = await fetch('/api/marketing/developer/live_chats', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -205,7 +205,7 @@ export default function SingleLiveChatPage() {
     if (!confirm('Are you sure you want to permanently delete this chat session? All message history will be removed.')) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/developer/live_chats?id=${chatId}`, {
+      const res = await fetch(`/api/marketing/developer/live_chats?id=${chatId}`, {
         method: 'DELETE',
       });
       const data = await res.json();

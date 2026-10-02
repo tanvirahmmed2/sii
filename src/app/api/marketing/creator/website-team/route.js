@@ -39,17 +39,17 @@ export async function GET(request) {
          WHERE u.website_id = $1
          ORDER BY u.id ASC`,
         [websiteId]
-      ),
+      ).catch(() => ({ rows: [] })),
       // Roles
       queryDb(
         `SELECT * FROM website_roles WHERE website_id = $1 ORDER BY id ASC`,
         [websiteId]
-      ),
+      ).catch(() => ({ rows: [] })),
       // Modules
       queryDb(
         `SELECT * FROM website_modules WHERE website_id = $1 AND is_enabled = TRUE ORDER BY id ASC`,
         [websiteId]
-      ),
+      ).catch(() => ({ rows: [] })),
       // Permissions
       queryDb(
         `SELECT p.*, m.name AS module_name, m.slug AS module_slug
@@ -58,7 +58,7 @@ export async function GET(request) {
          WHERE p.website_id = $1
          ORDER BY m.id ASC, p.id ASC`,
         [websiteId]
-      ),
+      ).catch(() => ({ rows: [] })),
     ]);
 
     return NextResponse.json({

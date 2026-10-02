@@ -34,7 +34,7 @@ export default function AdminReviewsPage() {
   const fetchReviews = useCallback(async (showLoading = false) => {
     try {
       if (showLoading) setLoading(true);
-      const res = await fetch('/api/developer/reviews');
+      const res = await fetch('/api/marketing/developer/reviews');
       const data = await res.json();
       if (data.success && Array.isArray(data.reviews)) {
         setReviews(data.reviews);
@@ -48,7 +48,7 @@ export default function AdminReviewsPage() {
 
   useEffect(() => {
     let ignore = false;
-    fetch('/api/developer/reviews')
+    fetch('/api/marketing/developer/reviews')
       .then((res) => res.json())
       .then((data) => {
         if (!ignore && data.success && Array.isArray(data.reviews)) {
@@ -71,7 +71,7 @@ export default function AdminReviewsPage() {
     setActionNotice({ text: '', type: '' });
 
     try {
-      const res = await fetch('/api/developer/reviews', {
+      const res = await fetch('/api/marketing/developer/reviews', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reviewId, status: newStatus }),
@@ -103,7 +103,7 @@ export default function AdminReviewsPage() {
     setActionNotice({ text: '', type: '' });
 
     try {
-      const res = await fetch('/api/developer/reviews', {
+      const res = await fetch('/api/marketing/developer/reviews', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reviewId, is_featured: newFeatured }),
@@ -137,7 +137,7 @@ export default function AdminReviewsPage() {
     setActionNotice({ text: '', type: '' });
 
     try {
-      const res = await fetch(`/api/developer/reviews?id=${reviewId}`, {
+      const res = await fetch(`/api/marketing/developer/reviews?id=${reviewId}`, {
         method: 'DELETE',
       });
       const data = await res.json();

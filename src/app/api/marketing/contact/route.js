@@ -6,6 +6,8 @@ export async function POST(request) {
     const body = await request.json();
     const name = body.name?.trim();
     const email = body.email?.trim()?.toLowerCase();
+    const phone = body.phone?.trim() || null;
+    const institution = body.institution?.trim() || null;
     const subject = body.subject?.trim() || 'General Inquiry';
     const message = body.message?.trim();
 
@@ -25,15 +27,15 @@ export async function POST(request) {
     }
 
     const res = await queryDb(
-      `INSERT INTO contacts (name, email, subject, message, status) 
-       VALUES ($1, $2, $3, $4, 'NEW') 
-       RETURNING id, name, email, subject, message, status, created_at`,
-      [name, email, subject, message]
+      `INSERT INTO contacts (name, email, phone, institution, subject, message, status) 
+       VALUES ($1, $2, $3, $4, $5, $6, 'new') 
+       RETURNING id, name, email, phone, institution, subject, message, status, created_at`,
+      [name, email, phone, institution, subject, message]
     );
 
     return NextResponse.json({ success: true, contact: res.rows[0] });
   } catch (error) {
+    console.error('Contact submission error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
-

@@ -38,7 +38,7 @@ function CreatorVerifyContent() {
       setVerifyingAuto(true);
       setError('');
       try {
-        const res = await fetch('/api/creator/auth', {
+        const res = await fetch('/api/marketing/creator/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -87,7 +87,7 @@ function CreatorVerifyContent() {
     setResendMsg('');
 
     try {
-      const res = await fetch('/api/creator/auth', {
+      const res = await fetch('/api/marketing/creator/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -124,7 +124,7 @@ function CreatorVerifyContent() {
     setError('');
 
     try {
-      const res = await fetch('/api/creator/auth', {
+      const res = await fetch('/api/marketing/creator/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

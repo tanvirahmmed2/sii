@@ -557,6 +557,10 @@ CREATE TABLE IF NOT EXISTS live_chats (
     visitor_phone VARCHAR(50),
     ip_address VARCHAR(100),
     user_agent TEXT,
+    creator_id BIGINT REFERENCES creators(id) ON DELETE SET NULL,
+    website_id BIGINT REFERENCES websites(id) ON DELETE SET NULL,
+    assigned_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    status VARCHAR(50) DEFAULT 'OPEN',
     started_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     ended_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -577,6 +581,7 @@ CREATE OR REPLACE VIEW live_chat AS SELECT * FROM live_chats;
 CREATE TABLE IF NOT EXISTS live_chat_messages (
     id BIGSERIAL PRIMARY KEY,
     chat_id BIGINT NOT NULL REFERENCES live_chats(id) ON DELETE CASCADE,
+    sender_type VARCHAR(50) DEFAULT 'VISITOR',
     sender_id BIGINT,
     sender_name VARCHAR(255) NOT NULL DEFAULT 'Visitor',
     message TEXT NOT NULL,

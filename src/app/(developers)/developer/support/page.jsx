@@ -39,7 +39,7 @@ export default function AdminSupportPage() {
   const fetchTickets = useCallback(async (showLoading = false) => {
     try {
       if (showLoading) setLoading(true);
-      const res = await fetch('/api/developer/support');
+      const res = await fetch('/api/marketing/developer/support');
       const data = await res.json();
       if (data.success) {
         setTickets(data.records || []);
@@ -66,7 +66,7 @@ export default function AdminSupportPage() {
 
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/developer/support/${id}`, {
+      const res = await fetch(`/api/marketing/developer/support/${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();
@@ -85,12 +85,13 @@ export default function AdminSupportPage() {
   };
 
   const filtered = tickets.filter((t) => {
-    if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
+    if (statusFilter !== 'ALL' && t.status?.toUpperCase() !== statusFilter.toUpperCase()) return false;
     if (!searchTerm.trim()) return true;
     const q = searchTerm.toLowerCase();
     return (
       t.ticket_number?.toLowerCase().includes(q) ||
       t.requester_name?.toLowerCase().includes(q) ||
+      t.creator_name?.toLowerCase().includes(q) ||
       t.requester_email?.toLowerCase().includes(q) ||
       t.subject?.toLowerCase().includes(q) ||
       t.category?.toLowerCase().includes(q)
@@ -102,6 +103,7 @@ export default function AdminSupportPage() {
     IN_PROGRESS: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     RESOLVED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     CLOSED: 'bg-slate-100 text-slate-600 border-slate-200',
+    WAITING_FOR_USER: 'bg-amber-50 text-amber-700 border-amber-200',
   };
 
   const priorityColors = {
@@ -305,17 +307,17 @@ export default function AdminSupportPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full border font-bold text-[10px] uppercase ${priorityColors[t.priority] || priorityColors.MEDIUM}`}>
-                        {t.priority || 'MEDIUM'}
+                      <span className={`px-2 py-0.5 rounded-full border font-bold text-[10px] uppercase ${priorityColors[t.priority?.toUpperCase()] || priorityColors.MEDIUM}`}>
+                        {t.priority || 'medium'}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${
-                          statusColors[t.status] || statusColors.OPEN
+                          statusColors[t.status?.toUpperCase()] || statusColors.OPEN
                         }`}
                       >
-                        {t.status || 'OPEN'}
+                        {t.status || 'open'}
                       </span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-[11px]">

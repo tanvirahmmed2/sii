@@ -58,7 +58,7 @@ export default function CreatorSingleProjectPage() {
     try {
       if (showLoading) setLoading(true);
       setError('');
-      const res = await fetch(`/api/creator/projects/${projectId}?creatorId=${creatorId}`);
+      const res = await fetch(`/api/marketing/creator/projects/${projectId}?creatorId=${creatorId}`);
       const data = await res.json();
       if (data.success && data.project) {
         setProject(data.project);
@@ -104,7 +104,7 @@ export default function CreatorSingleProjectPage() {
     setSendingReply(true);
 
     try {
-      const res = await fetch(`/api/creator/projects/${projectId}`, {
+      const res = await fetch(`/api/marketing/creator/projects/${projectId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -280,11 +280,11 @@ export default function CreatorSingleProjectPage() {
                     </span>
                   </>
                 )}
-                {project.assigned_dev_name && (
+                {(project.assigned_developer_name || project.assigned_dev_name) && (
                   <>
                     <span>•</span>
                     <span className="text-indigo-600 font-medium">
-                      Lead Developer: {project.assigned_dev_name}
+                      Lead Developer: {project.assigned_developer_name || project.assigned_dev_name}
                     </span>
                   </>
                 )}
@@ -460,7 +460,7 @@ export default function CreatorSingleProjectPage() {
                 </div>
               ) : (
                 messages.map((m) => {
-                  const isCreator = m.sender_type === 'CREATOR';
+                  const isCreator = String(m.sender_type || '').toUpperCase() === 'CREATOR';
                   const msgImages = images.filter((img) => img.message_id === m.id);
 
                   return (

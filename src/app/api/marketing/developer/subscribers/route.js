@@ -14,14 +14,22 @@ export async function GET(request) {
     const id = searchParams.get('id');
 
     if (id) {
-      const res = await queryDb('SELECT * FROM subscribers WHERE id = $1 LIMIT 1', [Number(id)]);
+      const res = await queryDb(
+        `SELECT *, CASE WHEN is_active THEN 'SUBSCRIBED' ELSE 'UNSUBSCRIBED' END AS status
+         FROM subscribers WHERE id = $1 LIMIT 1`,
+        [Number(id)]
+      ).catch(() => ({ rows: [] }));
       if (res.rows.length === 0) {
         return NextResponse.json({ success: false, error: 'Subscriber not found.' }, { status: 404 });
       }
       return NextResponse.json({ success: true, record: res.rows[0] });
     }
 
-    const res = await queryDb('SELECT * FROM subscribers ORDER BY id DESC').catch(() => ({ rows: [] }));
+    const res = await queryDb(
+      `SELECT *, CASE WHEN is_active THEN 'SUBSCRIBED' ELSE 'UNSUBSCRIBED' END AS status
+       FROM subscribers ORDER BY id DESC`
+    ).catch(() => ({ rows: [] }));
+
     return NextResponse.json({ success: true, table: 'subscribers', records: res.rows });
   } catch (error) {
     console.error('Error fetching subscribers:', error);
@@ -50,15 +58,20 @@ export async function PUT(request) {
 
     const body = await request.json().catch(() => ({}));
     const id = body.id || body.data?.id;
-    const status = body.status || body.data?.status;
+    const status = (body.status || body.data?.status || '').toString().toUpperCase();
+    const isActiveInput = body.is_active !== undefined ? Boolean(body.is_active) : (status === 'SUBSCRIBED');
 
-    if (!id || !status) {
-      return NextResponse.json({ success: false, error: 'Subscriber ID and status are required.' }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Subscriber ID is required.' }, { status: 400 });
     }
 
     const res = await queryDb(
-      'UPDATE subscribers SET status = $1 WHERE id = $2 RETURNING *',
-      [status, Number(id)]
+      `UPDATE subscribers 
+       SET is_active = $1, 
+           unsubscribed_at = CASE WHEN $1 THEN NULL ELSE CURRENT_TIMESTAMP END 
+       WHERE id = $2 
+       RETURNING *, CASE WHEN is_active THEN 'SUBSCRIBED' ELSE 'UNSUBSCRIBED' END AS status`,
+      [isActiveInput, Number(id)]
     );
 
     if (res.rows.length === 0) {

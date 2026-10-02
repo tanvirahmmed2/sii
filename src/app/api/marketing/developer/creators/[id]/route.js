@@ -20,8 +20,10 @@ export async function GET(request, { params }) {
 
     // 1. Fetch creator profile
     const creatorRes = await queryDb(
-      `SELECT id, name, email, phone, bio, is_active, is_verified, 
-              two_factor_enabled, last_login_at, last_login_ip, created_at, updated_at
+      `SELECT id, name, email, phone, institution, country, city, address,
+              institution AS bio, is_active, email_verified AS is_verified,
+              (CASE WHEN two_factor_code IS NOT NULL THEN true ELSE false END) AS two_factor_enabled,
+              last_login_at, created_at, updated_at
        FROM creators 
        WHERE id = $1 LIMIT 1`,
       [creatorId]
@@ -32,28 +34,35 @@ export async function GET(request, { params }) {
       return NextResponse.json({ success: false, error: 'Creator not found' }, { status: 404 });
     }
 
-    // 2. Parallel queries for subscriptions, websites, payments, support tickets
+    // 2. Parallel queries for subscriptions (purchases), websites, payments, support tickets
     const [subsRes, websitesRes, paymentsRes, ticketsRes] = await Promise.all([
       queryDb(
-        `SELECT s.*, 
+        `SELECT pu.id, pu.creator_id, pu.website_id, pu.package_id, pu.purchase_code,
+                pu.billing_cycle, pu.billing_cycle AS billing_interval,
+                (pu.total_amount * 100)::bigint AS price_in_cents,
+                'USD' AS currency,
+                pu.status,
+                pu.period_start AS current_period_start,
+                pu.period_end AS current_period_end,
+                pu.created_at, pu.updated_at,
                 p.name AS package_name, 
                 p.slug AS package_slug, 
                 p.description AS package_description, 
-                p.price_in_cents, 
-                p.currency, 
-                p.billing_interval, 
-                COALESCE(p.max_websites, p.max_portfolios, 1) AS max_websites,
-                p.max_portfolios
-         FROM subscription s
-         JOIN packages p ON s.package_id = p.id
-         WHERE s.creator_id = $1
-         ORDER BY s.id DESC`,
+                p.monthly_price_usd,
+                COALESCE(p.max_websites, 1) AS max_websites,
+                COALESCE(p.max_websites, 1) AS max_portfolios
+         FROM purchases pu
+         LEFT JOIN packages p ON pu.package_id = p.id
+         WHERE pu.creator_id = $1
+         ORDER BY pu.id DESC`,
         [creatorId]
       ).catch(() => ({ rows: [] })),
 
       queryDb(
-        `SELECT id, creator_id, name, subdomain, custom_domain, theme_config, 
-                status, storage_used_mb, is_published, created_at, updated_at
+        `SELECT id, creator_id, name, slug, subdomain, custom_domain, theme, primary_color,
+                status, storage_used_mb,
+                (CASE WHEN status = 'active' AND NOT is_maintenance_mode THEN true ELSE false END) AS is_published,
+                created_at, updated_at
          FROM websites
          WHERE creator_id = $1
          ORDER BY id DESC`,
@@ -61,20 +70,30 @@ export async function GET(request, { params }) {
       ).catch(() => ({ rows: [] })),
 
       queryDb(
-        `SELECT pay.*, p.name AS package_name
-         FROM payment pay
-         LEFT JOIN packages p ON pay.package_id = p.id
+        `SELECT pay.id, pay.purchase_id, pay.creator_id, pay.transaction_id,
+                pay.amount, (pay.amount * 100)::bigint AS amount_in_cents,
+                pay.currency, pay.payment_method, pay.payment_gateway,
+                pay.status, pay.payment_date, pay.created_at, pay.updated_at,
+                p.name AS package_name
+         FROM payments pay
+         LEFT JOIN purchases pu ON pay.purchase_id = pu.id
+         LEFT JOIN packages p ON pu.package_id = p.id
          WHERE pay.creator_id = $1
          ORDER BY pay.id DESC`,
         [creatorId]
       ).catch(() => ({ rows: [] })),
 
       queryDb(
-        `SELECT id, requester_name, requester_email, subject, message, status, priority, category, created_at, updated_at
-         FROM support
-         WHERE LOWER(requester_email) = LOWER($1)
-         ORDER BY id DESC LIMIT 25`,
-        [creator.email]
+        `SELECT s.id, s.creator_id, s.ticket_number, s.subject, s.status, s.priority,
+                s.created_at, s.updated_at,
+                c.name AS requester_name, c.email AS requester_email,
+                'General' AS category,
+                (SELECT sm.message FROM support_messages sm WHERE sm.support_id = s.id ORDER BY sm.id ASC LIMIT 1) AS message
+         FROM supports s
+         LEFT JOIN creators c ON s.creator_id = c.id
+         WHERE s.creator_id = $1
+         ORDER BY s.id DESC LIMIT 25`,
+        [creatorId]
       ).catch(() => ({ rows: [] })),
     ]);
 
@@ -83,7 +102,7 @@ export async function GET(request, { params }) {
     const payments = paymentsRes.rows;
     const tickets = ticketsRes.rows;
 
-    const activeSubscription = subscriptions.find((s) => s.status === 'ACTIVE') || subscriptions[0] || null;
+    const activeSubscription = subscriptions.find((s) => s.status === 'completed' || s.status === 'active' || s.status === 'ACTIVE') || subscriptions[0] || null;
 
     let daysRemaining = 0;
     if (activeSubscription?.current_period_end) {
@@ -94,7 +113,7 @@ export async function GET(request, { params }) {
     }
 
     const totalSpentCents = payments.reduce(
-      (acc, p) => acc + (p.status === 'COMPLETED' ? Number(p.amount_in_cents || 0) : 0),
+      (acc, p) => acc + (p.status === 'successful' || p.status === 'COMPLETED' ? Number(p.amount_in_cents || (Number(p.amount || 0) * 100)) : 0),
       0
     );
     const totalStorageMb = websites.reduce((acc, w) => acc + Number(w.storage_used_mb || 0), 0);
@@ -151,8 +170,18 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ success: true, creator: res.rows[0] });
     }
 
-    const data = body.data || body;
-    const allowedKeys = ['name', 'phone', 'bio', 'is_active', 'is_verified', 'two_factor_enabled'];
+    const rawData = body.data || body;
+    const data = { ...rawData };
+    if (data.is_verified !== undefined && data.email_verified === undefined) {
+      data.email_verified = data.is_verified;
+      delete data.is_verified;
+    }
+    if (data.bio !== undefined && data.institution === undefined) {
+      data.institution = data.bio;
+      delete data.bio;
+    }
+
+    const allowedKeys = ['name', 'phone', 'institution', 'country', 'city', 'address', 'is_active', 'email_verified'];
     const keys = Object.keys(data).filter((k) => allowedKeys.includes(k));
     if (keys.length === 0) {
       return NextResponse.json({ success: true, message: 'No valid fields provided to update' });
@@ -164,7 +193,10 @@ export async function PUT(request, { params }) {
 
     const res = await queryDb(
       `UPDATE creators SET ${setClauses.join(', ')} WHERE id = $${values.length} 
-       RETURNING id, name, email, phone, bio, is_active, is_verified, two_factor_enabled, updated_at`,
+       RETURNING id, name, email, phone, institution, country, city, address,
+                 institution AS bio, is_active, email_verified AS is_verified,
+                 (CASE WHEN two_factor_code IS NOT NULL THEN true ELSE false END) AS two_factor_enabled,
+                 updated_at`,
       values
     );
 

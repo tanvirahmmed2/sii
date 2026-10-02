@@ -58,7 +58,7 @@ export default function DeveloperTasksPage() {
       if (priorityFilter !== 'ALL') params.append('priority', priorityFilter);
       if (assigneeFilter !== 'ALL') params.append('assigned_to', assigneeFilter);
 
-      const res = await fetch(`/api/developer/tasks?${params.toString()}`);
+      const res = await fetch(`/api/marketing/developer/tasks?${params.toString()}`);
       const data = await res.json();
       if (data.success) {
         setTasks(data.tasks || []);
@@ -75,7 +75,7 @@ export default function DeveloperTasksPage() {
   const openTaskDetail = async (task) => {
     setSelectedTask(task);
     try {
-      const res = await fetch(`/api/developer/tasks/${task.id}/comments`);
+      const res = await fetch(`/api/marketing/developer/tasks/${task.id}/comments`);
       const data = await res.json();
       if (data.success) {
         setTaskComments(data.comments || []);
@@ -93,7 +93,7 @@ export default function DeveloperTasksPage() {
     e.preventDefault();
     try {
       setSavingTask(true);
-      const res = await fetch('/api/developer/tasks', {
+      const res = await fetch('/api/marketing/developer/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(createForm),
@@ -122,7 +122,7 @@ export default function DeveloperTasksPage() {
 
   const handleUpdateStatus = async (taskId, newStatus) => {
     try {
-      const res = await fetch(`/api/developer/tasks/${taskId}`, {
+      const res = await fetch(`/api/marketing/developer/tasks/${taskId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
@@ -142,7 +142,7 @@ export default function DeveloperTasksPage() {
   const handleDeleteTask = async (taskId) => {
     if (!confirm('Are you sure you want to delete this task?')) return;
     try {
-      const res = await fetch(`/api/developer/tasks/${taskId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/marketing/developer/tasks/${taskId}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         if (selectedTask?.id === taskId) setSelectedTask(null);
@@ -160,7 +160,7 @@ export default function DeveloperTasksPage() {
     if (!selectedTask || !commentInput.trim()) return;
     try {
       setPostingComment(true);
-      const res = await fetch(`/api/developer/tasks/${selectedTask.id}/comments`, {
+      const res = await fetch(`/api/marketing/developer/tasks/${selectedTask.id}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ comment: commentInput.trim() }),

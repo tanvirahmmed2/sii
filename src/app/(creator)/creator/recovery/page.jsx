@@ -41,7 +41,7 @@ export default function CreatorRecoveryPage() {
     setMsg('');
 
     try {
-      const res = await fetch('/api/creator/auth', {
+      const res = await fetch('/api/marketing/creator/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'recover', email: email.trim().toLowerCase() }),
@@ -83,7 +83,7 @@ export default function CreatorRecoveryPage() {
     setMsg('');
 
     try {
-      const res = await fetch('/api/creator/auth', {
+      const res = await fetch('/api/marketing/creator/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -115,7 +115,7 @@ export default function CreatorRecoveryPage() {
     setMsg('');
 
     try {
-      const res = await fetch('/api/creator/auth', {
+      const res = await fetch('/api/marketing/creator/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'recover', email: email.trim().toLowerCase() }),

@@ -31,7 +31,7 @@ export default function UpdateDetailPage({ params }) {
 
   useEffect(() => {
     let isMounted = true;
-    fetch(`/api/developer/updates/${encodeURIComponent(slug)}`)
+    fetch(`/api/marketing/developer/updates/${encodeURIComponent(slug)}`)
       .then((res) => res.json())
       .then((data) => {
         if (!isMounted) return;
@@ -63,7 +63,7 @@ export default function UpdateDetailPage({ params }) {
     e.preventDefault();
     try {
       setSaving(true);
-      const res = await fetch(`/api/developer/updates/${encodeURIComponent(slug)}`, {
+      const res = await fetch(`/api/marketing/developer/updates/${encodeURIComponent(slug)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -97,7 +97,7 @@ export default function UpdateDetailPage({ params }) {
 
     try {
       setDeleting(true);
-      const res = await fetch(`/api/developer/updates/${encodeURIComponent(slug)}`, {
+      const res = await fetch(`/api/marketing/developer/updates/${encodeURIComponent(slug)}`, {
         method: 'DELETE',
       });
       const data = await res.json();

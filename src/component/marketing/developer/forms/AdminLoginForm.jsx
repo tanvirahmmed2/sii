@@ -24,7 +24,7 @@ export default function AdminLoginForm() {
     setUnverifiedInfo(null);
 
     try {
-      const res = await fetch('/api/developer/me/login', {
+      const res = await fetch('/api/marketing/developer/me/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

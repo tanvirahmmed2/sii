@@ -24,7 +24,7 @@ export default function SupportTicketForm({ onSuccess, onCancel }) {
     const ticket_number = formData.ticket_number || 'TCK-' + Date.now().toString().slice(-6);
 
     try {
-      const res = await fetch('/api/developer/support', {
+      const res = await fetch('/api/marketing/developer/support', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

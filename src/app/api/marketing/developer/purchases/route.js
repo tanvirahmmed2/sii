@@ -22,11 +22,12 @@ export async function GET(request) {
                 pay.status AS payment_status,
                 pay.transaction_id,
                 pay.payment_method,
-                pay.amount_in_cents AS payment_amount
+                (COALESCE(pay.amount, pu.total_amount, 0) * 100)::bigint AS payment_amount,
+                pay.amount AS payment_amount_usd
          FROM purchases pu
          LEFT JOIN creators c ON pu.creator_id = c.id
          LEFT JOIN packages p ON pu.package_id = p.id
-         LEFT JOIN payment pay ON pu.payment_id = pay.id
+         LEFT JOIN payments pay ON pay.purchase_id = pu.id
          WHERE pu.id = $1
          LIMIT 1`,
         [Number(id)]
@@ -44,11 +45,12 @@ export async function GET(request) {
               pay.status AS payment_status,
               pay.transaction_id,
               pay.payment_method,
-              pay.amount_in_cents AS payment_amount
+              (COALESCE(pay.amount, pu.total_amount, 0) * 100)::bigint AS payment_amount,
+              pay.amount AS payment_amount_usd
        FROM purchases pu
        LEFT JOIN creators c ON pu.creator_id = c.id
        LEFT JOIN packages p ON pu.package_id = p.id
-       LEFT JOIN payment pay ON pu.payment_id = pay.id
+       LEFT JOIN payments pay ON pay.purchase_id = pu.id
        ORDER BY pu.id DESC`
     ).catch(() => ({ rows: [] }));
 

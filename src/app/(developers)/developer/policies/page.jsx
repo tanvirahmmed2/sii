@@ -44,7 +44,7 @@ export default function DeveloperPoliciesPage() {
   const fetchPolicies = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/developer/policies');
+      const res = await fetch('/api/marketing/developer/policies');
       const data = await res.json();
       if (data.success) {
         setPolicies(data.records || []);
@@ -58,7 +58,7 @@ export default function DeveloperPoliciesPage() {
 
   useEffect(() => {
     let active = true;
-    fetch('/api/developer/policies')
+    fetch('/api/marketing/developer/policies')
       .then((res) => res.json())
       .then((data) => {
         if (!active) return;
@@ -141,7 +141,7 @@ export default function DeveloperPoliciesPage() {
         id: editingPolicy?.id,
       };
 
-      const res = await fetch('/api/developer/policies', {
+      const res = await fetch('/api/marketing/developer/policies', {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -171,7 +171,7 @@ export default function DeveloperPoliciesPage() {
 
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/developer/policies?id=${id}`, {
+      const res = await fetch(`/api/marketing/developer/policies?id=${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();

@@ -3,78 +3,7 @@ import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import slugify from 'slugify';
 
-// Ensure tables and required columns exist
-async function ensureTablesAndColumns() {
-  await queryDb(`
-    CREATE TABLE IF NOT EXISTS packages (
-      id BIGSERIAL PRIMARY KEY,
-      name VARCHAR(100) UNIQUE NOT NULL,
-      slug VARCHAR(100) UNIQUE NOT NULL,
-      tagline VARCHAR(255),
-      description TEXT,
-      monthly_price_usd DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-      yearly_price_usd DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-      monthly_price_bdt DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-      yearly_price_bdt DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-      monthly_price DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-      yearly_price DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-      discount_percentage DECIMAL(5, 2) DEFAULT 0.00,
-      max_students INT DEFAULT 500,
-      max_teachers INT DEFAULT 30,
-      max_staff INT DEFAULT 20,
-      max_storage_mb INT DEFAULT 5120,
-      max_websites INT DEFAULT 1,
-      features JSONB DEFAULT '[]'::jsonb,
-      is_popular BOOLEAN DEFAULT FALSE,
-      is_active BOOLEAN DEFAULT TRUE,
-      trial_days INT DEFAULT 14,
-      sort_order INT DEFAULT 0,
-      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-    );
 
-    ALTER TABLE packages ADD COLUMN IF NOT EXISTS monthly_price_usd DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
-    ALTER TABLE packages ADD COLUMN IF NOT EXISTS yearly_price_usd DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
-    ALTER TABLE packages ADD COLUMN IF NOT EXISTS monthly_price_bdt DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
-    ALTER TABLE packages ADD COLUMN IF NOT EXISTS yearly_price_bdt DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
-    ALTER TABLE packages ADD COLUMN IF NOT EXISTS tagline VARCHAR(255);
-    ALTER TABLE packages ADD COLUMN IF NOT EXISTS max_students INT DEFAULT 500;
-    ALTER TABLE packages ADD COLUMN IF NOT EXISTS max_teachers INT DEFAULT 30;
-    ALTER TABLE packages ADD COLUMN IF NOT EXISTS max_staff INT DEFAULT 20;
-    ALTER TABLE packages ADD COLUMN IF NOT EXISTS max_storage_mb INT DEFAULT 5120;
-    ALTER TABLE packages ADD COLUMN IF NOT EXISTS max_websites INT DEFAULT 1;
-    ALTER TABLE packages ADD COLUMN IF NOT EXISTS features JSONB DEFAULT '[]'::jsonb;
-    ALTER TABLE packages ADD COLUMN IF NOT EXISTS is_popular BOOLEAN DEFAULT FALSE;
-    ALTER TABLE packages ADD COLUMN IF NOT EXISTS trial_days INT DEFAULT 14;
-    ALTER TABLE packages ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0;
-
-    CREATE TABLE IF NOT EXISTS tenant_modules (
-      id BIGSERIAL PRIMARY KEY,
-      name VARCHAR(100) UNIQUE NOT NULL,
-      slug VARCHAR(100) UNIQUE NOT NULL,
-      description TEXT,
-      icon VARCHAR(100),
-      is_active BOOLEAN DEFAULT TRUE,
-      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS package_modules (
-      id BIGSERIAL PRIMARY KEY,
-      package_id BIGINT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
-      tenant_module_id BIGINT NOT NULL REFERENCES tenant_modules(id) ON DELETE CASCADE,
-      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(package_id, tenant_module_id)
-    );
-
-    CREATE TABLE IF NOT EXISTS allowed_modules (
-      id BIGSERIAL PRIMARY KEY,
-      package_id BIGINT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
-      module_title VARCHAR(255) NOT NULL,
-      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-    );
-  `).catch((err) => console.warn('ensureTablesAndColumns warning:', err.message));
-}
 
 // Generate unique slug for packages
 async function generateUniqueSlug(name, excludeId = null) {
@@ -150,8 +79,6 @@ async function fetchPackageById(id) {
 
 export async function GET(request) {
   try {
-    await ensureTablesAndColumns();
-
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -242,8 +169,6 @@ export async function POST(request) {
         { status: auth.status || 403 }
       );
     }
-
-    await ensureTablesAndColumns();
 
     const body = await request.json();
     const data = body.data || body;
@@ -391,8 +316,6 @@ export async function PUT(request) {
         { status: auth.status || 403 }
       );
     }
-
-    await ensureTablesAndColumns();
 
     const body = await request.json();
     const { searchParams } = new URL(request.url);

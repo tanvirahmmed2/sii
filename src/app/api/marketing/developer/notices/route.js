@@ -20,12 +20,13 @@ export async function GET(request) {
         COALESCE(dr.slug, 'developer') AS creator_role
       FROM notices n
       LEFT JOIN developers d ON n.created_by_developer_id = d.id
-      LEFT JOIN roles dr ON d.role_id = dr.id
+      LEFT JOIN developer_roles dr ON d.role_id = dr.id
       ORDER BY n.is_pinned DESC, n.created_at DESC
-    `);
+    `).catch(() => ({ rows: [] }));
 
-    const perms = Array.isArray(auth.staff.permissions) ? auth.staff.permissions : [];
-    const canManage = perms.includes('notices');
+    const currentStaff = auth.user || auth.staff;
+    const perms = Array.isArray(currentStaff?.permissions) ? currentStaff.permissions : [];
+    const canManage = perms.includes('notices') || currentStaff?.role === 'admin';
 
     return NextResponse.json({
       success: true,
@@ -58,6 +59,8 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Notice title and content are required.' }, { status: 400 });
     }
 
+    const currentStaffId = auth.user?.id || auth.staff?.id;
+
     const res = await queryDb(
       `INSERT INTO notices (title, content, priority, category, is_pinned, target_role, created_by_developer_id, expires_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -69,7 +72,7 @@ export async function POST(request) {
         category,
         Boolean(is_pinned),
         target_role || 'ALL',
-        auth.staff.id,
+        currentStaffId,
         expires_at ? new Date(expires_at) : null,
       ]
     );

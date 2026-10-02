@@ -61,7 +61,7 @@ export async function GET(request) {
 
     queryText += ' ORDER BY r.created_at DESC, r.id DESC';
 
-    const res = await queryDb(queryText, params);
+    const res = await queryDb(queryText, params).catch(() => ({ rows: [] }));
 
     return NextResponse.json({
       success: true,

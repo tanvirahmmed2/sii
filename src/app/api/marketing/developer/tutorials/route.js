@@ -22,7 +22,7 @@ export async function GET(request) {
          LEFT JOIN developers d ON t.created_by_developer_id = d.id
          WHERE t.id = $1 LIMIT 1`,
         [Number(id)]
-      );
+      ).catch(() => ({ rows: [] }));
       if (res.rows.length === 0) {
         return NextResponse.json({ success: false, error: 'Tutorial not found.' }, { status: 404 });
       }
@@ -37,12 +37,13 @@ export async function GET(request) {
         COALESCE(dr.slug, 'developer') AS creator_role
       FROM tutorials t
       LEFT JOIN developers d ON t.created_by_developer_id = d.id
-      LEFT JOIN roles dr ON d.role_id = dr.id
+      LEFT JOIN developer_roles dr ON d.role_id = dr.id
       ORDER BY t.created_at DESC
-    `);
+    `).catch(() => ({ rows: [] }));
 
-    const perms = Array.isArray(auth.staff.permissions) ? auth.staff.permissions : [];
-    const canManage = perms.includes('tutorials');
+    const currentStaff = auth.user || auth.staff;
+    const perms = Array.isArray(currentStaff?.permissions) ? currentStaff.permissions : [];
+    const canManage = perms.includes('tutorials') || currentStaff?.role === 'admin';
 
     return NextResponse.json({
       success: true,
@@ -78,11 +79,13 @@ export async function POST(request) {
       );
     }
 
+    const currentStaffId = auth.user?.id || auth.staff?.id;
+
     const res = await queryDb(
       `INSERT INTO tutorials (title, description, youtube_link, created_by_developer_id)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [title.trim(), description ? description.trim() : null, youtube_link.trim(), auth.staff.id]
+      [title.trim(), description ? description.trim() : null, youtube_link.trim(), currentStaffId]
     );
 
     return NextResponse.json({

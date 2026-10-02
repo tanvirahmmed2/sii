@@ -32,8 +32,8 @@ export async function GET(request, context) {
       FROM project p
       LEFT JOIN creators c ON p.creator_id = c.id
       LEFT JOIN developers d ON p.assigned_developer_id = d.id
-      LEFT JOIN roles dr ON d.role_id = dr.id
-      WHERE (${isNumeric ? 'p.id = $1 OR p.project_number = $1' : 'p.project_number = $1'})
+      LEFT JOIN developer_roles dr ON d.role_id = dr.id
+      WHERE (${isNumeric ? 'p.id = $1::bigint OR p.project_number = $1::text' : 'p.project_number = $1'})
         AND p.creator_id = $2
       LIMIT 1
     `, [projectId, sessionCreator.id]);
@@ -58,7 +58,7 @@ export async function GET(request, context) {
         COALESCE(dr.slug, 'developer') AS developer_role
       FROM project_messages m
       LEFT JOIN developers d ON (m.sender_type IN ('ADMIN', 'DEVELOPER') AND m.sender_id = d.id)
-      LEFT JOIN roles dr ON d.role_id = dr.id
+      LEFT JOIN developer_roles dr ON d.role_id = dr.id
       WHERE m.project_id = $1
       ORDER BY m.created_at ASC
     `, [project.id]);
@@ -109,7 +109,7 @@ export async function POST(request, context) {
     const isNumeric = /^\d+$/.test(projectId);
     const projRes = await queryDb(`
       SELECT * FROM project 
-      WHERE (${isNumeric ? 'id = $1 OR project_number = $1' : 'project_number = $1'})
+      WHERE (${isNumeric ? 'id = $1::bigint OR project_number = $1::text' : 'project_number = $1'})
         AND creator_id = $2
       LIMIT 1
     `, [projectId, sessionCreator.id]);

@@ -65,7 +65,7 @@ export async function GET(request) {
     }
 
     // If chat does not exist or has been ended/closed, clear cookie
-    if (!chat || chat.status === 'CLOSED') {
+    if (!chat || String(chat.status || '').toUpperCase() === 'CLOSED') {
       const response = NextResponse.json({ success: true, chat: null, messages: [], device: null });
       try {
         cookieStore.delete(COOKIE_NAME);
@@ -228,7 +228,7 @@ export async function POST(request) {
         );
       }
 
-      if (chatCheck.rows[0].status === 'CLOSED') {
+      if (String(chatCheck.rows[0]?.status || '').toUpperCase() === 'CLOSED') {
         return NextResponse.json(
           { success: false, error: 'This live chat session has ended. Please start a new chat.' },
           { status: 400 }

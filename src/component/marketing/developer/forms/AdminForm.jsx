@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { BiUserPlus, BiCheck, BiX } from 'react-icons/bi';
 
-export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/developer/devs', roles: initialRoles = [] }) {
+export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/marketing/developer/devs', roles: initialRoles = [] }) {
   const [roles, setRoles] = useState(initialRoles);
   const [rolesLoading, setRolesLoading] = useState(initialRoles.length === 0);
   const [formData, setFormData] = useState({
@@ -27,7 +27,7 @@ export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/dev
 
     let isMounted = true;
     setRolesLoading(true);
-    fetch('/api/developer/roles')
+    fetch('/api/marketing/developer/roles')
       .then((res) => res.json())
       .then((data) => {
         if (!isMounted) return;

@@ -23,7 +23,10 @@ export async function GET(request) {
     }
 
     const res = await queryDb(
-      `SELECT id, name, email, phone, bio, is_active, is_verified, two_factor_enabled, created_at, updated_at
+      `SELECT id, name, email, phone, institution, country, city, address,
+              institution AS bio, is_active, email_verified AS is_verified,
+              (CASE WHEN two_factor_code IS NOT NULL THEN true ELSE false END) AS two_factor_enabled,
+              last_login_at, created_at, updated_at
        FROM creators WHERE id = $1 LIMIT 1`,
       [creatorId]
     );
@@ -44,7 +47,7 @@ export async function handleProfileAction(body, sessionCreator) {
   const creatorId = Number(body.creatorId || sessionCreator?.id);
 
   if (!creatorId) {
-    return NextResponse.json({ success: false, error: 'Creator ID required.' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Creator ID required.' }, { status: 401 });
   }
 
   if (sessionCreator && sessionCreator.id !== creatorId) {
@@ -57,10 +60,22 @@ export async function handleProfileAction(body, sessionCreator) {
       `UPDATE creators 
        SET name = COALESCE($1, name),
            phone = COALESCE($2, phone),
-           bio = COALESCE($3, bio)
-       WHERE id = $4
-       RETURNING id, name, email, phone, bio, is_active, is_verified, two_factor_enabled, updated_at`,
-      [body.name, body.phone, body.bio, creatorId]
+           institution = COALESCE($3, institution),
+           country = COALESCE($4, country),
+           city = COALESCE($5, city),
+           address = COALESCE($6, address),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $7
+       RETURNING id, name, email, phone, institution, country, city, address, institution AS bio, is_active, email_verified AS is_verified, updated_at`,
+      [
+        body.name?.trim() || null,
+        body.phone?.trim() || null,
+        (body.institution || body.bio)?.trim() || null,
+        body.country?.trim() || null,
+        body.city?.trim() || null,
+        body.address?.trim() || null,
+        creatorId,
+      ]
     );
 
     if (res.rows.length === 0) {
@@ -93,7 +108,7 @@ export async function handleProfileAction(body, sessionCreator) {
     }
 
     const newHash = await hashPassword(newPassword);
-    await queryDb('UPDATE creators SET password = $1 WHERE id = $2', [newHash, creatorId]);
+    await queryDb('UPDATE creators SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [newHash, creatorId]);
     return NextResponse.json({ success: true, message: 'Password updated successfully.' });
   }
 
@@ -101,12 +116,16 @@ export async function handleProfileAction(body, sessionCreator) {
   if (action === 'toggle_2fa') {
     const enabled = Boolean(body.enabled);
     const res = await queryDb(
-      'UPDATE creators SET two_factor_enabled = $1 WHERE id = $2 RETURNING two_factor_enabled',
+      `UPDATE creators 
+       SET two_factor_code = CASE WHEN $1 THEN 'ENABLED' ELSE NULL END, 
+           updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $2 
+       RETURNING (two_factor_code IS NOT NULL) AS two_factor_enabled`,
       [enabled, creatorId]
     );
     return NextResponse.json({
       success: true,
-      two_factor_enabled: res.rows[0]?.two_factor_enabled,
+      two_factor_enabled: Boolean(res.rows[0]?.two_factor_enabled),
       message: enabled ? 'Two-factor authentication enabled.' : 'Two-factor authentication disabled.',
     });
   }

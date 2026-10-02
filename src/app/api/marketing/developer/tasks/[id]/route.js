@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { hasModulePermission } from 'src/lib/middleware/developer';
+import { hasModulePermission, authenticateStaff } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
 // ============================================================================
@@ -14,19 +14,36 @@ export async function GET(request, { params }) {
 
     const { id } = await params;
 
-    const taskRes = await queryDb(`
+    let taskRes = await queryDb(`
       SELECT 
-        t.*,
-        assignee.name AS assignee_name,
-        assignee.email AS assignee_email,
-        COALESCE(ar.slug, 'developer') AS assignee_role,
-        creator.name AS creator_name
-      FROM tasks t
-      LEFT JOIN developers assignee ON t.assigned_to_developer_id = assignee.id
-      LEFT JOIN roles ar ON assignee.role_id = ar.id
-      LEFT JOIN developers creator ON t.created_by_developer_id = creator.id
-      WHERE t.id = $1
-    `, [id]);
+        dt.*,
+        dt.developer_id AS assigned_to_developer_id,
+        d.name AS assignee_name,
+        d.email AS assignee_email,
+        COALESCE(dr.slug, 'developer') AS assignee_role,
+        d.name AS creator_name
+      FROM developer_tasks dt
+      LEFT JOIN developers d ON dt.developer_id = d.id
+      LEFT JOIN developer_roles dr ON d.role_id = dr.id
+      WHERE dt.id = $1
+    `, [id]).catch(() => null);
+
+    if (!taskRes || taskRes.rows.length === 0) {
+      taskRes = await queryDb(`
+        SELECT 
+          t.*,
+          COALESCE(t.assigned_to_developer_id, t.developer_id) AS assigned_to_developer_id,
+          assignee.name AS assignee_name,
+          assignee.email AS assignee_email,
+          COALESCE(ar.slug, 'developer') AS assignee_role,
+          creator.name AS creator_name
+        FROM tasks t
+        LEFT JOIN developers assignee ON COALESCE(t.assigned_to_developer_id, t.developer_id) = assignee.id
+        LEFT JOIN developer_roles ar ON assignee.role_id = ar.id
+        LEFT JOIN developers creator ON t.created_by_developer_id = creator.id
+        WHERE t.id = $1
+      `, [id]).catch(() => ({ rows: [] }));
+    }
 
     if (taskRes.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Task not found.' }, { status: 404 });
@@ -40,10 +57,10 @@ export async function GET(request, { params }) {
         COALESCE(r.slug, 'developer') AS author_role
       FROM task_comments tc
       JOIN developers d ON tc.developer_id = d.id
-      LEFT JOIN roles r ON d.role_id = r.id
+      LEFT JOIN developer_roles r ON d.role_id = r.id
       WHERE tc.task_id = $1
       ORDER BY tc.created_at ASC
-    `, [id]);
+    `, [id]).catch(() => ({ rows: [] }));
 
     return NextResponse.json({
       success: true,
@@ -65,69 +82,120 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
+    const currentStaff = auth.user || auth.staff;
+    const currentStaffId = currentStaff?.id;
     const { id } = await params;
     const body = await request.json();
-    const perms = Array.isArray(auth.staff.permissions) ? auth.staff.permissions : [];
-    const isElevated = perms.includes('tasks');
+    const perms = Array.isArray(currentStaff?.permissions) ? currentStaff.permissions : [];
+    const isElevated = perms.includes('tasks') || currentStaff?.role === 'admin';
 
-    // Verify task exists
-    const currentRes = await queryDb('SELECT * FROM tasks WHERE id = $1', [id]);
-    if (currentRes.rows.length === 0) {
+    // Verify task exists in developer_tasks or tasks
+    let currentRes = await queryDb('SELECT * FROM developer_tasks WHERE id = $1', [id]).catch(() => null);
+    const isDevTasksTable = Boolean(currentRes && currentRes.rows?.length > 0);
+
+    if (!isDevTasksTable) {
+      currentRes = await queryDb('SELECT * FROM tasks WHERE id = $1', [id]).catch(() => ({ rows: [] }));
+    }
+
+    if (!currentRes || currentRes.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Task not found.' }, { status: 404 });
     }
     const currentTask = currentRes.rows[0];
+    const taskAssigneeId = currentTask.developer_id || currentTask.assigned_to_developer_id;
 
-    // If not admin/manager, check if user is the assigned developer updating status
+    // If not elevated manager/admin, check if user is the assigned developer updating status
     if (!isElevated) {
-      if (currentTask.assigned_to_developer_id !== auth.staff.id) {
+      if (taskAssigneeId !== currentStaffId) {
         return NextResponse.json(
           { success: false, error: 'Forbidden: Only managers, admins, or the assigned developer can update this task.' },
           { status: 403 }
         );
       }
-      // Assignee is only allowed to update status
       if (body.status) {
-        await queryDb('UPDATE tasks SET status = $1 WHERE id = $2', [body.status, id]);
+        const normStatus = body.status.toLowerCase();
+        if (isDevTasksTable) {
+          await queryDb('UPDATE developer_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [normStatus, id]);
+        } else {
+          await queryDb('UPDATE tasks SET status = $1 WHERE id = $2', [body.status, id]);
+        }
         return NextResponse.json({ success: true, message: 'Task status updated.' });
       }
       return NextResponse.json({ success: false, error: 'Assignees can only update task status.' }, { status: 403 });
     }
 
-    // Elevated (Manager or Admin) full update
-    const { title, description, status, priority, assigned_to_developer_id, due_date } = body;
+    // Elevated full update
+    const { title, description, status, priority, assigned_to_developer_id, developer_id, due_date } = body;
+    const targetDevId = assigned_to_developer_id || developer_id;
 
-    const fields = [];
-    const values = [];
-    let idx = 1;
+    if (isDevTasksTable) {
+      const fields = [];
+      const values = [];
+      let idx = 1;
 
-    if (title !== undefined) {
-      fields.push(`title = $${idx++}`);
-      values.push(title.trim());
-    }
-    if (description !== undefined) {
-      fields.push(`description = $${idx++}`);
-      values.push(description);
-    }
-    if (status !== undefined) {
-      fields.push(`status = $${idx++}`);
-      values.push(status);
-    }
-    if (priority !== undefined) {
-      fields.push(`priority = $${idx++}`);
-      values.push(priority);
-    }
-    if (assigned_to_developer_id !== undefined) {
-      fields.push(`assigned_to_developer_id = $${idx++}`);
-      values.push(assigned_to_developer_id ? Number(assigned_to_developer_id) : null);
-    }
-    if (due_date !== undefined) {
-      fields.push(`due_date = $${idx++}`);
-      values.push(due_date ? new Date(due_date) : null);
-    }
+      if (title !== undefined) {
+        fields.push(`title = $${idx++}`);
+        values.push(title.trim());
+      }
+      if (description !== undefined) {
+        fields.push(`description = $${idx++}`);
+        values.push(description);
+      }
+      if (status !== undefined) {
+        fields.push(`status = $${idx++}`);
+        values.push(status.toLowerCase());
+      }
+      if (priority !== undefined) {
+        fields.push(`priority = $${idx++}`);
+        values.push(priority.toLowerCase());
+      }
+      if (targetDevId !== undefined) {
+        fields.push(`developer_id = $${idx++}`);
+        values.push(targetDevId ? Number(targetDevId) : null);
+      }
+      if (due_date !== undefined) {
+        fields.push(`due_date = $${idx++}`);
+        values.push(due_date ? new Date(due_date) : null);
+      }
 
-    if (fields.length > 0) {
-      values.push(id);
-      await queryDb(`UPDATE tasks SET ${fields.join(', ')} WHERE id = $${idx}`, values);
+      if (fields.length > 0) {
+        fields.push('updated_at = CURRENT_TIMESTAMP');
+        values.push(id);
+        await queryDb(`UPDATE developer_tasks SET ${fields.join(', ')} WHERE id = $${idx}`, values);
+      }
+    } else {
+      const fields = [];
+      const values = [];
+      let idx = 1;
+
+      if (title !== undefined) {
+        fields.push(`title = $${idx++}`);
+        values.push(title.trim());
+      }
+      if (description !== undefined) {
+        fields.push(`description = $${idx++}`);
+        values.push(description);
+      }
+      if (status !== undefined) {
+        fields.push(`status = $${idx++}`);
+        values.push(status);
+      }
+      if (priority !== undefined) {
+        fields.push(`priority = $${idx++}`);
+        values.push(priority);
+      }
+      if (targetDevId !== undefined) {
+        fields.push(`assigned_to_developer_id = $${idx++}`);
+        values.push(targetDevId ? Number(targetDevId) : null);
+      }
+      if (due_date !== undefined) {
+        fields.push(`due_date = $${idx++}`);
+        values.push(due_date ? new Date(due_date) : null);
+      }
+
+      if (fields.length > 0) {
+        values.push(id);
+        await queryDb(`UPDATE tasks SET ${fields.join(', ')} WHERE id = $${idx}`, values);
+      }
     }
 
     return NextResponse.json({ success: true, message: 'Task updated successfully.' });
@@ -150,7 +218,9 @@ export async function DELETE(request, { params }) {
     }
 
     const { id } = await params;
-    await queryDb('DELETE FROM tasks WHERE id = $1', [id]);
+    await queryDb('DELETE FROM developer_tasks WHERE id = $1', [id]).catch(async () => {
+      await queryDb('DELETE FROM tasks WHERE id = $1', [id]).catch(() => {});
+    });
 
     return NextResponse.json({ success: true, message: 'Task deleted successfully.' });
   } catch (error) {

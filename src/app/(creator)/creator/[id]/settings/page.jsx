@@ -43,7 +43,7 @@ export default function CreatorSettingsPage() {
 
     setChangingPass(true);
     try {
-      const res = await fetch('/api/creator', {
+      const res = await fetch('/api/marketing/creator', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -76,7 +76,7 @@ export default function CreatorSettingsPage() {
     setTfaMsg('');
 
     try {
-      const res = await fetch('/api/creator', {
+      const res = await fetch('/api/marketing/creator', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

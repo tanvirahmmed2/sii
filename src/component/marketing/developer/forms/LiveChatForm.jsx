@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { BiChat, BiCheck, BiX } from 'react-icons/bi';
 
-export default function LiveChatForm({ onSuccess, onCancel, apiEndpoint = '/api/developer/live_chats' }) {
+export default function LiveChatForm({ onSuccess, onCancel, apiEndpoint = '/api/marketing/developer/live_chats' }) {
   const [formData, setFormData] = useState({
     visitor_name: '',
     visitor_email: '',

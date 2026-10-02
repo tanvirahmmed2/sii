@@ -75,7 +75,7 @@ export default function CreatorSidebar({
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/creator', {
+      await fetch('/api/marketing/creator', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'logout' }),

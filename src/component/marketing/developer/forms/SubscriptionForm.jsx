@@ -20,7 +20,7 @@ export default function SubscriptionForm({ packages = [], onSuccess, onCancel })
     setError('');
 
     try {
-      const res = await fetch('/api/developer/subscriptions', {
+      const res = await fetch('/api/marketing/developer/subscriptions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -20,7 +20,7 @@ export default function SupportMessageForm({ tickets = [], onSuccess, onCancel }
     setError('');
 
     try {
-      const res = await fetch('/api/developer/support', {
+      const res = await fetch('/api/marketing/developer/support', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

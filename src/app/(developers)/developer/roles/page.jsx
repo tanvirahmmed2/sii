@@ -96,9 +96,9 @@ export default function RolesManagementPage() {
     try {
       if (showLoading) setLoading(true);
       const [rolesRes, permsRes, meRes] = await Promise.all([
-        fetch('/api/developer/roles').then((r) => r.json()).catch(() => null),
-        fetch('/api/developer/permissions').then((r) => r.json()).catch(() => null),
-        fetch('/api/developer/me').then((r) => r.json()).catch(() => null),
+        fetch('/api/marketing/developer/roles').then((r) => r.json()).catch(() => null),
+        fetch('/api/marketing/developer/permissions').then((r) => r.json()).catch(() => null),
+        fetch('/api/marketing/developer/me').then((r) => r.json()).catch(() => null),
       ]);
 
       if (meRes && meRes.success && meRes.user) {
@@ -185,7 +185,7 @@ export default function RolesManagementPage() {
     setRolePermsError('');
 
     try {
-      const res = await fetch('/api/developer/roles', {
+      const res = await fetch('/api/marketing/developer/roles', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -215,7 +215,7 @@ export default function RolesManagementPage() {
     setCreateRoleError('');
 
     try {
-      const res = await fetch('/api/developer/roles', {
+      const res = await fetch('/api/marketing/developer/roles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(createRoleData),
@@ -255,7 +255,7 @@ export default function RolesManagementPage() {
     setEditRoleError('');
 
     try {
-      const res = await fetch('/api/developer/roles', {
+      const res = await fetch('/api/marketing/developer/roles', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -300,7 +300,7 @@ export default function RolesManagementPage() {
     }
 
     try {
-      const res = await fetch(`/api/developer/roles?id=${role.id}`, {
+      const res = await fetch(`/api/marketing/developer/roles?id=${role.id}`, {
         method: 'DELETE',
       });
       const data = await res.json();
@@ -322,7 +322,7 @@ export default function RolesManagementPage() {
     setCreatePermError('');
 
     try {
-      const res = await fetch('/api/developer/permissions', {
+      const res = await fetch('/api/marketing/developer/permissions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(createPermData),
@@ -362,7 +362,7 @@ export default function RolesManagementPage() {
     setEditPermError('');
 
     try {
-      const res = await fetch('/api/developer/permissions', {
+      const res = await fetch('/api/marketing/developer/permissions', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -400,7 +400,7 @@ export default function RolesManagementPage() {
     }
 
     try {
-      const res = await fetch(`/api/developer/permissions?id=${perm.id}`, {
+      const res = await fetch(`/api/marketing/developer/permissions?id=${perm.id}`, {
         method: 'DELETE',
       });
       const data = await res.json();

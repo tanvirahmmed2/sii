@@ -19,19 +19,23 @@ export async function GET(request) {
           c.id,
           c.name,
           c.email,
+          c.phone,
+          c.institution,
           c.subject,
           c.message,
           c.status,
-          c.reply,
-          c.replied_by_developer_id,
+          c.admin_notes AS reply,
+          c.admin_notes,
+          c.assigned_developer_id,
+          c.assigned_developer_id AS replied_by_developer_id,
           c.created_at,
           c.updated_at,
           d.name AS replied_by_name,
           d.email AS replied_by_email,
           COALESCE(dr.slug, 'developer') AS replied_by_role
         FROM contacts c
-        LEFT JOIN developers d ON c.replied_by_developer_id = d.id
-        LEFT JOIN roles dr ON d.role_id = dr.id
+        LEFT JOIN developers d ON c.assigned_developer_id = d.id
+        LEFT JOIN developer_roles dr ON d.role_id = dr.id
         WHERE c.id = $1
         LIMIT 1
       `, [id]);
@@ -44,7 +48,7 @@ export async function GET(request) {
         success: true, 
         contact: singleRes.rows[0], 
         record: singleRes.rows[0],
-        currentUserRole: auth.staff?.role || 'staff'
+        currentUserRole: auth.user?.role || auth.staff?.role || 'developer'
       });
     }
 
@@ -53,19 +57,23 @@ export async function GET(request) {
         c.id,
         c.name,
         c.email,
+        c.phone,
+        c.institution,
         c.subject,
         c.message,
         c.status,
-        c.reply,
-        c.replied_by_developer_id,
+        c.admin_notes AS reply,
+        c.admin_notes,
+        c.assigned_developer_id,
+        c.assigned_developer_id AS replied_by_developer_id,
         c.created_at,
         c.updated_at,
         d.name AS replied_by_name,
         d.email AS replied_by_email,
         COALESCE(dr.slug, 'developer') AS replied_by_role
       FROM contacts c
-      LEFT JOIN developers d ON c.replied_by_developer_id = d.id
-      LEFT JOIN roles dr ON d.role_id = dr.id
+      LEFT JOIN developers d ON c.assigned_developer_id = d.id
+      LEFT JOIN developer_roles dr ON d.role_id = dr.id
       ORDER BY c.id DESC
     `).catch(() => ({ rows: [] }));
 
@@ -73,7 +81,7 @@ export async function GET(request) {
       success: true, 
       table: 'contacts', 
       records: res.rows,
-      currentUserRole: auth.staff?.role || 'staff'
+      currentUserRole: auth.user?.role || auth.staff?.role || 'developer'
     });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -105,8 +113,16 @@ export async function PUT(request) {
     const email = data.email?.trim();
     const subject = data.subject?.trim();
     const message = data.message?.trim();
-    const status = data.status;
-    const reply = data.reply !== undefined ? data.reply : data.admin_reply;
+    const rawStatus = data.status;
+    let cleanStatus = rawStatus ? String(rawStatus).toLowerCase() : null;
+    if (cleanStatus === 'replied' || cleanStatus === 'resolved') cleanStatus = 'replied';
+    else if (cleanStatus === 'read') cleanStatus = 'read';
+    else if (cleanStatus === 'in_progress') cleanStatus = 'in_progress';
+    else if (cleanStatus === 'closed') cleanStatus = 'closed';
+    else if (cleanStatus) cleanStatus = 'new';
+
+    const reply = data.reply !== undefined ? data.reply : data.admin_notes || data.admin_reply;
+    const assignedDevId = data.assigned_developer_id !== undefined ? data.assigned_developer_id : (data.replied_by_developer_id || null);
 
     const res = await queryDb(
       `UPDATE contacts 
@@ -115,11 +131,12 @@ export async function PUT(request) {
            subject = COALESCE($3, subject),
            message = COALESCE($4, message),
            status = COALESCE($5, status),
-           reply = COALESCE($6, reply),
+           admin_notes = COALESCE($6, admin_notes),
+           assigned_developer_id = COALESCE($7, assigned_developer_id),
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $7
-       RETURNING *`,
-      [name || null, email || null, subject || null, message || null, status || null, reply || null, id]
+       WHERE id = $8
+       RETURNING *, admin_notes AS reply`,
+      [name || null, email || null, subject || null, message || null, cleanStatus, reply || null, assignedDevId, id]
     );
 
     return NextResponse.json({ success: true, record: res.rows[0] });
@@ -163,4 +180,3 @@ export async function DELETE(request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
-

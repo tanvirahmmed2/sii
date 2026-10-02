@@ -47,16 +47,17 @@ export default function CareersPage() {
   }, []);
 
   const filteredCareers = useMemo(() => {
+    const normalize = (str) => (str || '').toUpperCase().replace(/[-\s]/g, '_');
     return careers.filter((job) => {
       const matchDept = selectedDept === 'All' || job.department === selectedDept;
-      const matchType = selectedType === 'All' || job.job_type === selectedType;
-      const matchWorkplace = selectedWorkplace === 'All' || job.workplace_type === selectedWorkplace;
+      const matchType = selectedType === 'All' || normalize(job.job_type) === normalize(selectedType);
+      const matchWorkplace = selectedWorkplace === 'All' || normalize(job.workplace_type) === normalize(selectedWorkplace);
       const matchSearch =
         !search.trim() ||
-        job.title.toLowerCase().includes(search.toLowerCase()) ||
-        job.department.toLowerCase().includes(search.toLowerCase()) ||
-        job.location.toLowerCase().includes(search.toLowerCase()) ||
-        job.description.toLowerCase().includes(search.toLowerCase());
+        (job.title || '').toLowerCase().includes(search.toLowerCase()) ||
+        (job.department || '').toLowerCase().includes(search.toLowerCase()) ||
+        (job.location || '').toLowerCase().includes(search.toLowerCase()) ||
+        (job.description || '').toLowerCase().includes(search.toLowerCase());
 
       return matchDept && matchType && matchWorkplace && matchSearch;
     });
@@ -305,11 +306,11 @@ export default function CareersPage() {
                       {job.department}
                     </span>
                     <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                      {job.job_type.replace('_', ' ')}
+                      {(job.job_type || 'Full-time').replace(/_/g, ' ')}
                     </span>
                     <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-1">
                       <BiMapPin className="text-slate-400" />
-                      {job.location} ({job.workplace_type})
+                      {job.location || 'Remote'} ({job.workplace_type || 'Remote'})
                     </span>
                     {job.is_featured && (
                       <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300">

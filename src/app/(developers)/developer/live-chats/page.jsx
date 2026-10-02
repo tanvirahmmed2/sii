@@ -32,7 +32,7 @@ export default function AdminLiveChatsPage() {
   const fetchChats = useCallback(async (showLoading = false) => {
     try {
       if (showLoading) setLoading(true);
-      const res = await fetch('/api/developer/live_chats');
+      const res = await fetch('/api/marketing/developer/live_chats');
       const data = await res.json();
       if (data.success && Array.isArray(data.records)) {
         setChats(data.records);
@@ -47,7 +47,7 @@ export default function AdminLiveChatsPage() {
 
   useEffect(() => {
     let ignore = false;
-    fetch('/api/developer/live_chats')
+    fetch('/api/marketing/developer/live_chats')
       .then((r) => r.json())
       .then((data) => {
         if (!ignore && data.success && Array.isArray(data.records)) {
@@ -79,7 +79,7 @@ export default function AdminLiveChatsPage() {
     if (!confirm('Are you sure you want to delete this live chat session? All message history will be removed.')) return;
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/developer/live_chats?id=${id}`, {
+      const res = await fetch(`/api/marketing/developer/live_chats?id=${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();

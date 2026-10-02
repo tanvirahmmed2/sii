@@ -32,7 +32,10 @@ export async function GET(request) {
     const slug = searchParams.get('slug');
 
     if (id) {
-      const res = await queryDb('SELECT * FROM policies WHERE id = $1 LIMIT 1', [Number(id)]);
+      const res = await queryDb(
+        'SELECT *, is_active AS is_published FROM policies WHERE id = $1 LIMIT 1',
+        [Number(id)]
+      );
       if (res.rows.length === 0) {
         return NextResponse.json({ success: false, error: 'Policy not found.' }, { status: 404 });
       }
@@ -40,14 +43,20 @@ export async function GET(request) {
     }
 
     if (slug) {
-      const res = await queryDb('SELECT * FROM policies WHERE slug = $1 LIMIT 1', [slug]);
+      const res = await queryDb(
+        'SELECT *, is_active AS is_published FROM policies WHERE slug = $1 LIMIT 1',
+        [slug]
+      );
       if (res.rows.length === 0) {
         return NextResponse.json({ success: false, error: 'Policy not found.' }, { status: 404 });
       }
       return NextResponse.json({ success: true, record: res.rows[0] });
     }
 
-    const res = await queryDb('SELECT * FROM policies ORDER BY id ASC').catch(() => ({ rows: [] }));
+    const res = await queryDb(
+      'SELECT *, is_active AS is_published FROM policies ORDER BY id ASC'
+    ).catch(() => ({ rows: [] }));
+
     return NextResponse.json({ success: true, table: 'policies', records: res.rows });
   } catch (error) {
     console.error('Error fetching developer policies:', error);
@@ -72,7 +81,7 @@ export async function POST(request) {
     const title = body.title?.trim();
     const description = body.description?.trim();
     let slug = body.slug?.trim();
-    const is_published = body.is_published !== undefined ? Boolean(body.is_published) : true;
+    const isActive = body.is_active !== undefined ? Boolean(body.is_active) : (body.is_published !== undefined ? Boolean(body.is_published) : true);
 
     if (!title || !description) {
       return NextResponse.json(
@@ -97,10 +106,10 @@ export async function POST(request) {
     }
 
     const res = await queryDb(
-      `INSERT INTO policies (title, slug, description, is_published) 
+      `INSERT INTO policies (title, slug, description, is_active) 
        VALUES ($1, $2, $3, $4) 
-       RETURNING *`,
-      [title, slug, description, is_published]
+       RETURNING *, is_active AS is_published`,
+      [title, slug, description, isActive]
     );
 
     return NextResponse.json(
@@ -131,7 +140,7 @@ export async function PUT(request) {
     const title = body.title?.trim();
     const description = body.description?.trim();
     let slug = body.slug?.trim();
-    const is_published = body.is_published !== undefined ? Boolean(body.is_published) : true;
+    const isActive = body.is_active !== undefined ? Boolean(body.is_active) : (body.is_published !== undefined ? Boolean(body.is_published) : true);
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Policy ID is required for update.' }, { status: 400 });
@@ -161,23 +170,64 @@ export async function PUT(request) {
 
     const res = await queryDb(
       `UPDATE policies 
-       SET title = $1, slug = $2, description = $3, is_published = $4, updated_at = CURRENT_TIMESTAMP 
+       SET title = $1, slug = $2, description = $3, is_active = $4, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $5 
-       RETURNING *`,
-      [title, slug, description, is_published, Number(id)]
+       RETURNING *, is_active AS is_published`,
+      [title, slug, description, isActive, Number(id)]
     );
 
     if (res.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Policy record not found.' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Policy item not found.' }, { status: 404 });
     }
 
-    return NextResponse.json({
-      success: true,
-      record: res.rows[0],
-      message: 'Policy updated successfully.',
-    });
+    return NextResponse.json({ success: true, record: res.rows[0], message: 'Policy updated successfully.' });
   } catch (error) {
     console.error('Error updating policy:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+// ============================================================================
+// PATCH: Toggle active/publish status or quick edit
+// ============================================================================
+export async function PATCH(request) {
+  try {
+    const authCheck = await hasModulePermission(request, 'policies');
+    if (!authCheck.success) {
+      return NextResponse.json(
+        { success: false, error: authCheck.message || 'Access denied: Permission policies required.' },
+        { status: authCheck.status || 403 }
+      );
+    }
+
+    const body = await request.json();
+    const id = body.id || body.policyId;
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Policy ID is required.' }, { status: 400 });
+    }
+
+    if (body.is_published !== undefined || body.is_active !== undefined) {
+      const activeState = body.is_active !== undefined ? Boolean(body.is_active) : Boolean(body.is_published);
+      const res = await queryDb(
+        `UPDATE policies SET is_active = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *, is_active AS is_published`,
+        [activeState, Number(id)]
+      );
+
+      if (res.rows.length === 0) {
+        return NextResponse.json({ success: false, error: 'Policy not found.' }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        record: res.rows[0],
+        message: `Policy marked as ${activeState ? 'active' : 'inactive'}.`,
+      });
+    }
+
+    return NextResponse.json({ success: false, error: 'No update parameters provided.' }, { status: 400 });
+  } catch (error) {
+    console.error('Error in policy PATCH:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
@@ -196,23 +246,28 @@ export async function DELETE(request) {
     }
 
     const { searchParams } = new URL(request.url);
-    let id = searchParams.get('id');
+    let id = searchParams.get('id') || searchParams.get('policyId');
 
     if (!id) {
       const body = await request.json().catch(() => ({}));
-      id = body.id;
+      id = body.id || body.policyId;
     }
 
     if (!id) {
-      return NextResponse.json({ success: false, error: 'Policy ID is required.' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Policy ID is required for deletion.' }, { status: 400 });
     }
 
-    const res = await queryDb('DELETE FROM policies WHERE id = $1 RETURNING id', [Number(id)]);
+    const res = await queryDb('DELETE FROM policies WHERE id = $1 RETURNING id, title', [Number(id)]);
+
     if (res.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Policy not found or already deleted.' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, message: 'Policy deleted successfully.' });
+    return NextResponse.json({
+      success: true,
+      message: `Policy "${res.rows[0].title}" deleted successfully.`,
+      deletedId: res.rows[0].id,
+    });
   } catch (error) {
     console.error('Error deleting policy:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

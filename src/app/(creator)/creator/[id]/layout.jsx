@@ -48,7 +48,7 @@ export default function CreatorLayout({ children, params }) {
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await fetch(`/api/creator?creatorId=${creatorId}`);
+      const res = await fetch(`/api/marketing/creator?creatorId=${creatorId}`);
       const json = await res.json();
       if (json.success && json.creator) {
         if (Number(creatorId) !== json.creator.id) {
@@ -69,7 +69,7 @@ export default function CreatorLayout({ children, params }) {
 
   useEffect(() => {
     let ignore = false;
-    fetch(`/api/creator?creatorId=${creatorId}`)
+    fetch(`/api/marketing/creator?creatorId=${creatorId}`)
       .then((res) => res.json())
       .then((json) => {
         if (!ignore) {
@@ -105,7 +105,7 @@ export default function CreatorLayout({ children, params }) {
     setCreateSuccess('');
 
     try {
-      const res = await fetch('/api/creator', {
+      const res = await fetch('/api/marketing/creator', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

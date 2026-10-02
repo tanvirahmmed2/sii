@@ -123,7 +123,7 @@ export default function SingleUpdatePage({ params }) {
 
           {/* Description Content with TipTap Rich Typography */}
           <div
-            className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-p:text-slate-600 dark:prose-p:text-slate-300 prose-p:leading-relaxed prose-li:text-slate-600 dark:prose-li:text-slate-300 prose-code:text-emerald-700 dark:prose-code:text-emerald-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-pre:bg-slate-900 prose-pre:text-slate-100 prose-pre:rounded-xl prose-blockquote:border-emerald-600 prose-blockquote:text-slate-700 dark:prose-blockquote:text-slate-300"
+            className="prose prose-slate dark:prose-invert max-w-none whitespace-pre-line prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-p:text-slate-600 dark:prose-p:text-slate-300 prose-p:leading-relaxed prose-li:text-slate-600 dark:prose-li:text-slate-300 prose-code:text-emerald-700 dark:prose-code:text-emerald-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-pre:bg-slate-900 prose-pre:text-slate-100 prose-pre:rounded-xl prose-blockquote:border-emerald-600 prose-blockquote:text-slate-700 dark:prose-blockquote:text-slate-300"
             dangerouslySetInnerHTML={{ __html: update.description }}
           />
 

@@ -50,8 +50,10 @@ export async function GET(req) {
     // Endpoint to retrieve selectable canonical website modules
     if (getWebsiteModules) {
       const modRes = await query(
-        'SELECT id, name, slug, description FROM website_modules WHERE (website_id IS NULL OR is_enabled = true) AND is_active = true ORDER BY id ASC'
-      );
+        'SELECT id, name, slug, description FROM tenant_modules WHERE is_active = true ORDER BY id ASC'
+      ).catch(async () => {
+        return await query('SELECT id, name, slug, description FROM website_modules ORDER BY id ASC').catch(() => ({ rows: [] }));
+      });
       return Response.json(
         {
           success: true,
@@ -159,7 +161,7 @@ export async function GET(req) {
     }
 
     sql += ` ORDER BY a.id DESC`;
-    const result = await query(sql, params);
+    const result = await query(sql, params).catch(() => ({ rows: [] }));
     const mappedRows = result.rows || [];
 
     if (appId) {

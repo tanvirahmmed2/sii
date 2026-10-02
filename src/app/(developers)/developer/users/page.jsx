@@ -11,7 +11,7 @@ export default function AdminUsersPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/developer/users');
+      const res = await fetch('/api/marketing/developer/users');
       const data = await res.json();
       if (data.success) {
         setUsers(data.users || []);
@@ -29,7 +29,7 @@ export default function AdminUsersPage() {
 
   const handleBanToggle = async (userId, currentBanned) => {
     try {
-      await fetch('/api/developer/users', {
+      await fetch('/api/marketing/developer/users', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, isBanned: !currentBanned }),
@@ -43,7 +43,7 @@ export default function AdminUsersPage() {
   const handleDelete = async (userId) => {
     if (!confirm('Permanently remove this user account?')) return;
     try {
-      await fetch(`/api/developer/users?id=${userId}`, {
+      await fetch(`/api/marketing/developer/users?id=${userId}`, {
         method: 'DELETE',
       });
       fetchUsers();

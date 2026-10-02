@@ -93,7 +93,7 @@ export default function DeveloperSingleProjectPage() {
     try {
       if (showLoading) setLoading(true);
       setError('');
-      const res = await fetch(`/api/developer/projects/${projectId}`);
+      const res = await fetch(`/api/marketing/developer/projects/${projectId}`);
       const data = await res.json();
       if (data.success && data.project) {
         setProject(data.project);
@@ -156,7 +156,7 @@ export default function DeveloperSingleProjectPage() {
     setSendingReply(true);
 
     try {
-      const res = await fetch(`/api/developer/projects/${projectId}`, {
+      const res = await fetch(`/api/marketing/developer/projects/${projectId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -195,7 +195,7 @@ export default function DeveloperSingleProjectPage() {
     if (!projectId || savingStatus) return;
     setSavingStatus(true);
     try {
-      const res = await fetch(`/api/developer/projects/${projectId}`, {
+      const res = await fetch(`/api/marketing/developer/projects/${projectId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -225,7 +225,7 @@ export default function DeveloperSingleProjectPage() {
       const budgetCents = Math.round(parseFloat(budgetVal || 0) * 100);
       const paidCents = Math.round(parseFloat(paidVal || 0) * 100);
 
-      const res = await fetch(`/api/developer/projects/${projectId}`, {
+      const res = await fetch(`/api/marketing/developer/projects/${projectId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -255,7 +255,7 @@ export default function DeveloperSingleProjectPage() {
     if (!projectId || savingDev) return;
     setSavingDev(true);
     try {
-      const res = await fetch(`/api/developer/projects/${projectId}`, {
+      const res = await fetch(`/api/marketing/developer/projects/${projectId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -282,7 +282,7 @@ export default function DeveloperSingleProjectPage() {
     if (!projectId || savingDeliverables) return;
     setSavingDeliverables(true);
     try {
-      const res = await fetch(`/api/developer/projects/${projectId}`, {
+      const res = await fetch(`/api/marketing/developer/projects/${projectId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -313,7 +313,7 @@ export default function DeveloperSingleProjectPage() {
     if (!confirm('Are you sure you want to permanently delete this project?')) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/developer/projects/${projectId}`, {
+      const res = await fetch(`/api/marketing/developer/projects/${projectId}`, {
         method: 'DELETE',
       });
       const data = await res.json();

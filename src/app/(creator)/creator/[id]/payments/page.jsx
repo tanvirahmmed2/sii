@@ -43,7 +43,7 @@ function PaymentsContent() {
   useEffect(() => {
     if (orderPlaced && highlightedPaymentId && payments.length > 0) {
       const match = payments.find((p) => String(p.id) === String(highlightedPaymentId));
-      if (match && match.status === 'UNPAID') {
+      if (match && ['unpaid', 'pending'].includes(match.status?.toLowerCase())) {
         const timer = setTimeout(() => {
           setPayModalPayment(match);
         }, 0);
@@ -56,7 +56,7 @@ function PaymentsContent() {
     setPaying(true);
     setPayError('');
     try {
-      const res = await fetch('/api/creator/payments', {
+      const res = await fetch('/api/marketing/creator/payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -92,7 +92,7 @@ function PaymentsContent() {
     );
   });
 
-  const unpaidCount = payments.filter((p) => p.status === 'UNPAID' || p.status === 'PENDING').length;
+  const unpaidCount = payments.filter((p) => ['unpaid', 'pending'].includes(p.status?.toLowerCase())).length;
 
   return (
     <div className="space-y-6">
@@ -219,8 +219,9 @@ function PaymentsContent() {
                 </tr>
               ) : (
                 filtered.map((p) => {
-                  const amount = (Number(p.amount_in_cents || 0) / 100).toFixed(2);
-                  const isUnpaid = p.status === 'UNPAID' || p.status === 'PENDING';
+                  const amount = (Number(p.amount_in_cents || (Number(p.amount || 0) * 100)) / 100).toFixed(2);
+                  const isUnpaid = p.status === 'UNPAID' || p.status === 'PENDING' || p.status === 'pending';
+                  const isCompleted = p.status === 'COMPLETED' || p.status === 'successful' || p.status === 'SUCCESSFUL';
                   return (
                     <tr
                       key={p.id}
@@ -245,7 +246,7 @@ function PaymentsContent() {
                       <td className="px-4 py-3">
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            p.status === 'COMPLETED'
+                            isCompleted
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                               : isUnpaid
                               ? 'bg-amber-50 text-amber-700 border border-amber-200'
@@ -424,7 +425,7 @@ function PaymentsContent() {
       {/* Invoice Receipt Modal */}
       {selectedInvoice && (() => {
         const invData = generateInvoiceData(selectedInvoice, creator);
-        const isPaid = selectedInvoice.status === 'COMPLETED' || selectedInvoice.isPaid;
+        const isPaid = ['completed', 'successful'].includes(selectedInvoice.status?.toLowerCase()) || Boolean(selectedInvoice.isPaid);
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
             <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full overflow-hidden p-6 space-y-5 max-h-[92vh] overflow-y-auto">

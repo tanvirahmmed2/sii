@@ -14,7 +14,7 @@ export default function AdminReportsPage() {
   const fetchReports = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/developer/reports');
+      const res = await fetch('/api/marketing/developer/reports');
       const data = await res.json();
       if (data.success) {
         setReports(data.records || []);
@@ -34,7 +34,7 @@ export default function AdminReportsPage() {
     if (!confirm('Are you sure you want to delete this report?')) return;
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/developer/reports?id=${id}`, {
+      const res = await fetch(`/api/marketing/developer/reports?id=${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();
@@ -101,7 +101,7 @@ export default function AdminReportsPage() {
 
       {showForm && (
         <ReportForm
-          apiEndpoint="/api/developer/reports"
+          apiEndpoint="/api/marketing/developer/reports"
           onSuccess={() => {
             setShowForm(false);
             fetchReports();

@@ -46,7 +46,7 @@ export default function DeveloperTutorialsPage() {
   const fetchTutorials = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/developer/tutorials');
+      const res = await fetch('/api/marketing/developer/tutorials');
       const data = await res.json();
       if (data.success) {
         setTutorials(data.tutorials || []);
@@ -61,7 +61,7 @@ export default function DeveloperTutorialsPage() {
 
   useEffect(() => {
     let active = true;
-    fetch('/api/developer/tutorials')
+    fetch('/api/marketing/developer/tutorials')
       .then((res) => res.json())
       .then((data) => {
         if (!active) return;
@@ -124,8 +124,8 @@ export default function DeveloperTutorialsPage() {
       setSaving(true);
       setFormError('');
       const url = editingTut
-        ? `/api/developer/tutorials`
-        : '/api/developer/tutorials';
+        ? `/api/marketing/developer/tutorials`
+        : '/api/marketing/developer/tutorials';
       const method = editingTut ? 'PUT' : 'POST';
       const payload = editingTut
         ? { id: editingTut.id, ...form }
@@ -155,7 +155,7 @@ export default function DeveloperTutorialsPage() {
     if (!confirm(`Are you sure you want to permanently delete "${title || 'this tutorial'}"?`)) return;
     try {
       setDeletingId(id);
-      const res = await fetch(`/api/developer/tutorials?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/marketing/developer/tutorials?id=${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         setTutorials((prev) => prev.filter((t) => t.id !== id));

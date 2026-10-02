@@ -5,10 +5,10 @@ import { BiUser, BiStar, BiCheckShield, BiCube } from 'react-icons/bi';
 export default function Review({ review }) {
   if (!review) return null;
 
-  const name = review.creator_name || review.name || 'Verified Creator';
+  const name = review.creator_name || review.reviewer_name || review.name || 'Verified Client';
   const avatar = review.creator_avatar || null;
   const rating = Number(review.rating || 5);
-  const packageName = review.package_name || review.country || 'Subscriber';
+  const packageName = review.package_name || review.institution_name || review.country || 'Subscriber';
 
   return (
     <div className="w-[320px] sm:w-[380px] bg-slate-50 dark:bg-slate-800/90 border border-slate-200/90 dark:border-slate-700/80 rounded-3xl p-6 flex flex-col justify-between gap-4 shrink-0 shadow-xs hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600 transition-all">
@@ -36,7 +36,7 @@ export default function Review({ review }) {
         )}
 
         <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed italic line-clamp-4 min-h-[4.5rem]">
-          &ldquo;{review.comment}&rdquo;
+          &ldquo;{review.comment || review.review_text}&rdquo;
         </p>
       </div>
 

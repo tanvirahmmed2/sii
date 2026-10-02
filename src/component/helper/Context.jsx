@@ -100,24 +100,9 @@ export const ContextProvider = ({ children }) => {
     }
   }, []);
 
-  const fetchReviews = useCallback(async () => {
-    try {
-      const res = await fetch('/api/marketing/reviews');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && Array.isArray(data.reviews)) {
-          setReviews(data.reviews);
-        }
-      }
-    } catch (err) {
-      // Ignore
-    }
-  }, []);
-
   useEffect(() => {
     fetchCurrentUser();
-    fetchReviews();
-  }, [fetchCurrentUser, fetchReviews]);
+  }, [fetchCurrentUser]);
 
   return (
     <Context.Provider

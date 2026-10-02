@@ -10,7 +10,7 @@ import Sidebar from 'src/component/marketing/developer/Sidebar';
 
 /**
  * @deprecated ROLE_PERMISSIONS is deprecated in favor of dynamic permissions stored in the database
- * and returned by authenticateStaff / /api/developer/me. Retained solely as a fallback for unmigrated sessions.
+ * and returned by authenticateStaff / /api/marketing/developer/me. Retained solely as a fallback for unmigrated sessions.
  */
 export const ROLE_PERMISSIONS = {
   admin: [

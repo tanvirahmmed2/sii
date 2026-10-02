@@ -28,7 +28,7 @@ export default function AdminSubscribersPage() {
   const fetchSubs = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/developer/subscribers');
+      const res = await fetch('/api/marketing/developer/subscribers');
       const data = await res.json();
       if (data.success) {
         setSubs(data.records || []);
@@ -56,7 +56,7 @@ export default function AdminSubscribersPage() {
     if (!confirm('Are you sure you want to delete this subscriber record?')) return;
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/developer/subscribers?id=${id}`, {
+      const res = await fetch(`/api/marketing/developer/subscribers?id=${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();

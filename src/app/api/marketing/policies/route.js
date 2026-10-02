@@ -2,19 +2,21 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 
 // ============================================================================
-// GET: Public list of published policies (or single policy by slug)
+// GET: Public list of active policies (or single policy by slug)
+// Conforms strictly to Table 20 (policies) in psql/schema.psql
 // ============================================================================
 export async function GET(request) {
   try {
+
     const { searchParams } = new URL(request.url);
     const slug = searchParams.get('slug');
     const search = searchParams.get('search');
 
     if (slug) {
       const res = await queryDb(
-        `SELECT id, title, slug, description, created_at, updated_at 
+        `SELECT id, title, slug, description, is_active, created_at, updated_at 
          FROM policies 
-         WHERE slug = $1 AND is_published = TRUE 
+         WHERE LOWER(slug) = $1 AND COALESCE(is_active, TRUE) = TRUE 
          LIMIT 1`,
         [slug.toLowerCase()]
       ).catch(() => ({ rows: [] }));
@@ -29,7 +31,7 @@ export async function GET(request) {
       return NextResponse.json({ success: true, policy: res.rows[0] });
     }
 
-    const conditions = ['is_published = TRUE'];
+    const conditions = ['COALESCE(is_active, TRUE) = TRUE'];
     const params = [];
 
     if (search && search.trim()) {
@@ -40,7 +42,7 @@ export async function GET(request) {
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const res = await queryDb(
-      `SELECT id, title, slug, description, created_at, updated_at 
+      `SELECT id, title, slug, description, is_active, created_at, updated_at 
        FROM policies 
        ${whereClause} 
        ORDER BY id ASC`,

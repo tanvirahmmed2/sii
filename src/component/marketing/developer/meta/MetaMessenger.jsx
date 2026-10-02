@@ -61,7 +61,7 @@ export default function MetaMessenger({
   // 1. Fetch Meta configuration status
   const fetchConfig = useCallback(async () => {
     try {
-      const res = await fetch('/api/developer/meta/config');
+      const res = await fetch('/api/marketing/developer/meta/config');
       const data = await res.json();
       if (data.success && data.config) {
         setConfig(data.config);
@@ -75,7 +75,7 @@ export default function MetaMessenger({
   const fetchConversations = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoadingConvs(true);
-      const url = `/api/developer/meta/conversations?platform=${platform}&status=${statusFilter}&search=${encodeURIComponent(searchTerm)}`;
+      const url = `/api/marketing/developer/meta/conversations?platform=${platform}&status=${statusFilter}&search=${encodeURIComponent(searchTerm)}`;
       const res = await fetch(url);
       const data = await res.json();
       if (data.success && Array.isArray(data.records)) {
@@ -97,7 +97,7 @@ export default function MetaMessenger({
     if (!convId) return;
     try {
       if (!silent) setLoadingMsgs(true);
-      const res = await fetch(`/api/developer/meta/messages?conversationId=${convId}`);
+      const res = await fetch(`/api/marketing/developer/meta/messages?conversationId=${convId}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.records)) {
         setMessages(data.records);
@@ -163,7 +163,7 @@ export default function MetaMessenger({
     setMessages((prev) => [...prev, tempMsg]);
 
     try {
-      const res = await fetch('/api/developer/meta/messages', {
+      const res = await fetch('/api/marketing/developer/meta/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -203,7 +203,7 @@ export default function MetaMessenger({
     const newStatus = selectedConv.status === 'OPEN' ? 'RESOLVED' : 'OPEN';
     setStatusUpdating(true);
     try {
-      const res = await fetch('/api/developer/meta/conversations', {
+      const res = await fetch('/api/marketing/developer/meta/conversations', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: selectedConv.id, status: newStatus }),
@@ -225,7 +225,7 @@ export default function MetaMessenger({
     if (!selectedConv?.id) return;
     if (!confirm('Are you sure you want to delete this conversation and all associated message history?')) return;
     try {
-      const res = await fetch(`/api/developer/meta/conversations?id=${selectedConv.id}`, {
+      const res = await fetch(`/api/marketing/developer/meta/conversations?id=${selectedConv.id}`, {
         method: 'DELETE',
       });
       const data = await res.json();

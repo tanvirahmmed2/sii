@@ -6,6 +6,7 @@ import { queryDb } from 'src/lib/database/db';
 // ============================================================================
 export async function GET(request) {
   try {
+
     const { searchParams } = new URL(request.url);
     const department = searchParams.get('department') || '';
     const jobType = searchParams.get('job_type') || '';
@@ -66,24 +67,27 @@ export async function GET(request) {
       ORDER BY is_featured DESC, created_at DESC
     `;
 
-    const res = await queryDb(query, params);
+    const res = await queryDb(query, params).catch((err) => {
+      console.warn('career query error:', err.message);
+      return { rows: [] };
+    });
 
     // Get distinct active departments for filter pills
     const deptRes = await queryDb(
-      `SELECT DISTINCT department FROM career WHERE is_published = TRUE ORDER BY department ASC`
-    );
+      `SELECT DISTINCT department FROM career WHERE is_published = TRUE AND department IS NOT NULL ORDER BY department ASC`
+    ).catch(() => ({ rows: [] }));
     const departments = deptRes.rows.map((r) => r.department);
 
     return NextResponse.json({
       success: true,
-      careers: res.rows,
+      careers: res.rows || [],
       departments,
-      total: res.rows.length,
+      total: (res.rows || []).length,
     });
   } catch (error) {
     console.error('Public careers GET error:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch careers.' },
+      { success: false, error: 'Failed to fetch careers.', careers: [], departments: [] },
       { status: 500 }
     );
   }

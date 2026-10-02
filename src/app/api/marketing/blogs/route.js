@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 
 // ============================================================================
-// GET: Public endpoint for published blogs and blogs_image gallery
+// GET: Public endpoint for published blogs
+// Conforms strictly to Table 17 (blogs) in psql/schema.psql
 // ============================================================================
 export async function GET(request) {
   try {
@@ -14,44 +15,46 @@ export async function GET(request) {
     let query = `
       SELECT 
         b.id,
-        b.app_id,
+        b.developer_id,
         b.title,
         b.slug,
-        b.summary,
+        b.excerpt,
+        b.excerpt AS summary,
         b.content,
+        b.image,
+        b.image AS cover_image,
+        b.image_id,
+        b.category,
+        b.tags,
+        b.meta_title,
+        b.meta_description,
+        b.is_published,
         b.published_at,
+        b.views_count,
         b.created_at,
+        b.updated_at,
         d.name AS author_name,
-        a.title AS app_title,
-        a.slug AS app_slug,
         COALESCE(
-          (
-            SELECT json_agg(
-              json_build_object(
-                'id', bi.id,
-                'image_url', bi.image_url,
-                'image', COALESCE(bi.image, bi.image_url),
-                'image_id', bi.image_id,
-                'title', bi.title,
-                'alt_text', bi.alt_text,
-                'caption', bi.caption
-              ) ORDER BY bi.id ASC
-            )
-            FROM blogs_image bi
-            WHERE bi.blog_id = b.id
-          ),
+          CASE 
+            WHEN b.image IS NOT NULL AND b.image != '' THEN
+              json_build_array(
+                json_build_object(
+                  'id', 1,
+                  'image_url', b.image,
+                  'image', b.image,
+                  'image_id', b.image_id,
+                  'title', b.title,
+                  'alt_text', b.title,
+                  'caption', b.excerpt
+                )
+              )
+            ELSE
+              '[]'::json
+          END,
           '[]'::json
-        ) AS images,
-        (
-          SELECT bi.image_url
-          FROM blogs_image bi
-          WHERE bi.blog_id = b.id
-          ORDER BY bi.id ASC
-          LIMIT 1
-        ) AS cover_image
+        ) AS images
       FROM blogs b
-      LEFT JOIN developers d ON b.author_id = d.id
-      LEFT JOIN apps a ON b.app_id = a.id
+      LEFT JOIN developers d ON b.developer_id = d.id
       WHERE b.is_published = TRUE
     `;
 
@@ -67,26 +70,33 @@ export async function GET(request) {
     }
 
     if (search && search.trim()) {
-      query += ` AND (LOWER(b.title) LIKE $${idx} OR LOWER(COALESCE(b.summary, '')) LIKE $${idx})`;
+      query += ` AND (LOWER(b.title) LIKE $${idx} OR LOWER(COALESCE(b.excerpt, '')) LIKE $${idx})`;
       params.push(`%${search.trim().toLowerCase()}%`);
       idx++;
     }
 
-    query += ` ORDER BY b.published_at DESC, b.id DESC`;
+    query += ` ORDER BY b.published_at DESC NULLS LAST, b.id DESC`;
 
-    const res = await queryDb(query, params);
+    const res = await queryDb(query, params).catch((err) => {
+      console.error('Public blogs queryDb error:', err.message);
+      return { rows: [] };
+    });
 
     if (slug || id) {
       const blog = res.rows[0] || null;
       if (!blog) {
         return NextResponse.json({ success: false, error: 'Article not found.' }, { status: 404 });
       }
+
+      // Increment views count safely in background
+      queryDb(`UPDATE blogs SET views_count = COALESCE(views_count, 0) + 1 WHERE id = $1`, [blog.id]).catch(() => {});
+
       return NextResponse.json({ success: true, blog, record: blog });
     }
 
     return NextResponse.json({ success: true, blogs: res.rows, records: res.rows });
   } catch (error) {
     console.error('Public blogs GET error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message, blogs: [] }, { status: 500 });
   }
 }

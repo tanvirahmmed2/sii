@@ -14,7 +14,7 @@ export default function AdminLeadsPage() {
   const fetchLeads = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/developer/leads');
+      const res = await fetch('/api/marketing/developer/leads');
       const data = await res.json();
       if (data.success) {
         setLeads(data.records || []);
@@ -34,7 +34,7 @@ export default function AdminLeadsPage() {
     if (!confirm('Are you sure you want to delete this sales lead?')) return;
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/developer/leads?id=${id}`, {
+      const res = await fetch(`/api/marketing/developer/leads?id=${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();
@@ -101,7 +101,7 @@ export default function AdminLeadsPage() {
 
       {showForm && (
         <LeadForm
-          apiEndpoint="/api/developer/leads"
+          apiEndpoint="/api/marketing/developer/leads"
           onSuccess={() => {
             setShowForm(false);
             fetchLeads();

@@ -34,7 +34,7 @@ export default function AdminCreatorsPage() {
   const fetchCreators = async (isRefresh = false) => {
     try {
       if (isRefresh) setLoading(true);
-      const res = await fetch('/api/developer/creators');
+      const res = await fetch('/api/marketing/developer/creators');
       const data = await res.json();
       if (data.success) {
         setCreators(data.creators || []);
@@ -52,7 +52,7 @@ export default function AdminCreatorsPage() {
       return;
     }
 
-    fetch('/api/developer/creators')
+    fetch('/api/marketing/developer/creators')
       .then((res) => res.json())
       .then((data) => {
         if (!ignore) {
@@ -77,7 +77,7 @@ export default function AdminCreatorsPage() {
   const handleToggleActive = async (creatorId) => {
     try {
       setActionLoadingId(creatorId);
-      const res = await fetch('/api/developer/creators', {
+      const res = await fetch('/api/marketing/developer/creators', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ creatorId, toggle_active: true }),

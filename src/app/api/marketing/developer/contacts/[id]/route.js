@@ -22,19 +22,23 @@ export async function GET(request, context) {
         c.id,
         c.name,
         c.email,
+        c.phone,
+        c.institution,
         c.subject,
         c.message,
         c.status,
-        c.reply,
-        c.replied_by_developer_id,
+        c.admin_notes AS reply,
+        c.admin_notes,
+        c.assigned_developer_id,
+        c.assigned_developer_id AS replied_by_developer_id,
         c.created_at,
         c.updated_at,
         d.name AS replied_by_name,
         d.email AS replied_by_email,
         COALESCE(dr.slug, 'developer') AS replied_by_role
       FROM contacts c
-      LEFT JOIN developers d ON c.replied_by_developer_id = d.id
-      LEFT JOIN roles dr ON d.role_id = dr.id
+      LEFT JOIN developers d ON c.assigned_developer_id = d.id
+      LEFT JOIN developer_roles dr ON d.role_id = dr.id
       WHERE c.id = $1
       LIMIT 1
     `, [id]);
@@ -47,7 +51,7 @@ export async function GET(request, context) {
       success: true,
       contact: res.rows[0],
       record: res.rows[0],
-      currentUserRole: auth.staff?.role || 'staff',
+      currentUserRole: auth.user?.role || auth.staff?.role || 'developer',
     });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

@@ -62,7 +62,7 @@ export default function PaymentGatewayCheckout({ creatorId, paymentId, initialGa
   useEffect(() => {
     let isMounted = true;
     if (creatorId && paymentId) {
-      fetch(`/api/creator/payments?id=${paymentId}&creatorId=${creatorId}`)
+      fetch(`/api/marketing/creator/payments?id=${paymentId}&creatorId=${creatorId}`)
         .then((res) => res.json())
         .then((data) => {
           if (!isMounted) return;
@@ -154,7 +154,7 @@ export default function PaymentGatewayCheckout({ creatorId, paymentId, initialGa
 
     setIsSendingOtp(true);
     try {
-      const res = await fetch('/api/creator/payments/bkash', {
+      const res = await fetch('/api/marketing/creator/payments/bkash', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -188,7 +188,7 @@ export default function PaymentGatewayCheckout({ creatorId, paymentId, initialGa
     setError('');
     setIsSendingOtp(true);
     try {
-      const res = await fetch('/api/creator/payments/bkash', {
+      const res = await fetch('/api/marketing/creator/payments/bkash', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -224,7 +224,7 @@ export default function PaymentGatewayCheckout({ creatorId, paymentId, initialGa
 
     setIsVerifyingOtp(true);
     try {
-      const res = await fetch('/api/creator/payments/bkash', {
+      const res = await fetch('/api/marketing/creator/payments/bkash', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -261,7 +261,7 @@ export default function PaymentGatewayCheckout({ creatorId, paymentId, initialGa
     setPaying(true);
 
     try {
-      const res = await fetch('/api/creator/payments/bkash', {
+      const res = await fetch('/api/marketing/creator/payments/bkash', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -343,7 +343,7 @@ export default function PaymentGatewayCheckout({ creatorId, paymentId, initialGa
     setPaying(true);
 
     try {
-      const res = await fetch('/api/creator/payments', {
+      const res = await fetch('/api/marketing/creator/payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -403,7 +403,7 @@ export default function PaymentGatewayCheckout({ creatorId, paymentId, initialGa
     );
   }
 
-  const isAlreadyPaid = payment?.status === 'COMPLETED' && !isSuccess;
+  const isAlreadyPaid = (payment?.status === 'COMPLETED' || payment?.status === 'successful' || payment?.status === 'SUCCESSFUL') && !isSuccess;
 
   return (
     <div className="max-w-md mx-auto px-4 py-8 space-y-5">

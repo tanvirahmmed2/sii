@@ -56,7 +56,7 @@ export default function AppUpdateForm({ app, onSuccess, onCancel }) {
     const fetchWebsiteModules = async () => {
       try {
         setLoadingModules(true);
-        const res = await axios.get('/api/developer/apps?website_modules=true');
+        const res = await axios.get('/api/marketing/developer/apps?website_modules=true');
         if (res.data?.success && Array.isArray(res.data?.website_modules)) {
           setAvailableModules(res.data.website_modules);
         }
@@ -106,7 +106,7 @@ export default function AppUpdateForm({ app, onSuccess, onCancel }) {
     setError('');
 
     try {
-      const res = await axios.get('/api/developer/apps?cloudinary_assets=true');
+      const res = await axios.get('/api/marketing/developer/apps?cloudinary_assets=true');
 
       if (res.data?.success && res.data?.assets) {
         setCloudinaryAssets(res.data.assets);
@@ -127,7 +127,7 @@ export default function AppUpdateForm({ app, onSuccess, onCancel }) {
     setSuccessMsg('');
 
     try {
-      const res = await axios.put('/api/developer/apps', {
+      const res = await axios.put('/api/marketing/developer/apps', {
         id: app.id,
         public_id: asset.public_id,
         asset_id: asset.asset_id,
@@ -189,7 +189,7 @@ export default function AppUpdateForm({ app, onSuccess, onCancel }) {
         uploadFormData.append('images', file);
       });
 
-      const res = await axios.put('/api/developer/apps', uploadFormData, {
+      const res = await axios.put('/api/marketing/developer/apps', uploadFormData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -218,7 +218,7 @@ export default function AppUpdateForm({ app, onSuccess, onCancel }) {
     setSuccessMsg('');
 
     try {
-      const res = await axios.delete(`/api/developer/apps?image_id=${imageId}`);
+      const res = await axios.delete(`/api/marketing/developer/apps?image_id=${imageId}`);
 
       if (res.data?.success) {
         setImages((prev) => prev.filter((img) => img.id !== imageId));
@@ -248,14 +248,14 @@ export default function AppUpdateForm({ app, onSuccess, onCancel }) {
         uploadFormData.append('id', String(app.id));
         selectedFiles.forEach((file) => uploadFormData.append('images', file));
 
-        await axios.put('/api/developer/apps', uploadFormData, {
+        await axios.put('/api/marketing/developer/apps', uploadFormData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
         setSelectedFiles([]);
         setFilePreviews([]);
       }
 
-      const res = await axios.put('/api/developer/apps', {
+      const res = await axios.put('/api/marketing/developer/apps', {
         id: app.id,
         title: formData.title,
         short_description: formData.short_description,

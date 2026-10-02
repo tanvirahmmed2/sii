@@ -15,7 +15,7 @@ export default function AppCreateForm({ onSuccess, onCancel }) {
     setError('');
 
     try {
-      const res = await axios.post('/api/developer/apps', {
+      const res = await axios.post('/api/marketing/developer/apps', {
         title: title.trim() || 'Untitled App',
         is_published: false,
       });

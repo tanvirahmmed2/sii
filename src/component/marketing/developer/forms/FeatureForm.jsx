@@ -7,7 +7,7 @@ export default function FeatureForm({
   initialData = null,
   onSuccess,
   onCancel,
-  apiEndpoint = '/api/developer/features',
+  apiEndpoint = '/api/marketing/developer/features',
 }) {
   const isEditing = Boolean(initialData?.id);
 

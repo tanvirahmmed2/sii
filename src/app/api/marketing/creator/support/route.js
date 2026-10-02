@@ -22,14 +22,16 @@ export async function GET(request) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
-    const creatorEmail = sessionCreator?.email || '';
-
     const res = await queryDb(
-      `SELECT * FROM support 
-       WHERE creator_id = $1 OR requester_email = $2 
-       ORDER BY id DESC LIMIT 50`,
-      [creatorId, creatorEmail]
-    );
+      `SELECT s.*,
+              c.name AS creator_name,
+              c.email AS creator_email
+       FROM supports s
+       LEFT JOIN creators c ON s.creator_id = c.id
+       WHERE s.creator_id = $1 
+       ORDER BY s.id DESC LIMIT 50`,
+      [creatorId]
+    ).catch(() => ({ rows: [] }));
 
     return NextResponse.json({ success: true, tickets: res.rows });
   } catch (error) {
@@ -52,7 +54,7 @@ export async function handleSupportAction(body, sessionCreator) {
 
   // 1. Create Support Ticket
   if (action === 'create_ticket' || !action) {
-    const { subject, category, priority, message } = body;
+    const { subject, priority = 'medium', message } = body;
 
     if (!subject || !message) {
       return NextResponse.json({ success: false, error: 'Subject and message are required.' }, { status: 400 });
@@ -63,21 +65,22 @@ export async function handleSupportAction(body, sessionCreator) {
       return NextResponse.json({ success: false, error: 'Creator not found.' }, { status: 404 });
     }
 
-    const creator = c.rows[0];
     const ticketNumber = 'TKT-' + Math.floor(100000 + Math.random() * 900000);
+    const validPriorities = ['low', 'medium', 'high', 'urgent'];
+    const cleanPriority = validPriorities.includes(String(priority).toLowerCase()) ? String(priority).toLowerCase() : 'medium';
 
     const ticketRes = await queryDb(
-      `INSERT INTO support (ticket_number, creator_id, requester_name, requester_email, subject, category, priority, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'OPEN')
+      `INSERT INTO supports (ticket_number, creator_id, subject, priority, status)
+       VALUES ($1, $2, $3, $4, 'open')
        RETURNING *`,
-      [ticketNumber, creatorId, creator.name, creator.email, subject, category || 'TECHNICAL', priority || 'MEDIUM']
+      [ticketNumber, creatorId, subject.trim(), cleanPriority]
     );
     const ticket = ticketRes.rows[0];
 
     await queryDb(
-      `INSERT INTO support_messages (support_id, sender_type, sender_id, sender_name, message)
-       VALUES ($1, 'CREATOR', $2, $3, $4)`,
-      [ticket.id, creatorId, creator.name, message]
+      `INSERT INTO support_messages (support_id, sender_type, sender_id, message)
+       VALUES ($1, 'creator', $2, $3)`,
+      [ticket.id, creatorId, message.trim()]
     );
 
     return NextResponse.json({ success: true, ticket });
@@ -90,13 +93,16 @@ export async function handleSupportAction(body, sessionCreator) {
       return NextResponse.json({ success: false, error: 'Ticket ID and message are required.' }, { status: 400 });
     }
 
-    const creatorData = sessionCreator || (await queryDb('SELECT name FROM creators WHERE id = $1', [creatorId])).rows[0];
-
     const msgRes = await queryDb(
-      `INSERT INTO support_messages (support_id, sender_type, sender_id, sender_name, message)
-       VALUES ($1, 'CREATOR', $2, $3, $4)
+      `INSERT INTO support_messages (support_id, sender_type, sender_id, message)
+       VALUES ($1, 'creator', $2, $3)
        RETURNING *`,
-      [Number(ticketId), creatorId, creatorData?.name || 'Creator', message]
+      [Number(ticketId), creatorId, message.trim()]
+    );
+
+    await queryDb(
+      `UPDATE supports SET last_message_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+      [Number(ticketId)]
     );
 
     return NextResponse.json({ success: true, message: msgRes.rows[0] });

@@ -42,7 +42,7 @@ export async function GET(request) {
       JOIN chat_participants cp ON c.id = cp.chat_id AND cp.developer_id = $1
       JOIN chat_participants all_cp ON c.id = all_cp.chat_id
       JOIN developers d ON all_cp.developer_id = d.id
-      LEFT JOIN roles r ON d.role_id = r.id
+      LEFT JOIN developer_roles r ON d.role_id = r.id
       LEFT JOIN LATERAL (
         SELECT m.id, m.message, m.created_at, m.sender_developer_id
         FROM chat_messages m
@@ -60,7 +60,7 @@ export async function GET(request) {
     const devsRes = await queryDb(`
       SELECT d.id, d.name, d.email, COALESCE(r.slug, 'developer') AS role, COALESCE(r.name, 'Developer') AS role_name
       FROM developers d
-      LEFT JOIN roles r ON d.role_id = r.id
+      LEFT JOIN developer_roles r ON d.role_id = r.id
       WHERE d.is_active = TRUE AND d.id != $1
       ORDER BY d.name ASC
     `, [currentDevId]);

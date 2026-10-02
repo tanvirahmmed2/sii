@@ -32,8 +32,10 @@ export async function POST(request, context) {
 
     const isNumeric = /^\d+$/.test(id);
     const ticketRes = await queryDb(`
-      SELECT * FROM support 
-      WHERE ${isNumeric ? 'id = $1 OR ticket_number = $1' : 'ticket_number = $1'}
+      SELECT s.*, c.name AS requester_name, c.email AS requester_email 
+      FROM supports s
+      LEFT JOIN creators c ON s.creator_id = c.id
+      WHERE ${isNumeric ? 's.id = $1 OR s.ticket_number = $1' : 's.ticket_number = $1'}
       LIMIT 1
     `, [id]);
 
@@ -46,28 +48,29 @@ export async function POST(request, context) {
 
     // Insert staff message
     const msgRes = await queryDb(`
-      INSERT INTO support_messages (support_id, sender_type, sender_id, sender_name, message)
-      VALUES ($1, 'DEVELOPER', $2, $3, $4)
+      INSERT INTO support_messages (support_id, sender_type, sender_id, message)
+      VALUES ($1, 'developer', $2, $3)
       RETURNING *
-    `, [ticket.id, dev.id, dev.name, cleanMessage]);
+    `, [ticket.id, dev.id, cleanMessage]);
 
     const newMsg = msgRes.rows[0];
 
     // Optional image attachment
     if (imageUrl) {
       await queryDb(`
-        INSERT INTO support_images (support_id, message_id, image_url)
-        VALUES ($1, $2, $3)
-      `, [ticket.id, newMsg.id, imageUrl]).catch(() => {});
+        INSERT INTO support_images (message_id, image_url)
+        VALUES ($1, $2)
+      `, [newMsg.id, imageUrl]).catch(() => {});
     }
 
     // Determine target status
-    const targetStatus = status || (ticket.status === 'OPEN' ? 'IN_PROGRESS' : ticket.status);
+    const targetStatus = status ? status.toLowerCase() : (ticket.status === 'open' ? 'in_progress' : ticket.status);
 
     // Update ticket
     const updateRes = await queryDb(`
-      UPDATE support
+      UPDATE supports
       SET updated_at = CURRENT_TIMESTAMP,
+          last_message_at = CURRENT_TIMESTAMP,
           status = $1,
           assigned_developer_id = COALESCE(assigned_developer_id, $2)
       WHERE id = $3
@@ -114,6 +117,7 @@ export async function POST(request, context) {
       success: true,
       message: {
         ...newMsg,
+        sender_name: dev.name,
         developer_name: dev.name,
         developer_role: dev.role,
       },

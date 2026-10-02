@@ -63,7 +63,7 @@ export default function AdminProjectsPage() {
   const fetchProjects = useCallback(async (showLoading = false) => {
     try {
       if (showLoading) setLoading(true);
-      const res = await fetch('/api/developer/projects');
+      const res = await fetch('/api/marketing/developer/projects');
       const data = await res.json();
       if (data.success) {
         setProjects(data.projects || []);
@@ -94,7 +94,7 @@ export default function AdminProjectsPage() {
 
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/developer/projects/${id}`, {
+      const res = await fetch(`/api/marketing/developer/projects/${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();
@@ -130,7 +130,7 @@ export default function AdminProjectsPage() {
     try {
       // 1. Update working status
       if (quickWorkingStatus !== quickEditProject.working_status) {
-        await fetch(`/api/developer/projects/${quickEditProject.id}`, {
+        await fetch(`/api/marketing/developer/projects/${quickEditProject.id}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -143,7 +143,7 @@ export default function AdminProjectsPage() {
       // 2. Update payment
       const budgetCents = Math.round(parseFloat(quickBudget || 0) * 100);
       const paidCents = Math.round(parseFloat(quickPaid || 0) * 100);
-      await fetch(`/api/developer/projects/${quickEditProject.id}`, {
+      await fetch(`/api/marketing/developer/projects/${quickEditProject.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -156,7 +156,7 @@ export default function AdminProjectsPage() {
       });
 
       // 3. Assign developer
-      await fetch(`/api/developer/projects/${quickEditProject.id}`, {
+      await fetch(`/api/marketing/developer/projects/${quickEditProject.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -8,11 +8,13 @@ export default function HomeBlogCard({ blog }) {
   if (!blog) return null;
 
   const images = Array.isArray(blog.images) ? blog.images : [];
-  const coverImage = images[0]?.image_url || images[0]?.image || blog.cover_image || null;
+  const coverImage = images[0]?.image_url || images[0]?.image || blog.cover_image || blog.image || null;
 
-  // Clean HTML from summary/content for clean card snippet
+  // Clean HTML from summary/excerpt/content for clean card snippet
   const cleanSnippet = blog.summary
     ? blog.summary.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    : blog.excerpt
+    ? blog.excerpt.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
     : blog.content
     ? blog.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
     : '';

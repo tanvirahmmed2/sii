@@ -35,7 +35,7 @@ export async function GET(request) {
       LEFT JOIN developer_payrolls dp ON p.id = dp.payroll_id
       GROUP BY p.id, d.name
       ORDER BY p.pay_period_start DESC, p.id DESC
-    `);
+    `).catch(() => ({ rows: [] }));
 
     // 2. Aggregate metrics
     const statsRes = await queryDb(`
@@ -46,16 +46,16 @@ export async function GET(request) {
         (SELECT COUNT(*)::int FROM developers WHERE is_active = TRUE) AS active_developers
       FROM payroll_payments
       WHERE status = 'COMPLETED'
-    `);
+    `).catch(() => ({ rows: [] }));
 
     // 3. List active developers for new payroll creation modal
     const devsRes = await queryDb(`
       SELECT d.id, d.name, d.email, COALESCE(r.slug, 'developer') AS role, COALESCE(r.name, 'Developer') AS role_name
       FROM developers d
-      LEFT JOIN roles r ON d.role_id = r.id
+      LEFT JOIN developer_roles r ON d.role_id = r.id
       WHERE d.is_active = TRUE 
       ORDER BY d.name ASC
-    `);
+    `).catch(() => ({ rows: [] }));
 
     return NextResponse.json({
       success: true,
@@ -121,7 +121,7 @@ export async function POST(request) {
       `INSERT INTO payrolls (title, pay_period_start, pay_period_end, status, total_amount, notes, created_by_developer_id)
        VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6)
        RETURNING *`,
-      [title.trim(), pay_period_start, pay_period_end, totalAmount.toFixed(2), notes || null, auth.staff.id]
+      [title.trim(), pay_period_start, pay_period_end, totalAmount.toFixed(2), notes || null, auth.user?.id || auth.staff?.id || null]
     );
 
     const newPayroll = payrollRes.rows[0];

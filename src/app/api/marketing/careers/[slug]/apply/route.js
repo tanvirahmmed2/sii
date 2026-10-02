@@ -7,6 +7,7 @@ import { uploadToCloudinary } from 'src/lib/database/cloudinary';
 // ============================================================================
 export async function POST(request, context) {
   try {
+
     const { slug } = await context.params;
 
     if (!slug) {

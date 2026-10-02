@@ -146,7 +146,7 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/developer/me/logout', {
+      await fetch('/api/marketing/developer/me/logout', {
         method: 'POST',
       });
       router.push('/developer-auth/login');

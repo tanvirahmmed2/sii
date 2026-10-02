@@ -105,8 +105,9 @@ export default function SingleBlogPage({ params }) {
       images.push({ url, title: img.title || img.alt_text || img.caption || blog.title });
     }
   });
-  if (blog.cover_image && !images.some((i) => i.url === blog.cover_image)) {
-    images.unshift({ url: blog.cover_image, title: blog.title });
+  const coverUrl = blog.cover_image || blog.image;
+  if (coverUrl && !images.some((i) => i.url === coverUrl)) {
+    images.unshift({ url: coverUrl, title: blog.title });
   }
 
   const currentImgObj = images[activeImageIndex] || images[0] || null;
@@ -132,10 +133,10 @@ export default function SingleBlogPage({ params }) {
     <main className="min-h-screen bg-slate-50/70 dark:bg-slate-950/70">
       <div className="w-full space-y-10">
         {/* 1. TOP: Summary Banner (matching /apps/[slug]) */}
-        {blog.summary && (
+        {(blog.summary || blog.excerpt) && (
           <section className="bg-primary-light dark:bg-primary-dark border border-primary/20 dark:border-primary-dark/30 p-6 sm:p-8 shadow-xs space-y-3">
             <p className="text-lg text-center sm:text-2xl font-semibold py-8 sm:py-12 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto text-slate-900 dark:text-dark leading-relaxed tracking-tight">
-              {blog.summary}
+              {blog.summary || blog.excerpt}
             </p>
           </section>
         )}

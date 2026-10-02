@@ -25,7 +25,7 @@ export default function PaymentForm({ onSuccess, onCancel }) {
     const transaction_id = formData.transaction_id || 'txn_' + Date.now() + Math.random().toString(36).substring(2, 6);
 
     try {
-      const res = await fetch('/api/developer/payments', {
+      const res = await fetch('/api/marketing/developer/payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

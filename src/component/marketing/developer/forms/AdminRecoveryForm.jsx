@@ -22,7 +22,7 @@ export default function AdminRecoveryForm() {
     setError('');
 
     try {
-      const res = await fetch('/api/developer/me/recovery', {
+      const res = await fetch('/api/marketing/developer/me/recovery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'request_token', email }),
@@ -63,7 +63,7 @@ export default function AdminRecoveryForm() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/developer/me/recovery', {
+      const res = await fetch('/api/marketing/developer/me/recovery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

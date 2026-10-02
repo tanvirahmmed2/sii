@@ -48,7 +48,7 @@ export default function CreatorProjectsListPage() {
     if (!creatorId) return;
     try {
       if (showLoading) setLoading(true);
-      const res = await fetch(`/api/creator/projects?creatorId=${creatorId}`);
+      const res = await fetch(`/api/marketing/creator/projects?creatorId=${creatorId}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.projects)) {
         setProjects(data.projects);
@@ -78,7 +78,7 @@ export default function CreatorProjectsListPage() {
     try {
       const budgetCents = estimatedBudget ? Math.round(parseFloat(estimatedBudget) * 100) : 0;
 
-      const res = await fetch('/api/creator/projects', {
+      const res = await fetch('/api/marketing/creator/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

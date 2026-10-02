@@ -27,9 +27,12 @@ export async function GET(request) {
     if (websiteIdParam) {
       const singleRes = await queryDb(
         `SELECT w.*, 
-                ws.site_title, ws.tagline, ws.contact_email, ws.contact_phone, 
-                ws.primary_color, ws.secondary_color, ws.font_family, ws.currency AS setting_currency,
-                ws.social_links, ws.seo_config
+                w.name AS site_title,
+                ws.motto AS tagline,
+                COALESCE(ws.contact_email, w.contact_email) AS contact_email,
+                COALESCE(ws.contact_phone, w.contact_phone) AS contact_phone, 
+                w.primary_color,
+                (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published
          FROM websites w
          LEFT JOIN website_settings ws ON w.id = ws.website_id
          WHERE w.id = $1 AND w.creator_id = $2
@@ -47,15 +50,18 @@ export async function GET(request) {
     // List all websites for creator
     const res = await queryDb(
       `SELECT w.*, 
-              ws.site_title, ws.tagline, ws.contact_email, ws.contact_phone, 
-              ws.primary_color, ws.secondary_color, ws.font_family, ws.currency AS setting_currency,
-              ws.social_links, ws.seo_config
+              w.name AS site_title,
+              ws.motto AS tagline,
+              COALESCE(ws.contact_email, w.contact_email) AS contact_email,
+              COALESCE(ws.contact_phone, w.contact_phone) AS contact_phone, 
+              w.primary_color,
+              (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published
        FROM websites w
        LEFT JOIN website_settings ws ON w.id = ws.website_id
        WHERE w.creator_id = $1
        ORDER BY w.id DESC`,
       [creatorId]
-    );
+    ).catch(() => ({ rows: [] }));
 
     return NextResponse.json({ success: true, websites: res.rows });
   } catch (error) {
@@ -97,15 +103,17 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       }, { status: 400 });
     }
 
-    // Check active package subscription and quotas
+    // Check active package subscription and quotas from purchases table
     const activeSub = await queryDb(
-      `SELECT s.*, COALESCE(p.max_websites, p.max_portfolios, 1) AS max_websites, p.max_portfolios 
-       FROM subscription s 
-       JOIN packages p ON s.package_id = p.id 
-       WHERE s.creator_id = $1 AND s.status = 'ACTIVE' AND s.current_period_end > CURRENT_TIMESTAMP
-       ORDER BY s.id DESC LIMIT 1`,
+      `SELECT pu.*, COALESCE(p.max_websites, 1) AS max_websites, pu.package_id 
+       FROM purchases pu 
+       JOIN packages p ON pu.package_id = p.id 
+       WHERE pu.creator_id = $1 
+         AND pu.status IN ('completed', 'active') 
+         AND (pu.period_end IS NULL OR pu.period_end > CURRENT_TIMESTAMP)
+       ORDER BY pu.id DESC LIMIT 1`,
       [creatorId]
-    );
+    ).catch(() => ({ rows: [] }));
 
     if (activeSub.rows.length === 0) {
       return NextResponse.json({
@@ -114,7 +122,8 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       }, { status: 403 });
     }
 
-    const maxLimit = Number(activeSub.rows[0].max_websites ?? activeSub.rows[0].max_portfolios ?? 1);
+    const packageRecord = activeSub.rows[0];
+    const maxLimit = Number(packageRecord.max_websites || 1);
     const countRes = await queryDb('SELECT COUNT(*)::int AS count FROM websites WHERE creator_id = $1', [creatorId]);
     const currentCount = countRes.rows[0].count;
 
@@ -137,35 +146,43 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       fullSubdomain = `${rawSubdomain}-${Date.now().toString().slice(-4)}.${mainDomain}`;
     }
 
-    const themeConfig = body.themeConfig || {
-      primaryColor: body.primaryColor || '#6366f1',
-      secondaryColor: body.secondaryColor || '#4f46e5',
-      fontFamily: body.fontFamily || 'Inter',
-      accent: '#10b981',
-      mode: 'dark',
-    };
+    // Generate unique slug
+    let slug = rawSubdomain.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    const slugCheck = await queryDb('SELECT id FROM websites WHERE LOWER(slug) = LOWER($1) LIMIT 1', [slug]);
+    if (slugCheck.rows.length > 0) {
+      slug = `${slug}-${Date.now().toString().slice(-4)}`;
+    }
+
+    const primaryColor = body.primaryColor || body.themeConfig?.primaryColor || '#6366f1';
+    const themeName = body.theme || body.themeConfig?.mode || 'default';
 
     const res = await queryDb(
-      `INSERT INTO websites (creator_id, name, subdomain, custom_domain, theme_config, status, storage_used_mb, is_published)
-       VALUES ($1, $2, $3, $4, $5, 'ACTIVE', 15, TRUE)
+      `INSERT INTO websites (creator_id, package_id, name, slug, subdomain, custom_domain, status, primary_color, theme, storage_used_mb, is_maintenance_mode)
+       VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8, 15, FALSE)
        RETURNING *`,
       [
         creatorId,
+        packageRecord.package_id || null,
         name,
+        slug,
         fullSubdomain,
         body.customDomain || null,
-        JSON.stringify(themeConfig),
+        primaryColor,
+        themeName,
       ]
     );
     const newWebsite = res.rows[0];
 
-    // Seed default settings, modules, roles, permissions, and sample catalog items
-    await seedWebsiteDefaults(newWebsite.id, newWebsite.name, themeConfig, body);
+    // Seed default settings and configurations
+    await seedWebsiteDefaults(newWebsite.id, newWebsite.name, { primaryColor, theme: themeName }, body);
 
     return NextResponse.json({
       success: true,
       message: 'Website setup completed successfully!',
-      website: newWebsite,
+      website: {
+        ...newWebsite,
+        is_published: true,
+      },
     });
   }
 
@@ -197,16 +214,26 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       values.push(body.custom_domain || null);
     }
     if (body.theme_config !== undefined) {
-      updates.push(`theme_config = $${idx++}`);
-      values.push(typeof body.theme_config === 'object' ? JSON.stringify(body.theme_config) : body.theme_config);
+      const tc = typeof body.theme_config === 'object' ? body.theme_config : {};
+      if (tc.primaryColor) {
+        updates.push(`primary_color = $${idx++}`);
+        values.push(tc.primaryColor);
+      }
+      if (tc.mode || tc.theme) {
+        updates.push(`theme = $${idx++}`);
+        values.push(tc.mode || tc.theme || 'default');
+      }
     }
     if (body.status !== undefined) {
       updates.push(`status = $${idx++}`);
       values.push(body.status);
     }
     if (body.is_published !== undefined) {
-      updates.push(`is_published = $${idx++}`);
-      values.push(Boolean(body.is_published));
+      const isPub = Boolean(body.is_published);
+      updates.push(`status = $${idx++}`);
+      values.push(isPub ? 'active' : 'suspended');
+      updates.push(`is_maintenance_mode = $${idx++}`);
+      values.push(!isPub);
     }
 
     if (updates.length === 0) {
@@ -223,7 +250,18 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       return NextResponse.json({ success: false, error: 'Website not found or unauthorized.' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, website: res.rows[0] });
+    const updated = res.rows[0];
+    return NextResponse.json({
+      success: true,
+      website: {
+        ...updated,
+        is_published: updated.status === 'active' && !updated.is_maintenance_mode,
+        theme_config: {
+          primaryColor: updated.primary_color || '#6366f1',
+          mode: updated.theme || 'default',
+        },
+      },
+    });
   }
 
   // 3. Delete Website
@@ -260,28 +298,24 @@ export async function seedWebsiteDefaults(websiteId, websiteName, themeConfig = 
     const secondaryColor = themeConfig.secondaryColor || extraSettings.secondaryColor || '#4f46e5';
     const fontFamily = themeConfig.fontFamily || extraSettings.fontFamily || 'Inter';
 
-    // 1. Settings
+    // 1. Settings (strictly aligned with psql/subschema.psql website_settings table)
     await queryDb(`
       INSERT INTO website_settings (
-        website_id, site_title, tagline, contact_email, contact_phone, 
-        primary_color, secondary_color, font_family, currency
+        website_id, contact_email, contact_phone, motto, address
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (website_id) DO UPDATE SET
-        site_title = EXCLUDED.site_title,
-        tagline = EXCLUDED.tagline,
-        primary_color = EXCLUDED.primary_color,
-        font_family = EXCLUDED.font_family
+        contact_email = EXCLUDED.contact_email,
+        contact_phone = EXCLUDED.contact_phone,
+        motto = EXCLUDED.motto,
+        address = EXCLUDED.address,
+        updated_at = CURRENT_TIMESTAMP
     `, [
       websiteId,
-      websiteName || 'My Portfolio & Store',
-      extraSettings.tagline || 'Modern Showcase & Digital Hub',
       extraSettings.contactEmail || null,
       extraSettings.contactPhone || null,
-      primaryColor,
-      secondaryColor,
-      fontFamily,
-      extraSettings.currency || 'USD',
+      extraSettings.tagline || extraSettings.motto || 'Excellence in Education & Digital Learning',
+      extraSettings.address || null,
     ]);
 
     // 2. Modules

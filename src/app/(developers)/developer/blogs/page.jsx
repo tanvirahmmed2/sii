@@ -43,7 +43,7 @@ export default function AdminBlogsPage() {
     try {
       setCreating(true);
       setActionError('');
-      const res = await fetch('/api/developer/blogs', {
+      const res = await fetch('/api/marketing/developer/blogs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -70,7 +70,7 @@ export default function AdminBlogsPage() {
     try {
       setLoading(true);
       setActionError('');
-      const res = await fetch('/api/developer/blogs');
+      const res = await fetch('/api/marketing/developer/blogs');
       const data = await res.json();
       if (data.success) {
         setBlogs(data.records || []);
@@ -87,7 +87,7 @@ export default function AdminBlogsPage() {
 
   useEffect(() => {
     let active = true;
-    fetch('/api/developer/blogs')
+    fetch('/api/marketing/developer/blogs')
       .then((res) => res.json())
       .then((data) => {
         if (active) {
@@ -115,7 +115,7 @@ export default function AdminBlogsPage() {
     setDeletingId(id);
     setActionError('');
     try {
-      const res = await fetch(`/api/developer/blogs?id=${id}`, {
+      const res = await fetch(`/api/marketing/developer/blogs?id=${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();
@@ -135,7 +135,7 @@ export default function AdminBlogsPage() {
     setTogglingId(blog.id);
     setActionError('');
     try {
-      const res = await fetch('/api/developer/blogs', {
+      const res = await fetch('/api/marketing/developer/blogs', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

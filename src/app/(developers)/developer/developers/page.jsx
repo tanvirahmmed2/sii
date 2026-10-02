@@ -79,7 +79,7 @@ export default function AdminAdminsPage() {
 
   const fetchCurrentUser = async () => {
     try {
-      const res = await fetch('/api/developer/me');
+      const res = await fetch('/api/marketing/developer/me');
       const data = await res.json();
       if (data.success && data.user) {
         setCurrentUser(data.user);
@@ -90,7 +90,7 @@ export default function AdminAdminsPage() {
   const fetchAdmins = async (showLoading = false) => {
     try {
       if (showLoading) setLoading(true);
-      const res = await fetch('/api/developer/devs/list');
+      const res = await fetch('/api/marketing/developer/devs/list');
       const data = await res.json();
       if (data.success) {
         setAdmins(data.records || []);
@@ -111,8 +111,8 @@ export default function AdminAdminsPage() {
   useEffect(() => {
     let ignore = false;
     Promise.all([
-      fetch('/api/developer/devs/list').then((r) => r.json()).catch(() => null),
-      fetch('/api/developer/me').then((r) => r.json()).catch(() => null),
+      fetch('/api/marketing/developer/devs/list').then((r) => r.json()).catch(() => null),
+      fetch('/api/marketing/developer/me').then((r) => r.json()).catch(() => null),
     ]).then(([adminData, meData]) => {
       if (ignore) return;
       if (adminData && adminData.success) {
@@ -158,7 +158,7 @@ export default function AdminAdminsPage() {
     try {
       setUpdatingStatusId(admin.id);
       setActionNotice({ text: '', type: 'info' });
-      const res = await fetch('/api/developer/devs/list', {
+      const res = await fetch('/api/marketing/developer/devs/list', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: admin.id, is_active: !admin.is_active }),
@@ -209,7 +209,7 @@ export default function AdminAdminsPage() {
     try {
       setUpdatingRoleId(admin.id);
       setActionNotice({ text: '', type: 'info' });
-      const res = await fetch('/api/developer/devs/list', {
+      const res = await fetch('/api/marketing/developer/devs/list', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: admin.id, role: newRole }),
@@ -277,7 +277,7 @@ export default function AdminAdminsPage() {
         payload.password = editFormData.password.trim();
       }
 
-      const res = await fetch('/api/developer/devs/list', {
+      const res = await fetch('/api/marketing/developer/devs/list', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -320,7 +320,7 @@ export default function AdminAdminsPage() {
 
     try {
       setActionNotice({ text: '', type: 'info' });
-      const res = await fetch(`/api/developer/devs/list?id=${adminId}`, {
+      const res = await fetch(`/api/marketing/developer/devs/list?id=${adminId}`, {
         method: 'DELETE',
       });
       const data = await res.json();
@@ -348,7 +348,7 @@ export default function AdminAdminsPage() {
     try {
       setResendingEmail(email);
       setActionNotice({ text: '', type: 'info' });
-      const res = await fetch('/api/developer', {
+      const res = await fetch('/api/marketing/developer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'resend_code', email }),
@@ -651,7 +651,7 @@ export default function AdminAdminsPage() {
 
       {showAddForm && isUserAdmin && (
         <AdminForm
-          apiEndpoint="/api/developer/devs"
+          apiEndpoint="/api/marketing/developer/devs"
           roles={roles}
           onSuccess={() => {
             setShowAddForm(false);

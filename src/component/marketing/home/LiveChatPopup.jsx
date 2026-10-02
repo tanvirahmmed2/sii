@@ -685,7 +685,7 @@ export default function LiveChatPopup() {
               {/* Messages Container */}
               <div className="flex-1 p-4 overflow-y-auto space-y-3.5">
                 {messages.map((msg, idx) => {
-                  const isVisitor = msg.sender_type === 'VISITOR';
+                  const isVisitor = String(msg.sender_type || '').toUpperCase() === 'VISITOR';
                   return (
                     <div
                       key={msg.id || idx}

@@ -35,7 +35,7 @@ export default function AdminPaymentsPage() {
   const fetchPayments = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/developer/payments');
+      const res = await fetch('/api/marketing/developer/payments');
       const data = await res.json();
       if (data.success) {
         setPayments(data.records || []);
@@ -49,7 +49,7 @@ export default function AdminPaymentsPage() {
 
   useEffect(() => {
     let ignore = false;
-    fetch('/api/developer/payments')
+    fetch('/api/marketing/developer/payments')
       .then((res) => res.json())
       .then((data) => {
         if (!ignore && data.success) {
@@ -74,7 +74,7 @@ export default function AdminPaymentsPage() {
 
     setUpdatingId(payment.id);
     try {
-      const res = await fetch('/api/developer/payments', {
+      const res = await fetch('/api/marketing/developer/payments', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -105,7 +105,7 @@ export default function AdminPaymentsPage() {
 
     setUpdatingId(editingPayment.id);
     try {
-      const res = await fetch('/api/developer/payments', {
+      const res = await fetch('/api/marketing/developer/payments', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -134,7 +134,7 @@ export default function AdminPaymentsPage() {
     if (!confirm('Are you sure you want to delete this payment record?')) return;
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/developer/payments?id=${id}`, {
+      const res = await fetch(`/api/marketing/developer/payments?id=${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();
@@ -167,13 +167,15 @@ export default function AdminPaymentsPage() {
 
     const matchesStatus =
       statusFilter === 'ALL' ||
-      p.status?.toUpperCase() === statusFilter.toUpperCase();
+      p.status?.toUpperCase() === statusFilter.toUpperCase() ||
+      (statusFilter.toUpperCase() === 'COMPLETED' && (p.status?.toLowerCase() === 'successful' || p.status?.toLowerCase() === 'completed')) ||
+      (statusFilter.toUpperCase() === 'PENDING' && (p.status?.toLowerCase() === 'pending' || p.status?.toLowerCase() === 'unpaid'));
 
     return matchesSearch && matchesStatus;
   });
 
-  const unpaidCount = payments.filter((p) => p.status === 'UNPAID' || p.status === 'PENDING').length;
-  const completedCount = payments.filter((p) => p.status === 'COMPLETED').length;
+  const unpaidCount = payments.filter((p) => p.status === 'UNPAID' || p.status === 'PENDING' || p.status === 'pending').length;
+  const completedCount = payments.filter((p) => p.status === 'COMPLETED' || p.status === 'successful' || p.status === 'SUCCESSFUL').length;
 
   return (
     <div className="space-y-6">
@@ -238,7 +240,7 @@ export default function AdminPaymentsPage() {
 
       {showForm && (
         <PaymentForm
-          apiEndpoint="/api/developer/payments"
+          apiEndpoint="/api/marketing/developer/payments"
           onSuccess={() => {
             setShowForm(false);
             fetchPayments();
@@ -315,7 +317,9 @@ export default function AdminPaymentsPage() {
                 </tr>
               ) : (
                 filtered.map((p) => {
-                  const isUnpaid = p.status === 'UNPAID' || p.status === 'PENDING';
+                  const isUnpaid = p.status === 'UNPAID' || p.status === 'PENDING' || p.status === 'pending';
+                  const isCompleted = p.status === 'COMPLETED' || p.status === 'successful' || p.status === 'SUCCESSFUL';
+                  const amount = (Number(p.amount_in_cents || (Number(p.amount || 0) * 100)) / 100).toFixed(2);
                   return (
                     <tr key={p.id} className="hover:bg-slate-50/60 transition-colors">
                       <td className="px-4 py-3 font-mono font-bold text-slate-500">#{p.id}</td>
@@ -340,22 +344,22 @@ export default function AdminPaymentsPage() {
                       </td>
 
                       <td className="px-4 py-3 font-bold text-slate-900 font-mono">
-                        ${((p.amount_in_cents || 0) / 100).toFixed(2)} {p.currency || 'USD'}
+                        ${amount} {p.currency || 'USD'}
                       </td>
 
                       <td className="px-4 py-3 text-slate-600 text-[11px] font-semibold">{p.payment_method}</td>
 
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                          p.status === 'COMPLETED'
+                          isCompleted
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : p.status === 'PENDING' || p.status === 'UNPAID'
+                            : isUnpaid
                             ? 'bg-amber-50 text-amber-700 border border-amber-200'
                             : 'bg-rose-50 text-rose-700 border border-rose-200'
                         }`}>
-                          {p.status === 'COMPLETED' && <BiCheckCircle />}
-                          {(p.status === 'PENDING' || p.status === 'UNPAID') && <BiTime />}
-                          {p.status !== 'COMPLETED' && p.status !== 'PENDING' && p.status !== 'UNPAID' && <BiXCircle />}
+                          {isCompleted && <BiCheckCircle />}
+                          {isUnpaid && <BiTime />}
+                          {!isCompleted && !isUnpaid && <BiXCircle />}
                           <span>{p.status}</span>
                         </span>
                       </td>

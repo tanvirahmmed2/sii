@@ -26,7 +26,7 @@ export default function ThemeDetailPage({ params }) {
     try {
       setLoading(true);
       setError('');
-      const res = await fetch(`/api/developer/themes/${encodeURIComponent(slug)}`);
+      const res = await fetch(`/api/marketing/developer/themes/${encodeURIComponent(slug)}`);
       const data = await res.json();
       if (data.success && data.record) {
         setTheme(data.record);
@@ -52,7 +52,7 @@ export default function ThemeDetailPage({ params }) {
 
     try {
       setDeleting(true);
-      const res = await fetch(`/api/developer/themes/${encodeURIComponent(slug)}`, {
+      const res = await fetch(`/api/marketing/developer/themes/${encodeURIComponent(slug)}`, {
         method: 'DELETE',
       });
       const data = await res.json();

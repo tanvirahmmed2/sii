@@ -31,7 +31,7 @@ export default function AdminThemesPage() {
     try {
       setCreating(true);
       const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-      const res = await fetch('/api/developer/themes', {
+      const res = await fetch('/api/marketing/developer/themes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -59,7 +59,7 @@ export default function AdminThemesPage() {
   const fetchThemes = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/developer/themes');
+      const res = await fetch('/api/marketing/developer/themes');
       const data = await res.json();
       if (data.success) {
         setThemes(data.records || []);
@@ -73,7 +73,7 @@ export default function AdminThemesPage() {
 
   useEffect(() => {
     let active = true;
-    fetch('/api/developer/themes')
+    fetch('/api/marketing/developer/themes')
       .then((res) => res.json())
       .then((data) => {
         if (!active) return;
@@ -97,7 +97,7 @@ export default function AdminThemesPage() {
     if (!confirm(`Are you sure you want to delete "${name || 'this theme'}"?`)) return;
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/developer/themes?id=${id}`, {
+      const res = await fetch(`/api/marketing/developer/themes?id=${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();

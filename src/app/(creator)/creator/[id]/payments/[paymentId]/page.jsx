@@ -27,7 +27,7 @@ export default function CreatorPaymentInvoicePage({ params }) {
   useEffect(() => {
     let isMounted = true;
     if (creatorId && paymentId) {
-      fetch(`/api/creator/payments?id=${paymentId}&creatorId=${creatorId}`)
+      fetch(`/api/marketing/creator/payments?id=${paymentId}&creatorId=${creatorId}`)
         .then((res) => res.json())
         .then((data) => {
           if (!isMounted) return;
@@ -81,7 +81,7 @@ export default function CreatorPaymentInvoicePage({ params }) {
   }
 
   const invoice = generateInvoiceData(payment);
-  const isPaid = payment.status === 'COMPLETED';
+  const isPaid = payment.status === 'COMPLETED' || payment.status === 'successful' || payment.status === 'SUCCESSFUL';
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">

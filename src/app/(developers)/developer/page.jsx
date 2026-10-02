@@ -39,20 +39,20 @@ export default function AdminOverviewPage() {
         setLoading(true);
 
         // 1. Fetch current logged-in developer profile
-        const devPromise = fetch('/api/developer')
+        const devPromise = fetch('/api/marketing/developer')
           .then((r) => r.json())
           .catch(() => ({ success: false }));
 
         // 2. Fetch module records in parallel
         const statsPromises = Promise.allSettled([
-          fetch('/api/developer/devs').then((r) => r.json()),
-          fetch('/api/developer/packages').then((r) => r.json()),
-          fetch('/api/developer/websites').then((r) => r.json()),
-          fetch('/api/developer/blogs').then((r) => r.json()),
-          fetch('/api/developer/support').then((r) => r.json()),
-          fetch('/api/developer/payments').then((r) => r.json()),
-          fetch('/api/developer/leads').then((r) => r.json()),
-          fetch('/api/developer/subscribers').then((r) => r.json()),
+          fetch('/api/marketing/developer/devs').then((r) => r.json()),
+          fetch('/api/marketing/developer/packages').then((r) => r.json()),
+          fetch('/api/marketing/developer/websites').then((r) => r.json()),
+          fetch('/api/marketing/developer/blogs').then((r) => r.json()),
+          fetch('/api/marketing/developer/support').then((r) => r.json()),
+          fetch('/api/marketing/developer/payments').then((r) => r.json()),
+          fetch('/api/marketing/developer/leads').then((r) => r.json()),
+          fetch('/api/marketing/developer/subscribers').then((r) => r.json()),
         ]);
 
         const [devRes, statsRes] = await Promise.all([devPromise, statsPromises]);
@@ -64,10 +64,20 @@ export default function AdminOverviewPage() {
         const [devs, pkgs, webs, blogs, supp, pay, leads, subs] = statsRes;
 
         const payments = pay.status === 'fulfilled' && pay.value?.records ? pay.value.records : [];
-        const totalRevenue = payments.reduce(
-          (acc, p) => acc + (p.amount_in_cents || p.amountInCents || 0),
-          0
-        ) / 100;
+        const completedPayments = payments.filter((p) =>
+          ['successful', 'completed'].includes(String(p.status || '').toLowerCase())
+        );
+        const totalRevenue = completedPayments.reduce((acc, p) => {
+          const valInCents =
+            p.amount_in_cents !== undefined
+              ? Number(p.amount_in_cents)
+              : p.amountInCents !== undefined
+              ? Number(p.amountInCents)
+              : p.amount !== undefined
+              ? Math.round(Number(p.amount) * 100)
+              : 0;
+          return acc + (isNaN(valInCents) ? 0 : valInCents);
+        }, 0) / 100;
 
         setCounts({
           developers: devs.status === 'fulfilled' && devs.value?.records ? devs.value.records.length : 0,
@@ -75,7 +85,7 @@ export default function AdminOverviewPage() {
           websites: webs.status === 'fulfilled' && webs.value?.records ? webs.value.records.length : 0,
           blogs: blogs.status === 'fulfilled' && blogs.value?.records ? blogs.value.records.length : 0,
           support: supp.status === 'fulfilled' && supp.value?.records
-            ? supp.value.records.filter((s) => s.status === 'OPEN').length
+            ? supp.value.records.filter((s) => String(s.status || '').toLowerCase() === 'open').length
             : 0,
           revenue: totalRevenue,
           leads: leads.status === 'fulfilled' && leads.value?.records ? leads.value.records.length : 0,

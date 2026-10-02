@@ -37,7 +37,7 @@ export default function ThemeForm({ initialData = {}, onSuccess, onCancel }) {
     // Load available apps for category dropdown
     async function loadApps() {
       try {
-        const res = await fetch('/api/developer/apps');
+        const res = await fetch('/api/marketing/developer/apps');
         const data = await res.json();
         if (data.success && Array.isArray(data.apps)) {
           setApps(data.apps);
@@ -72,8 +72,8 @@ export default function ThemeForm({ initialData = {}, onSuccess, onCancel }) {
 
     try {
       const endpoint = initialData?.slug
-        ? `/api/developer/themes/${encodeURIComponent(initialData.slug)}`
-        : '/api/developer/themes';
+        ? `/api/marketing/developer/themes/${encodeURIComponent(initialData.slug)}`
+        : '/api/marketing/developer/themes';
       const method = initialData?.slug ? 'PUT' : 'POST';
 
       const payload = {

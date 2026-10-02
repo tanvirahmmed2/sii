@@ -25,13 +25,16 @@ export async function GET(request, context) {
         c.email AS creator_email,
         NULL::text AS creator_avatar,
         c.phone AS creator_phone,
+        c.name AS requester_name,
+        c.email AS requester_email,
+        'General' AS category,
         d.name AS assigned_developer_name,
         d.email AS assigned_developer_email,
         COALESCE(dr.slug, 'developer') AS assigned_developer_role
-      FROM support s
+      FROM supports s
       LEFT JOIN creators c ON s.creator_id = c.id
       LEFT JOIN developers d ON s.assigned_developer_id = d.id
-      LEFT JOIN roles dr ON d.role_id = dr.id
+      LEFT JOIN developer_roles dr ON d.role_id = dr.id
       WHERE ${isNumeric ? 's.id = $1 OR s.ticket_number = $1' : 's.ticket_number = $1'}
       LIMIT 1
     `, [id]);
@@ -49,28 +52,39 @@ export async function GET(request, context) {
         m.support_id,
         m.sender_type,
         m.sender_id,
-        m.sender_name,
+        CASE 
+          WHEN m.sender_type = 'creator' THEN c.name 
+          WHEN m.sender_type = 'developer' THEN d.name 
+          ELSE 'System' 
+        END AS sender_name,
         m.message,
+        m.is_internal_note,
+        m.is_read,
         m.created_at,
         d.name AS developer_name,
         COALESCE(mr.slug, 'developer') AS developer_role
       FROM support_messages m
-      LEFT JOIN developers d ON (m.sender_type IN ('ADMIN', 'DEVELOPER') AND m.sender_id = d.id)
-      LEFT JOIN roles mr ON d.role_id = mr.id
+      LEFT JOIN creators c ON (m.sender_type = 'creator' AND m.sender_id = c.id)
+      LEFT JOIN developers d ON (m.sender_type = 'developer' AND m.sender_id = d.id)
+      LEFT JOIN developer_roles mr ON d.role_id = mr.id
       WHERE m.support_id = $1
       ORDER BY m.created_at ASC
     `, [ticket.id]);
 
-    // Fetch images
+    // Fetch images joined through support_messages
     const imagesRes = await queryDb(`
-      SELECT * FROM support_images WHERE support_id = $1 ORDER BY created_at ASC
+      SELECT si.*, sm.support_id 
+      FROM support_images si
+      JOIN support_messages sm ON si.message_id = sm.id
+      WHERE sm.support_id = $1 
+      ORDER BY si.created_at ASC
     `, [ticket.id]).catch(() => ({ rows: [] }));
 
     // Fetch staff developers for assignment dropdown
     const devsRes = await queryDb(`
       SELECT d.id, d.name, d.email, COALESCE(r.slug, 'developer') AS role, COALESCE(r.name, 'Developer') AS role_name 
       FROM developers d
-      LEFT JOIN roles r ON d.role_id = r.id
+      LEFT JOIN developer_roles r ON d.role_id = r.id
       WHERE d.is_active = TRUE 
       ORDER BY d.name ASC
     `).catch(() => ({ rows: [] }));
@@ -93,7 +107,7 @@ export async function GET(request, context) {
 // UPDATE TICKET (Status, Priority, Assignment)
 export async function PUT(request, context) {
   try {
-    const auth = await authenticateStaff(request);
+    const auth = await hasModulePermission(request, 'support');
     if (!auth.success) {
       return NextResponse.json({ success: false, error: auth.message || 'Unauthorized' }, { status: 401 });
     }
@@ -107,15 +121,15 @@ export async function PUT(request, context) {
     }
 
     const isNumeric = /^\d+$/.test(id);
-    const status = body.status;
-    const priority = body.priority;
+    const status = body.status ? body.status.toLowerCase() : null;
+    const priority = body.priority ? body.priority.toLowerCase() : null;
     const assignedDevId = body.assigned_developer_id !== undefined ? body.assigned_developer_id : undefined;
 
     const res = await queryDb(`
-      UPDATE support
+      UPDATE supports
       SET status = COALESCE($1, status),
           priority = COALESCE($2, priority),
-          assigned_developer_id = CASE WHEN $3::text IS NOT NULL THEN $4::int ELSE assigned_developer_id END,
+          assigned_developer_id = CASE WHEN $3::text IS NOT NULL THEN $4::bigint ELSE assigned_developer_id END,
           updated_at = CURRENT_TIMESTAMP
       WHERE ${isNumeric ? 'id = $5 OR ticket_number = $5' : 'ticket_number = $5'}
       RETURNING *
@@ -158,7 +172,7 @@ export async function DELETE(request, context) {
 
     const isNumeric = /^\d+$/.test(id);
     const deleteRes = await queryDb(`
-      DELETE FROM support 
+      DELETE FROM supports 
       WHERE ${isNumeric ? 'id = $1 OR ticket_number = $1' : 'ticket_number = $1'}
       RETURNING id
     `, [id]);

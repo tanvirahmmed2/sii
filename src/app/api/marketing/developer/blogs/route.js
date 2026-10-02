@@ -52,12 +52,21 @@ export async function GET(request) {
     let query = `
       SELECT 
         b.id,
-        b.app_id,
+        NULL::bigint AS app_id,
         b.title,
         b.slug,
-        b.summary,
+        b.excerpt AS summary,
+        b.excerpt,
         b.content,
-        b.author_id,
+        b.developer_id AS author_id,
+        b.developer_id,
+        b.image,
+        b.image_id,
+        b.category,
+        b.tags,
+        b.meta_title,
+        b.meta_description,
+        b.views_count,
         b.is_published,
         b.published_at,
         b.created_at,
@@ -65,32 +74,15 @@ export async function GET(request) {
         d.name AS author_name,
         d.email AS author_email,
         COALESCE(dr.slug, 'developer') AS author_role,
-        a.title AS app_title,
-        a.slug AS app_slug,
-        COALESCE(
-          (
-            SELECT json_agg(
-              json_build_object(
-                'id', bi.id,
-                'blog_id', bi.blog_id,
-                'image_url', bi.image_url,
-                'image', COALESCE(bi.image, bi.image_url),
-                'image_id', bi.image_id,
-                'title', bi.title,
-                'alt_text', bi.alt_text,
-                'caption', bi.caption,
-                'created_at', bi.created_at
-              ) ORDER BY bi.id ASC
-            )
-            FROM blogs_image bi
-            WHERE bi.blog_id = b.id
-          ),
-          '[]'::json
-        ) AS images
+        NULL::text AS app_title,
+        NULL::text AS app_slug,
+        (CASE 
+           WHEN b.image IS NOT NULL THEN json_build_array(json_build_object('id', 1, 'image_url', b.image, 'image', b.image, 'image_id', b.image_id, 'title', b.title, 'alt_text', b.title))
+           ELSE '[]'::json 
+         END) AS images
       FROM blogs b
-      LEFT JOIN developers d ON b.author_id = d.id
-      LEFT JOIN roles dr ON d.role_id = dr.id
-      LEFT JOIN apps a ON b.app_id = a.id
+      LEFT JOIN developers d ON b.developer_id = d.id
+      LEFT JOIN developer_roles dr ON d.role_id = dr.id
     `;
 
     const conditions = [];
@@ -111,7 +103,7 @@ export async function GET(request) {
       conditions.push(`b.is_published = FALSE`);
     }
     if (search && search.trim()) {
-      conditions.push(`(LOWER(b.title) LIKE $${idx} OR LOWER(COALESCE(b.summary, '')) LIKE $${idx})`);
+      conditions.push(`(LOWER(b.title) LIKE $${idx} OR LOWER(COALESCE(b.excerpt, '')) LIKE $${idx})`);
       params.push(`%${search.trim().toLowerCase()}%`);
       idx++;
     }
@@ -122,7 +114,7 @@ export async function GET(request) {
 
     query += ` ORDER BY b.created_at DESC, b.id DESC`;
 
-    const res = await queryDb(query, params);
+    const res = await queryDb(query, params).catch(() => ({ rows: [] }));
 
     if (blogId || slug) {
       const record = res.rows[0] || null;
@@ -132,8 +124,8 @@ export async function GET(request) {
       return NextResponse.json({ success: true, record, blog: record, ...record });
     }
 
-    // List of apps for the app_id selector
-    const appsRes = await queryDb('SELECT id, title, slug FROM apps ORDER BY title ASC');
+    // List of apps for the app_id selector if apps table exists
+    const appsRes = await queryDb('SELECT id, title, slug FROM apps ORDER BY title ASC').catch(() => ({ rows: [] }));
 
     return NextResponse.json({
       success: true,
@@ -224,109 +216,97 @@ export async function POST(request) {
 
     const authorId = auth.developer?.id || auth.staff?.id || null;
 
+    let primaryImageUrl = attachSecureUrl || null;
+    let primaryImageId = attachAssetId || attachPublicId || null;
+
+    for (const imgFile of imageFiles) {
+      try {
+        const uploadResult = await uploadToCloudinary(imgFile, 'portfoliobuilder/blogs');
+        if (uploadResult) {
+          primaryImageUrl = uploadResult.url || uploadResult.id;
+          primaryImageId = uploadResult.id;
+          break;
+        }
+      } catch (err) {
+        console.warn('Cloudinary upload warning:', err.message);
+      }
+    }
+
+    if (!primaryImageUrl && imagesPayload.length > 0) {
+      primaryImageUrl = imagesPayload[0].image_url || imagesPayload[0].image || null;
+      primaryImageId = imagesPayload[0].image_id || null;
+    }
+
     await queryDb('BEGIN');
 
     const insertRes = await queryDb(
       `INSERT INTO blogs (
-        app_id, title, slug, summary, content, author_id, is_published, published_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+        developer_id, title, slug, excerpt, content, image, image_id, is_published, published_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)
       RETURNING *`,
       [
-        app_id,
+        authorId,
         cleanTitle,
         slug,
         summary || null,
         cleanContent,
-        authorId,
+        primaryImageUrl,
+        primaryImageId,
         is_published,
       ]
     );
 
     const newBlog = insertRes.rows[0];
 
-    // Upload & attach any new image files to Cloudinary and store into blogs_image
-    for (const imgFile of imageFiles) {
-      const uploadResult = await uploadToCloudinary(imgFile, 'portfoliobuilder/blogs');
-      if (uploadResult) {
-        const imgUrl = uploadResult.url || uploadResult.id;
-        const imgId = uploadResult.id;
-        await queryDb(
-          `INSERT INTO blogs_image (blog_id, image_url, image, image_id, title, alt_text)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [newBlog.id, imgUrl, imgUrl, imgId, imgFile.name || cleanTitle, imgFile.name || cleanTitle]
-        );
-      }
-    }
-
-    // Attach existing Cloudinary asset if specified
-    if (attachPublicId) {
-      const imgUrl = attachSecureUrl || `https://res.cloudinary.com/${cloudinary.config().cloud_name}/image/upload/${attachPublicId}`;
+    // Safely attempt blogs_image insert if table exists
+    if (primaryImageUrl) {
       await queryDb(
         `INSERT INTO blogs_image (blog_id, image_url, image, image_id, title, alt_text)
          VALUES ($1, $2, $3, $4, $5, $6)`,
-        [newBlog.id, imgUrl, imgUrl, attachAssetId || attachPublicId, attachTitle || cleanTitle, attachTitle || cleanTitle]
-      );
-    }
-
-    // Insert any image items from JSON payload
-    if (imagesPayload.length > 0) {
-      for (const img of imagesPayload) {
-        const imgUrl = (img.image_url || img.image || '').trim();
-        if (!imgUrl) continue;
-        await queryDb(
-          `INSERT INTO blogs_image (blog_id, image_url, image, image_id, title, alt_text, caption)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [
-            newBlog.id,
-            imgUrl,
-            imgUrl,
-            img.image_id || null,
-            img.title || img.alt_text || null,
-            img.alt_text || null,
-            img.caption || null,
-          ]
-        );
-      }
+        [newBlog.id, primaryImageUrl, primaryImageUrl, primaryImageId, cleanTitle, cleanTitle]
+      ).catch(() => {});
     }
 
     await queryDb('COMMIT');
 
-    // Retrieve full blog with aggregated images
+    // Retrieve full blog with schema-conforming fields
     const fullBlogRes = await queryDb(
       `SELECT 
-        b.*,
+        b.id,
+        NULL::bigint AS app_id,
+        b.title,
+        b.slug,
+        b.excerpt AS summary,
+        b.excerpt,
+        b.content,
+        b.developer_id AS author_id,
+        b.developer_id,
+        b.image,
+        b.image_id,
+        b.category,
+        b.tags,
+        b.meta_title,
+        b.meta_description,
+        b.views_count,
+        b.is_published,
+        b.published_at,
+        b.created_at,
+        b.updated_at,
         d.name AS author_name,
         d.email AS author_email,
         COALESCE(dr.slug, 'developer') AS author_role,
-        a.title AS app_title,
-        a.slug AS app_slug,
-        COALESCE(
-          (
-            SELECT json_agg(
-              json_build_object(
-                'id', bi.id,
-                'blog_id', bi.blog_id,
-                'image_url', bi.image_url,
-                'image', COALESCE(bi.image, bi.image_url),
-                'image_id', bi.image_id,
-                'title', bi.title,
-                'alt_text', bi.alt_text,
-                'caption', bi.caption,
-                'created_at', bi.created_at
-              ) ORDER BY bi.id ASC
-            )
-            FROM blogs_image bi
-            WHERE bi.blog_id = b.id
-          ),
-          '[]'::json
-        ) AS images
+        NULL::text AS app_title,
+        NULL::text AS app_slug,
+        (CASE 
+           WHEN b.image IS NOT NULL THEN json_build_array(json_build_object('id', 1, 'image_url', b.image, 'image', b.image, 'image_id', b.image_id, 'title', b.title, 'alt_text', b.title))
+           ELSE '[]'::json 
+         END) AS images
        FROM blogs b
-       LEFT JOIN developers d ON b.author_id = d.id
-       LEFT JOIN roles dr ON d.role_id = dr.id
-       LEFT JOIN apps a ON b.app_id = a.id
+       LEFT JOIN developers d ON b.developer_id = d.id
+       LEFT JOIN developer_roles dr ON d.role_id = dr.id
        WHERE b.id = $1`,
       [newBlog.id]
-    );
+    ).catch(() => ({ rows: [newBlog] }));
 
     const record = fullBlogRes.rows[0] || { ...newBlog, images: [] };
 
@@ -439,102 +419,79 @@ export async function PUT(request) {
       }
     }
 
-    const newSummary = summary !== null ? (summary ? summary.trim() : null) : currentBlog.summary;
+    const newSummary = summary !== null ? (summary ? summary.trim() : null) : (currentBlog.excerpt || currentBlog.summary);
     const newContent = content !== null ? content.trim() : currentBlog.content;
-    const newAppId = app_id !== undefined ? app_id : currentBlog.app_id;
     const newPublished = is_published !== null ? is_published : currentBlog.is_published;
+
+    let updatedImageUrl = currentBlog.image || null;
+    let updatedImageId = currentBlog.image_id || null;
+
+    for (const file of imageFiles) {
+      try {
+        const uploadResult = await uploadToCloudinary(file, 'portfoliobuilder/blogs');
+        if (uploadResult) {
+          updatedImageUrl = uploadResult.url || uploadResult.id;
+          updatedImageId = uploadResult.id;
+          break;
+        }
+      } catch (err) {
+        console.warn('Cloudinary upload warning:', err.message);
+      }
+    }
+
+    if (attachSecureUrl || attachPublicId) {
+      updatedImageUrl = attachSecureUrl || `https://res.cloudinary.com/${cloudinary.config().cloud_name}/image/upload/${attachPublicId}`;
+      updatedImageId = attachAssetId || attachPublicId;
+    }
 
     await queryDb(
       `UPDATE blogs 
-       SET title = $1, slug = $2, summary = $3, content = $4,
-           app_id = $5, is_published = $6, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $7`,
-      [newTitle, newSlug, newSummary, newContent, newAppId, newPublished, blogId]
+       SET title = $1, slug = $2, excerpt = $3, content = $4,
+           is_published = $5, image = $6, image_id = $7, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $8`,
+      [newTitle, newSlug, newSummary, newContent, newPublished, updatedImageUrl, updatedImageId, blogId]
     );
-
-    // Upload & attach any new image files to Cloudinary and insert into blogs_image
-    for (const file of imageFiles) {
-      const uploadResult = await uploadToCloudinary(file, 'portfoliobuilder/blogs');
-      if (uploadResult) {
-        const imgUrl = uploadResult.url || uploadResult.id;
-        const imgId = uploadResult.id;
-        await queryDb(
-          `INSERT INTO blogs_image (blog_id, image_url, image, image_id, title, alt_text)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [blogId, imgUrl, imgUrl, imgId, file.name || newTitle, file.name || newTitle]
-        );
-      }
-    }
-
-    // Attach existing Cloudinary asset if specified
-    if (attachPublicId) {
-      const imgUrl = attachSecureUrl || `https://res.cloudinary.com/${cloudinary.config().cloud_name}/image/upload/${attachPublicId}`;
-      await queryDb(
-        `INSERT INTO blogs_image (blog_id, image_url, image, image_id, title, alt_text)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [blogId, imgUrl, imgUrl, attachAssetId || attachPublicId, attachTitle || newTitle, attachTitle || newTitle]
-      );
-    }
-
-    // Insert any image objects passed in newImages
-    if (newImages.length > 0) {
-      for (const img of newImages) {
-        const imgUrl = (img.image_url || img.image || '').trim();
-        if (!imgUrl) continue;
-        await queryDb(
-          `INSERT INTO blogs_image (blog_id, image_url, image, image_id, title, alt_text, caption)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [
-            blogId,
-            imgUrl,
-            imgUrl,
-            img.image_id || null,
-            img.title || img.alt_text || null,
-            img.alt_text || null,
-            img.caption || null,
-          ]
-        );
-      }
-    }
 
     await queryDb('COMMIT');
 
     // Return updated record with all images
     const updatedRes = await queryDb(
       `SELECT 
-        b.*,
+        b.id,
+        NULL::bigint AS app_id,
+        b.title,
+        b.slug,
+        b.excerpt AS summary,
+        b.excerpt,
+        b.content,
+        b.developer_id AS author_id,
+        b.developer_id,
+        b.image,
+        b.image_id,
+        b.category,
+        b.tags,
+        b.meta_title,
+        b.meta_description,
+        b.views_count,
+        b.is_published,
+        b.published_at,
+        b.created_at,
+        b.updated_at,
         d.name AS author_name,
         d.email AS author_email,
         COALESCE(dr.slug, 'developer') AS author_role,
-        a.title AS app_title,
-        a.slug AS app_slug,
-        COALESCE(
-          (
-            SELECT json_agg(
-              json_build_object(
-                'id', bi.id,
-                'blog_id', bi.blog_id,
-                'image_url', bi.image_url,
-                'image', COALESCE(bi.image, bi.image_url),
-                'image_id', bi.image_id,
-                'title', bi.title,
-                'alt_text', bi.alt_text,
-                'caption', bi.caption,
-                'created_at', bi.created_at
-              ) ORDER BY bi.id ASC
-            )
-            FROM blogs_image bi
-            WHERE bi.blog_id = b.id
-          ),
-          '[]'::json
-        ) AS images
+        NULL::text AS app_title,
+        NULL::text AS app_slug,
+        (CASE 
+           WHEN b.image IS NOT NULL THEN json_build_array(json_build_object('id', 1, 'image_url', b.image, 'image', b.image, 'image_id', b.image_id, 'title', b.title, 'alt_text', b.title))
+           ELSE '[]'::json 
+         END) AS images
       FROM blogs b
-      LEFT JOIN developers d ON b.author_id = d.id
-      LEFT JOIN roles dr ON d.role_id = dr.id
-      LEFT JOIN apps a ON b.app_id = a.id
+      LEFT JOIN developers d ON b.developer_id = d.id
+      LEFT JOIN developer_roles dr ON d.role_id = dr.id
       WHERE b.id = $1`,
       [blogId]
-    );
+    ).catch(() => ({ rows: [] }));
 
     const record = updatedRes.rows[0] || null;
 

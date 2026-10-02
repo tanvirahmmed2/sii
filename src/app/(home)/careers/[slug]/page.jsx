@@ -196,14 +196,14 @@ export default function CareerDetailPage({ params }) {
               {career.department}
             </span>
             <span className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-              {career.job_type.replace('_', ' ')}
+              {(career.job_type || 'Full-time').replace(/_/g, ' ')}
             </span>
             <span className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-1">
               <BiMapPin className="text-slate-400" />
-              {career.location} ({career.workplace_type})
+              {career.location || 'Remote'} ({career.workplace_type || 'Remote'})
             </span>
             <span className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-              {career.experience_level.replace('_', ' ')}
+              {(career.experience_level || 'Mid Level').replace(/_/g, ' ')}
             </span>
           </div>
 

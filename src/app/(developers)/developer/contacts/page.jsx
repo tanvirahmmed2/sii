@@ -37,7 +37,7 @@ export default function AdminContactsPage() {
   const fetchContacts = useCallback(async (showLoading = false) => {
     try {
       if (showLoading) setLoading(true);
-      const res = await fetch('/api/developer/contacts');
+      const res = await fetch('/api/marketing/developer/contacts');
       const data = await res.json();
       if (data.success) {
         setContacts(data.records || []);
@@ -63,7 +63,7 @@ export default function AdminContactsPage() {
 
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/developer/contacts/${id}`, {
+      const res = await fetch(`/api/marketing/developer/contacts/${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();
@@ -83,11 +83,11 @@ export default function AdminContactsPage() {
 
   // Stats calculation
   const totalCount = contacts.length;
-  const newCount = contacts.filter((c) => c.status === 'NEW').length;
-  const repliedCount = contacts.filter((c) => c.status === 'REPLIED').length;
+  const newCount = contacts.filter((c) => String(c.status || '').toLowerCase() === 'new').length;
+  const repliedCount = contacts.filter((c) => String(c.status || '').toLowerCase() === 'replied').length;
 
   const filtered = contacts.filter((c) => {
-    if (statusFilter !== 'ALL' && c.status !== statusFilter) return false;
+    if (statusFilter !== 'ALL' && String(c.status || '').toUpperCase() !== statusFilter.toUpperCase()) return false;
     if (!searchTerm.trim()) return true;
     const q = searchTerm.toLowerCase();
     return (
@@ -270,7 +270,7 @@ export default function AdminContactsPage() {
                 </tr>
               ) : (
                 filtered.map((c) => {
-                  const isReplied = c.status === 'REPLIED';
+                  const isReplied = String(c.status || '').toLowerCase() === 'replied';
                   return (
                     <tr
                       key={c.id}

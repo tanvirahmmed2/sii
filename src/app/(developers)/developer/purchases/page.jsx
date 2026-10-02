@@ -32,7 +32,7 @@ export default function PurchasesPage() {
   const fetchPurchases = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/developer/purchases');
+      const res = await fetch('/api/marketing/developer/purchases');
       const data = await res.json();
       if (data.success) {
         setPurchases(data.records || []);
@@ -46,7 +46,7 @@ export default function PurchasesPage() {
 
   useEffect(() => {
     let ignore = false;
-    fetch('/api/developer/purchases')
+    fetch('/api/marketing/developer/purchases')
       .then((res) => res.json())
       .then((data) => {
         if (!ignore && data.success) {
@@ -69,7 +69,7 @@ export default function PurchasesPage() {
 
     setUpdating(true);
     try {
-      const res = await fetch('/api/developer/purchases', {
+      const res = await fetch('/api/marketing/developer/purchases', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -98,7 +98,7 @@ export default function PurchasesPage() {
     if (!confirm(`Are you sure you want to permanently delete purchase order #${id}?`)) return;
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/developer/purchases?id=${id}`, {
+      const res = await fetch(`/api/marketing/developer/purchases?id=${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();
@@ -134,9 +134,19 @@ export default function PurchasesPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const totalAmount = purchases.reduce((acc, pu) => acc + (Number(pu.amount_in_cents || pu.price * 100 || 0) / 100), 0);
-  const completedCount = purchases.filter((pu) => pu.status === 'COMPLETED').length;
-  const unpaidCount = purchases.filter((pu) => pu.status === 'UNPAID' || pu.status === 'PENDING').length;
+  const totalAmount = purchases.reduce((acc, pu) => {
+    const amountVal =
+      pu.amount_in_cents !== undefined
+        ? Number(pu.amount_in_cents) / 100
+        : pu.total_amount !== undefined
+        ? Number(pu.total_amount)
+        : pu.price !== undefined
+        ? Number(pu.price)
+        : 0;
+    return acc + (isNaN(amountVal) ? 0 : amountVal);
+  }, 0);
+  const completedCount = purchases.filter((pu) => ['completed', 'active'].includes(String(pu.status || '').toLowerCase())).length;
+  const unpaidCount = purchases.filter((pu) => ['unpaid', 'pending'].includes(String(pu.status || '').toLowerCase())).length;
 
   return (
     <div className="space-y-6">
@@ -295,20 +305,27 @@ export default function PurchasesPage() {
                       </td>
 
                       <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                            pu.status === 'COMPLETED'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : pu.status === 'UNPAID' || pu.status === 'PENDING'
-                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200'
-                          }`}
-                        >
-                          {pu.status === 'COMPLETED' && <BiCheckCircle />}
-                          {(pu.status === 'UNPAID' || pu.status === 'PENDING') && <BiTime />}
-                          {pu.status !== 'COMPLETED' && pu.status !== 'UNPAID' && pu.status !== 'PENDING' && <BiXCircle />}
-                          <span>{pu.status}</span>
-                        </span>
+                        {(() => {
+                          const s = String(pu.status || '').toLowerCase();
+                          const isComp = s === 'completed' || s === 'active';
+                          const isPend = s === 'pending' || s === 'unpaid';
+                          return (
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                isComp
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : isPend
+                                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                  : 'bg-rose-50 text-rose-700 border border-rose-200'
+                              }`}
+                            >
+                              {isComp && <BiCheckCircle />}
+                              {isPend && <BiTime />}
+                              {!isComp && !isPend && <BiXCircle />}
+                              <span>{pu.status}</span>
+                            </span>
+                          );
+                        })()}
                       </td>
 
                       <td className="px-4 py-3">

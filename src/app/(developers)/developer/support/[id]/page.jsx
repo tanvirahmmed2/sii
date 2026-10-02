@@ -65,7 +65,7 @@ export default function SingleSupportTicketPage() {
     try {
       if (showLoading) setLoading(true);
       setError('');
-      const res = await fetch(`/api/developer/support/${ticketId}`);
+      const res = await fetch(`/api/marketing/developer/support/${ticketId}`);
       const data = await res.json();
       if (data.success && data.ticket) {
         setTicket(data.ticket);
@@ -110,7 +110,7 @@ export default function SingleSupportTicketPage() {
     if (!ticketId || statusLoading) return;
     setStatusLoading(true);
     try {
-      const res = await fetch(`/api/developer/support/${ticketId}`, {
+      const res = await fetch(`/api/marketing/developer/support/${ticketId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
@@ -134,7 +134,7 @@ export default function SingleSupportTicketPage() {
   const handleAssignDeveloper = async (devId) => {
     if (!ticketId) return;
     try {
-      const res = await fetch(`/api/developer/support/${ticketId}`, {
+      const res = await fetch(`/api/marketing/developer/support/${ticketId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ assigned_developer_id: devId }),
@@ -160,7 +160,7 @@ export default function SingleSupportTicketPage() {
 
     setSendingReply(true);
     try {
-      const res = await fetch(`/api/developer/support/${ticketId}/messages`, {
+      const res = await fetch(`/api/marketing/developer/support/${ticketId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -207,7 +207,7 @@ export default function SingleSupportTicketPage() {
 
     setDeleting(true);
     try {
-      const res = await fetch(`/api/developer/support/${ticketId}`, {
+      const res = await fetch(`/api/marketing/developer/support/${ticketId}`, {
         method: 'DELETE',
       });
       const data = await res.json();
