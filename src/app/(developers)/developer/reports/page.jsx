@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BiSearch, BiPlus, BiMinus, BiTrash, BiRefresh } from 'react-icons/bi';
+
+
 import ReportForm from 'src/component/marketing/developer/forms/ReportForm';
 
 export default function AdminReportsPage() {
@@ -64,11 +65,11 @@ export default function AdminReportsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded p-6 shadow-xs">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Platform Reports &amp; Moderation</h1>
-            <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+            <h1 className="text-2xl font-medium text-slate-900 tracking-tight">Platform Reports &amp; Moderation</h1>
+            <span className="text-[11px] font-medium uppercase tracking-wider px-2.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
               Report
             </span>
           </div>
@@ -79,21 +80,19 @@ export default function AdminReportsPage() {
           <button
             type="button"
             onClick={fetchReports}
-            className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+            className="p-2 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
             title="Refresh table data"
-          >
-            <BiRefresh className="text-lg" />
-          </button>
+          >Refresh</button>
           <button
             type="button"
             onClick={() => setShowForm(!showForm)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
+            className={`flex items-center gap-1.5 px-4 py-2 rounded text-xs font-medium transition-all shadow-xs cursor-pointer ${
               showForm
                 ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 : 'bg-secondary hover:bg-secondary-dark text-white'
             }`}
           >
-            {showForm ? <BiMinus className="text-base" /> : <BiPlus className="text-base" />}
+            
             <span>{showForm ? 'Hide Form' : 'Add Report'}</span>
           </button>
         </div>
@@ -111,27 +110,27 @@ export default function AdminReportsPage() {
       )}
 
       {/* Table Card */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50">
           <div className="relative w-full sm:w-72">
-            <BiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
+            
             <input
               type="text"
               placeholder="Search reports by subject, reporter, or category..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
+              className="w-full bg-white border border-slate-300 rounded pl-3 pr-3.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
             />
           </div>
           <div className="text-xs text-slate-500 font-medium">
-            Showing <span className="font-bold text-slate-800">{filtered.length}</span> of {reports.length} records
+            Showing <span className="font-medium text-slate-800">{filtered.length}</span> of {reports.length} records
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/80 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
+              <tr className="border-b border-slate-100 bg-slate-50/80 text-slate-500 font-normal uppercase tracking-wider text-[10px]">
                 <th className="px-4 py-3 whitespace-nowrap">ID</th>
                 <th className="px-4 py-3 whitespace-nowrap">Reporter</th>
                 <th className="px-4 py-3 whitespace-nowrap">Subject</th>
@@ -154,23 +153,23 @@ export default function AdminReportsPage() {
               ) : (
                 filtered.map((r) => (
                   <tr key={r.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="px-4 py-3 font-mono font-bold text-slate-500">#{r.id}</td>
+                    <td className="px-4 py-3 font-mono font-medium text-slate-500">#{r.id}</td>
                     <td className="px-4 py-3">
-                      <div className="font-semibold text-slate-800">{r.reporter_name}</div>
+                      <div className="font-normal text-slate-800">{r.reporter_name}</div>
                       <div className="font-mono text-[11px] text-slate-400">{r.reporter_email}</div>
                     </td>
                     <td className="px-4 py-3 max-w-xs">
-                      <div className="font-semibold text-slate-800 truncate">{r.subject}</div>
+                      <div className="font-normal text-slate-800 truncate">{r.subject}</div>
                       <div className="text-[11px] text-slate-400 truncate">{r.description}</div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                      <span className="text-[11px] font-normal text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
                         {r.category}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${
                           r.priority === 'HIGH' || r.priority === 'URGENT'
                             ? 'bg-rose-50 text-rose-700 border border-rose-200'
                             : r.priority === 'MEDIUM'
@@ -183,7 +182,7 @@ export default function AdminReportsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${
                           r.status === 'OPEN'
                             ? 'bg-blue-50 text-blue-700 border border-blue-200'
                             : r.status === 'RESOLVED'
@@ -202,10 +201,10 @@ export default function AdminReportsPage() {
                         type="button"
                         disabled={deletingId === r.id}
                         onClick={() => handleDelete(r.id)}
-                        className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                        className="text-slate-400 hover:text-rose-600 p-1.5 rounded hover:bg-rose-50 transition-colors cursor-pointer"
                         title="Delete record"
                       >
-                        <BiTrash className="text-base" />
+                        
                       </button>
                     </td>
                   </tr>

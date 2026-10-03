@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { BiMessageSquareDetail, BiCheck, BiX } from 'react-icons/bi';
+
+
 
 export default function LiveChatMessageForm({ chats = [], onSuccess, onCancel }) {
   const [formData, setFormData] = useState({
@@ -51,14 +52,14 @@ export default function LiveChatMessageForm({ chats = [], onSuccess, onCancel })
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs mb-6">
+    <div className="bg-white border border-slate-200 rounded p-6 shadow-xs mb-6">
       <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
         <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-primary/10 text-primary">
-            <BiMessageSquareDetail className="text-xl" />
+          <div className="p-2 rounded bg-primary/10 text-primary">
+            
           </div>
           <div>
-            <h3 className="text-base font-bold text-slate-800">Dispatch Live Chat Message</h3>
+            <h3 className="text-base font-medium text-slate-800">Dispatch Live Chat Message</h3>
             <p className="text-xs text-slate-500">Post a response or log an entry to an active live chat stream.</p>
           </div>
         </div>
@@ -67,14 +68,12 @@ export default function LiveChatMessageForm({ chats = [], onSuccess, onCancel })
             type="button"
             onClick={onCancel}
             className="p-1 text-slate-400 hover:text-slate-600 rounded-md transition-colors"
-          >
-            <BiX className="text-xl" />
-          </button>
+          >Close</button>
         )}
       </div>
 
       {error && (
-        <div className="p-3 mb-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+        <div className="p-3 mb-4 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs font-normal">
           {error}
         </div>
       )}
@@ -82,23 +81,23 @@ export default function LiveChatMessageForm({ chats = [], onSuccess, onCancel })
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Live Chat ID</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">Live Chat ID</label>
             <input
               type="number"
               required
               placeholder="e.g. 1"
               value={formData.chat_id}
               onChange={(e) => setFormData({ ...formData, chat_id: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+              className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Sender Type</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">Sender Type</label>
             <select
               value={formData.sender_type}
               onChange={(e) => setFormData({ ...formData, sender_type: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+              className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
             >
               <option value="ADMIN">Support Staff</option>
               <option value="VISITOR">Visitor</option>
@@ -106,27 +105,27 @@ export default function LiveChatMessageForm({ chats = [], onSuccess, onCancel })
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Sender Name</label>
+            <label className="block text-xs font-medium text-slate-700 mb-1">Sender Name</label>
             <input
               type="text"
               required
               placeholder="e.g. Support"
               value={formData.sender_name}
               onChange={(e) => setFormData({ ...formData, sender_name: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+              className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1">Message Body</label>
+          <label className="block text-xs font-medium text-slate-700 mb-1">Message Body</label>
           <textarea
             rows={3}
             required
             placeholder="Type your reply message..."
             value={formData.message}
             onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+            className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
           />
         </div>
 
@@ -135,7 +134,7 @@ export default function LiveChatMessageForm({ chats = [], onSuccess, onCancel })
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors"
+              className="px-4 py-2 rounded border border-slate-300 text-slate-700 text-xs font-normal hover:bg-slate-50 transition-colors"
             >
               Cancel
             </button>
@@ -143,9 +142,9 @@ export default function LiveChatMessageForm({ chats = [], onSuccess, onCancel })
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-primary hover:bg-primary-dark text-slate-900 text-xs font-bold shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-5 py-2 rounded bg-primary hover:bg-primary-dark text-slate-900 text-xs font-medium shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
           >
-            <BiCheck className="text-base" />
+            
             <span>{loading ? 'Sending...' : 'Post Message'}</span>
           </button>
         </div>

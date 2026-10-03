@@ -3,28 +3,6 @@
 import { useState, useEffect, useContext } from 'react';
 import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
-import {
-  BiUser,
-  BiEnvelope,
-  BiPhone,
-  BiBriefcase,
-  BiLockAlt,
-  BiKey,
-  BiCheckCircle,
-  BiXCircle,
-  BiArrowBack,
-  BiSave,
-  BiCheckShield,
-  BiLoaderAlt,
-  BiDevices,
-  BiLaptop,
-  BiLogOutCircle,
-  BiLogoGithub,
-  BiLogoLinkedin,
-  BiShieldQuarter,
-  BiImage,
-  BiInfoCircle,
-} from 'react-icons/bi';
 
 export default function DeveloperSettingsPage() {
   const { refetchUser, setUser } = useContext(Context) || {};
@@ -216,409 +194,272 @@ export default function DeveloperSettingsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 animate-pulse max-w-6xl mx-auto pb-12">
-        <div className="h-32 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl" />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="h-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl" />
-          <div className="h-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl" />
-        </div>
+      <div className="p-4 text-xs font-normal text-slate-500">
+        Loading settings...
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12">
+    <div className="space-y-5">
       {/* Toast Feedback */}
       {feedback && (
         <div
-          className={`fixed top-6 right-6 z-50 flex items-center gap-2 px-5 py-3 rounded-2xl shadow-xl border text-xs font-semibold animate-fade-in ${
+          className={`p-3 rounded border text-xs font-normal flex items-center justify-between ${
             feedbackType === 'error'
-              ? 'bg-rose-900/95 text-rose-100 border-rose-700'
-              : 'bg-slate-900/95 text-white border-slate-700'
+              ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300'
+              : 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
           }`}
         >
-          {feedbackType === 'error' ? (
-            <BiXCircle className="text-rose-400 text-base shrink-0" />
-          ) : (
-            <BiCheckCircle className="text-emerald-400 text-base shrink-0" />
-          )}
           <span>{feedback}</span>
+          <button
+            type="button"
+            onClick={() => setFeedback(null)}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 ml-2 cursor-pointer"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
       {/* Header */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Developer Settings &amp; Preferences
-            </h1>
-            <span className="text-[11px] font-bold uppercase tracking-wider px-3 py-0.5 rounded-full bg-secondary/10 text-secondary border border-secondary/20">
-              Account Control
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-            Configure personal information, authentication credentials, connected devices, and privacy.
+          <h1 className="text-base font-medium text-slate-900 dark:text-white">Account Settings</h1>
+          <p className="text-xs text-slate-500 font-normal">
+            Manage your personal profile details, authentication password, and active devices.
           </p>
         </div>
 
         <Link
           href="/developer/profile"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors shrink-0"
+          className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-normal shrink-0"
         >
-          <BiArrowBack className="text-base" />
-          <span>View Profile</span>
+          View Profile
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Left Column: Profile Information Form */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6 transition-colors">
-          <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
-            <div className="p-2.5 rounded-2xl bg-secondary/10 text-secondary">
-              <BiUser className="text-2xl" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
-                Profile Information
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Update your identity, contact details, and social links.
-              </p>
-            </div>
-          </div>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 space-y-4">
+          <h2 className="text-sm font-medium text-slate-900 dark:text-white pb-2 border-b border-slate-100 dark:border-slate-800">
+            Profile Information
+          </h2>
 
-          <form onSubmit={handleSaveProfile} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Full Name <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <BiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
-                  <input
-                    type="text"
-                    required
-                    value={profile.name}
-                    onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                    placeholder="Your Full Name"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-800 focus:ring-1 focus:ring-secondary transition-all font-medium"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Job Designation
-                </label>
-                <div className="relative">
-                  <BiBriefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
-                  <input
-                    type="text"
-                    value={profile.designation}
-                    onChange={(e) => setProfile({ ...profile, designation: e.target.value })}
-                    placeholder="e.g. Lead Software Engineer"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-800 focus:ring-1 focus:ring-secondary transition-all font-medium"
-                  />
-                </div>
-              </div>
+          <form onSubmit={handleSaveProfile} className="space-y-3">
+            <div className="space-y-1">
+              <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Full Name</label>
+              <input
+                type="text"
+                required
+                value={profile.name}
+                onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
+              />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Email Address <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <BiEnvelope className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
-                  <input
-                    type="email"
-                    required
-                    value={profile.email}
-                    onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                    placeholder="your.email@company.com"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-800 focus:ring-1 focus:ring-secondary transition-all font-medium"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Phone Number
-                </label>
-                <div className="relative">
-                  <BiPhone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
-                  <input
-                    type="text"
-                    value={profile.phone}
-                    onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                    placeholder="+1 (555) 000-0000"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-800 focus:ring-1 focus:ring-secondary transition-all font-medium"
-                  />
-                </div>
-              </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Email Address</label>
+              <input
+                type="email"
+                required
+                value={profile.email}
+                onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
+              />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  GitHub Profile Handle / URL
-                </label>
-                <div className="relative">
-                  <BiLogoGithub className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
-                  <input
-                    type="text"
-                    value={profile.github_profile}
-                    onChange={(e) => setProfile({ ...profile, github_profile: e.target.value })}
-                    placeholder="https://github.com/username"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-800 focus:ring-1 focus:ring-secondary transition-all font-medium"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  LinkedIn Profile URL
-                </label>
-                <div className="relative">
-                  <BiLogoLinkedin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
-                  <input
-                    type="text"
-                    value={profile.linkedin_profile}
-                    onChange={(e) => setProfile({ ...profile, linkedin_profile: e.target.value })}
-                    placeholder="https://linkedin.com/in/username"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-800 focus:ring-1 focus:ring-secondary transition-all font-medium"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Avatar Image URL
-              </label>
-              <div className="relative">
-                <BiImage className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Phone</label>
                 <input
-                  type="url"
-                  value={profile.avatar_url}
-                  onChange={(e) => setProfile({ ...profile, avatar_url: e.target.value })}
-                  placeholder="https://example.com/avatar.jpg"
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-800 focus:ring-1 focus:ring-secondary transition-all font-medium"
+                  type="text"
+                  value={profile.phone}
+                  onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                  placeholder="+1 (555) 000-0000"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Designation</label>
+                <input
+                  type="text"
+                  value={profile.designation}
+                  onChange={(e) => setProfile({ ...profile, designation: e.target.value })}
+                  placeholder="Software Engineer"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Professional Bio &amp; Notes
-              </label>
-              <textarea
-                rows={3}
-                value={profile.bio}
-                onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                placeholder="Write a brief professional summary..."
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-800 focus:ring-1 focus:ring-secondary transition-all font-medium"
+            <div className="space-y-1">
+              <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Avatar Image URL</label>
+              <input
+                type="url"
+                value={profile.avatar_url}
+                onChange={(e) => setProfile({ ...profile, avatar_url: e.target.value })}
+                placeholder="https://..."
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
               />
             </div>
 
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">GitHub Profile URL</label>
+                <input
+                  type="url"
+                  value={profile.github_profile}
+                  onChange={(e) => setProfile({ ...profile, github_profile: e.target.value })}
+                  placeholder="https://github.com/..."
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">LinkedIn Profile URL</label>
+                <input
+                  type="url"
+                  value={profile.linkedin_profile}
+                  onChange={(e) => setProfile({ ...profile, linkedin_profile: e.target.value })}
+                  placeholder="https://linkedin.com/in/..."
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Bio</label>
+              <textarea
+                rows={2}
+                value={profile.bio}
+                onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+                placeholder="Brief professional summary..."
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
+              />
+            </div>
+
+            <div className="pt-2">
               <button
                 type="submit"
                 disabled={savingProfile}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-secondary hover:bg-secondary-dark text-white text-xs font-bold shadow-xs disabled:opacity-50 transition-all cursor-pointer"
+                className="px-3.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium disabled:opacity-50 cursor-pointer"
               >
-                {savingProfile ? <BiLoaderAlt className="animate-spin text-base" /> : <BiSave className="text-base" />}
-                <span>{savingProfile ? 'Saving Changes...' : 'Save Profile Details'}</span>
+                {savingProfile ? 'Saving...' : 'Save Profile'}
               </button>
             </div>
           </form>
         </div>
 
-        {/* Right Column: Security Credentials & Sessions */}
-        <div className="space-y-6">
-          {/* Security & Password Form */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6 transition-colors">
-            <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
-              <div className="p-2.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
-                <BiLockAlt className="text-2xl" />
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
-                  Security &amp; Credentials
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Update your secret login password and authentication keys.
-                </p>
-              </div>
-            </div>
+        {/* Right Column: Security (Password + Sessions) */}
+        <div className="space-y-4">
+          {/* Change Password Form */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 space-y-4">
+            <h2 className="text-sm font-medium text-slate-900 dark:text-white pb-2 border-b border-slate-100 dark:border-slate-800">
+              Change Password
+            </h2>
 
-            <form onSubmit={handleChangePassword} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Current Password <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <BiKey className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
+            <form onSubmit={handleChangePassword} className="space-y-3">
+              <div className="space-y-1">
+                <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Current Password</label>
+                <input
+                  type="password"
+                  required
+                  value={passwordData.currentPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                  placeholder="••••••••"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">New Password</label>
                   <input
                     type="password"
                     required
-                    value={passwordData.currentPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                    placeholder="Enter current password"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-indigo-600 focus:bg-white dark:focus:bg-slate-800 focus:ring-1 focus:ring-indigo-600 transition-all font-medium"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  New Password <span className="text-rose-500">*</span> (min 6 characters)
-                </label>
-                <div className="relative">
-                  <BiLockAlt className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
-                  <input
-                    type="password"
-                    required
-                    minLength={6}
                     value={passwordData.newPassword}
                     onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                    placeholder="Minimum 6 characters"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-indigo-600 focus:bg-white dark:focus:bg-slate-800 focus:ring-1 focus:ring-indigo-600 transition-all font-medium"
+                    placeholder="Min 6 characters"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Confirm New Password <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <BiLockAlt className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
+                <div className="space-y-1">
+                  <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Confirm Password</label>
                   <input
                     type="password"
                     required
-                    minLength={6}
                     value={passwordData.confirmPassword}
                     onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                    placeholder="Re-enter new password"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-indigo-600 focus:bg-white dark:focus:bg-slate-800 focus:ring-1 focus:ring-indigo-600 transition-all font-medium"
+                    placeholder="Repeat new password"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
                   />
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+              <div className="pt-2">
                 <button
                   type="submit"
                   disabled={savingSecurity}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs disabled:opacity-50 transition-all cursor-pointer"
+                  className="px-3.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium disabled:opacity-50 cursor-pointer"
                 >
-                  {savingSecurity ? <BiLoaderAlt className="animate-spin text-base" /> : <BiCheckShield className="text-base" />}
-                  <span>{savingSecurity ? 'Updating Password...' : 'Update Password'}</span>
+                  {savingSecurity ? 'Updating...' : 'Update Password'}
                 </button>
               </div>
             </form>
           </div>
 
-          {/* Active Sessions & Connected Devices Management */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4 transition-colors">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400">
-                  <BiDevices className="text-2xl" />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
-                    Active Connected Sessions
-                  </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Manage logged-in devices and revoke unauthorized access.
-                  </p>
-                </div>
-              </div>
-
+          {/* Connected Sessions */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <h2 className="text-sm font-medium text-slate-900 dark:text-white">Active Sessions</h2>
               {sessionsList.length > 1 && (
                 <button
                   type="button"
                   onClick={() => handleRevokeSession(null, true)}
                   disabled={revokingSessionId === 'others'}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold hover:bg-rose-100 transition-colors cursor-pointer"
+                  className="text-xs font-normal text-rose-600 dark:text-rose-400 hover:underline disabled:opacity-50 cursor-pointer"
                 >
-                  {revokingSessionId === 'others' ? <BiLoaderAlt className="animate-spin text-sm" /> : <BiLogOutCircle className="text-sm" />}
-                  <span>Revoke Other Sessions</span>
+                  {revokingSessionId === 'others' ? 'Revoking...' : 'Revoke Others'}
                 </button>
               )}
             </div>
 
-            <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
-              {sessionsList.map((session) => (
-                <div
-                  key={session.id}
-                  className={`p-3 rounded-2xl border transition-colors flex items-center justify-between text-xs ${
-                    session.is_current
-                      ? 'border-secondary/40 bg-secondary/5 dark:bg-secondary/10'
-                      : 'border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`p-2 rounded-xl shrink-0 ${
-                        session.is_current ? 'bg-secondary text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                      }`}
-                    >
-                      <BiLaptop className="text-base" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-slate-900 dark:text-white">
-                          {session.is_current ? 'Current Device' : 'Authorized Session'}
-                        </span>
-                        {session.is_current && (
-                          <span className="px-1.5 py-0.5 rounded bg-secondary text-white text-[9px] font-bold uppercase">
-                            This
+            <div className="space-y-2">
+              {sessionsList.length === 0 ? (
+                <p className="text-xs text-slate-400 font-normal">No active sessions found.</p>
+              ) : (
+                sessionsList.map((sess) => (
+                  <div
+                    key={sess.id}
+                    className="p-3 rounded border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-slate-900 dark:text-white">{sess.ip_address || '127.0.0.1'}</span>
+                        {sess.is_current && (
+                          <span className="text-[10px] font-normal px-1.5 py-0.2 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+                            Current
                           </span>
                         )}
                       </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
-                        {session.ip_address || '127.0.0.1'}
-                      </div>
+                      <p className="text-[11px] text-slate-500 font-normal line-clamp-1">{sess.user_agent || 'Unknown Client'}</p>
                     </div>
+
+                    {!sess.is_current && (
+                      <button
+                        type="button"
+                        disabled={revokingSessionId === sess.id}
+                        onClick={() => handleRevokeSession(sess.id)}
+                        className="text-xs font-normal text-rose-600 dark:text-rose-400 hover:underline disabled:opacity-50 cursor-pointer"
+                      >
+                        {revokingSessionId === sess.id ? 'Revoking...' : 'Revoke'}
+                      </button>
+                    )}
                   </div>
-
-                  {!session.is_current && (
-                    <button
-                      type="button"
-                      onClick={() => handleRevokeSession(session.id, false)}
-                      disabled={revokingSessionId === session.id}
-                      className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[11px] font-semibold transition-colors cursor-pointer"
-                    >
-                      {revokingSessionId === session.id ? <BiLoaderAlt className="animate-spin text-xs" /> : 'Revoke'}
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Account Status Card */}
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs mt-2">
-              <div className="flex items-center gap-2">
-                <BiShieldQuarter className="text-xl text-slate-400" />
-                <div>
-                  <span className="font-bold text-slate-800 dark:text-white capitalize">
-                    {profile.role_name || profile.role || 'Developer'}
-                  </span>
-                  <p className="text-[10px] text-slate-400">Governance role is locked to superadmin policy.</p>
-                </div>
-              </div>
-              <span
-                className={`px-2.5 py-1 rounded-full font-bold text-[10px] ${
-                  profile.email_verified
-                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                    : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
-                }`}
-              >
-                {profile.email_verified ? 'Verified Email' : 'Pending Verification'}
-              </span>
+                ))
+              )}
             </div>
           </div>
         </div>

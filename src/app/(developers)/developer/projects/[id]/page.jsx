@@ -1,29 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useContext } from 'react';
-import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
-import {
-  BiArrowBack,
-  BiRefresh,
-  BiTrash,
-  BiSend,
-  BiBriefcase,
-  BiUser,
-  BiCheckCircle,
-  BiTimeFive,
-  BiLoaderAlt,
-  BiEnvelope,
-  BiCheckShield,
-  BiLinkExternal,
-  BiX,
-  BiDollarCircle,
-  BiCalendar,
-  BiImage,
-  BiFile,
-  BiEdit,
-  BiSave,
-} from 'react-icons/bi';
+import { useState, useEffect, useContext, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+
+
 import { Context } from 'src/component/helper/Context';
 
 export default function DeveloperSingleProjectPage() {
@@ -350,7 +330,7 @@ export default function DeveloperSingleProjectPage() {
   if (loading) {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3">
-        <BiLoaderAlt className="w-8 h-8 text-indigo-600 animate-spin" />
+        
         <p className="text-xs text-slate-500 font-medium">Loading project workspace...</p>
       </div>
     );
@@ -358,17 +338,17 @@ export default function DeveloperSingleProjectPage() {
 
   if (error || !project) {
     return (
-      <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center max-w-lg mx-auto my-12">
-        <BiBriefcase className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-        <h2 className="text-lg font-bold text-slate-900">Custom Project Not Found</h2>
+      <div className="bg-white border border-slate-200 rounded p-8 text-center max-w-lg mx-auto my-12">
+        
+        <h2 className="text-lg font-medium text-slate-900">Custom Project Not Found</h2>
         <p className="text-xs text-slate-500 mt-1 mb-6">
           {error || 'The requested custom project does not exist or was deleted.'}
         </p>
         <Link
           href="/developer/projects"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold hover:bg-slate-800 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded text-xs font-normal hover:bg-slate-800 transition-colors"
         >
-          <BiArrowBack className="w-4 h-4" />
+          
           Back to Projects
         </Link>
       </div>
@@ -380,7 +360,7 @@ export default function DeveloperSingleProjectPage() {
       {/* Toast Alert */}
       {actionNotice.text && (
         <div
-          className={`p-4 rounded-2xl flex items-center justify-between text-xs font-semibold shadow-xs transition-all ${
+          className={`p-4 rounded flex items-center justify-between text-xs font-normal shadow-xs transition-all ${
             actionNotice.type === 'error'
               ? 'bg-rose-50 border border-rose-200 text-rose-800'
               : 'bg-emerald-50 border border-emerald-200 text-emerald-800'
@@ -391,37 +371,35 @@ export default function DeveloperSingleProjectPage() {
             onClick={() => setActionNotice({ text: '', type: '' })}
             className="text-slate-400 hover:text-slate-600 cursor-pointer"
           >
-            <BiX className="w-4 h-4" />
+            
           </button>
         </div>
       )}
 
       {/* Top Header Card */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
+      <div className="bg-white border border-slate-200 rounded p-6 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start gap-4">
             <Link
               href="/developer/projects"
-              className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer mt-0.5"
+              className="p-2.5 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer mt-0.5"
               title="Back to projects"
-            >
-              <BiArrowBack className="w-5 h-5" />
-            </Link>
+            >Back</Link>
 
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                <span className="font-mono text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                <span className="font-mono text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
                   #{project.project_number}
                 </span>
                 <span
-                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${
+                  className={`px-2.5 py-0.5 rounded text-[10px] font-medium border uppercase tracking-wider ${
                     workingStatusStyles[project.working_status] || 'bg-slate-100 text-slate-600 border-slate-200'
                   }`}
                 >
                   {project.working_status ? project.working_status.replace('_', ' ') : 'PENDING'}
                 </span>
                 <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider ${
+                  className={`px-2 py-0.5 rounded text-[10px] font-medium border uppercase tracking-wider ${
                     paymentStatusStyles[project.payment_status] || 'bg-slate-100 text-slate-600 border-slate-200'
                   }`}
                 >
@@ -432,7 +410,7 @@ export default function DeveloperSingleProjectPage() {
                 </span>
               </div>
 
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight">{project.title}</h1>
+              <h1 className="text-xl font-medium text-slate-900 tracking-tight">{project.title}</h1>
 
               <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-slate-500">
                 <span>
@@ -460,21 +438,17 @@ export default function DeveloperSingleProjectPage() {
             <button
               onClick={handleManualRefresh}
               disabled={refreshing}
-              className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50"
+              className="p-2.5 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50"
               title="Refresh discussion"
-            >
-              <BiRefresh className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            </button>
+            >Refresh</button>
 
             {canManage && (
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="p-2.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50"
+                className="p-2.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50"
                 title="Delete project"
-              >
-                <BiTrash className="w-4 h-4" />
-              </button>
+              >Delete</button>
             )}
           </div>
         </div>
@@ -485,24 +459,24 @@ export default function DeveloperSingleProjectPage() {
         {/* Left Column: Discussion & Activity Thread (2 cols on lg) */}
         <div className="lg:col-span-2 space-y-6">
           {/* Project Initial Scope / Description Card */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2 flex items-center gap-2">
-              <BiFile className="w-4 h-4 text-indigo-500" />
+          <div className="bg-white border border-slate-200 rounded p-5 shadow-xs">
+            <h3 className="text-xs font-medium text-slate-900 uppercase tracking-wider mb-2 flex items-center gap-2">
+              
               Project Scope & Requirements
             </h3>
-            <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed bg-slate-50 border border-slate-100 rounded-xl p-3.5">
+            <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed bg-slate-50 border border-slate-100 rounded p-3.5">
               {project.description || 'No detailed scope provided.'}
             </p>
           </div>
 
           {/* Conversation Thread */}
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden flex flex-col h-[560px]">
+          <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden flex flex-col h-[560px]">
             {/* Thread Header */}
             <div className="p-4 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <BiBriefcase className="w-4 h-4 text-indigo-600" />
-                <h3 className="text-xs font-bold text-slate-900">Custom Project Discussion</h3>
-                <span className="text-[10px] text-slate-500 font-mono bg-white px-2 py-0.5 rounded-full border border-slate-200">
+                
+                <h3 className="text-xs font-medium text-slate-900">Custom Project Discussion</h3>
+                <span className="text-[10px] text-slate-500 font-mono bg-white px-2 py-0.5 rounded border border-slate-200">
                   {messages.length} messages
                 </span>
               </div>
@@ -513,7 +487,7 @@ export default function DeveloperSingleProjectPage() {
             <div className="flex-1 p-4 overflow-y-auto space-y-4">
               {messages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs">
-                  <BiBriefcase className="w-8 h-8 text-slate-300 mb-2" />
+                  
                   No messages yet. Send a message to get started!
                 </div>
               ) : (
@@ -528,14 +502,14 @@ export default function DeveloperSingleProjectPage() {
                     >
                       <div className="flex items-center gap-2 mb-1 px-1">
                         <span
-                          className={`text-[11px] font-bold ${
+                          className={`text-[11px] font-medium ${
                             isStaff ? 'text-indigo-600' : 'text-slate-700'
                           }`}
                         >
                           {m.sender_name || (isStaff ? 'Developer' : 'Creator')}
                         </span>
                         <span
-                          className={`text-[9px] font-bold px-1.5 py-0.2 rounded border uppercase ${
+                          className={`text-[9px] font-medium px-1.5 py-0.2 rounded border uppercase ${
                             isStaff
                               ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
                               : 'bg-slate-100 text-slate-700 border-slate-200'
@@ -552,7 +526,7 @@ export default function DeveloperSingleProjectPage() {
                       </div>
 
                       <div
-                        className={`max-w-[85%] rounded-2xl p-3.5 text-xs leading-relaxed ${
+                        className={`max-w-[85%] rounded p-3.5 text-xs leading-relaxed ${
                           isStaff
                             ? 'bg-indigo-600 text-white rounded-tr-xs'
                             : 'bg-slate-100 text-slate-800 rounded-tl-xs'
@@ -568,7 +542,7 @@ export default function DeveloperSingleProjectPage() {
                                 key={img.id}
                                 type="button"
                                 onClick={() => setPreviewImage(img.image_url)}
-                                className="group relative rounded-lg overflow-hidden border border-white/30 bg-black/10 hover:opacity-90 transition-opacity"
+                                className="group relative rounded overflow-hidden border border-white/30 bg-black/10 hover:opacity-90 transition-opacity"
                               >
                                 <img
                                   src={img.image_url}
@@ -593,8 +567,8 @@ export default function DeveloperSingleProjectPage() {
             {/* Composer Footer */}
             <div className="p-3 border-t border-slate-200 bg-white">
               {showAttachmentInput && (
-                <div className="mb-2 p-2 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-2 text-xs">
-                  <BiImage className="w-4 h-4 text-slate-400" />
+                <div className="mb-2 p-2 bg-slate-50 border border-slate-200 rounded flex items-center gap-2 text-xs">
+                  
                   <input
                     type="url"
                     value={replyImageUrl}
@@ -610,7 +584,7 @@ export default function DeveloperSingleProjectPage() {
                     }}
                     className="text-slate-400 hover:text-slate-600"
                   >
-                    <BiX className="w-4 h-4" />
+                    
                   </button>
                 </div>
               )}
@@ -619,14 +593,14 @@ export default function DeveloperSingleProjectPage() {
                 <button
                   type="button"
                   onClick={() => setShowAttachmentInput((prev) => !prev)}
-                  className={`p-2.5 rounded-xl border border-slate-200 transition-colors ${
+                  className={`p-2.5 rounded border border-slate-200 transition-colors ${
                     showAttachmentInput || replyImageUrl
                       ? 'bg-indigo-50 border-indigo-200 text-indigo-600'
                       : 'text-slate-500 hover:bg-slate-50'
                   }`}
                   title="Attach mockup or screenshot URL"
                 >
-                  <BiImage className="w-4 h-4" />
+                  
                 </button>
 
                 <input
@@ -635,22 +609,15 @@ export default function DeveloperSingleProjectPage() {
                   onChange={(e) => setReplyMessage(e.target.value)}
                   placeholder="Type an update or response to the creator..."
                   disabled={sendingReply}
-                  className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-indigo-400 focus:bg-white"
+                  className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-indigo-400 focus:bg-white"
                 />
 
                 <button
                   type="submit"
                   disabled={sendingReply || !replyMessage.trim()}
-                  className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="px-4 py-2.5 bg-indigo-600 text-white rounded text-xs font-normal hover:bg-indigo-700 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
-                  {sendingReply ? (
-                    <BiLoaderAlt className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <span>Send</span>
-                      <BiSend className="w-3.5 h-3.5" />
-                    </>
-                  )}
+                  {sendingReply ? 'Sending...' : 'Send'}
                 </button>
               </form>
             </div>
@@ -660,11 +627,11 @@ export default function DeveloperSingleProjectPage() {
         {/* Right Column: Project Control Panel & Details */}
         <div className="space-y-6">
           {/* 1. Working Status Selector Card */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 flex items-center justify-between">
+          <div className="bg-white border border-slate-200 rounded p-5 shadow-xs">
+            <h3 className="text-xs font-medium text-slate-900 uppercase tracking-wider mb-3 flex items-center justify-between">
               <span>Working Progress Status</span>
               <span
-                className={`text-[9px] px-2 py-0.5 rounded-full font-bold border uppercase ${
+                className={`text-[9px] px-2 py-0.5 rounded font-medium border uppercase ${
                   workingStatusStyles[project.working_status] || 'bg-slate-100 text-slate-600'
                 }`}
               >
@@ -674,13 +641,13 @@ export default function DeveloperSingleProjectPage() {
 
             <div className="space-y-3">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                <label className="block text-[11px] font-normal text-slate-600 mb-1">
                   Change Project Phase
                 </label>
                 <select
                   value={targetWorkingStatus}
                   onChange={(e) => setTargetWorkingStatus(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
                 >
                   <option value="PENDING_REVIEW">PENDING REVIEW (Under evaluation)</option>
                   <option value="ACCEPTED">ACCEPTED (Approved & scheduled)</option>
@@ -696,35 +663,28 @@ export default function DeveloperSingleProjectPage() {
                 type="button"
                 onClick={handleSaveWorkingStatus}
                 disabled={savingStatus || targetWorkingStatus === project.working_status}
-                className="w-full py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold hover:bg-slate-800 transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full py-2 bg-slate-900 text-white rounded text-xs font-normal hover:bg-slate-800 transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
               >
-                {savingStatus ? (
-                  <BiLoaderAlt className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <BiCheckCircle className="w-3.5 h-3.5" />
-                    <span>Save Working Status</span>
-                  </>
-                )}
+                <span>{savingStatus ? 'Saving Working Status...' : 'Save Working Status'}</span>
               </button>
             </div>
           </div>
 
           {/* 2. Quotation & Financials Card */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 flex items-center justify-between">
+          <div className="bg-white border border-slate-200 rounded p-5 shadow-xs">
+            <h3 className="text-xs font-medium text-slate-900 uppercase tracking-wider mb-3 flex items-center justify-between">
               <span>Financial Quotation & Payments</span>
-              <BiDollarCircle className="w-4 h-4 text-emerald-600" />
+              
             </h3>
 
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  <label className="block text-[11px] font-normal text-slate-600 mb-1">
                     Quoted Budget
                   </label>
                   <div className="relative">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-xs">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-normal text-xs">
                       $
                     </span>
                     <input
@@ -732,17 +692,17 @@ export default function DeveloperSingleProjectPage() {
                       step="0.01"
                       value={budgetVal}
                       onChange={(e) => setBudgetVal(e.target.value)}
-                      className="w-full pl-6 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
+                      className="w-full pl-6 pr-2 py-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  <label className="block text-[11px] font-normal text-slate-600 mb-1">
                     Amount Paid
                   </label>
                   <div className="relative">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-xs">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-normal text-xs">
                       $
                     </span>
                     <input
@@ -750,20 +710,20 @@ export default function DeveloperSingleProjectPage() {
                       step="0.01"
                       value={paidVal}
                       onChange={(e) => setPaidVal(e.target.value)}
-                      className="w-full pl-6 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
+                      className="w-full pl-6 pr-2 py-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
                     />
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                <label className="block text-[11px] font-normal text-slate-600 mb-1">
                   Payment Status
                 </label>
                 <select
                   value={targetPaymentStatus}
                   onChange={(e) => setTargetPaymentStatus(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
                 >
                   <option value="PENDING_QUOTE">PENDING QUOTE</option>
                   <option value="UNPAID">UNPAID (Quote presented)</option>
@@ -774,13 +734,13 @@ export default function DeveloperSingleProjectPage() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                <label className="block text-[11px] font-normal text-slate-600 mb-1">
                   Currency
                 </label>
                 <select
                   value={currencyVal}
                   onChange={(e) => setCurrencyVal(e.target.value)}
-                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-hidden"
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden"
                 >
                   <option value="USD">USD ($)</option>
                   <option value="EUR">EUR (€)</option>
@@ -793,24 +753,17 @@ export default function DeveloperSingleProjectPage() {
                 type="button"
                 onClick={handleSavePayment}
                 disabled={savingPayment}
-                className="w-full py-2 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full py-2 bg-emerald-600 text-white rounded text-xs font-normal hover:bg-emerald-700 transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
               >
-                {savingPayment ? (
-                  <BiLoaderAlt className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <BiDollarCircle className="w-4 h-4" />
-                    <span>Update Quotation & Terms</span>
-                  </>
-                )}
+                <span>{savingPayment ? 'Updating...' : 'Update Quotation & Terms'}</span>
               </button>
             </div>
           </div>
 
           {/* 3. Assign Developer Card */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <BiUser className="w-4 h-4 text-indigo-500" />
+          <div className="bg-white border border-slate-200 rounded p-5 shadow-xs">
+            <h3 className="text-xs font-medium text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-2">
+              
               Assigned Developer
             </h3>
 
@@ -818,7 +771,7 @@ export default function DeveloperSingleProjectPage() {
               <select
                 value={assignedDevId}
                 onChange={(e) => setAssignedDevId(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
               >
                 <option value="">-- Unassigned --</option>
                 {developers.map((d) => (
@@ -832,27 +785,23 @@ export default function DeveloperSingleProjectPage() {
                 type="button"
                 onClick={handleAssignDev}
                 disabled={savingDev}
-                className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded text-xs font-normal transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
               >
-                {savingDev ? (
-                  <BiLoaderAlt className="w-4 h-4 animate-spin" />
-                ) : (
-                  <span>Save Assignment</span>
-                )}
+                <span>{savingDev ? 'Assigning...' : 'Save Assignment'}</span>
               </button>
             </div>
           </div>
 
           {/* 4. Deliverables, Priority & Notes */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <BiLinkExternal className="w-4 h-4 text-slate-500" />
+          <div className="bg-white border border-slate-200 rounded p-5 shadow-xs">
+            <h3 className="text-xs font-medium text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-2">
+              
               Deliverables & Specs
             </h3>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                <label className="block text-[11px] font-normal text-slate-600 mb-1">
                   Deliverable / Preview URL
                 </label>
                 <input
@@ -860,7 +809,7 @@ export default function DeveloperSingleProjectPage() {
                   value={deliverableUrl}
                   onChange={(e) => setDeliverableUrl(e.target.value)}
                   placeholder="https://staging.domain.com or repo link"
-                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
                 />
                 {deliverableUrl && (
                   <a
@@ -870,20 +819,20 @@ export default function DeveloperSingleProjectPage() {
                     className="inline-flex items-center gap-1 text-[11px] text-indigo-600 hover:underline mt-1"
                   >
                     <span>Test link</span>
-                    <BiLinkExternal className="w-3 h-3" />
+                    
                   </a>
                 )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  <label className="block text-[11px] font-normal text-slate-600 mb-1">
                     Priority
                   </label>
                   <select
                     value={priorityVal}
                     onChange={(e) => setPriorityVal(e.target.value)}
-                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-hidden"
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden"
                   >
                     <option value="LOW">LOW</option>
                     <option value="MEDIUM">MEDIUM</option>
@@ -893,20 +842,20 @@ export default function DeveloperSingleProjectPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  <label className="block text-[11px] font-normal text-slate-600 mb-1">
                     Target Deadline
                   </label>
                   <input
                     type="date"
                     value={deadlineVal}
                     onChange={(e) => setDeadlineVal(e.target.value)}
-                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-hidden"
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                <label className="block text-[11px] font-normal text-slate-600 mb-1">
                   Internal Engineering Notes
                 </label>
                 <textarea
@@ -914,7 +863,7 @@ export default function DeveloperSingleProjectPage() {
                   value={internalNotes}
                   onChange={(e) => setInternalNotes(e.target.value)}
                   placeholder="Private engineering notes, API credentials, milestones..."
-                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
                 />
               </div>
 
@@ -922,16 +871,9 @@ export default function DeveloperSingleProjectPage() {
                 type="button"
                 onClick={handleSaveDeliverables}
                 disabled={savingDeliverables}
-                className="w-full py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold hover:bg-slate-800 transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full py-2 bg-slate-900 text-white rounded text-xs font-normal hover:bg-slate-800 transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
               >
-                {savingDeliverables ? (
-                  <BiLoaderAlt className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <BiSave className="w-3.5 h-3.5" />
-                    <span>Save Specifications</span>
-                  </>
-                )}
+                <span>{savingDeliverables ? 'Saving...' : 'Save Specifications'}</span>
               </button>
             </div>
           </div>
@@ -948,13 +890,13 @@ export default function DeveloperSingleProjectPage() {
             <img
               src={previewImage}
               alt="Attachment preview"
-              className="max-w-full max-h-[90vh] rounded-xl object-contain"
+              className="max-w-full max-h-[90vh] rounded object-contain"
             />
             <button
               onClick={() => setPreviewImage(null)}
-              className="absolute -top-3 -right-3 p-1.5 bg-white text-slate-800 rounded-full shadow-lg"
+              className="absolute -top-3 -right-3 p-1.5 bg-white text-slate-800 rounded shadow-lg"
             >
-              <BiX className="w-5 h-5" />
+              
             </button>
           </div>
         </div>

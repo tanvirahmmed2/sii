@@ -1,22 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
-import {
-  BiFile,
-  BiCheck,
-  BiX,
-  BiImage,
-  BiPlus,
-  BiTrash,
-  BiLoaderAlt,
-  BiGlobe,
-  BiTimeFive,
-  BiUpload,
-  BiCloudUpload,
-  BiImages,
-  BiCheckCircle,
-} from 'react-icons/bi';
+
+
 
 export default function BlogForm({
   blog = null,
@@ -329,20 +315,20 @@ export default function BlogForm({
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs mb-6 transition-all">
+    <div className="bg-white border border-slate-200 rounded p-6 shadow-xs mb-6 transition-all">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-100">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center text-xl font-bold">
-            <BiFile />
+          <div className="w-10 h-10 rounded bg-primary/10 text-primary border border-primary/20 flex items-center justify-center text-xl font-medium">
+            
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-base font-bold text-slate-800">
+              <h3 className="text-base font-medium text-slate-800">
                 {isEditing ? `Edit Article: ${formData.title || 'Untitled'}` : 'New Platform Blog Article'}
               </h3>
               <span
-                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider border ${
+                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider border ${
                   formData.is_published
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                     : 'bg-amber-50 text-amber-700 border-amber-200'
@@ -350,11 +336,11 @@ export default function BlogForm({
               >
                 {formData.is_published ? (
                   <>
-                    <BiGlobe className="text-xs" /> Published
+                     Published
                   </>
                 ) : (
                   <>
-                    <BiTimeFive className="text-xs" /> Draft
+                     Draft
                   </>
                 )}
               </span>
@@ -371,22 +357,20 @@ export default function BlogForm({
           <button
             type="button"
             onClick={onCancel}
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer self-start sm:self-auto"
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors cursor-pointer self-start sm:self-auto"
             aria-label="Close"
-          >
-            <BiX className="text-xl" />
-          </button>
+          >Close</button>
         )}
       </div>
 
       {error && (
-        <div className="p-3 mb-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+        <div className="p-3 mb-4 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs font-normal">
           {error}
         </div>
       )}
 
       {successMsg && (
-        <div className="p-3 mb-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
+        <div className="p-3 mb-4 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-normal">
           {successMsg}
         </div>
       )}
@@ -395,7 +379,7 @@ export default function BlogForm({
         {/* Title */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="block text-xs font-bold text-slate-700">Article Title *</label>
+            <label className="block text-xs font-medium text-slate-700">Article Title *</label>
           </div>
           <input
             type="text"
@@ -407,19 +391,19 @@ export default function BlogForm({
               const autoSlug = newTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
               setFormData((prev) => ({ ...prev, title: newTitle, slug: autoSlug || prev.slug }));
             }}
-            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+            className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
           />
         </div>
 
         {/* Associated Ecosystem App */}
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1">
+          <label className="block text-xs font-medium text-slate-700 mb-1">
             Associated Ecosystem App <span className="text-slate-400 font-normal">(Optional)</span>
           </label>
           <select
             value={formData.app_id}
             onChange={(e) => setFormData({ ...formData, app_id: e.target.value })}
-            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+            className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
           >
             <option value="">-- No App Linked (General Platform Article) --</option>
             {availableApps.map((a) => (
@@ -432,33 +416,33 @@ export default function BlogForm({
 
         {/* Summary */}
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1">Brief Summary</label>
+          <label className="block text-xs font-medium text-slate-700 mb-1">Brief Summary</label>
           <textarea
             rows={2}
             placeholder="Short overview snippet for card previews, search results, and social feeds..."
             value={formData.summary}
             onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
-            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+            className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
           />
         </div>
 
         {/* Body Content */}
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1">Article Body Content *</label>
+          <label className="block text-xs font-medium text-slate-700 mb-1">Article Body Content *</label>
           <textarea
             rows={7}
             required
             placeholder="Write full article content (HTML or Markdown supported)..."
             value={formData.content}
             onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-            className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors font-mono text-xs leading-relaxed"
+            className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors font-mono text-xs leading-relaxed"
           />
         </div>
 
         {/* Publication Status Toggle */}
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-slate-50 border border-slate-200 rounded p-4 flex items-center justify-between">
           <div>
-            <div className="text-xs font-bold text-slate-800">Publication Status</div>
+            <div className="text-xs font-medium text-slate-800">Publication Status</div>
             <p className="text-[11px] text-slate-500">
               When published, this article will appear publicly in the /blogs directory and RSS feeds.
             </p>
@@ -471,8 +455,8 @@ export default function BlogForm({
               onChange={(e) => setFormData({ ...formData, is_published: e.target.checked })}
               className="sr-only peer"
             />
-            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-            <span className="ml-2 text-xs font-bold text-slate-700">
+            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+            <span className="ml-2 text-xs font-medium text-slate-700">
               {formData.is_published ? 'Published' : 'Draft'}
             </span>
           </label>
@@ -481,11 +465,11 @@ export default function BlogForm({
         {/* ========================================================================= */}
         {/* Cloudinary Gallery Images (blogs_image table) */}
         {/* ========================================================================= */}
-        <div className="border border-slate-200 rounded-xl p-5 space-y-4 bg-white">
+        <div className="border border-slate-200 rounded p-5 space-y-4 bg-white">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
             <div>
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                <BiImage className="text-primary text-base" />
+              <h4 className="text-xs font-medium text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                
                 <span>Gallery Images (blogs_image table)</span>
               </h4>
               <p className="text-[11px] text-slate-500">
@@ -497,12 +481,12 @@ export default function BlogForm({
               <button
                 type="button"
                 onClick={loadCloudinaryLibrary}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-300 hover:border-slate-400 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
+                className="flex items-center gap-1 px-3 py-1.5 rounded border border-slate-300 hover:border-slate-400 bg-white text-slate-700 text-xs font-normal hover:bg-slate-50 transition-colors cursor-pointer"
               >
-                <BiImages className="text-sm" />
+                
                 <span>Cloudinary Assets</span>
               </button>
-              <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-slate-100 text-slate-700">
+              <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-slate-100 text-slate-700">
                 {images.length} saved
               </span>
             </div>
@@ -511,7 +495,7 @@ export default function BlogForm({
           {/* Saved Cloudinary Gallery Images */}
           {images.length > 0 ? (
             <div className="space-y-2">
-              <div className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+              <div className="text-[11px] font-medium text-slate-600 uppercase tracking-wider">
                 Saved Images in Cloudinary
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -522,7 +506,7 @@ export default function BlogForm({
                   return (
                     <div
                       key={img.id || idx}
-                      className="group relative rounded-xl border border-slate-200 bg-slate-50/50 overflow-hidden shadow-xs flex flex-col justify-between"
+                      className="group relative rounded border border-slate-200 bg-slate-50/50 overflow-hidden shadow-xs flex flex-col justify-between"
                     >
                       <div className="aspect-video bg-slate-100 overflow-hidden relative">
                         <img
@@ -536,7 +520,7 @@ export default function BlogForm({
                         />
 
                         {isCover && (
-                          <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-primary text-slate-900 font-extrabold text-[10px] shadow-xs">
+                          <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-primary text-slate-900 font-medium text-[10px] shadow-xs">
                             Primary Cover
                           </div>
                         )}
@@ -545,19 +529,15 @@ export default function BlogForm({
                           type="button"
                           disabled={deletingImageId === img.id}
                           onClick={() => handleDeleteImage(img.id)}
-                          className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/95 hover:bg-rose-600 hover:text-white text-rose-600 transition-colors shadow-xs cursor-pointer"
+                          className="absolute top-2 right-2 p-1.5 rounded bg-white/95 hover:bg-rose-600 hover:text-white text-rose-600 transition-colors shadow-xs cursor-pointer"
                           title="Delete image from Cloudinary"
                         >
-                          {deletingImageId === img.id ? (
-                            <BiLoaderAlt className="animate-spin text-sm" />
-                          ) : (
-                            <BiTrash className="text-sm" />
-                          )}
+                          
                         </button>
                       </div>
 
                       <div className="p-2.5 text-[11px] space-y-1">
-                        <div className="font-semibold text-slate-800 truncate">
+                        <div className="font-normal text-slate-800 truncate">
                           {img.title || img.alt_text || 'Untitled Image'}
                         </div>
                         {img.caption && (
@@ -575,13 +555,13 @@ export default function BlogForm({
               </div>
             </div>
           ) : (
-            <div className="p-6 text-center border border-dashed border-slate-200 rounded-xl text-slate-400 text-xs">
+            <div className="p-6 text-center border border-dashed border-slate-200 rounded text-slate-400 text-xs">
               No gallery images saved yet. Upload images below to store them in Cloudinary.
             </div>
           )}
 
           {/* Local File Selection Dropzone */}
-          <div className="border border-dashed border-slate-300 hover:border-secondary rounded-xl p-4 bg-slate-50/60 transition-colors text-center space-y-3">
+          <div className="border border-dashed border-slate-300 hover:border-secondary rounded p-4 bg-slate-50/60 transition-colors text-center space-y-3">
             <input
               type="file"
               ref={fileInputRef}
@@ -595,10 +575,10 @@ export default function BlogForm({
               htmlFor="blog-image-file-input"
               className="cursor-pointer inline-flex flex-col items-center justify-center gap-1.5 text-slate-600 hover:text-secondary"
             >
-              <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-xl shadow-xs">
-                <BiUpload />
+              <div className="w-10 h-10 rounded bg-white border border-slate-200 flex items-center justify-center text-xl shadow-xs">
+                
               </div>
-              <span className="text-xs font-bold text-slate-800">
+              <span className="text-xs font-medium text-slate-800">
                 Click to browse images or drag files here
               </span>
               <span className="text-[11px] text-slate-400">
@@ -610,7 +590,7 @@ export default function BlogForm({
             {filePreviews.length > 0 && (
               <div className="space-y-3 pt-3 border-t border-slate-200">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700">
+                  <span className="text-xs font-medium text-slate-700">
                     Selected Files to Upload ({filePreviews.length}):
                   </span>
                   {isEditing && (
@@ -618,16 +598,16 @@ export default function BlogForm({
                       type="button"
                       disabled={uploadingImages}
                       onClick={handleUploadFilesToCloudinary}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary text-white text-xs font-bold hover:bg-secondary-dark transition-colors cursor-pointer disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-secondary text-white text-xs font-medium hover:bg-secondary-dark transition-colors cursor-pointer disabled:opacity-50"
                     >
                       {uploadingImages ? (
                         <>
-                          <BiLoaderAlt className="animate-spin text-sm" />
+                          
                           <span>Uploading...</span>
                         </>
                       ) : (
                         <>
-                          <BiCloudUpload className="text-base" />
+                          
                           <span>Upload Now to Cloudinary</span>
                         </>
                       )}
@@ -639,15 +619,15 @@ export default function BlogForm({
                   {filePreviews.map((prev, idx) => (
                     <div
                       key={idx}
-                      className="relative rounded-xl border border-amber-200 bg-amber-50/50 p-2 flex items-center gap-3"
+                      className="relative rounded border border-amber-200 bg-amber-50/50 p-2 flex items-center gap-3"
                     >
                       <img
                         src={prev.url}
                         alt="Preview"
-                        className="w-12 h-12 object-cover rounded-lg border border-amber-200 shrink-0"
+                        className="w-12 h-12 object-cover rounded border border-amber-200 shrink-0"
                       />
                       <div className="min-w-0 flex-1 text-left">
-                        <div className="text-xs font-semibold text-slate-800 truncate">
+                        <div className="text-xs font-normal text-slate-800 truncate">
                           {prev.name}
                         </div>
                         <div className="text-[10px] text-slate-500">{prev.size}</div>
@@ -658,7 +638,7 @@ export default function BlogForm({
                         className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-white transition-colors"
                         title="Remove file"
                       >
-                        <BiX className="text-lg" />
+                        
                       </button>
                     </div>
                   ))}
@@ -676,7 +656,7 @@ export default function BlogForm({
               type="button"
               disabled={loading}
               onClick={(e) => handleSubmit(e, true)}
-              className="px-3 py-1.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-medium transition-colors cursor-pointer"
             >
               Save &amp; Publish Live
             </button>
@@ -684,7 +664,7 @@ export default function BlogForm({
               type="button"
               disabled={loading}
               onClick={(e) => handleSubmit(e, false)}
-              className="px-3 py-1.5 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
             >
               Save as Draft
             </button>
@@ -696,7 +676,7 @@ export default function BlogForm({
                 type="button"
                 onClick={onCancel}
                 disabled={loading}
-                className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
+                className="px-4 py-2 rounded border border-slate-300 text-slate-700 text-xs font-normal hover:bg-slate-50 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -704,16 +684,16 @@ export default function BlogForm({
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-primary hover:bg-primary-dark text-slate-900 text-xs font-bold shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-5 py-2 rounded bg-primary hover:bg-primary-dark text-slate-900 text-xs font-medium shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
             >
               {loading ? (
                 <>
-                  <BiLoaderAlt className="animate-spin text-base" />
+                  
                   <span>Saving Article...</span>
                 </>
               ) : (
                 <>
-                  <BiCheck className="text-base" />
+                  
                   <span>{isEditing ? 'Save Changes' : 'Initialize Article'}</span>
                 </>
               )}
@@ -727,15 +707,15 @@ export default function BlogForm({
       {/* ========================================================================= */}
       {showCloudinaryLibrary && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 max-w-4xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded border border-slate-200 max-w-4xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="p-5 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center text-xl">
-                  <BiImages />
+                <div className="w-9 h-9 rounded bg-secondary/10 text-secondary flex items-center justify-center text-xl">
+                  
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">Cloudinary Media Library</h3>
+                  <h3 className="text-sm font-medium text-slate-900">Cloudinary Media Library</h3>
                   <p className="text-[11px] text-slate-500">
                     Select an existing uploaded asset to attach to this blog gallery.
                   </p>
@@ -744,9 +724,9 @@ export default function BlogForm({
               <button
                 type="button"
                 onClick={() => setShowCloudinaryLibrary(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                className="p-1.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100"
               >
-                <BiX className="text-xl" />
+                
               </button>
             </div>
 
@@ -754,7 +734,7 @@ export default function BlogForm({
             <div className="p-5 overflow-y-auto flex-1">
               {loadingAssets ? (
                 <div className="py-16 text-center text-slate-400 flex flex-col items-center justify-center gap-2">
-                  <BiLoaderAlt className="animate-spin text-3xl text-secondary" />
+                  
                   <span className="text-xs">Loading Cloudinary media assets...</span>
                 </div>
               ) : cloudinaryAssets.length === 0 ? (
@@ -768,7 +748,7 @@ export default function BlogForm({
                     return (
                       <div
                         key={asset.public_id}
-                        className="group relative rounded-xl border border-slate-200 bg-white overflow-hidden shadow-xs hover:border-secondary transition-all flex flex-col justify-between"
+                        className="group relative rounded border border-slate-200 bg-white overflow-hidden shadow-xs hover:border-secondary transition-all flex flex-col justify-between"
                       >
                         <div className="aspect-square bg-slate-100 relative overflow-hidden">
                           <img
@@ -785,13 +765,9 @@ export default function BlogForm({
                             type="button"
                             disabled={isAttaching}
                             onClick={() => handleAttachExistingAsset(asset)}
-                            className="w-full py-1 rounded-lg bg-slate-100 hover:bg-secondary hover:text-white text-slate-700 text-[10px] font-bold transition-colors cursor-pointer flex items-center justify-center gap-1"
+                            className="w-full py-1 rounded bg-slate-100 hover:bg-secondary hover:text-white text-slate-700 text-[10px] font-medium transition-colors cursor-pointer flex items-center justify-center gap-1"
                           >
-                            {isAttaching ? (
-                              <BiLoaderAlt className="animate-spin" />
-                            ) : (
-                              <BiPlus />
-                            )}
+                            
                             <span>{isAttaching ? 'Attaching...' : 'Attach Image'}</span>
                           </button>
                         </div>
@@ -807,7 +783,7 @@ export default function BlogForm({
               <button
                 type="button"
                 onClick={() => setShowCloudinaryLibrary(false)}
-                className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-white"
+                className="px-4 py-2 rounded border border-slate-300 text-slate-700 text-xs font-normal hover:bg-white"
               >
                 Close
               </button>

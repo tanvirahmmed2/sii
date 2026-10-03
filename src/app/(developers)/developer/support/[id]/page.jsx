@@ -1,23 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useContext } from 'react';
-import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
-import {
-  BiArrowBack,
-  BiRefresh,
-  BiTrash,
-  BiSend,
-  BiSupport,
-  BiUser,
-  BiCheckCircle,
-  BiTimeFive,
-  BiLoaderAlt,
-  BiEnvelope,
-  BiCheckShield,
-  BiLinkExternal,
-  BiX,
-} from 'react-icons/bi';
+import { useState, useEffect, useContext, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+
+
 import { Context } from 'src/component/helper/Context';
 
 export default function SingleSupportTicketPage() {
@@ -229,11 +215,11 @@ export default function SingleSupportTicketPage() {
 
   if (loading) {
     return (
-      <div className="bg-white border border-slate-200 rounded-3xl p-16 text-center shadow-xs">
-        <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-4 animate-spin">
-          <BiLoaderAlt className="text-2xl" />
+      <div className="bg-white border border-slate-200 rounded p-16 text-center shadow-xs">
+        <div className="w-12 h-12 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-4 animate-spin">
+          
         </div>
-        <h3 className="text-base font-bold text-slate-900 mb-1">Loading Support Thread...</h3>
+        <h3 className="text-base font-medium text-slate-900 mb-1">Loading Support Thread...</h3>
         <p className="text-xs text-slate-500">Connecting to creator support channel and syncing messages.</p>
       </div>
     );
@@ -241,19 +227,19 @@ export default function SingleSupportTicketPage() {
 
   if (error || !ticket) {
     return (
-      <div className="bg-white border border-slate-200 rounded-3xl p-16 text-center shadow-xs space-y-4">
-        <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
-          <BiX className="text-2xl" />
+      <div className="bg-white border border-slate-200 rounded p-16 text-center shadow-xs space-y-4">
+        <div className="w-12 h-12 rounded bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+          
         </div>
-        <h3 className="text-base font-bold text-slate-900">{error || 'Ticket Not Found'}</h3>
+        <h3 className="text-base font-medium text-slate-900">{error || 'Ticket Not Found'}</h3>
         <p className="text-xs text-slate-500 max-w-md mx-auto">
           The requested support ticket could not be found or has been removed.
         </p>
         <Link
           href="/developer/support"
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded bg-slate-900 text-white text-xs font-normal hover:bg-slate-800 transition-colors"
         >
-          <BiArrowBack className="text-base" />
+          
           <span>Back to All Tickets</span>
         </Link>
       </div>
@@ -279,50 +265,50 @@ export default function SingleSupportTicketPage() {
       {/* Toast Alert */}
       {actionNotice.text && (
         <div
-          className={`p-4 rounded-2xl flex items-center justify-between text-xs font-semibold shadow-xs transition-all ${
+          className={`p-4 rounded flex items-center justify-between text-xs font-normal shadow-xs transition-all ${
             actionNotice.type === 'error'
               ? 'bg-rose-50 border border-rose-200 text-rose-800'
               : 'bg-emerald-50 border border-emerald-200 text-emerald-800'
           }`}
         >
           <div className="flex items-center gap-2">
-            <BiCheckCircle className="text-base" />
+            
             <span>{actionNotice.text}</span>
           </div>
           <button
             onClick={() => setActionNotice({ text: '', type: '' })}
             className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
           >
-            <BiX className="text-base" />
+            
           </button>
         </div>
       )}
 
       {/* Top Header & Actions Bar */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200 rounded p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
             <Link
               href="/developer/support"
-              className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors"
+              className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-indigo-600 transition-colors"
             >
-              <BiArrowBack className="text-base" />
+              
               <span>Support Dashboard</span>
             </Link>
             <span className="text-slate-300">/</span>
-            <span className="text-xs font-mono font-bold text-slate-900">{ticket.ticket_number}</span>
+            <span className="text-xs font-mono font-medium text-slate-900">{ticket.ticket_number}</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{ticket.subject}</h1>
+            <h1 className="text-2xl font-medium text-slate-900 tracking-tight">{ticket.subject}</h1>
             <span
-              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${
+              className={`inline-flex items-center px-2.5 py-0.5 rounded text-[10px] font-medium border uppercase tracking-wider ${
                 statusColors[ticket.status] || statusColors.OPEN
               }`}
             >
               {ticket.status}
             </span>
-            <span className={`px-2 py-0.5 rounded-full border font-bold text-[10px] uppercase ${priorityColors[ticket.priority] || priorityColors.MEDIUM}`}>
+            <span className={`px-2 py-0.5 rounded border font-medium text-[10px] uppercase ${priorityColors[ticket.priority] || priorityColors.MEDIUM}`}>
               {ticket.priority || 'MEDIUM'}
             </span>
           </div>
@@ -330,7 +316,7 @@ export default function SingleSupportTicketPage() {
           <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-500">
             <span>
               Requester:{' '}
-              <strong className="text-slate-800 font-semibold">{ticket.creator_name || ticket.requester_name}</strong>
+              <strong className="text-slate-800 font-normal">{ticket.creator_name || ticket.requester_name}</strong>
             </span>
             <span>•</span>
             <span className="font-mono text-slate-600">{ticket.requester_email}</span>
@@ -339,10 +325,10 @@ export default function SingleSupportTicketPage() {
                 <span>•</span>
                 <Link
                   href={`/developer/creators/${ticket.creator_id}`}
-                  className="inline-flex items-center gap-1 text-indigo-600 font-semibold hover:underline"
+                  className="inline-flex items-center gap-1 text-indigo-600 font-normal hover:underline"
                 >
                   <span>View Creator Profile</span>
-                  <BiLinkExternal className="text-xs" />
+                  
                 </Link>
               </>
             )}
@@ -353,12 +339,12 @@ export default function SingleSupportTicketPage() {
         <div className="flex flex-wrap items-center gap-2 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
           {/* Status Selector */}
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-bold text-slate-500">Status:</span>
+            <span className="text-[11px] font-medium text-slate-500">Status:</span>
             <select
               value={ticket.status}
               disabled={statusLoading}
               onChange={(e) => handleStatusChange(e.target.value)}
-              className="bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-semibold focus:outline-none focus:border-indigo-600 transition-all cursor-pointer"
+              className="bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-800 font-normal focus:outline-none focus:border-indigo-600 transition-all cursor-pointer"
             >
               <option value="OPEN">Open</option>
               <option value="IN_PROGRESS">In Progress</option>
@@ -369,11 +355,11 @@ export default function SingleSupportTicketPage() {
 
           {/* Assignee Selector */}
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-bold text-slate-500">Assigned:</span>
+            <span className="text-[11px] font-medium text-slate-500">Assigned:</span>
             <select
               value={ticket.assigned_developer_id || ''}
               onChange={(e) => handleAssignDeveloper(e.target.value || null)}
-              className="bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-semibold focus:outline-none focus:border-indigo-600 transition-all cursor-pointer"
+              className="bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-800 font-normal focus:outline-none focus:border-indigo-600 transition-all cursor-pointer"
             >
               <option value="">Unassigned</option>
               {staffMembers.map((m) => (
@@ -388,33 +374,29 @@ export default function SingleSupportTicketPage() {
             type="button"
             disabled={refreshing}
             onClick={handleManualRefresh}
-            className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs transition-colors cursor-pointer"
+            className="p-2 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs transition-colors cursor-pointer"
             title="Live Sync"
-          >
-            <BiRefresh className={`text-base ${refreshing ? 'animate-spin' : ''}`} />
-          </button>
+          >Refresh</button>
 
           {canDelete && (
             <button
               type="button"
               disabled={deleting}
               onClick={handleDeleteTicket}
-              className="p-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs transition-colors cursor-pointer"
+              className="p-2 rounded border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs transition-colors cursor-pointer"
               title="Delete Ticket"
-            >
-              <BiTrash className="text-base" />
-            </button>
+            >Delete</button>
           )}
         </div>
       </div>
 
       {/* Conversation Thread & Live Stream Card */}
-      <div className="bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden flex flex-col h-[640px]">
+      <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden flex flex-col h-[640px]">
         {/* Messages Stream */}
         <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-50/50">
           {messages.length === 0 ? (
             <div className="py-24 text-center text-slate-400">
-              <BiSupport className="text-4xl mx-auto mb-2 opacity-50" />
+              
               <p className="text-xs">No messages in this ticket thread yet.</p>
             </div>
           ) : (
@@ -429,21 +411,21 @@ export default function SingleSupportTicketPage() {
                   <div className="flex items-center gap-2 mb-1 text-[11px] px-1">
                     {isStaff ? (
                       <>
-                        <span className="font-bold text-indigo-700 flex items-center gap-1">
-                          <BiCheckShield className="text-indigo-600 text-sm" />
+                        <span className="font-medium text-indigo-700 flex items-center gap-1">
+                          
                           <span>{m.sender_name || 'Staff Support'}</span>
                         </span>
-                        <span className="px-1.5 py-0.2 rounded-md bg-indigo-50 text-indigo-700 font-semibold text-[9px] uppercase border border-indigo-200">
+                        <span className="px-1.5 py-0.2 rounded-md bg-indigo-50 text-indigo-700 font-normal text-[9px] uppercase border border-indigo-200">
                           {m.developer_role || 'Staff'}
                         </span>
                       </>
                     ) : (
                       <>
-                        <span className="font-bold text-slate-800 flex items-center gap-1">
-                          <BiUser className="text-slate-400 text-sm" />
+                        <span className="font-medium text-slate-800 flex items-center gap-1">
+                          
                           <span>{m.sender_name || ticket.requester_name || 'Creator'}</span>
                         </span>
-                        <span className="px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-600 font-semibold text-[9px] uppercase border border-slate-200">
+                        <span className="px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-600 font-normal text-[9px] uppercase border border-slate-200">
                           Creator
                         </span>
                       </>
@@ -454,7 +436,7 @@ export default function SingleSupportTicketPage() {
                   </div>
 
                   <div
-                    className={`max-w-xl rounded-2xl p-4 text-xs leading-relaxed shadow-xs whitespace-pre-wrap ${
+                    className={`max-w-xl rounded p-4 text-xs leading-relaxed shadow-xs whitespace-pre-wrap ${
                       isStaff
                         ? 'bg-indigo-600 text-white border border-indigo-600 rounded-tr-sm'
                         : 'bg-white text-slate-800 border border-slate-200 rounded-tl-sm'
@@ -485,19 +467,15 @@ export default function SingleSupportTicketPage() {
                 }
                 value={replyMessage}
                 onChange={(e) => setReplyMessage(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-2xl p-3.5 pr-14 text-xs text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all disabled:opacity-60 leading-relaxed resize-none"
+                className="w-full bg-slate-50 border border-slate-300 rounded p-3.5 pr-14 text-xs text-slate-900 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all disabled:opacity-60 leading-relaxed resize-none"
               />
               <button
                 type="submit"
                 disabled={sendingReply || !replyMessage.trim() || !canReply}
-                className="absolute right-3 bottom-4 w-9 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center disabled:opacity-40 transition-all cursor-pointer shadow-xs"
+                className="absolute right-3 bottom-4 w-9 h-9 rounded bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center disabled:opacity-40 transition-all cursor-pointer shadow-xs"
                 title="Send Reply"
               >
-                {sendingReply ? (
-                  <BiLoaderAlt className="animate-spin text-sm" />
-                ) : (
-                  <BiSend className="text-base" />
-                )}
+                
               </button>
             </div>
 
@@ -507,7 +485,7 @@ export default function SingleSupportTicketPage() {
                 <select
                   value={targetStatus}
                   onChange={(e) => setTargetStatus(e.target.value)}
-                  className="bg-slate-50 border border-slate-300 rounded-lg px-2 py-0.5 text-xs text-slate-800 font-semibold focus:outline-none"
+                  className="bg-slate-50 border border-slate-300 rounded px-2 py-0.5 text-xs text-slate-800 font-normal focus:outline-none"
                 >
                   <option value="IN_PROGRESS">Keep In Progress</option>
                   <option value="RESOLVED">Mark as Resolved</option>

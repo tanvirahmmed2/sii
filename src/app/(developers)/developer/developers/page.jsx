@@ -4,33 +4,19 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AdminForm from 'src/component/marketing/developer/forms/AdminForm';
-import { BiEdit, BiTrash, BiLockAlt, BiShieldQuarter, BiX, BiCheck, BiUserCheck, BiSearch, BiPlus, BiMinus, BiRefresh } from 'react-icons/bi';
 
 const BASE_ROLE_BADGES = {
-  developer: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-  marketer: 'bg-orange-50 text-orange-700 border-orange-200',
-  admin: 'bg-purple-50 text-purple-700 border-purple-200',
-  manager: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  support: 'bg-teal-50 text-teal-700 border-teal-200',
+  developer: 'bg-cyan-50 dark:bg-cyan-950/40 text-cyan-800 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800',
+  marketer: 'bg-orange-50 dark:bg-orange-950/40 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-800',
+  admin: 'bg-purple-50 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800',
+  manager: 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+  support: 'bg-teal-50 dark:bg-teal-950/40 text-teal-800 dark:text-teal-300 border-teal-200 dark:border-teal-800',
 };
-
-const PALETTE = [
-  'bg-blue-50 text-blue-700 border-blue-200',
-  'bg-emerald-50 text-emerald-700 border-emerald-200',
-  'bg-violet-50 text-violet-700 border-violet-200',
-  'bg-amber-50 text-amber-700 border-amber-200',
-  'bg-rose-50 text-rose-700 border-rose-200',
-  'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200',
-];
 
 function getRoleBadgeStyle(slug = '') {
   const s = slug.toLowerCase();
   if (BASE_ROLE_BADGES[s]) return BASE_ROLE_BADGES[s];
-  let hash = 0;
-  for (let i = 0; i < s.length; i++) {
-    hash = (hash + s.charCodeAt(i)) % PALETTE.length;
-  }
-  return PALETTE[hash] || 'bg-slate-100 text-slate-700 border-slate-200';
+  return 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700';
 }
 
 const DEFAULT_ROLE_OPTIONS = [
@@ -77,16 +63,6 @@ export default function AdminAdminsPage() {
 
   const getRoleLabel = (slug = '') => roleLabelsMap[slug.toLowerCase()] || slug;
 
-  const fetchCurrentUser = async () => {
-    try {
-      const res = await fetch('/api/marketing/developer/me');
-      const data = await res.json();
-      if (data.success && data.user) {
-        setCurrentUser(data.user);
-      }
-    } catch (_) {}
-  };
-
   const fetchAdmins = async (showLoading = false) => {
     try {
       if (showLoading) setLoading(true);
@@ -124,8 +100,8 @@ export default function AdminAdminsPage() {
           setCurrentUser(adminData.currentUser);
         }
       }
-      if (meData && meData.success && meData.user) {
-        setCurrentUser(meData.user);
+      if (meData && meData.success && (meData.user || meData.developer)) {
+        setCurrentUser(meData.user || meData.developer);
       }
       setLoading(false);
     });
@@ -138,216 +114,72 @@ export default function AdminAdminsPage() {
   const permissions = Array.isArray(currentUser?.permissions) ? currentUser.permissions : [];
   const isUserAdmin = Boolean(permissions.includes('developers'));
 
-  useEffect(() => {
-    if (currentUser && !isUserAdmin) {
-      router.replace('/developer');
-    }
-  }, [currentUser, isUserAdmin, router]);
+  const activeAdminCount = admins.filter(
+    (a) => (a.role || '').toLowerCase() === 'admin' && a.is_active !== false && a.isActive !== false
+  ).length;
 
-  // Toggle active / inactive status
-  const handleToggleStatus = async (admin) => {
-    if (!isUserAdmin) {
-      setActionNotice({
-        text: 'Access Denied: developers permission required to update developer account status.',
-        type: 'error',
-      });
-      setTimeout(() => setActionNotice({ text: '', type: 'info' }), 6000);
-      return;
-    }
-
-    try {
-      setUpdatingStatusId(admin.id);
-      setActionNotice({ text: '', type: 'info' });
-      const res = await fetch('/api/marketing/developer/devs/list', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: admin.id, is_active: !admin.is_active }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setActionNotice({
-          text: data.message || `Status updated for ${admin.name}.`,
-          type: 'success',
-        });
-        fetchAdmins();
-      } else {
-        setActionNotice({
-          text: data.error || 'Failed to update admin account status.',
-          type: 'error',
-        });
-      }
-    } catch (err) {
-      setActionNotice({ text: 'Network error updating account status.', type: 'error' });
-    } finally {
-      setUpdatingStatusId(null);
-      setTimeout(() => setActionNotice({ text: '', type: 'info' }), 6000);
-    }
-  };
-
-  // Change admin role
   const handleChangeRole = async (admin, newRole) => {
-    if (!isUserAdmin) {
-      setActionNotice({
-        text: 'Access Denied: developers permission required to change roles.',
-        type: 'error',
-      });
-      setTimeout(() => setActionNotice({ text: '', type: 'info' }), 6000);
-      return;
-    }
-
-    const currentRole = (admin.role || '').toLowerCase();
-    if (currentRole === newRole.toLowerCase()) return;
-
-    const currentLabel = getRoleLabel(currentRole);
-    const newLabel = getRoleLabel(newRole);
-
-    const confirmChange = window.confirm(
-      `Change role for ${admin.name} from "${currentLabel}" to "${newLabel}"?`
-    );
-    if (!confirmChange) return;
+    if (!isUserAdmin) return;
+    setUpdatingRoleId(admin.id);
+    setActionNotice({ text: '', type: 'info' });
 
     try {
-      setUpdatingRoleId(admin.id);
-      setActionNotice({ text: '', type: 'info' });
-      const res = await fetch('/api/marketing/developer/devs/list', {
-        method: 'PATCH',
+      const res = await fetch('/api/marketing/developer/devs', {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: admin.id, role: newRole }),
       });
       const data = await res.json();
       if (data.success) {
-        setActionNotice({
-          text: data.message || `Role updated to ${newLabel} for ${admin.name}.`,
-          type: 'success',
-        });
-        fetchAdmins();
+        setAdmins((prev) =>
+          prev.map((a) => (a.id === admin.id ? { ...a, role: newRole, role_name: getRoleLabel(newRole) } : a))
+        );
+        setActionNotice({ text: `Updated ${admin.name} to ${getRoleLabel(newRole)}.`, type: 'success' });
       } else {
-        setActionNotice({
-          text: data.error || 'Failed to update role.',
-          type: 'error',
-        });
+        setActionNotice({ text: data.error || 'Failed to update role.', type: 'error' });
       }
     } catch (err) {
-      setActionNotice({ text: 'Network error updating role.', type: 'error' });
+      setActionNotice({ text: err.message || 'Error updating role.', type: 'error' });
     } finally {
       setUpdatingRoleId(null);
-      setTimeout(() => setActionNotice({ text: '', type: 'info' }), 6000);
     }
   };
 
-  // Open Edit Modal
-  const handleOpenEdit = (admin) => {
-    if (!isUserAdmin) {
-      setActionNotice({
-        text: 'Access Denied: developers permission required to edit developer accounts.',
-        type: 'error',
-      });
-      setTimeout(() => setActionNotice({ text: '', type: 'info' }), 6000);
-      return;
-    }
-    setEditingAdmin(admin);
-    setEditFormData({
-      name: admin.name || '',
-      role: (admin.role || 'developer').toLowerCase(),
-      is_active: admin.is_active !== false && admin.isActive !== false,
-      password: '',
-    });
-    setEditError('');
-  };
-
-  // Submit Edit Modal Form
-  const handleSaveEdit = async (e) => {
-    e.preventDefault();
-    if (!editingAdmin) return;
-    if (!isUserAdmin) {
-      setEditError('developers permission required to update developer accounts.');
-      return;
-    }
-
-    setEditLoading(true);
-    setEditError('');
+  const handleToggleStatus = async (admin) => {
+    if (!isUserAdmin) return;
+    setUpdatingStatusId(admin.id);
+    setActionNotice({ text: '', type: 'info' });
 
     try {
-      const payload = {
-        name: editFormData.name.trim(),
-        role: editFormData.role,
-        is_active: Boolean(editFormData.is_active),
-      };
-      if (editFormData.password && editFormData.password.trim()) {
-        payload.password = editFormData.password.trim();
-      }
-
-      const res = await fetch('/api/marketing/developer/devs/list', {
+      const res = await fetch('/api/marketing/developer/devs', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: editingAdmin.id,
-          data: payload,
-        }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        setActionNotice({
-          text: `Developer account for ${editingAdmin.name} updated successfully.`,
-          type: 'success',
-        });
-        setEditingAdmin(null);
-        fetchAdmins();
-      } else {
-        setEditError(data.error || 'Failed to update developer account.');
-      }
-    } catch (err) {
-      setEditError(err.message || 'Network error updating developer.');
-    } finally {
-      setEditLoading(false);
-      setTimeout(() => setActionNotice({ text: '', type: 'info' }), 6000);
-    }
-  };
-
-  // Delete admin account
-  const handleDeleteAdmin = async (adminId) => {
-    if (!isUserAdmin) {
-      setActionNotice({
-        text: 'Access Denied: developers permission required to delete developer accounts.',
-        type: 'error',
-      });
-      setTimeout(() => setActionNotice({ text: '', type: 'info' }), 6000);
-      return;
-    }
-
-    if (!confirm('Are you sure you want to delete this admin account? This action cannot be undone.')) return;
-
-    try {
-      setActionNotice({ text: '', type: 'info' });
-      const res = await fetch(`/api/marketing/developer/devs/list?id=${adminId}`, {
-        method: 'DELETE',
+        body: JSON.stringify({ id: admin.id, is_active: !admin.is_active }),
       });
       const data = await res.json();
       if (data.success) {
+        setAdmins((prev) =>
+          prev.map((a) => (a.id === admin.id ? { ...a, is_active: !admin.is_active } : a))
+        );
         setActionNotice({
-          text: data.message || 'Admin account deleted successfully.',
+          text: `Account for ${admin.name} is now ${!admin.is_active ? 'Active' : 'Inactive'}.`,
           type: 'success',
         });
-        fetchAdmins();
       } else {
-        setActionNotice({
-          text: data.error || 'Failed to delete admin account.',
-          type: 'error',
-        });
+        setActionNotice({ text: data.error || 'Failed to update status.', type: 'error' });
       }
     } catch (err) {
-      setActionNotice({ text: 'Network error deleting admin account.', type: 'error' });
+      setActionNotice({ text: err.message || 'Error updating status.', type: 'error' });
     } finally {
-      setTimeout(() => setActionNotice({ text: '', type: 'info' }), 6000);
+      setUpdatingStatusId(null);
     }
   };
 
-  // Resend Verification Link
   const handleResendCode = async (email) => {
+    setResendingEmail(email);
+    setActionNotice({ text: '', type: 'info' });
+
     try {
-      setResendingEmail(email);
-      setActionNotice({ text: '', type: 'info' });
       const res = await fetch('/api/marketing/developer/me/resend-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -355,195 +187,186 @@ export default function AdminAdminsPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setActionNotice({
-          text: `Verification activation link successfully resent to ${email} via Brevo.`,
-          type: 'success',
-        });
+        setActionNotice({ text: `Activation link sent to ${email}.`, type: 'success' });
       } else {
-        setActionNotice({
-          text: data.error || 'Failed to resend verification link.',
-          type: 'error',
-        });
+        setActionNotice({ text: data.error || 'Failed to send activation link.', type: 'error' });
       }
     } catch (err) {
-      setActionNotice({ text: 'Network error resending verification link.', type: 'error' });
+      setActionNotice({ text: err.message || 'Error sending link.', type: 'error' });
     } finally {
       setResendingEmail(null);
-      setTimeout(() => setActionNotice({ text: '', type: 'info' }), 6000);
     }
   };
 
-  const activeAdminCount = admins.filter(
-    (a) => (a.role || '').toLowerCase() === 'admin' && a.is_active !== false && a.isActive !== false
-  ).length;
+  const handleDeleteAdmin = async (id) => {
+    if (!isUserAdmin) return;
+    if (!confirm('Are you sure you want to delete this developer account? This action cannot be undone.')) {
+      return;
+    }
 
-  const filteredAdmins = admins.filter((admin) => {
-    if (!searchTerm.trim()) return true;
-    const q = searchTerm.toLowerCase();
+    try {
+      const res = await fetch(`/api/marketing/developer/devs?id=${id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAdmins((prev) => prev.filter((a) => a.id !== id));
+        setActionNotice({ text: 'Developer account deleted successfully.', type: 'success' });
+      } else {
+        setActionNotice({ text: data.error || 'Failed to delete developer.', type: 'error' });
+      }
+    } catch (err) {
+      setActionNotice({ text: err.message || 'Error deleting developer.', type: 'error' });
+    }
+  };
+
+  const handleOpenEdit = (admin) => {
+    setEditingAdmin(admin);
+    setEditFormData({
+      name: admin.name || '',
+      role: admin.role || 'developer',
+      is_active: admin.is_active !== false,
+      password: '',
+    });
+    setEditError('');
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    setEditLoading(true);
+    setEditError('');
+
+    try {
+      const payload = {
+        id: editingAdmin.id,
+        name: editFormData.name.trim(),
+        role: editFormData.role,
+        is_active: editFormData.is_active,
+      };
+      if (editFormData.password && editFormData.password.trim()) {
+        payload.password = editFormData.password.trim();
+      }
+
+      const res = await fetch('/api/marketing/developer/devs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setAdmins((prev) =>
+          prev.map((a) =>
+            a.id === editingAdmin.id
+              ? {
+                  ...a,
+                  name: payload.name,
+                  role: payload.role,
+                  role_name: getRoleLabel(payload.role),
+                  is_active: payload.is_active,
+                }
+              : a
+          )
+        );
+        setEditingAdmin(null);
+        setActionNotice({ text: `Account for ${payload.name} updated successfully.`, type: 'success' });
+      } else {
+        setEditError(data.error || 'Failed to update account.');
+      }
+    } catch (err) {
+      setEditError(err.message || 'Network error updating account.');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const filteredAdmins = admins.filter((a) => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
     return (
-      admin.name?.toLowerCase().includes(q) ||
-      admin.email?.toLowerCase().includes(q) ||
-      admin.role?.toLowerCase().includes(q)
+      (a.name || '').toLowerCase().includes(term) ||
+      (a.email || '').toLowerCase().includes(term) ||
+      (a.role || '').toLowerCase().includes(term)
     );
   });
 
-  if (currentUser && !isUserAdmin) {
-    return (
-      <div className="max-w-md mx-auto my-12 p-8 rounded-3xl bg-white border border-slate-200 shadow-xl text-center space-y-4">
-        <div className="w-14 h-14 mx-auto rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center text-3xl font-bold border border-rose-200">
-          <BiLockAlt />
-        </div>
-        <div>
-          <h2 className="text-lg font-bold text-slate-800">Permission Required</h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Managing administrator and developer accounts requires the <strong className="font-mono">developers</strong> permission.
-          </p>
-        </div>
-        <div className="pt-2">
-          <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 font-medium">
-            Redirecting to Admin Overview...
-          </span>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
-      {/* Role permission status banner */}
-      {currentUser && (
-        <div
-          className={`p-4 rounded-2xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs ${
-            isUserAdmin
-              ? 'bg-purple-50/70 border-purple-200 text-purple-900'
-              : 'bg-amber-50 border-amber-200 text-amber-900'
-          }`}
-        >
-          <div className="flex items-center gap-2.5">
-            <div
-              className={`p-1.5 rounded-lg ${
-                isUserAdmin ? 'bg-purple-100 text-purple-700' : 'bg-amber-100 text-amber-700'
-              }`}
-            >
-              {isUserAdmin ? <BiShieldQuarter className="text-lg" /> : <BiLockAlt className="text-lg" />}
-            </div>
-            <div>
-              <div className="font-bold flex items-center gap-2">
-                <span>Logged in as: {currentUser.name || currentUser.email}</span>
-                <span
-                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                    isUserAdmin ? 'bg-purple-200 text-purple-800' : 'bg-amber-200 text-amber-800'
-                  }`}
-                >
-                  {currentUser.role || 'Operator'}
-                </span>
-              </div>
-              <p className="text-[11px] opacity-85 mt-0.5">
-                {isUserAdmin
-                  ? 'Full administrative control: You can update accounts, change roles, toggle statuses, and add developers.'
-                  : 'Read-only access: developers permission is required to update accounts, change roles, or toggle statuses.'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <span
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
-                isUserAdmin
-                  ? 'bg-white text-purple-700 border-purple-200'
-                  : 'bg-white text-amber-700 border-amber-200'
-              }`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${isUserAdmin ? 'bg-purple-600 animate-pulse' : 'bg-amber-500'}`}
-              />
-              {isUserAdmin ? 'Role Update Enabled' : 'Developers Permission Required'}
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* Action Notification Alert */}
       {actionNotice.text && (
         <div
-          className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all ${
+          className={`p-3 rounded border text-xs font-normal flex items-center justify-between ${
             actionNotice.type === 'error'
-              ? 'bg-rose-50 border-rose-200 text-rose-800'
+              ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300'
               : actionNotice.type === 'success'
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-              : 'bg-sky-50 border-sky-200 text-sky-800'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
+              : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200'
           }`}
         >
           <span>{actionNotice.text}</span>
           <button
             type="button"
             onClick={() => setActionNotice({ text: '', type: 'info' })}
-            className="text-slate-400 hover:text-slate-600 font-bold ml-2 cursor-pointer"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 ml-2 cursor-pointer"
           >
-            ×
+            Dismiss
           </button>
         </div>
       )}
 
       {/* Edit Admin Account Modal */}
       {editingAdmin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-purple-50 text-purple-700">
-                  <BiEdit className="text-xl" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800">Update Admin Account</h3>
-                  <p className="text-[11px] text-slate-500">Super Admin role privileges</p>
-                </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 max-w-md w-full p-5 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h3 className="text-sm font-medium text-slate-900 dark:text-white">Edit Developer Account</h3>
+                <p className="text-[11px] font-normal text-slate-500">Update account credentials and role</p>
               </div>
               <button
                 type="button"
                 onClick={() => setEditingAdmin(null)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="text-xs font-normal text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
               >
-                <BiX className="text-xl" />
+                Close
               </button>
             </div>
 
             {editError && (
-              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+              <div className="p-2.5 rounded bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs font-normal">
                 {editError}
               </div>
             )}
 
-            <form onSubmit={handleSaveEdit} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
+            <form onSubmit={handleSaveEdit} className="space-y-3">
+              <div className="space-y-1">
+                <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Full Name</label>
                 <input
                   type="text"
                   required
                   value={editFormData.name}
                   onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-secondary focus:bg-white"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+              <div className="space-y-1">
+                <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Email Address</label>
                 <input
                   type="email"
                   disabled
                   value={editingAdmin.email}
-                  className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-500 cursor-not-allowed font-mono"
-                  title="Email cannot be changed directly"
+                  className="w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-500 cursor-not-allowed font-mono"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Assigned Role</label>
+                <div className="space-y-1">
+                  <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Assigned Role</label>
                   <select
                     value={editFormData.role}
                     onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-secondary focus:bg-white"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
                   >
                     {roleOptions.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -553,12 +376,12 @@ export default function AdminAdminsPage() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Account Status</label>
+                <div className="space-y-1">
+                  <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Account Status</label>
                   <select
                     value={editFormData.is_active ? 'active' : 'inactive'}
                     onChange={(e) => setEditFormData({ ...editFormData, is_active: e.target.value === 'active' })}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-secondary focus:bg-white"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
@@ -566,8 +389,8 @@ export default function AdminAdminsPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+              <div className="space-y-1">
+                <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">
                   Reset Password <span className="text-slate-400 font-normal">(Leave blank to keep unchanged)</span>
                 </label>
                 <input
@@ -575,25 +398,24 @@ export default function AdminAdminsPage() {
                   placeholder="••••••••"
                   value={editFormData.password}
                   onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-secondary focus:bg-white"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setEditingAdmin(null)}
-                  className="px-3.5 py-1.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-50 cursor-pointer"
+                  className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-normal hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={editLoading}
-                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-secondary hover:bg-secondary-dark text-white text-xs font-bold shadow-xs disabled:opacity-50 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium disabled:opacity-50 cursor-pointer"
                 >
-                  <BiCheck className="text-base" />
-                  <span>{editLoading ? 'Saving...' : 'Save Changes'}</span>
+                  {editLoading ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>
@@ -602,48 +424,35 @@ export default function AdminAdminsPage() {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Platform Developers &amp; Administrators</h1>
-            <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-secondary/10 text-secondary border border-secondary/20">
-              Developer
-            </span>
-          </div>
-          <p className="text-xs text-slate-500">Manage internal operators, developers, and platform staff.</p>
+          <h1 className="text-base font-medium text-slate-900 dark:text-white">Developers &amp; Staff</h1>
+          <p className="text-xs text-slate-500 font-normal">Manage internal operators and platform access.</p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
           {isUserAdmin && (
             <Link
               href="/developer/roles"
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold transition-all shadow-xs"
-              title="Manage platform roles and permission mappings"
+              className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-xs font-normal text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
             >
-              <BiShieldQuarter className="text-base" />
-              <span>Roles &amp; Permissions</span>
+              Roles &amp; Permissions
             </Link>
           )}
           <button
             type="button"
             onClick={() => fetchAdmins(true)}
-            className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
-            title="Refresh table data"
+            className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-xs font-normal text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
           >
-            <BiRefresh className="text-lg" />
+            Refresh
           </button>
           {isUserAdmin && (
             <button
               type="button"
               onClick={() => setShowAddForm(!showAddForm)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
-                showAddForm
-                  ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  : 'bg-secondary hover:bg-secondary-dark text-white'
-              }`}
+              className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium cursor-pointer"
             >
-              {showAddForm ? <BiMinus className="text-base" /> : <BiPlus className="text-base" />}
-              <span>{showAddForm ? 'Hide Form' : 'Add Developer'}</span>
+              {showAddForm ? 'Hide Form' : 'Add Developer'}
             </button>
           )}
         </div>
@@ -662,46 +471,43 @@ export default function AdminAdminsPage() {
       )}
 
       {/* Table Card */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50">
-          <div className="relative w-full sm:w-72">
-            <BiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
-            <input
-              type="text"
-              placeholder="Search admins by name, email, or role..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
-            />
-          </div>
-          <div className="text-xs text-slate-500 font-medium">
-            Showing <span className="font-bold text-slate-800">{filteredAdmins.length}</span> of {admins.length} records
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden">
+        <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-800/30">
+          <input
+            type="text"
+            placeholder="Search by name, email, or role..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full sm:w-72 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-slate-500 font-normal"
+          />
+          <div className="text-xs text-slate-500 font-normal">
+            Showing {filteredAdmins.length} of {admins.length} records
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/80 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
-                <th className="px-4 py-3 whitespace-nowrap">ID</th>
-                <th className="px-4 py-3 whitespace-nowrap">Name</th>
-                <th className="px-4 py-3 whitespace-nowrap">Email Address</th>
-                <th className="px-4 py-3 whitespace-nowrap">Role (Admin editable)</th>
-                <th className="px-4 py-3 whitespace-nowrap">Status (Click to toggle)</th>
-                <th className="px-4 py-3 whitespace-nowrap">Verification</th>
-                <th className="px-4 py-3 whitespace-nowrap">Last Login</th>
-                <th className="px-4 py-3 whitespace-nowrap">Created At</th>
-                <th className="px-4 py-3 text-right whitespace-nowrap">Actions</th>
+              <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-normal text-[11px]">
+                <th className="px-3.5 py-2.5 whitespace-nowrap">ID</th>
+                <th className="px-3.5 py-2.5 whitespace-nowrap">Name</th>
+                <th className="px-3.5 py-2.5 whitespace-nowrap">Email</th>
+                <th className="px-3.5 py-2.5 whitespace-nowrap">Role</th>
+                <th className="px-3.5 py-2.5 whitespace-nowrap">Status</th>
+                <th className="px-3.5 py-2.5 whitespace-nowrap">Verification</th>
+                <th className="px-3.5 py-2.5 whitespace-nowrap">Last Login</th>
+                <th className="px-3.5 py-2.5 whitespace-nowrap">Created</th>
+                <th className="px-3.5 py-2.5 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400">Loading developers &amp; administrators...</td>
+                  <td colSpan={9} className="py-8 text-center text-slate-400 font-normal">Loading developers...</td>
                 </tr>
               ) : filteredAdmins.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400">No developer records found.</td>
+                  <td colSpan={9} className="py-8 text-center text-slate-400 font-normal">No developer records found.</td>
                 </tr>
               ) : (
                 filteredAdmins.map((admin) => {
@@ -711,107 +517,65 @@ export default function AdminAdminsPage() {
                   const isLastActiveAdmin = role === 'admin' && isActive && activeAdminCount <= 1;
 
                   return (
-                    <tr key={admin.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="px-4 py-3 font-mono font-bold text-slate-500">#{admin.id}</td>
-                      <td className="px-4 py-3 font-semibold text-slate-800">{admin.name}</td>
-                      <td className="px-4 py-3 font-mono text-slate-600">{admin.email}</td>
+                    <tr key={admin.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="px-3.5 py-2.5 font-mono font-normal text-slate-500">#{admin.id}</td>
+                      <td className="px-3.5 py-2.5 font-medium text-slate-900 dark:text-white">{admin.name}</td>
+                      <td className="px-3.5 py-2.5 font-mono text-slate-600 dark:text-slate-400 font-normal">{admin.email}</td>
 
                       {/* Role column */}
-                      <td className="px-4 py-3">
+                      <td className="px-3.5 py-2.5">
                         {isUserAdmin ? (
-                          <div className="relative inline-block">
-                            <select
-                              value={role}
-                              disabled={updatingRoleId === admin.id}
-                              onChange={(e) => handleChangeRole(admin, e.target.value)}
-                              title={
-                                isLastActiveAdmin
-                                  ? 'Protected: Demoting this Super Admin requires another active Super Admin'
-                                  : 'Click to change developer role'
-                              }
-                              className={`text-[10px] font-bold border rounded-full px-2.5 py-1 appearance-none pr-6 cursor-pointer focus:outline-none focus:ring-1 focus:ring-secondary transition-colors ${
-                                getRoleBadgeStyle(role)
-                              } ${updatingRoleId === admin.id ? 'opacity-50' : ''}`}
-                            >
-                              {roleOptions.map((opt) => (
-                                <option key={opt.value} value={opt.value} className="bg-white text-slate-800 font-normal">
-                                  {opt.label}
-                                </option>
-                              ))}
-                            </select>
-                            <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-slate-400">
-                              ▼
-                            </span>
-                          </div>
-                        ) : (
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                              getRoleBadgeStyle(role)
-                            }`}
-                            title="Only developers permission can change roles"
+                          <select
+                            value={role}
+                            disabled={updatingRoleId === admin.id}
+                            onChange={(e) => handleChangeRole(admin, e.target.value)}
+                            className={`text-[11px] font-normal border rounded px-2 py-0.5 bg-transparent cursor-pointer focus:outline-none ${getRoleBadgeStyle(role)}`}
                           >
+                            {roleOptions.map((opt) => (
+                              <option key={opt.value} value={opt.value} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-normal border ${getRoleBadgeStyle(role)}`}>
                             {getRoleLabel(role)}
                           </span>
                         )}
                       </td>
 
                       {/* Status column */}
-                      <td className="px-4 py-3">
+                      <td className="px-3.5 py-2.5">
                         <button
                           type="button"
-                          disabled={!isUserAdmin || updatingStatusId === admin.id}
+                          disabled={!isUserAdmin || updatingStatusId === admin.id || isLastActiveAdmin}
                           onClick={() => handleToggleStatus(admin)}
-                          title={
-                            !isUserAdmin
-                              ? 'Protected: developers permission required to update status'
-                              : isLastActiveAdmin
-                              ? 'Protected: At least one Super Admin account must remain active'
-                              : `Click to ${isActive ? 'deactivate' : 'activate'} this account`
-                          }
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all ${
-                            !isUserAdmin
-                              ? 'opacity-60 cursor-not-allowed bg-slate-50 text-slate-600 border-slate-200'
-                              : 'cursor-pointer hover:shadow-xs disabled:opacity-50 ' +
-                                (isActive
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                  : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100')
-                          }`}
+                          className={`px-2 py-0.5 rounded text-[11px] font-normal border cursor-pointer ${
+                            isActive
+                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                              : 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                          } disabled:opacity-50`}
                         >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              !isUserAdmin ? (isActive ? 'bg-emerald-400' : 'bg-rose-400') : isActive ? 'bg-emerald-500' : 'bg-rose-500'
-                            }`}
-                          />
-                          <span>
-                            {updatingStatusId === admin.id ? 'Updating...' : isActive ? 'Active' : 'Inactive'}
-                          </span>
-                          {!isUserAdmin ? (
-                            <BiLockAlt className="text-[10px] text-slate-400 ml-0.5" />
-                          ) : isLastActiveAdmin ? (
-                            <span className="text-[9px] text-amber-600 font-semibold ml-0.5" title="Last active super admin">
-                              (Protected)
-                            </span>
-                          ) : null}
+                          {updatingStatusId === admin.id ? 'Updating...' : isActive ? 'Active' : 'Inactive'}
                         </button>
                       </td>
 
                       {/* Verification column */}
-                      <td className="px-4 py-3">
+                      <td className="px-3.5 py-2.5">
                         {isVerified ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <span className="text-[11px] font-normal text-emerald-700 dark:text-emerald-400">
                             Verified
                           </span>
                         ) : (
                           <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            <span className="text-[11px] font-normal text-amber-700 dark:text-amber-400">
                               Unverified
                             </span>
                             <button
                               type="button"
                               disabled={resendingEmail === admin.email}
                               onClick={() => handleResendCode(admin.email)}
-                              className="text-[10px] text-secondary hover:underline font-semibold disabled:opacity-50 cursor-pointer"
-                              title="Resend activation link via email"
+                              className="text-[11px] text-slate-600 dark:text-slate-400 hover:underline font-normal cursor-pointer"
                             >
                               {resendingEmail === admin.email ? 'Sending...' : 'Resend Link'}
                             </button>
@@ -820,46 +584,41 @@ export default function AdminAdminsPage() {
                       </td>
 
                       {/* Last Login */}
-                      <td className="px-4 py-3 text-slate-500 text-[11px]">
+                      <td className="px-3.5 py-2.5 text-slate-500 text-[11px] font-normal">
                         {admin.last_login_at || admin.lastLoginAt
                           ? new Date(admin.last_login_at || admin.lastLoginAt).toLocaleDateString()
                           : 'Never'}
                       </td>
 
                       {/* Created At */}
-                      <td className="px-4 py-3 text-slate-500 text-[11px]">
+                      <td className="px-3.5 py-2.5 text-slate-500 text-[11px] font-normal">
                         {admin.created_at || admin.createdAt
                           ? new Date(admin.created_at || admin.createdAt).toLocaleDateString()
                           : '—'}
                       </td>
 
                       {/* Actions */}
-                      <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="px-3.5 py-2.5 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-2">
                           {isUserAdmin ? (
                             <>
                               <button
                                 type="button"
                                 onClick={() => handleOpenEdit(admin)}
-                                className="text-slate-400 hover:text-secondary p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-                                title={`Edit details for ${admin.name}`}
+                                className="text-xs font-normal text-slate-600 dark:text-slate-400 hover:underline cursor-pointer"
                               >
-                                <BiEdit className="text-base" />
+                                Edit
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleDeleteAdmin(admin.id)}
-                                className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-                                title={`Delete account ${admin.name}`}
+                                className="text-xs font-normal text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"
                               >
-                                <BiTrash className="text-base" />
+                                Delete
                               </button>
                             </>
                           ) : (
-                            <span className="text-[10px] text-slate-400 flex items-center gap-1 italic px-2">
-                              <BiLockAlt className="text-xs" />
-                              <span>Read-only</span>
-                            </span>
+                            <span className="text-[11px] text-slate-400 font-normal">Read-only</span>
                           )}
                         </div>
                       </td>

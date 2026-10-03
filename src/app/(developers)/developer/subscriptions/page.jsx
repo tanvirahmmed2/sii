@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BiSearch, BiPlus, BiMinus, BiTrash, BiRefresh } from 'react-icons/bi';
+
+
 import SubscriptionForm from 'src/component/marketing/developer/forms/SubscriptionForm';
 
 export default function AdminSubscriptionsPage() {
@@ -63,11 +64,11 @@ export default function AdminSubscriptionsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded p-6 shadow-xs">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Creator Subscriptions</h1>
-            <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+            <h1 className="text-2xl font-medium text-slate-900 tracking-tight">Creator Subscriptions</h1>
+            <span className="text-[11px] font-medium uppercase tracking-wider px-2.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
               Subscription
             </span>
           </div>
@@ -78,21 +79,19 @@ export default function AdminSubscriptionsPage() {
           <button
             type="button"
             onClick={fetchSubs}
-            className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+            className="p-2 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
             title="Refresh table data"
-          >
-            <BiRefresh className="text-lg" />
-          </button>
+          >Refresh</button>
           <button
             type="button"
             onClick={() => setShowForm(!showForm)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
+            className={`flex items-center gap-1.5 px-4 py-2 rounded text-xs font-medium transition-all shadow-xs cursor-pointer ${
               showForm
                 ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 : 'bg-secondary hover:bg-secondary-dark text-white'
             }`}
           >
-            {showForm ? <BiMinus className="text-base" /> : <BiPlus className="text-base" />}
+            
             <span>{showForm ? 'Hide Form' : 'Add Subscription'}</span>
           </button>
         </div>
@@ -110,27 +109,27 @@ export default function AdminSubscriptionsPage() {
       )}
 
       {/* Table Card */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50">
           <div className="relative w-full sm:w-72">
-            <BiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
+            
             <input
               type="text"
               placeholder="Search subscriptions by creator ID or package ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
+              className="w-full bg-white border border-slate-300 rounded pl-3 pr-3.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
             />
           </div>
           <div className="text-xs text-slate-500 font-medium">
-            Showing <span className="font-bold text-slate-800">{filtered.length}</span> of {subs.length} records
+            Showing <span className="font-medium text-slate-800">{filtered.length}</span> of {subs.length} records
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/80 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
+              <tr className="border-b border-slate-100 bg-slate-50/80 text-slate-500 font-normal uppercase tracking-wider text-[10px]">
                 <th className="px-4 py-3 whitespace-nowrap">ID</th>
                 <th className="px-4 py-3 whitespace-nowrap">Creator ID</th>
                 <th className="px-4 py-3 whitespace-nowrap">Package ID</th>
@@ -153,11 +152,11 @@ export default function AdminSubscriptionsPage() {
               ) : (
                 filtered.map((s) => (
                   <tr key={s.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="px-4 py-3 font-mono font-bold text-slate-500">#{s.id}</td>
-                    <td className="px-4 py-3 font-bold text-slate-800">Creator #{s.creator_id}</td>
-                    <td className="px-4 py-3 font-semibold text-slate-700">Package #{s.package_id}</td>
+                    <td className="px-4 py-3 font-mono font-medium text-slate-500">#{s.id}</td>
+                    <td className="px-4 py-3 font-medium text-slate-800">Creator #{s.creator_id}</td>
+                    <td className="px-4 py-3 font-normal text-slate-700">Package #{s.package_id}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${
                         s.status === 'ACTIVE'
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : s.status === 'TRIALING'
@@ -173,7 +172,7 @@ export default function AdminSubscriptionsPage() {
                     <td className="px-4 py-3 text-slate-500 text-[11px]">
                       {s.current_period_end ? new Date(s.current_period_end).toLocaleDateString() : '—'}
                     </td>
-                    <td className="px-4 py-3 text-[11px] font-semibold text-slate-600">
+                    <td className="px-4 py-3 text-[11px] font-normal text-slate-600">
                       {s.cancel_at_period_end ? 'Yes (Pending cancel)' : 'No (Auto-renew)'}
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
@@ -181,10 +180,10 @@ export default function AdminSubscriptionsPage() {
                         type="button"
                         disabled={deletingId === s.id}
                         onClick={() => handleDelete(s.id)}
-                        className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                        className="text-slate-400 hover:text-rose-600 p-1.5 rounded hover:bg-rose-50 transition-colors cursor-pointer"
                         title="Delete record"
                       >
-                        <BiTrash className="text-base" />
+                        
                       </button>
                     </td>
                   </tr>

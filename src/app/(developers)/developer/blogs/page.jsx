@@ -1,25 +1,9 @@
 'use client';
 
 import { useState, useEffect, useContext } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import {
-  BiSearch,
-  BiPlus,
-  BiTrash,
-  BiRefresh,
-  BiEdit,
-  BiImage,
-  BiLinkExternal,
-  BiCheckCircle,
-  BiTimeFive,
-  BiUser,
-  BiRocket,
-  BiLoaderAlt,
-  BiFile,
-  BiX,
-} from 'react-icons/bi';
+import { useRouter, redirect } from 'next/navigation';
+
+
 import { Context } from 'src/component/helper/Context';
 
 export default function AdminBlogsPage() {
@@ -174,13 +158,13 @@ export default function AdminBlogsPage() {
   return (
     <div className="space-y-6 w-full max-w-full overflow-hidden">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs w-full max-w-full overflow-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded p-5 sm:p-6 shadow-xs w-full max-w-full overflow-hidden">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight truncate">
+            <h1 className="text-xl sm:text-2xl font-medium text-slate-900 tracking-tight truncate">
               Platform Blog Articles
             </h1>
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 shrink-0">
+            <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 shrink-0">
               Blogs &amp; News
             </span>
           </div>
@@ -193,32 +177,30 @@ export default function AdminBlogsPage() {
           <button
             type="button"
             onClick={fetchBlogs}
-            className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+            className="p-2 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
             title="Refresh list data"
             aria-label="Refresh"
-          >
-            <BiRefresh className="text-lg" />
-          </button>
+          >Refresh</button>
           <button
             type="button"
             disabled={creating || !canManage}
             onClick={handleCreateDefaultBlog}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs bg-secondary hover:bg-secondary-dark text-white cursor-pointer disabled:opacity-60 shrink-0"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded text-xs font-medium transition-all shadow-xs bg-secondary hover:bg-secondary-dark text-white cursor-pointer disabled:opacity-60 shrink-0"
             title="Create New Blog Article"
           >
-            {creating ? <BiLoaderAlt className="animate-spin text-base" /> : <BiPlus className="text-base" />}
+            
             <span>{creating ? 'Creating...' : 'Create Article'}</span>
           </button>
         </div>
       </div>
 
       {actionError && (
-        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center justify-between gap-2 w-full">
+        <div className="p-4 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs font-normal flex items-center justify-between gap-2 w-full">
           <span className="truncate">{actionError}</span>
           <button
             type="button"
             onClick={() => setActionError('')}
-            className="text-rose-500 hover:text-rose-800 shrink-0 font-bold"
+            className="text-rose-500 hover:text-rose-800 shrink-0 font-medium"
           >
             Dismiss
           </button>
@@ -226,17 +208,17 @@ export default function AdminBlogsPage() {
       )}
 
       {/* Search & Filter Bar */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden w-full max-w-full">
+      <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden w-full max-w-full">
         <div className="p-3.5 sm:p-4 border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/50 w-full">
           {/* Search Field */}
           <div className="relative w-full sm:w-72 md:w-80">
-            <BiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
+            
             <input
               type="text"
               placeholder="Search by title, app, or author..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white border border-slate-300 rounded-xl pl-8.5 pr-8 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
+              className="w-full bg-white border border-slate-300 rounded pl-8.5 pr-8 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
             />
             {searchTerm && (
               <button
@@ -245,13 +227,13 @@ export default function AdminBlogsPage() {
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
                 title="Clear search"
               >
-                <BiX className="text-sm" />
+                
               </button>
             )}
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl w-full sm:w-auto shrink-0">
+          <div className="flex items-center gap-1 p-1 bg-slate-100 rounded w-full sm:w-auto shrink-0">
             {[
               { key: 'ALL', label: `All (${blogs.length})` },
               { key: 'PUBLISHED', label: `Published (${blogs.filter((b) => b.is_published).length})` },
@@ -261,9 +243,9 @@ export default function AdminBlogsPage() {
                 key={tab.key}
                 type="button"
                 onClick={() => setFilterTab(tab.key)}
-                className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer text-center whitespace-nowrap ${
+                className={`flex-1 sm:flex-initial px-3 py-1.5 rounded text-xs font-normal transition-all cursor-pointer text-center whitespace-nowrap ${
                   filterTab === tab.key
-                    ? 'bg-white text-slate-900 shadow-xs font-bold'
+                    ? 'bg-white text-slate-900 shadow-xs font-medium'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -278,7 +260,7 @@ export default function AdminBlogsPage() {
         {/* ========================================================================= */}
         <div className="w-full max-w-full overflow-hidden">
           {/* Header Row (Hidden on small screens) */}
-          <div className="hidden md:flex items-center gap-3 px-4 py-2.5 bg-slate-50/80 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-400 select-none">
+          <div className="hidden md:flex items-center gap-3 px-4 py-2.5 bg-slate-50/80 border-b border-slate-100 text-[10px] font-medium uppercase tracking-wider text-slate-400 select-none">
             <span className="w-8 shrink-0">#</span>
             <span className="w-14 shrink-0">Cover</span>
             <span className="flex-1 min-w-0">Article Title &amp; Details</span>
@@ -292,15 +274,15 @@ export default function AdminBlogsPage() {
           {/* List Content */}
           {loading ? (
             <div className="py-20 text-center flex flex-col items-center justify-center gap-2 text-slate-400">
-              <BiLoaderAlt className="animate-spin text-2xl text-secondary" />
-              <span className="text-xs font-semibold">Loading blog articles...</span>
+              
+              <span className="text-xs font-normal">Loading blog articles...</span>
             </div>
           ) : filtered.length === 0 ? (
             <div className="py-16 px-4 text-center space-y-2">
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center text-2xl mx-auto">
-                <BiFile />
+              <div className="w-12 h-12 rounded bg-slate-100 text-slate-400 flex items-center justify-center text-2xl mx-auto">
+                
               </div>
-              <h3 className="text-sm font-bold text-slate-800">No Articles Found</h3>
+              <h3 className="text-sm font-medium text-slate-800">No Articles Found</h3>
               <p className="text-xs text-slate-500 max-w-xs mx-auto">
                 {searchTerm
                   ? `No articles matched "${searchTerm}". Try a different keyword.`
@@ -312,9 +294,9 @@ export default function AdminBlogsPage() {
                 <button
                   type="button"
                   onClick={handleCreateDefaultBlog}
-                  className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-secondary text-white text-xs font-bold hover:bg-secondary-dark transition-colors cursor-pointer mt-2"
+                  className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded bg-secondary text-white text-xs font-medium hover:bg-secondary-dark transition-colors cursor-pointer mt-2"
                 >
-                  <BiPlus />
+                  
                   <span>Create First Article</span>
                 </button>
               )}
@@ -338,12 +320,12 @@ export default function AdminBlogsPage() {
                     className="p-3 sm:p-4 hover:bg-slate-50/70 transition-colors flex items-center gap-2.5 sm:gap-3 w-full min-w-0 overflow-hidden"
                   >
                     {/* ID (hidden on mobile) */}
-                    <span className="w-8 shrink-0 font-mono font-bold text-[11px] text-slate-400 hidden md:block">
+                    <span className="w-8 shrink-0 font-mono font-medium text-[11px] text-slate-400 hidden md:block">
                       #{blog.id}
                     </span>
 
                     {/* Cover Thumbnail */}
-                    <div className="w-12 h-9 sm:w-14 sm:h-10 rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shrink-0 relative flex items-center justify-center">
+                    <div className="w-12 h-9 sm:w-14 sm:h-10 rounded overflow-hidden border border-slate-200 bg-slate-100 shrink-0 relative flex items-center justify-center">
                       {thumb ? (
                         <Image
                           src={thumb}
@@ -356,9 +338,7 @@ export default function AdminBlogsPage() {
                             e.currentTarget.style.display = 'none';
                           }}
                         />
-                      ) : (
-                        <BiImage className="text-slate-300 text-base" />
-                      )}
+                      ) : null}
                     </div>
 
                     {/* Title & Details (flex-1 min-w-0 with truncate to prevent overflow) */}
@@ -366,7 +346,7 @@ export default function AdminBlogsPage() {
                       <div className="flex items-center gap-1.5 min-w-0">
                         <Link
                           href={`/developer/blogs/${blog.slug}`}
-                          className="text-xs sm:text-sm font-bold text-slate-900 hover:text-secondary truncate block tracking-tight"
+                          className="text-xs sm:text-sm font-medium text-slate-900 hover:text-secondary truncate block tracking-tight"
                           title={blog.title}
                         >
                           {blog.title}
@@ -377,10 +357,10 @@ export default function AdminBlogsPage() {
                         <div className="flex items-center gap-2 text-[11px] text-slate-400 min-w-0">
                           {blog.app_title && (
                             <span
-                              className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 truncate max-w-[140px] shrink-0"
+                              className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 truncate max-w-[140px] shrink-0"
                               title={`Linked app: ${blog.app_title}`}
                             >
-                              <BiRocket className="text-[10px] shrink-0" />
+                              
                               <span className="truncate">{blog.app_title}</span>
                             </span>
                           )}
@@ -388,7 +368,7 @@ export default function AdminBlogsPage() {
                           {/* On mobile screens, show gallery count inline */}
                           {imageCount > 0 && (
                             <span className="inline-flex md:hidden items-center gap-0.5 text-[10px] text-slate-500 shrink-0">
-                              <BiImage className="text-xs text-slate-400" />
+                              
                               <span>{imageCount}</span>
                             </span>
                           )}
@@ -404,13 +384,13 @@ export default function AdminBlogsPage() {
 
                     {/* Author (Hidden on < lg) */}
                     <div className="w-28 shrink-0 hidden lg:flex items-center gap-1 text-[11px] text-slate-600 truncate">
-                      <BiUser className="text-slate-400 shrink-0 text-xs" />
+                      
                       <span className="truncate">{blog.author_name || 'Staff'}</span>
                     </div>
 
                     {/* Gallery Count (Hidden on < md) */}
                     <div className="w-16 shrink-0 hidden md:flex items-center justify-center gap-1 text-[11px] text-slate-500">
-                      <BiImage className="text-sm text-slate-400" />
+                      
                       <span>{imageCount}</span>
                     </div>
 
@@ -420,20 +400,14 @@ export default function AdminBlogsPage() {
                         type="button"
                         disabled={isBeingToggled}
                         onClick={() => handleTogglePublish(blog)}
-                        className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-[10px] font-bold cursor-pointer transition-all ${
+                        className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded text-[10px] font-medium cursor-pointer transition-all ${
                           blog.is_published
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
                             : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
                         }`}
                         title="Click to toggle publish status"
                       >
-                        {isBeingToggled ? (
-                          <BiLoaderAlt className="animate-spin text-xs" />
-                        ) : blog.is_published ? (
-                          <BiCheckCircle className="text-xs" />
-                        ) : (
-                          <BiTimeFive className="text-xs" />
-                        )}
+                        
                         <span className="hidden sm:inline">
                           {blog.is_published ? 'Published' : 'Draft'}
                         </span>
@@ -452,38 +426,30 @@ export default function AdminBlogsPage() {
                         <Link
                           href={`/blogs/${blog.slug}`}
                           target="_blank"
-                          className="p-1 sm:p-1.5 rounded-lg text-slate-400 hover:text-secondary hover:bg-slate-100 transition-colors"
+                          className="p-1 sm:p-1.5 rounded text-slate-400 hover:text-secondary hover:bg-slate-100 transition-colors"
                           title="View live public article"
                           aria-label="View public article"
-                        >
-                          <BiLinkExternal className="text-base" />
-                        </Link>
+                        >Open</Link>
                       )}
 
                       {/* Edit article */}
                       <Link
                         href={`/developer/blogs/${blog.slug}`}
-                        className="p-1 sm:p-1.5 rounded-lg text-slate-500 hover:text-secondary hover:bg-secondary/10 transition-colors"
+                        className="p-1 sm:p-1.5 rounded text-slate-500 hover:text-secondary hover:bg-secondary/10 transition-colors"
                         title="Edit article"
                         aria-label="Edit article"
-                      >
-                        <BiEdit className="text-base" />
-                      </Link>
+                      >Edit</Link>
 
                       {/* Delete article */}
                       <button
                         type="button"
                         disabled={deletingId === blog.id}
                         onClick={() => handleDelete(blog.id, blog.title)}
-                        className="p-1 sm:p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50"
+                        className="p-1 sm:p-1.5 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50"
                         title="Delete article"
                         aria-label="Delete article"
                       >
-                        {deletingId === blog.id ? (
-                          <BiLoaderAlt className="animate-spin text-base" />
-                        ) : (
-                          <BiTrash className="text-base" />
-                        )}
+                        
                       </button>
                     </div>
                   </div>

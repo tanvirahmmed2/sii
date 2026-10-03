@@ -1,27 +1,9 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  BiShieldQuarter,
-  BiPlus,
-  BiCheck,
-  BiX,
-  BiEdit,
-  BiTrash,
-  BiSearch,
-  BiCheckShield,
-  BiLockAlt,
-  BiRefresh,
-  BiGridAlt,
-  BiLayer,
-  BiUserCheck,
-  BiArrowBack,
-  BiCheckDouble,
-  BiFolder,
-  BiInfoCircle,
-} from 'react-icons/bi';
+
+
 
 export default function RolesManagementPage() {
   const router = useRouter();
@@ -457,7 +439,7 @@ export default function RolesManagementPage() {
       {/* Notice Alert */}
       {notice.text && (
         <div
-          className={`p-3.5 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all shadow-xs ${
+          className={`p-3.5 rounded border text-xs font-normal flex items-center justify-between transition-all shadow-xs ${
             notice.type === 'error'
               ? 'bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-200'
               : notice.type === 'success'
@@ -466,13 +448,13 @@ export default function RolesManagementPage() {
           }`}
         >
           <div className="flex items-center gap-2">
-            <BiInfoCircle className="text-base shrink-0" />
+            
             <span>{notice.text}</span>
           </div>
           <button
             type="button"
             onClick={() => setNotice({ text: '', type: 'info' })}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold ml-2 cursor-pointer"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-medium ml-2 cursor-pointer"
           >
             ×
           </button>
@@ -480,14 +462,14 @@ export default function RolesManagementPage() {
       )}
 
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs transition-colors">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 shadow-xs transition-colors">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
-            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300">
-              <BiShieldQuarter className="text-2xl" />
+            <div className="p-2 rounded bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300">
+              
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-medium text-slate-900 dark:text-white tracking-tight">
                 Roles &amp; Permissions Studio
               </h1>
               <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -500,35 +482,35 @@ export default function RolesManagementPage() {
         <div className="flex items-center gap-2 flex-wrap">
           <Link
             href="/developer/developers"
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-normal transition-colors"
           >
-            <BiUserCheck className="text-base" />
+            
             <span>Developer Accounts</span>
           </Link>
           <button
             type="button"
             onClick={() => fetchData(true)}
-            className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-2 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             title="Refresh roles data"
           >
-            <BiRefresh className="text-lg" />
+            
           </button>
           {canManage && (
             <>
               <button
                 type="button"
                 onClick={() => setShowCreatePermModal(true)}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
-                <BiPlus className="text-base" />
+                
                 <span>New Permission</span>
               </button>
               <button
                 type="button"
                 onClick={() => setShowCreateRoleModal(true)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-4 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium shadow-xs transition-colors cursor-pointer"
               >
-                <BiPlus className="text-base" />
+                
                 <span>Create Role</span>
               </button>
             </>
@@ -545,13 +527,13 @@ export default function RolesManagementPage() {
               setActiveTab('roles');
               setSearchTerm('');
             }}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
               activeTab === 'roles'
-                ? 'border-purple-600 text-purple-600 dark:text-purple-400 font-extrabold'
+                ? 'border-purple-600 text-purple-600 dark:text-purple-400 font-medium'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            <BiShieldQuarter className="text-base" />
+            
             <span>Roles ({roles.length})</span>
           </button>
 
@@ -561,13 +543,13 @@ export default function RolesManagementPage() {
               setActiveTab('matrix');
               setSearchTerm('');
             }}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
               activeTab === 'matrix'
-                ? 'border-purple-600 text-purple-600 dark:text-purple-400 font-extrabold'
+                ? 'border-purple-600 text-purple-600 dark:text-purple-400 font-medium'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            <BiGridAlt className="text-base" />
+            
             <span>Permissions Matrix</span>
           </button>
 
@@ -577,20 +559,20 @@ export default function RolesManagementPage() {
               setActiveTab('permissions');
               setSearchTerm('');
             }}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
               activeTab === 'permissions'
-                ? 'border-purple-600 text-purple-600 dark:text-purple-400 font-extrabold'
+                ? 'border-purple-600 text-purple-600 dark:text-purple-400 font-medium'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
-            <BiLayer className="text-base" />
+            
             <span>Permissions Catalog ({permissions.length})</span>
           </button>
         </div>
 
         {/* Global Search Bar */}
         <div className="relative w-full sm:w-64 pb-2 sm:pb-0">
-          <BiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+          
           <input
             type="text"
             placeholder={
@@ -600,7 +582,7 @@ export default function RolesManagementPage() {
             }
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+            className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded pl-8 pr-3 py-1.5 text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
           />
         </div>
       </div>
@@ -626,16 +608,16 @@ export default function RolesManagementPage() {
                 return (
                   <div
                     key={role.id}
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-purple-300 dark:hover:border-purple-700 transition-all"
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-xs flex flex-col justify-between hover:border-purple-300 dark:hover:border-purple-700 transition-all"
                   >
                     <div className="space-y-3">
                       {/* Top Badges */}
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-2">
-                            <h3 className="text-base font-bold text-slate-900 dark:text-white">{role.name}</h3>
+                            <h3 className="text-base font-medium text-slate-900 dark:text-white">{role.name}</h3>
                             {isSystem && (
-                              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                              <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                                 System
                               </span>
                             )}
@@ -651,19 +633,19 @@ export default function RolesManagementPage() {
                               <button
                                 type="button"
                                 onClick={() => handleOpenEditRole(role)}
-                                className="text-slate-400 hover:text-purple-600 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                className="text-slate-400 hover:text-purple-600 p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                 title="Edit role metadata"
                               >
-                                <BiEdit className="text-base" />
+                                
                               </button>
                               {!isSystem && (
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteRole(role)}
-                                  className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                                  className="text-slate-400 hover:text-rose-600 p-1.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
                                   title="Delete role"
                                 >
-                                  <BiTrash className="text-base" />
+                                  
                                 </button>
                               )}
                             </>
@@ -678,15 +660,15 @@ export default function RolesManagementPage() {
 
                       {/* Counts / Stats */}
                       <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
-                        <div className="bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl">
-                          <span className="text-slate-400 block text-[10px] font-bold uppercase">Permissions</span>
-                          <span className="font-bold text-slate-800 dark:text-slate-200">
+                        <div className="bg-slate-50 dark:bg-slate-800/60 p-2 rounded">
+                          <span className="text-slate-400 block text-[10px] font-medium uppercase">Permissions</span>
+                          <span className="font-medium text-slate-800 dark:text-slate-200">
                             {assignedSlugs.length} / {permissions.length} modules
                           </span>
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl">
-                          <span className="text-slate-400 block text-[10px] font-bold uppercase">Members</span>
-                          <span className="font-bold text-slate-800 dark:text-slate-200">
+                        <div className="bg-slate-50 dark:bg-slate-800/60 p-2 rounded">
+                          <span className="text-slate-400 block text-[10px] font-medium uppercase">Members</span>
+                          <span className="font-medium text-slate-800 dark:text-slate-200">
                             {devCount} developer{devCount === 1 ? '' : 's'}
                           </span>
                         </div>
@@ -694,7 +676,7 @@ export default function RolesManagementPage() {
 
                       {/* Permission Preview Chips */}
                       <div className="pt-1">
-                        <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Modules Granted</div>
+                        <div className="text-[10px] uppercase font-medium text-slate-400 mb-1">Modules Granted</div>
                         <div className="flex flex-wrap gap-1">
                           {assignedSlugs.length === 0 ? (
                             <span className="text-xs text-slate-400 italic">No permissions assigned</span>
@@ -709,7 +691,7 @@ export default function RolesManagementPage() {
                                 </span>
                               ))}
                               {assignedSlugs.length > 5 && (
-                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
+                                <span className="text-[10px] font-normal px-1.5 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
                                   +{assignedSlugs.length - 5} more
                                 </span>
                               )}
@@ -723,7 +705,7 @@ export default function RolesManagementPage() {
                     <div className="pt-4 mt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
                       <Link
                         href={`/developer/developers?role=${role.slug}`}
-                        className="text-[11px] font-semibold text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+                        className="text-[11px] font-normal text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
                       >
                         View {devCount} member{devCount === 1 ? '' : 's'} →
                       </Link>
@@ -732,9 +714,9 @@ export default function RolesManagementPage() {
                         <button
                           type="button"
                           onClick={() => handleOpenConfigurePerms(role)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 text-xs font-bold transition-colors cursor-pointer"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 text-xs font-medium transition-colors cursor-pointer"
                         >
-                          <BiCheckShield className="text-base" />
+                          
                           <span>Configure Permissions</span>
                         </button>
                       )}
@@ -749,24 +731,24 @@ export default function RolesManagementPage() {
 
       {/* TAB 2: PERMISSIONS MATRIX VIEW */}
       {activeTab === 'matrix' && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-xs overflow-hidden">
           <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-800/40">
             <div>
-              <h2 className="text-sm font-bold text-slate-800 dark:text-white">Role-Permission Access Matrix</h2>
+              <h2 className="text-sm font-medium text-slate-800 dark:text-white">Role-Permission Access Matrix</h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Comprehensive matrix of all platform modules against configured staff roles.
               </p>
             </div>
             <div className="text-xs text-slate-500 font-medium">
-              Showing <span className="font-bold text-slate-800 dark:text-white">{matrixPermissions.length}</span> permissions across{' '}
-              <span className="font-bold text-slate-800 dark:text-white">{roles.length}</span> roles
+              Showing <span className="font-medium text-slate-800 dark:text-white">{matrixPermissions.length}</span> permissions across{' '}
+              <span className="font-medium text-slate-800 dark:text-white">{roles.length}</span> roles
             </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
+                <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-500 font-normal uppercase tracking-wider text-[10px]">
                   <th className="px-4 py-3 sticky left-0 bg-slate-50 dark:bg-slate-800/90 z-10 w-64">
                     Module / Permission
                   </th>
@@ -774,7 +756,7 @@ export default function RolesManagementPage() {
                   {roles.map((r) => (
                     <th key={r.id} className="px-3 py-3 text-center whitespace-nowrap min-w-28">
                       <div>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{r.name}</span>
+                        <span className="font-medium text-slate-800 dark:text-slate-200">{r.name}</span>
                         <div className="text-[9px] font-mono text-slate-400 normal-case">{r.slug}</div>
                       </div>
                     </th>
@@ -793,13 +775,13 @@ export default function RolesManagementPage() {
                     return (
                       <tr key={perm.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
                         <td className="px-4 py-2.5 sticky left-0 bg-white dark:bg-slate-900 z-10">
-                          <div className="font-bold text-slate-800 dark:text-white">{perm.name}</div>
+                          <div className="font-medium text-slate-800 dark:text-white">{perm.name}</div>
                           <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">
                             /{perm.slug}
                           </span>
                         </td>
                         <td className="px-3 py-2.5">
-                          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                          <span className="text-[10px] uppercase font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                             {perm.folder || 'general'}
                           </span>
                         </td>
@@ -809,14 +791,14 @@ export default function RolesManagementPage() {
                             <td key={r.id} className="px-3 py-2.5 text-center">
                               {hasPerm ? (
                                 <span
-                                  className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400"
+                                  className="inline-flex items-center justify-center w-6 h-6 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400"
                                   title={`${r.name} has permission to access ${perm.name}`}
                                 >
-                                  <BiCheck className="text-base" />
+                                  
                                 </span>
                               ) : (
                                 <span
-                                  className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800/60 text-slate-300 dark:text-slate-600"
+                                  className="inline-flex items-center justify-center w-6 h-6 rounded bg-slate-100 dark:bg-slate-800/60 text-slate-300 dark:text-slate-600"
                                   title={`${r.name} does NOT have permission to access ${perm.name}`}
                                 >
                                   -
@@ -843,7 +825,7 @@ export default function RolesManagementPage() {
             <button
               type="button"
               onClick={() => setSelectedFolder('all')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
                 selectedFolder === 'all'
                   ? 'bg-purple-600 text-white shadow-xs'
                   : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50'
@@ -858,7 +840,7 @@ export default function RolesManagementPage() {
                   key={folder}
                   type="button"
                   onClick={() => setSelectedFolder(folder)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase transition-colors cursor-pointer ${
+                  className={`px-3 py-1.5 rounded text-xs font-medium uppercase transition-colors cursor-pointer ${
                     selectedFolder === folder
                       ? 'bg-purple-600 text-white shadow-xs'
                       : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50'
@@ -871,11 +853,11 @@ export default function RolesManagementPage() {
           </div>
 
           {/* Permissions Table Card */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
+                  <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-500 font-normal uppercase tracking-wider text-[10px]">
                     <th className="px-4 py-3">Permission Name</th>
                     <th className="px-4 py-3">Route / Slug</th>
                     <th className="px-4 py-3">Category</th>
@@ -902,7 +884,7 @@ export default function RolesManagementPage() {
 
                       return (
                         <tr key={perm.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
-                          <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">
+                          <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
                             {perm.name}
                           </td>
                           <td className="px-4 py-3">
@@ -911,7 +893,7 @@ export default function RolesManagementPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3">
-                            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                            <span className="text-[10px] uppercase font-medium px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                               {perm.folder || 'general'}
                             </span>
                           </td>
@@ -920,7 +902,7 @@ export default function RolesManagementPage() {
                               {rolesHoldingPerm.map((r) => (
                                 <span
                                   key={r.id}
-                                  className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                                  className="text-[10px] font-normal px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                                 >
                                   {r.name}
                                 </span>
@@ -939,19 +921,19 @@ export default function RolesManagementPage() {
                                 <button
                                   type="button"
                                   onClick={() => handleOpenEditPerm(perm)}
-                                  className="text-slate-400 hover:text-purple-600 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                  className="text-slate-400 hover:text-purple-600 p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                   title="Edit permission details"
                                 >
-                                  <BiEdit className="text-base" />
+                                  
                                 </button>
                                 {!isProtected && (
                                   <button
                                     type="button"
                                     onClick={() => handleDeletePerm(perm)}
-                                    className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                                    className="text-slate-400 hover:text-rose-600 p-1.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
                                     title="Delete permission"
                                   >
-                                    <BiTrash className="text-base" />
+                                    
                                   </button>
                                 )}
                               </div>
@@ -971,15 +953,15 @@ export default function RolesManagementPage() {
       {/* MODAL: CONFIGURE ROLE PERMISSIONS */}
       {configuringRolePerms && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-3xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-2xl max-w-3xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
-                  <BiCheckShield className="text-2xl" />
+                <div className="p-2 rounded bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
+                  
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-base font-medium text-slate-900 dark:text-white">
                     Configure Permissions for: <span className="text-purple-600">{configuringRolePerms.name}</span>
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
@@ -990,15 +972,15 @@ export default function RolesManagementPage() {
               <button
                 type="button"
                 onClick={() => setConfiguringRolePerms(null)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg"
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded"
               >
-                <BiX className="text-2xl" />
+                
               </button>
             </div>
 
             {/* Error banner */}
             {rolePermsError && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+              <div className="p-3 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs font-normal">
                 {rolePermsError}
               </div>
             )}
@@ -1006,13 +988,13 @@ export default function RolesManagementPage() {
             {/* Quick Actions & Search */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="relative w-full sm:w-64">
-                <BiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+                
                 <input
                   type="text"
                   placeholder="Filter permissions..."
                   value={permSearchQuery}
                   onChange={(e) => setPermSearchQuery(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-purple-500"
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded pl-8 pr-3 py-1.5 text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-purple-500"
                 />
               </div>
 
@@ -1020,14 +1002,14 @@ export default function RolesManagementPage() {
                 <button
                   type="button"
                   onClick={() => setRolePermsSelection(permissions.map((p) => p.slug))}
-                  className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 >
                   Select All
                 </button>
                 <button
                   type="button"
                   onClick={() => setRolePermsSelection([])}
-                  className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 >
                   Deselect All
                 </button>
@@ -1049,18 +1031,18 @@ export default function RolesManagementPage() {
                 const allInFolderSelected = folderPerms.every((p) => rolePermsSelection.includes(p.slug));
 
                 return (
-                  <div key={folder} className="border border-slate-200 dark:border-slate-800 rounded-2xl p-4 bg-slate-50/40 dark:bg-slate-800/20">
+                  <div key={folder} className="border border-slate-200 dark:border-slate-800 rounded p-4 bg-slate-50/40 dark:bg-slate-800/20">
                     <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200 dark:border-slate-800">
                       <div className="flex items-center gap-2">
-                        <BiFolder className="text-purple-600 text-lg" />
-                        <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                        
+                        <span className="text-xs font-medium uppercase tracking-wider text-slate-700 dark:text-slate-200">
                           {folder} ({folderPerms.length})
                         </span>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleToggleFolderPerms(folderPerms, !allInFolderSelected)}
-                        className="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
+                        className="text-[11px] font-medium text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
                       >
                         {allInFolderSelected ? 'Deselect Category' : 'Select Category'}
                       </button>
@@ -1072,7 +1054,7 @@ export default function RolesManagementPage() {
                         return (
                           <label
                             key={perm.id}
-                            className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer select-none transition-all ${
+                            className={`flex items-start gap-2.5 p-2.5 rounded border cursor-pointer select-none transition-all ${
                               checked
                                 ? 'bg-purple-50 dark:bg-purple-950/60 border-purple-300 dark:border-purple-700 text-slate-900 dark:text-white'
                                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300'
@@ -1085,7 +1067,7 @@ export default function RolesManagementPage() {
                               className="mt-0.5 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
                             />
                             <div className="min-w-0">
-                              <span className="text-xs font-bold block truncate">{perm.name}</span>
+                              <span className="text-xs font-medium block truncate">{perm.name}</span>
                               <span className="font-mono text-[10px] text-slate-400 block truncate">
                                 /{perm.slug}
                               </span>
@@ -1110,7 +1092,7 @@ export default function RolesManagementPage() {
                 <button
                   type="button"
                   onClick={() => setConfiguringRolePerms(null)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                  className="px-4 py-2 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-normal hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1118,9 +1100,9 @@ export default function RolesManagementPage() {
                   type="button"
                   disabled={rolePermsLoading}
                   onClick={handleSaveRolePermissions}
-                  className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs disabled:opacity-50 cursor-pointer"
+                  className="flex items-center gap-1.5 px-5 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium shadow-xs disabled:opacity-50 cursor-pointer"
                 >
-                  <BiCheck className="text-base" />
+                  
                   <span>{rolePermsLoading ? 'Saving...' : 'Save Permissions'}</span>
                 </button>
               </div>
@@ -1132,35 +1114,35 @@ export default function RolesManagementPage() {
       {/* MODAL: CREATE ROLE */}
       {showCreateRoleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-xl w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
+          <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-2xl max-w-xl w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
-                  <BiShieldQuarter className="text-xl" />
+                <div className="p-2 rounded bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
+                  
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-800 dark:text-white">Create Platform Role</h3>
+                  <h3 className="text-base font-medium text-slate-800 dark:text-white">Create Platform Role</h3>
                   <p className="text-xs text-slate-500">Define a custom operational role for your developer team</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowCreateRoleModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="text-slate-400 hover:text-slate-600 p-1 rounded"
               >
-                <BiX className="text-xl" />
+                
               </button>
             </div>
 
             {createRoleError && (
-              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+              <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs font-normal">
                 {createRoleError}
               </div>
             )}
 
             <form onSubmit={handleCreateRole} className="space-y-4 overflow-y-auto pr-1 flex-1">
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Role Name <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -1177,12 +1159,12 @@ export default function RolesManagementPage() {
                       slug: createRoleData.slug === '' || createRoleData.slug === autoSlug.slice(0, -1) ? autoSlug : createRoleData.slug,
                     });
                   }}
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Role Slug / Identifier <span className="text-slate-400 font-normal">(Used in system logic)</span>
                 </label>
                 <input
@@ -1190,12 +1172,12 @@ export default function RolesManagementPage() {
                   placeholder="e.g. compliance-officer"
                   value={createRoleData.slug}
                   onChange={(e) => setCreateRoleData({ ...createRoleData, slug: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded px-3.5 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Description
                 </label>
                 <textarea
@@ -1203,35 +1185,35 @@ export default function RolesManagementPage() {
                   placeholder="Describe the duties and responsibilities assigned to this role..."
                   value={createRoleData.description}
                   onChange={(e) => setCreateRoleData({ ...createRoleData, description: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
                 />
               </div>
 
               {/* Quick Preset Permissions Selection */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
                     Initial Permissions ({createRoleData.permissions.length} selected)
                   </label>
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => setCreateRoleData({ ...createRoleData, permissions: permissions.map((p) => p.slug) })}
-                      className="text-[10px] font-bold text-purple-600 hover:underline"
+                      className="text-[10px] font-medium text-purple-600 hover:underline"
                     >
                       All
                     </button>
                     <button
                       type="button"
                       onClick={() => setCreateRoleData({ ...createRoleData, permissions: [] })}
-                      className="text-[10px] font-bold text-purple-600 hover:underline"
+                      className="text-[10px] font-medium text-purple-600 hover:underline"
                     >
                       None
                     </button>
                   </div>
                 </div>
 
-                <div className="max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-50/50 dark:bg-slate-800/40 grid grid-cols-2 gap-2">
+                <div className="max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded p-3 bg-slate-50/50 dark:bg-slate-800/40 grid grid-cols-2 gap-2">
                   {permissions.map((p) => {
                     const isChecked = createRoleData.permissions.includes(p.slug);
                     return (
@@ -1260,16 +1242,16 @@ export default function RolesManagementPage() {
                 <button
                   type="button"
                   onClick={() => setShowCreateRoleModal(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                  className="px-4 py-2 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-normal hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={createRoleLoading}
-                  className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs disabled:opacity-50 cursor-pointer"
+                  className="flex items-center gap-1.5 px-5 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium shadow-xs disabled:opacity-50 cursor-pointer"
                 >
-                  <BiCheck className="text-base" />
+                  
                   <span>{createRoleLoading ? 'Creating...' : 'Create Role'}</span>
                 </button>
               </div>
@@ -1281,46 +1263,46 @@ export default function RolesManagementPage() {
       {/* MODAL: EDIT ROLE METADATA */}
       {editingRole && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
-                  <BiEdit className="text-xl" />
+                <div className="p-2 rounded bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
+                  
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-800 dark:text-white">Edit Role Details</h3>
+                  <h3 className="text-sm font-medium text-slate-800 dark:text-white">Edit Role Details</h3>
                   <p className="text-xs text-slate-500">Update metadata for role #{editingRole.id}</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setEditingRole(null)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="text-slate-400 hover:text-slate-600 p-1 rounded"
               >
-                <BiX className="text-xl" />
+                
               </button>
             </div>
 
             {editRoleError && (
-              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+              <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs font-normal">
                 {editRoleError}
               </div>
             )}
 
             <form onSubmit={handleSaveEditRole} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Role Name</label>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Role Name</label>
                 <input
                   type="text"
                   required
                   value={editRoleData.name}
                   onChange={(e) => setEditRoleData({ ...editRoleData, name: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Slug {editingRole.is_system && <span className="text-slate-400 font-normal">(System Protected)</span>}
                 </label>
                 <input
@@ -1328,7 +1310,7 @@ export default function RolesManagementPage() {
                   disabled={editingRole.is_system}
                   value={editRoleData.slug}
                   onChange={(e) => setEditRoleData({ ...editRoleData, slug: e.target.value })}
-                  className={`w-full border rounded-xl px-3.5 py-2 text-xs font-mono ${
+                  className={`w-full border rounded px-3.5 py-2 text-xs font-mono ${
                     editingRole.is_system
                       ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 cursor-not-allowed border-slate-200 dark:border-slate-700'
                       : 'bg-slate-50 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white'
@@ -1337,12 +1319,12 @@ export default function RolesManagementPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Description</label>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Description</label>
                 <textarea
                   rows={3}
                   value={editRoleData.description}
                   onChange={(e) => setEditRoleData({ ...editRoleData, description: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
                 />
               </div>
 
@@ -1350,16 +1332,16 @@ export default function RolesManagementPage() {
                 <button
                   type="button"
                   onClick={() => setEditingRole(null)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                  className="px-4 py-2 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-normal hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={editRoleLoading}
-                  className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs disabled:opacity-50 cursor-pointer"
+                  className="flex items-center gap-1.5 px-5 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium shadow-xs disabled:opacity-50 cursor-pointer"
                 >
-                  <BiCheck className="text-base" />
+                  
                   <span>{editRoleLoading ? 'Saving...' : 'Save Changes'}</span>
                 </button>
               </div>
@@ -1371,35 +1353,35 @@ export default function RolesManagementPage() {
       {/* MODAL: CREATE PERMISSION */}
       {showCreatePermModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
-                  <BiLayer className="text-xl" />
+                <div className="p-2 rounded bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
+                  
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-800 dark:text-white">New Permission Module</h3>
+                  <h3 className="text-base font-medium text-slate-800 dark:text-white">New Permission Module</h3>
                   <p className="text-xs text-slate-500">Register a new feature or endpoint permission</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowCreatePermModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="text-slate-400 hover:text-slate-600 p-1 rounded"
               >
-                <BiX className="text-xl" />
+                
               </button>
             </div>
 
             {createPermError && (
-              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+              <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs font-normal">
                 {createPermError}
               </div>
             )}
 
             <form onSubmit={handleCreatePermission} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Permission Name <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -1416,12 +1398,12 @@ export default function RolesManagementPage() {
                       slug: createPermData.slug === '' || createPermData.slug === autoSlug.slice(0, -1) ? autoSlug : createPermData.slug,
                     });
                   }}
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Module Slug / Route Key <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -1430,19 +1412,19 @@ export default function RolesManagementPage() {
                   placeholder="e.g. analytics, audit-logs"
                   value={createPermData.slug}
                   onChange={(e) => setCreatePermData({ ...createPermData, slug: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded px-3.5 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Category / Folder</label>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Category / Folder</label>
                 <input
                   type="text"
                   list="folder-list"
                   placeholder="e.g. Platform Core, Security & Trust"
                   value={createPermData.folder}
                   onChange={(e) => setCreatePermData({ ...createPermData, folder: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
                 />
                 <datalist id="folder-list">
                   {uniqueFolders.map((f) => (
@@ -1452,13 +1434,13 @@ export default function RolesManagementPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Description</label>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Description</label>
                 <textarea
                   rows={2}
                   placeholder="Description of capabilities granted by this permission..."
                   value={createPermData.description}
                   onChange={(e) => setCreatePermData({ ...createPermData, description: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
                 />
               </div>
 
@@ -1466,16 +1448,16 @@ export default function RolesManagementPage() {
                 <button
                   type="button"
                   onClick={() => setShowCreatePermModal(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                  className="px-4 py-2 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-normal hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={createPermLoading}
-                  className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs disabled:opacity-50 cursor-pointer"
+                  className="flex items-center gap-1.5 px-5 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium shadow-xs disabled:opacity-50 cursor-pointer"
                 >
-                  <BiCheck className="text-base" />
+                  
                   <span>{createPermLoading ? 'Creating...' : 'Create Permission'}</span>
                 </button>
               </div>
@@ -1487,35 +1469,35 @@ export default function RolesManagementPage() {
       {/* MODAL: EDIT PERMISSION */}
       {editingPerm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
-                  <BiEdit className="text-xl" />
+                <div className="p-2 rounded bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
+                  
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-800 dark:text-white">Edit Permission</h3>
+                  <h3 className="text-sm font-medium text-slate-800 dark:text-white">Edit Permission</h3>
                   <p className="text-xs text-slate-500 font-mono">slug: {editingPerm.slug}</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setEditingPerm(null)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="text-slate-400 hover:text-slate-600 p-1 rounded"
               >
-                <BiX className="text-xl" />
+                
               </button>
             </div>
 
             {editPermError && (
-              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+              <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs font-normal">
                 {editPermError}
               </div>
             )}
 
             <form onSubmit={handleSaveEditPerm} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Permission Name
                 </label>
                 <input
@@ -1523,18 +1505,18 @@ export default function RolesManagementPage() {
                   required
                   value={editPermData.name}
                   onChange={(e) => setEditPermData({ ...editPermData, name: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Category / Folder</label>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Category / Folder</label>
                 <input
                   type="text"
                   list="folder-list-edit"
                   value={editPermData.folder}
                   onChange={(e) => setEditPermData({ ...editPermData, folder: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
                 />
                 <datalist id="folder-list-edit">
                   {uniqueFolders.map((f) => (
@@ -1544,12 +1526,12 @@ export default function RolesManagementPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Description</label>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Description</label>
                 <textarea
                   rows={3}
                   value={editPermData.description}
                   onChange={(e) => setEditPermData({ ...editPermData, description: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
+                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
                 />
               </div>
 
@@ -1557,16 +1539,16 @@ export default function RolesManagementPage() {
                 <button
                   type="button"
                   onClick={() => setEditingPerm(null)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                  className="px-4 py-2 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-normal hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={editPermLoading}
-                  className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs disabled:opacity-50 cursor-pointer"
+                  className="flex items-center gap-1.5 px-5 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium shadow-xs disabled:opacity-50 cursor-pointer"
                 >
-                  <BiCheck className="text-base" />
+                  
                   <span>{editPermLoading ? 'Saving...' : 'Save Changes'}</span>
                 </button>
               </div>

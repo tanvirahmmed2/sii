@@ -1,20 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef, useContext } from 'react';
-import {
-  BiChat,
-  BiPlus,
-  BiGroup,
-  BiUser,
-  BiSend,
-  BiImage,
-  BiSearch,
-  BiRefresh,
-  BiX,
-  BiCheckCircle,
-  BiTime,
-  BiPhotoAlbum,
-} from 'react-icons/bi';
+import { useState, useEffect, useContext, useRef } from 'react';
+
+
 import { Context } from 'src/component/helper/Context';
 
 export default function DeveloperChatsPage() {
@@ -204,8 +192,8 @@ export default function DeveloperChatsPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-            <BiChat className="text-secondary" /> Internal Developer Messenger
+          <h1 className="text-2xl font-medium text-slate-900 tracking-tight flex items-center gap-2">
+             Internal Developer Messenger
           </h1>
           <p className="text-xs md:text-sm text-slate-500">
             Real-time team communication, private 1-on-1 chats, group channels, and image sharing.
@@ -214,32 +202,32 @@ export default function DeveloperChatsPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowDirectModal(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-all"
           >
-            <BiUser className="text-base" /> + Direct Message
+             + Direct Message
           </button>
           <button
             onClick={() => setShowGroupModal(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-secondary hover:bg-secondary/90 text-white text-xs font-bold shadow-sm transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded bg-secondary hover:bg-secondary/90 text-white text-xs font-medium shadow-sm transition-all"
           >
-            <BiGroup className="text-base" /> + New Group
+             + New Group
           </button>
         </div>
       </div>
 
       {/* Main Chat Interface Grid */}
-      <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-[640px] max-h-[780px]">
+      <div className="bg-white border border-slate-200 rounded shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-[640px] max-h-[780px]">
         {/* Left Column: Chat List */}
         <div className="md:col-span-4 border-r border-slate-100 flex flex-col h-full bg-slate-50/40">
           <div className="p-4 border-b border-slate-100 space-y-3">
             <div className="relative">
-              <BiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
+              
               <input
                 type="text"
                 value={filterSearch}
                 onChange={(e) => setFilterSearch(e.target.value)}
                 placeholder="Search conversations..."
-                className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-3 py-2 text-xs focus:outline-none focus:border-secondary transition-colors"
+                className="w-full bg-white border border-slate-200 rounded pl-3 pr-3 py-2 text-xs focus:outline-none focus:border-secondary transition-colors"
               />
             </div>
           </div>
@@ -264,17 +252,17 @@ export default function DeveloperChatsPage() {
                     }`}
                   >
                     <div
-                      className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0 font-bold ${
+                      className={`w-10 h-10 rounded flex items-center justify-center text-lg shrink-0 font-medium ${
                         isGroup
                           ? 'bg-purple-100 text-purple-700'
                           : 'bg-indigo-100 text-indigo-700'
                       }`}
                     >
-                      {isGroup ? <BiGroup /> : <BiUser />}
+                      
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1">
-                        <span className="font-bold text-slate-900 text-xs truncate">
+                        <span className="font-medium text-slate-900 text-xs truncate">
                           {getChatDisplayName(c)}
                         </span>
                         {c.last_message_at && (
@@ -286,7 +274,7 @@ export default function DeveloperChatsPage() {
                       <p className="text-[11px] text-slate-500 truncate mt-0.5">
                         {c.last_message || <span className="italic text-slate-400">No messages yet</span>}
                       </p>
-                      <span className="inline-block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1">
+                      <span className="inline-block text-[10px] font-normal text-slate-400 uppercase tracking-wider mt-1">
                         {getChatSubtitle(c)}
                       </span>
                     </div>
@@ -305,16 +293,16 @@ export default function DeveloperChatsPage() {
               <div className="p-4 px-6 border-b border-slate-100 flex items-center justify-between bg-white">
                 <div className="flex items-center gap-3">
                   <div
-                    className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg ${
+                    className={`w-10 h-10 rounded flex items-center justify-center text-lg ${
                       selectedChat.type === 'GROUP'
                         ? 'bg-purple-100 text-purple-700'
                         : 'bg-indigo-100 text-indigo-700'
                     }`}
                   >
-                    {selectedChat.type === 'GROUP' ? <BiGroup /> : <BiUser />}
+                    
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm">
+                    <h3 className="font-medium text-slate-900 text-sm">
                       {getChatDisplayName(selectedChat)}
                     </h3>
                     <div className="flex items-center gap-1.5 text-xs text-slate-400">
@@ -328,10 +316,10 @@ export default function DeveloperChatsPage() {
                 </div>
                 <button
                   onClick={() => fetchMessages(selectedChat.id)}
-                  className="p-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors"
+                  className="p-2 rounded border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors"
                   title="Refresh messages"
                 >
-                  <BiRefresh className="text-lg" />
+                  
                 </button>
               </div>
 
@@ -341,8 +329,8 @@ export default function DeveloperChatsPage() {
                   <div className="text-center py-12 text-xs text-slate-400 animate-pulse">Loading message thread...</div>
                 ) : messages.length === 0 ? (
                   <div className="text-center py-16 space-y-2">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-2xl">
-                      <BiChat />
+                    <div className="w-12 h-12 rounded bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-2xl">
+                      
                     </div>
                     <p className="text-xs text-slate-500 font-medium">No messages yet. Start the conversation!</p>
                   </div>
@@ -352,7 +340,7 @@ export default function DeveloperChatsPage() {
                     if (m.is_system) {
                       return (
                         <div key={m.id} className="text-center my-2">
-                          <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-[11px] font-medium inline-block">
+                          <span className="px-3 py-1 rounded bg-slate-100 text-slate-500 text-[11px] font-medium inline-block">
                             {m.message}
                           </span>
                         </div>
@@ -365,15 +353,15 @@ export default function DeveloperChatsPage() {
                         className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
                       >
                         <div className="flex items-center gap-1.5 mb-1 text-[11px] text-slate-400 px-1">
-                          <span className="font-semibold text-slate-700">{m.sender_name}</span>
-                          <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 bg-slate-100 rounded text-slate-500">
+                          <span className="font-normal text-slate-700">{m.sender_name}</span>
+                          <span className="text-[10px] uppercase font-medium px-1.5 py-0.2 bg-slate-100 rounded text-slate-500">
                             {m.sender_role}
                           </span>
                           <span>•</span>
                           <span>{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                         <div
-                          className={`max-w-md p-3.5 rounded-2xl text-xs space-y-2 leading-relaxed shadow-sm ${
+                          className={`max-w-md p-3.5 rounded text-xs space-y-2 leading-relaxed shadow-sm ${
                             isMe
                               ? 'bg-secondary text-white rounded-br-none'
                               : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none'
@@ -390,7 +378,7 @@ export default function DeveloperChatsPage() {
                                   href={img.image_url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="block rounded-xl overflow-hidden border border-black/10 hover:opacity-95 transition-opacity"
+                                  className="block rounded overflow-hidden border border-black/10 hover:opacity-95 transition-opacity"
                                 >
                                   <img
                                     src={img.image_url}
@@ -412,8 +400,8 @@ export default function DeveloperChatsPage() {
               {/* Message Composer */}
               <div className="p-4 border-t border-slate-100 bg-white space-y-2">
                 {showImageInput && (
-                  <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-xl">
-                    <BiPhotoAlbum className="text-secondary text-lg ml-1" />
+                  <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded">
+                    
                     <input
                       type="url"
                       value={imageUrlInput}
@@ -438,38 +426,38 @@ export default function DeveloperChatsPage() {
                   <button
                     type="button"
                     onClick={() => setShowImageInput(!showImageInput)}
-                    className={`p-2.5 rounded-xl border transition-colors ${
+                    className={`p-2.5 rounded border transition-colors ${
                       showImageInput || imageUrlInput
                         ? 'bg-secondary text-white border-secondary'
                         : 'border-slate-200 hover:bg-slate-50 text-slate-600'
                     }`}
                     title="Attach Image URL"
                   >
-                    <BiImage className="text-lg" />
+                    
                   </button>
                   <input
                     type="text"
                     value={textInput}
                     onChange={(e) => setTextInput(e.target.value)}
                     placeholder="Type your message..."
-                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+                    className="flex-1 bg-slate-50 border border-slate-200 rounded px-4 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
                   />
                   <button
                     type="submit"
                     disabled={sending || (!textInput.trim() && !imageUrlInput.trim())}
-                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-secondary hover:bg-secondary/90 text-white text-xs font-bold shadow-md transition-all active:scale-95 disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded bg-secondary hover:bg-secondary/90 text-white text-xs font-medium shadow-md transition-all active:scale-95 disabled:opacity-50"
                   >
-                    <BiSend className="text-base" /> Send
+                     Send
                   </button>
                 </form>
               </div>
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3">
-              <div className="w-16 h-16 rounded-3xl bg-slate-100 text-slate-400 flex items-center justify-center text-3xl">
-                <BiChat />
+              <div className="w-16 h-16 rounded bg-slate-100 text-slate-400 flex items-center justify-center text-3xl">
+                
               </div>
-              <h3 className="font-bold text-slate-700 text-base">Select a conversation</h3>
+              <h3 className="font-medium text-slate-700 text-base">Select a conversation</h3>
               <p className="text-xs text-slate-400 max-w-sm">
                 Pick a channel from the left sidebar or start a new direct message with any developer on the team.
               </p>
@@ -481,9 +469,9 @@ export default function DeveloperChatsPage() {
       {/* Start Direct Chat Modal */}
       {showDirectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-slate-100">
+          <div className="bg-white rounded shadow-2xl max-w-md w-full p-6 space-y-4 border border-slate-100">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900 text-base">Start Direct Message</h3>
+              <h3 className="font-medium text-slate-900 text-base">Start Direct Message</h3>
               <button
                 onClick={() => setShowDirectModal(false)}
                 className="text-slate-400 hover:text-slate-600 text-xl"
@@ -492,7 +480,7 @@ export default function DeveloperChatsPage() {
               </button>
             </div>
 
-            <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 rounded-2xl border border-slate-100">
+            <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 rounded border border-slate-100">
               {availableDevs.length === 0 ? (
                 <div className="p-4 text-center text-xs text-slate-400">No other developers found.</div>
               ) : (
@@ -502,12 +490,12 @@ export default function DeveloperChatsPage() {
                     className="p-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors"
                   >
                     <div>
-                      <div className="font-bold text-slate-900 text-xs">{dev.name}</div>
+                      <div className="font-medium text-slate-900 text-xs">{dev.name}</div>
                       <div className="text-[11px] text-slate-400">{dev.email} • {dev.role}</div>
                     </div>
                     <button
                       onClick={() => handleStartDirectChat(dev.id)}
-                      className="px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary/90 text-white text-xs font-bold shadow-sm transition-all"
+                      className="px-3 py-1.5 rounded bg-secondary hover:bg-secondary/90 text-white text-xs font-medium shadow-sm transition-all"
                     >
                       Chat
                     </button>
@@ -522,9 +510,9 @@ export default function DeveloperChatsPage() {
       {/* Create Group Chat Modal */}
       {showGroupModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-5 border border-slate-100">
+          <div className="bg-white rounded shadow-2xl max-w-md w-full p-6 space-y-5 border border-slate-100">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900 text-base">Create Group Channel</h3>
+              <h3 className="font-medium text-slate-900 text-base">Create Group Channel</h3>
               <button
                 onClick={() => setShowGroupModal(false)}
                 className="text-slate-400 hover:text-slate-600 text-xl"
@@ -535,22 +523,22 @@ export default function DeveloperChatsPage() {
 
             <form onSubmit={handleCreateGroupChat} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Group Title</label>
+                <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Group Title</label>
                 <input
                   type="text"
                   required
                   value={groupTitle}
                   onChange={(e) => setGroupTitle(e.target.value)}
                   placeholder="e.g. Backend Engineers, Sprint Beta"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-medium text-slate-700 uppercase mb-1">
                   Add Members ({selectedGroupDevIds.length} selected)
                 </label>
-                <div className="max-h-52 overflow-y-auto rounded-2xl border border-slate-200 divide-y divide-slate-100">
+                <div className="max-h-52 overflow-y-auto rounded border border-slate-200 divide-y divide-slate-100">
                   {availableDevs.map((dev) => {
                     const isSelected = selectedGroupDevIds.includes(dev.id);
                     return (
@@ -559,7 +547,7 @@ export default function DeveloperChatsPage() {
                         className="p-3 flex items-center justify-between hover:bg-slate-50 cursor-pointer text-xs"
                       >
                         <div>
-                          <div className="font-bold text-slate-900">{dev.name}</div>
+                          <div className="font-medium text-slate-900">{dev.name}</div>
                           <div className="text-[10px] text-slate-400 capitalize">{dev.role}</div>
                         </div>
                         <input
@@ -584,14 +572,14 @@ export default function DeveloperChatsPage() {
                 <button
                   type="button"
                   onClick={() => setShowGroupModal(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50"
+                  className="px-4 py-2 rounded border border-slate-200 text-slate-600 text-xs font-normal hover:bg-slate-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!groupTitle.trim()}
-                  className="px-5 py-2 rounded-xl bg-secondary hover:bg-secondary/90 text-white text-xs font-bold shadow-md transition-all disabled:opacity-50"
+                  className="px-5 py-2 rounded bg-secondary hover:bg-secondary/90 text-white text-xs font-medium shadow-md transition-all disabled:opacity-50"
                 >
                   Create Group
                 </button>

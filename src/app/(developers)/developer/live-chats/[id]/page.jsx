@@ -1,25 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
-import {
-  BiArrowBack,
-  BiRefresh,
-  BiTrash,
-  BiSend,
-  BiSupport,
-  BiUser,
-  BiCheckCircle,
-  BiTimeFive,
-  BiLoaderAlt,
-  BiEnvelope,
-  BiGlobe,
-  BiMessageSquareDetail,
-  BiCheck,
-  BiUserCheck,
-  BiCheckDouble,
-} from 'react-icons/bi';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+
+
 
 export default function SingleLiveChatPage() {
   const params = useParams();
@@ -225,8 +209,8 @@ export default function SingleLiveChatPage() {
   if (loading) {
     return (
       <div className="min-h-[500px] flex flex-col items-center justify-center gap-3 text-slate-500">
-        <BiLoaderAlt className="animate-spin text-3xl text-slate-800" />
-        <p className="text-xs font-semibold">Connecting to live chat stream #{chatId}...</p>
+        
+        <p className="text-xs font-normal">Connecting to live chat stream #{chatId}...</p>
       </div>
     );
   }
@@ -234,19 +218,19 @@ export default function SingleLiveChatPage() {
   if (error || !chat) {
     return (
       <div className="max-w-xl mx-auto py-12 px-4 text-center">
-        <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-xs space-y-4">
-          <div className="w-14 h-14 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center text-3xl mx-auto">
-            <BiMessageSquareDetail />
+        <div className="bg-white border border-slate-200 rounded p-8 shadow-xs space-y-4">
+          <div className="w-14 h-14 bg-rose-50 text-rose-600 rounded flex items-center justify-center text-3xl mx-auto">
+            
           </div>
-          <h2 className="text-lg font-bold text-slate-900">Chat Session Not Found</h2>
+          <h2 className="text-lg font-medium text-slate-900">Chat Session Not Found</h2>
           <p className="text-xs text-slate-500 leading-relaxed">
             {error || `The chat session with ID #${chatId} does not exist or has been deleted.`}
           </p>
           <Link
             href="/developer/live-chats"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors cursor-pointer"
           >
-            <BiArrowBack className="text-base" />
+            
             <span>Back to Live Chat Workspace</span>
           </Link>
         </div>
@@ -260,25 +244,23 @@ export default function SingleLiveChatPage() {
   return (
     <div className="space-y-4 max-w-6xl mx-auto">
       {/* Top Action & Session Management Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded p-4 shadow-xs">
         <div className="flex items-center gap-3">
           <Link
             href="/developer/live-chats"
-            className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition-colors"
+            className="p-2 rounded border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition-colors"
             title="Back to All Live Chats"
-          >
-            <BiArrowBack className="text-lg" />
-          </Link>
+          >Back</Link>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-base font-bold text-slate-900 leading-tight">
+              <h1 className="text-base font-medium text-slate-900 leading-tight">
                 {chat.visitor_name}
               </h1>
               <span className="font-mono text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
                 #{chat.id}
               </span>
               <span
-                className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                className={`text-[10px] font-medium uppercase px-2 py-0.5 rounded ${
                   status === 'ACTIVE'
                     ? 'bg-emerald-100 text-emerald-700'
                     : status === 'OPEN'
@@ -293,12 +275,12 @@ export default function SingleLiveChatPage() {
 
               {/* Assigned Developer Chip */}
               {chat.assigned_developer_name ? (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full">
-                  <BiUserCheck className="text-xs" />
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded">
+                  
                   <span>Assigned: {chat.assigned_developer_name}</span>
                 </span>
               ) : (
-                <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                <span className="text-[10px] font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
                   Unassigned
                 </span>
               )}
@@ -328,10 +310,10 @@ export default function SingleLiveChatPage() {
               type="button"
               disabled={assignLoading}
               onClick={() => handleAssignDeveloper(currentUser.id)}
-              className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold border border-indigo-200 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 px-3 py-2 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-medium border border-indigo-200 transition-colors cursor-pointer"
               title="Assign this live chat to me"
             >
-              <BiUserCheck className="text-sm" />
+              
               <span>Assign to Me</span>
             </button>
           )}
@@ -341,7 +323,7 @@ export default function SingleLiveChatPage() {
             value={chat.assigned_developer_id || ''}
             disabled={assignLoading}
             onChange={(e) => handleAssignDeveloper(e.target.value)}
-            className="bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-2 text-xs text-slate-700 font-semibold focus:outline-none focus:border-slate-800 cursor-pointer disabled:opacity-50 transition-colors"
+            className="bg-slate-50 border border-slate-300 rounded px-2.5 py-2 text-xs text-slate-700 font-normal focus:outline-none focus:border-slate-800 cursor-pointer disabled:opacity-50 transition-colors"
             title="Reassign developer"
           >
             <option value="">Assign Developer...</option>
@@ -357,7 +339,7 @@ export default function SingleLiveChatPage() {
             value={status}
             disabled={statusLoading}
             onChange={(e) => handleStatusChange(e.target.value)}
-            className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 font-bold focus:outline-none focus:border-slate-800 cursor-pointer disabled:opacity-50 transition-colors"
+            className="bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-800 font-medium focus:outline-none focus:border-slate-800 cursor-pointer disabled:opacity-50 transition-colors"
           >
             <option value="OPEN">Status: OPEN</option>
             <option value="ACTIVE">Status: ACTIVE</option>
@@ -370,33 +352,31 @@ export default function SingleLiveChatPage() {
             type="button"
             disabled={refreshing}
             onClick={handleManualRefresh}
-            className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer disabled:opacity-50"
+            className="p-2 rounded border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer disabled:opacity-50"
             title="Refresh stream"
-          >
-            <BiRefresh className={`text-lg ${refreshing ? 'animate-spin text-slate-900' : ''}`} />
-          </button>
+          >Refresh</button>
 
           {/* Delete */}
           <button
             type="button"
             disabled={deleting}
             onClick={handleDeleteChat}
-            className="p-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50"
+            className="p-2 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50"
             title="Delete chat session"
           >
-            {deleting ? <BiLoaderAlt className="animate-spin text-lg" /> : <BiTrash className="text-lg" />}
+            
           </button>
         </div>
       </div>
 
       {/* Main Chat Box Container */}
-      <div className="bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden flex flex-col h-[680px]">
+      <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden flex flex-col h-[680px]">
         {/* Messages Stream */}
         <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-50/40">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center text-slate-400 gap-2">
-              <BiMessageSquareDetail className="text-4xl text-slate-300" />
-              <p className="text-xs font-semibold">No messages in this chat session yet.</p>
+              
+              <p className="text-xs font-normal">No messages in this chat session yet.</p>
             </div>
           ) : (
             messages.map((msg, idx) => {
@@ -407,7 +387,7 @@ export default function SingleLiveChatPage() {
                   className={`flex flex-col ${isStaff ? 'items-end' : 'items-start'}`}
                 >
                   <div className="flex items-center gap-1.5 mb-1 px-1">
-                    <span className="text-[11px] font-bold text-slate-600">
+                    <span className="text-[11px] font-medium text-slate-600">
                       {isStaff
                         ? msg.sender_name || 'Support Specialist'
                         : `${msg.sender_name || chat.visitor_name} (Visitor)`}
@@ -420,13 +400,11 @@ export default function SingleLiveChatPage() {
                           })
                         : ''}
                     </span>
-                    {isStaff && msg.is_read && (
-                      <BiCheckDouble className="text-indigo-600 text-xs" title="Read by visitor" />
-                    )}
+                    
                   </div>
 
                   <div
-                    className={`max-w-[78%] sm:max-w-[70%] px-4 py-3 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-xs ${
+                    className={`max-w-[78%] sm:max-w-[70%] px-4 py-3 rounded text-xs sm:text-sm leading-relaxed shadow-xs ${
                       isStaff
                         ? 'bg-slate-900 text-white rounded-br-xs'
                         : 'bg-white text-slate-900 border border-slate-200 rounded-bl-xs'
@@ -452,23 +430,23 @@ export default function SingleLiveChatPage() {
             placeholder={`Reply to ${chat.visitor_name} as ${currentUser?.name || 'Support'} (Press Enter to send)...`}
             value={replyMessage}
             onChange={(e) => setReplyMessage(e.target.value)}
-            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 focus:bg-white transition-colors"
+            className="flex-1 bg-slate-50 border border-slate-200 rounded px-4 py-3 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 focus:bg-white transition-colors"
           />
 
           <button
             type="submit"
             disabled={!replyMessage.trim() || sendingReply}
-            className="px-6 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-xs sm:text-sm font-bold shadow-xs transition-colors flex items-center gap-2 cursor-pointer shrink-0"
+            className="px-6 py-3 rounded bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-xs sm:text-sm font-medium shadow-xs transition-colors flex items-center gap-2 cursor-pointer shrink-0"
           >
             {sendingReply ? (
               <>
-                <BiLoaderAlt className="animate-spin text-base" />
+                
                 <span>Sending...</span>
               </>
             ) : (
               <>
                 <span>Send Reply</span>
-                <BiSend className="text-base" />
+                
               </>
             )}
           </button>

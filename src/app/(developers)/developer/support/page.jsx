@@ -1,20 +1,9 @@
 'use client';
 
 import { useState, useEffect, useContext, useCallback } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  BiSearch,
-  BiTrash,
-  BiRefresh,
-  BiSupport,
-  BiCheckCircle,
-  BiTimeFive,
-  BiX,
-  BiUser,
-  BiMessageSquareDetail,
-  BiCheckShield,
-} from 'react-icons/bi';
+
+
 import { Context } from 'src/component/helper/Context';
 
 export default function AdminSupportPage() {
@@ -118,31 +107,31 @@ export default function AdminSupportPage() {
       {/* Toast Alert */}
       {actionNotice.text && (
         <div
-          className={`p-4 rounded-2xl flex items-center justify-between text-xs font-semibold shadow-xs transition-all ${
+          className={`p-4 rounded flex items-center justify-between text-xs font-normal shadow-xs transition-all ${
             actionNotice.type === 'error'
               ? 'bg-rose-50 border border-rose-200 text-rose-800'
               : 'bg-emerald-50 border border-emerald-200 text-emerald-800'
           }`}
         >
           <div className="flex items-center gap-2">
-            <BiCheckCircle className="text-base" />
+            
             <span>{actionNotice.text}</span>
           </div>
           <button
             onClick={() => setActionNotice({ text: '', type: '' })}
             className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
           >
-            <BiX className="text-base" />
+            
           </button>
         </div>
       )}
 
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded p-6 shadow-xs">
         <div>
           <div className="flex items-center gap-2.5 mb-1.5">
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Customer Support Tickets</h1>
-            <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+            <h1 className="text-2xl font-medium text-slate-900 tracking-tight">Customer Support Tickets</h1>
+            <span className="text-[11px] font-medium uppercase tracking-wider px-2.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
               Operations
             </span>
           </div>
@@ -155,10 +144,10 @@ export default function AdminSupportPage() {
           <button
             type="button"
             onClick={() => fetchTickets(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-normal transition-colors cursor-pointer"
             title="Refresh tickets"
           >
-            <BiRefresh className="text-lg" />
+            
             <span>Refresh</span>
           </button>
         </div>
@@ -166,56 +155,56 @@ export default function AdminSupportPage() {
 
       {/* KPI Counters */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center justify-between">
+        <div className="bg-white border border-slate-200 rounded p-5 shadow-xs flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold text-slate-500">Total Tickets</span>
-            <div className="text-2xl font-bold text-slate-900 mt-1">{stats.total || tickets.length}</div>
+            <span className="text-xs font-normal text-slate-500">Total Tickets</span>
+            <div className="text-2xl font-medium text-slate-900 mt-1">{stats.total || tickets.length}</div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
-            <BiSupport className="text-xl" />
+          <div className="w-10 h-10 rounded bg-slate-100 text-slate-700 flex items-center justify-center">
+            
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center justify-between">
+        <div className="bg-white border border-slate-200 rounded p-5 shadow-xs flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold text-blue-600">Open Tickets</span>
-            <div className="text-2xl font-bold text-blue-700 mt-1">{stats.open || 0}</div>
+            <span className="text-xs font-normal text-blue-600">Open Tickets</span>
+            <div className="text-2xl font-medium text-blue-700 mt-1">{stats.open || 0}</div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-            <BiTimeFive className="text-xl" />
+          <div className="w-10 h-10 rounded bg-blue-50 text-blue-600 flex items-center justify-center">
+            
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center justify-between">
+        <div className="bg-white border border-slate-200 rounded p-5 shadow-xs flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold text-indigo-600">In Progress</span>
-            <div className="text-2xl font-bold text-indigo-700 mt-1">{stats.in_progress || 0}</div>
+            <span className="text-xs font-normal text-indigo-600">In Progress</span>
+            <div className="text-2xl font-medium text-indigo-700 mt-1">{stats.in_progress || 0}</div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-            <BiMessageSquareDetail className="text-xl" />
+          <div className="w-10 h-10 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex items-center justify-between">
+        <div className="bg-white border border-slate-200 rounded p-5 shadow-xs flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold text-emerald-600">Resolved</span>
-            <div className="text-2xl font-bold text-emerald-700 mt-1">{stats.resolved || 0}</div>
+            <span className="text-xs font-normal text-emerald-600">Resolved</span>
+            <div className="text-2xl font-medium text-emerald-700 mt-1">{stats.resolved || 0}</div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-            <BiCheckCircle className="text-xl" />
+          <div className="w-10 h-10 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            
           </div>
         </div>
       </div>
 
       {/* Filter Tabs & Search */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between gap-3 bg-slate-50/50">
           <div className="flex flex-wrap items-center gap-1.5 w-full md:w-auto">
             {['ALL', 'OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setStatusFilter(tab)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-all cursor-pointer ${
                   statusFilter === tab
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
@@ -232,17 +221,17 @@ export default function AdminSupportPage() {
 
           <div className="flex items-center gap-3 w-full md:w-auto">
             <div className="relative w-full md:w-72">
-              <BiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
+              
               <input
                 type="text"
                 placeholder="Search ticket #, creator, subject..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition-all"
+                className="w-full bg-white border border-slate-300 rounded pl-3 pr-3.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition-all"
               />
             </div>
             <div className="text-xs text-slate-500 font-medium shrink-0">
-              <span className="font-bold text-slate-800">{filtered.length}</span> of {tickets.length}
+              <span className="font-medium text-slate-800">{filtered.length}</span> of {tickets.length}
             </div>
           </div>
         </div>
@@ -251,7 +240,7 @@ export default function AdminSupportPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/80 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
+              <tr className="border-b border-slate-100 bg-slate-50/80 text-slate-500 font-normal uppercase tracking-wider text-[10px]">
                 <th className="px-4 py-3 whitespace-nowrap">Ticket #</th>
                 <th className="px-4 py-3 whitespace-nowrap">Requester / Creator</th>
                 <th className="px-4 py-3 whitespace-nowrap">Subject & Messages</th>
@@ -283,12 +272,12 @@ export default function AdminSupportPage() {
                     onClick={() => router.push(`/developer/support/${t.id}`)}
                     className="hover:bg-slate-50/70 transition-colors cursor-pointer"
                   >
-                    <td className="px-4 py-3 font-mono font-bold text-slate-900">
+                    <td className="px-4 py-3 font-mono font-medium text-slate-900">
                       {t.ticket_number}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                        <BiUser className="text-slate-400" />
+                      <div className="font-medium text-slate-900 flex items-center gap-1.5">
+                        
                         <span>{t.creator_name || t.requester_name}</span>
                       </div>
                       <div className="font-mono text-[11px] text-slate-500 truncate max-w-[160px]">
@@ -296,24 +285,24 @@ export default function AdminSupportPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 max-w-xs">
-                      <div className="font-semibold text-slate-900 truncate">{t.subject}</div>
+                      <div className="font-normal text-slate-900 truncate">{t.subject}</div>
                       <div className="text-slate-500 text-[11px] truncate">
                         {t.last_message || 'Initial inquiry open'}
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-semibold text-[10px] uppercase tracking-wider">
+                      <span className="px-2.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-normal text-[10px] uppercase tracking-wider">
                         {t.category}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full border font-bold text-[10px] uppercase ${priorityColors[t.priority?.toUpperCase()] || priorityColors.MEDIUM}`}>
+                      <span className={`px-2 py-0.5 rounded border font-medium text-[10px] uppercase ${priorityColors[t.priority?.toUpperCase()] || priorityColors.MEDIUM}`}>
                         {t.priority || 'medium'}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded text-[10px] font-medium border uppercase tracking-wider ${
                           statusColors[t.status?.toUpperCase()] || statusColors.OPEN
                         }`}
                       >
@@ -322,8 +311,8 @@ export default function AdminSupportPage() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-[11px]">
                       {t.assigned_developer_name ? (
-                        <span className="text-indigo-600 font-semibold flex items-center gap-1">
-                          <BiCheckShield className="text-sm" />
+                        <span className="text-indigo-600 font-normal flex items-center gap-1">
+                          
                           <span>{t.assigned_developer_name}</span>
                         </span>
                       ) : (
@@ -337,7 +326,7 @@ export default function AdminSupportPage() {
                       <div className="flex items-center justify-end gap-1">
                         <Link
                           href={`/developer/support/${t.id}`}
-                          className="text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 font-semibold px-2.5 py-1 rounded-lg transition-colors cursor-pointer text-[11px]"
+                          className="text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 font-normal px-2.5 py-1 rounded transition-colors cursor-pointer text-[11px]"
                         >
                           Open Thread →
                         </Link>
@@ -347,10 +336,10 @@ export default function AdminSupportPage() {
                             type="button"
                             disabled={deletingId === t.id}
                             onClick={(e) => handleDelete(t.id, e)}
-                            className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                            className="text-slate-400 hover:text-rose-600 p-1.5 rounded hover:bg-rose-50 transition-colors cursor-pointer"
                             title="Delete ticket (Admin/Manager)"
                           >
-                            <BiTrash className="text-base" />
+                            
                           </button>
                         )}
                       </div>

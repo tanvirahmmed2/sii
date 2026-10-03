@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BiSearch, BiPlus, BiMinus, BiTrash, BiRefresh } from 'react-icons/bi';
 import WebsiteForm from 'src/component/marketing/developer/forms/WebsiteForm';
 
 export default function AdminWebsitesPage() {
@@ -31,7 +30,7 @@ export default function AdminWebsitesPage() {
   }, []);
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this website?')) return;
+    if (!confirm('Are you sure you want to delete this website container?')) return;
     setDeletingId(id);
     try {
       const res = await fetch(`/api/marketing/developer/websites?id=${id}`, {
@@ -62,46 +61,34 @@ export default function AdminWebsitesPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Website Portfolio Sites</h1>
-            <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-secondary/10 text-secondary border border-secondary/20">
-              Websites
-            </span>
-          </div>
-          <p className="text-xs text-slate-500">Multi-website containers, custom domains, storage usage, and published sites.</p>
+          <h1 className="text-base font-medium text-slate-900 dark:text-white">Hosted Websites</h1>
+          <p className="text-xs text-slate-500 font-normal">Containers, custom domains, storage allocation, and published status.</p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={fetchWebsites}
-            className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
-            title="Refresh table data"
+            className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-xs font-normal text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
           >
-            <BiRefresh className="text-lg" />
+            Refresh
           </button>
           <button
             type="button"
             onClick={() => setShowForm(!showForm)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
-              showForm
-                ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                : 'bg-secondary hover:bg-secondary-dark text-white'
-            }`}
+            className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium cursor-pointer"
           >
-            {showForm ? <BiMinus className="text-base" /> : <BiPlus className="text-base" />}
-            <span>{showForm ? 'Hide Form' : 'Add Website'}</span>
+            {showForm ? 'Hide Form' : 'Add Website'}
           </button>
         </div>
       </div>
 
       {showForm && (
         <WebsiteForm
-          apiEndpoint="/api/marketing/developer/websites"
           onSuccess={() => {
             setShowForm(false);
             fetchWebsites();
@@ -111,86 +98,69 @@ export default function AdminWebsitesPage() {
       )}
 
       {/* Table Card */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50">
-          <div className="relative w-full sm:w-72">
-            <BiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
-            <input
-              type="text"
-              placeholder="Search websites by name, subdomain, or domain..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
-            />
-          </div>
-          <div className="text-xs text-slate-500 font-medium">
-            Showing <span className="font-bold text-slate-800">{filtered.length}</span> of {websites.length} records
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden">
+        <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-800/30">
+          <input
+            type="text"
+            placeholder="Search websites by name, subdomain, or domain..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full sm:w-72 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-slate-500 font-normal"
+          />
+          <div className="text-xs text-slate-500 font-normal">
+            Showing {filtered.length} of {websites.length} records
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/80 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
-                <th className="px-4 py-3 whitespace-nowrap">ID</th>
-                <th className="px-4 py-3 whitespace-nowrap">Website Space</th>
-                <th className="px-4 py-3 whitespace-nowrap">Subdomain</th>
-                <th className="px-4 py-3 whitespace-nowrap">Custom Domain</th>
-                <th className="px-4 py-3 whitespace-nowrap">Storage</th>
-                <th className="px-4 py-3 whitespace-nowrap">Status</th>
-                <th className="px-4 py-3 whitespace-nowrap">Published</th>
-                <th className="px-4 py-3 text-right whitespace-nowrap">Actions</th>
+              <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-normal text-[11px]">
+                <th className="px-3.5 py-2.5 whitespace-nowrap">ID</th>
+                <th className="px-3.5 py-2.5 whitespace-nowrap">Website Name</th>
+                <th className="px-3.5 py-2.5 whitespace-nowrap">Subdomain</th>
+                <th className="px-3.5 py-2.5 whitespace-nowrap">Custom Domain</th>
+                <th className="px-3.5 py-2.5 whitespace-nowrap">Storage</th>
+                <th className="px-3.5 py-2.5 whitespace-nowrap">Status</th>
+                <th className="px-3.5 py-2.5 whitespace-nowrap">Published</th>
+                <th className="px-3.5 py-2.5 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">Loading websites...</td>
+                  <td colSpan={8} className="py-8 text-center text-slate-400 font-normal">Loading websites...</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">No website portfolio sites found.</td>
+                  <td colSpan={8} className="py-8 text-center text-slate-400 font-normal">No websites found.</td>
                 </tr>
               ) : (
                 filtered.map((w) => (
-                  <tr key={w.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="px-4 py-3 font-mono font-bold text-slate-500">#{w.id}</td>
-                    <td className="px-4 py-3">
-                      <div className="font-bold text-slate-800">{w.name}</div>
-                      <div className="text-[11px] text-slate-400">Creator #{w.creator_id}</div>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-slate-700">
-                      <span className="text-secondary font-semibold">{w.subdomain}</span>.portfoliobuilder.app
-                    </td>
-                    <td className="px-4 py-3 font-mono text-slate-600">{w.custom_domain || '—'}</td>
-                    <td className="px-4 py-3 text-slate-600 font-medium">{w.storage_used_mb || 0} MB</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        w.status === 'ACTIVE'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : 'bg-rose-50 text-rose-700 border border-rose-200'
-                      }`}>
-                        {w.status}
+                  <tr key={w.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="px-3.5 py-2.5 font-mono text-slate-500 font-normal">#{w.id}</td>
+                    <td className="px-3.5 py-2.5 font-medium text-slate-900 dark:text-white">{w.name}</td>
+                    <td className="px-3.5 py-2.5 font-mono text-slate-600 dark:text-slate-400 font-normal">{w.subdomain || '—'}</td>
+                    <td className="px-3.5 py-2.5 font-mono text-slate-600 dark:text-slate-400 font-normal">{w.custom_domain || '—'}</td>
+                    <td className="px-3.5 py-2.5 font-normal text-slate-600 dark:text-slate-400">{w.storage_used_mb ?? 0} MB</td>
+                    <td className="px-3.5 py-2.5">
+                      <span className="px-2 py-0.5 rounded text-[11px] font-normal border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
+                        {w.status || 'ACTIVE'}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        w.is_published !== false
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : 'bg-slate-100 text-slate-600 border border-slate-200'
-                      }`}>
-                        {w.is_published !== false ? 'Live' : 'Draft'}
+                    <td className="px-3.5 py-2.5 font-normal">
+                      <span className={w.is_published ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-400'}>
+                        {w.is_published ? 'Online' : 'Draft'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <td className="px-3.5 py-2.5 text-right whitespace-nowrap">
                       <button
                         type="button"
                         disabled={deletingId === w.id}
                         onClick={() => handleDelete(w.id)}
-                        className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-                        title="Delete record"
+                        className="text-xs font-normal text-rose-600 dark:text-rose-400 hover:underline disabled:opacity-50 cursor-pointer"
                       >
-                        <BiTrash className="text-base" />
+                        {deletingId === w.id ? 'Deleting...' : 'Delete'}
                       </button>
                     </td>
                   </tr>

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BiCheckShield, BiCheck, BiX, BiEdit, BiPlus } from 'react-icons/bi';
+
+
 
 export default function FeatureForm({
   initialData = null,
@@ -87,14 +88,14 @@ export default function FeatureForm({
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm mb-8 transition-all">
+    <div className="bg-white border border-slate-200 rounded p-6 sm:p-8 shadow-sm mb-8 transition-all">
       <div className="flex items-center justify-between pb-4 mb-6 border-b border-slate-100">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-2xl bg-secondary/10 text-secondary border border-secondary/20">
-            {isEditing ? <BiEdit className="text-2xl" /> : <BiCheckShield className="text-2xl" />}
+          <div className="p-2.5 rounded bg-secondary/10 text-secondary border border-secondary/20">
+            
           </div>
           <div>
-            <h3 className="text-lg font-bold text-slate-900 tracking-tight">
+            <h3 className="text-lg font-medium text-slate-900 tracking-tight">
               {isEditing ? `Edit Feature: ${initialData.name}` : 'Add Platform Feature'}
             </h3>
             <p className="text-xs text-slate-500">
@@ -108,17 +109,15 @@ export default function FeatureForm({
           <button
             type="button"
             onClick={onCancel}
-            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+            className="p-1.5 text-slate-400 hover:text-slate-600 rounded hover:bg-slate-100 transition-colors cursor-pointer"
             title="Close Form"
-          >
-            <BiX className="text-2xl" />
-          </button>
+          >Close</button>
         )}
       </div>
 
       {error && (
-        <div className="p-3.5 mb-6 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+        <div className="p-3.5 mb-6 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs font-normal flex items-center gap-2">
+          <span className="w-2 h-2 rounded bg-rose-500 shrink-0" />
           <span>{error}</span>
         </div>
       )}
@@ -126,7 +125,7 @@ export default function FeatureForm({
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+            <label className="block text-xs font-medium text-slate-700 mb-1.5">
               Feature Name <span className="text-rose-500">*</span>
             </label>
             <input
@@ -135,12 +134,12 @@ export default function FeatureForm({
               placeholder="e.g. Custom Domain Mapping"
               value={formData.name}
               onChange={(e) => handleNameChange(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-secondary focus:bg-white focus:ring-1 focus:ring-secondary transition-all font-medium"
+              className="w-full bg-slate-50 border border-slate-200 rounded px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-secondary focus:bg-white focus:ring-1 focus:ring-secondary transition-all font-medium"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+            <label className="block text-xs font-medium text-slate-700 mb-1.5">
               Key Identifier <span className="text-rose-500">*</span>
             </label>
             <input
@@ -152,20 +151,20 @@ export default function FeatureForm({
                 setIsCustomKey(true);
                 setFormData({ ...formData, key: e.target.value });
               }}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:border-secondary focus:bg-white focus:ring-1 focus:ring-secondary transition-all"
+              className="w-full bg-slate-50 border border-slate-200 rounded px-4 py-2.5 text-sm font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:border-secondary focus:bg-white focus:ring-1 focus:ring-secondary transition-all"
             />
             <p className="text-[10px] text-slate-400 mt-1">Unique programmatic key used for feature flag verification.</p>
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1.5">Description &amp; Purpose</label>
+          <label className="block text-xs font-medium text-slate-700 mb-1.5">Description &amp; Purpose</label>
           <textarea
             rows={3}
             placeholder="Describe what creators or websites gain when this feature is unlocked in a plan..."
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-secondary focus:bg-white focus:ring-1 focus:ring-secondary transition-all"
+            className="w-full bg-slate-50 border border-slate-200 rounded px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-secondary focus:bg-white focus:ring-1 focus:ring-secondary transition-all"
           />
         </div>
 
@@ -174,7 +173,7 @@ export default function FeatureForm({
             <button
               type="button"
               onClick={onCancel}
-              className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 hover:border-slate-300 transition-all cursor-pointer"
+              className="px-5 py-2.5 rounded border border-slate-200 text-slate-600 text-xs font-normal hover:bg-slate-50 hover:border-slate-300 transition-all cursor-pointer"
             >
               Cancel
             </button>
@@ -182,9 +181,9 @@ export default function FeatureForm({
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-secondary hover:bg-secondary-dark text-white text-xs font-bold shadow-sm disabled:opacity-50 transition-all cursor-pointer"
+            className="flex items-center gap-2 px-6 py-2.5 rounded bg-secondary hover:bg-secondary-dark text-white text-xs font-medium shadow-sm disabled:opacity-50 transition-all cursor-pointer"
           >
-            {isEditing ? <BiCheck className="text-lg" /> : <BiPlus className="text-lg" />}
+            
             <span>{loading ? (isEditing ? 'Updating...' : 'Creating...') : isEditing ? 'Update Feature' : 'Create Feature'}</span>
           </button>
         </div>

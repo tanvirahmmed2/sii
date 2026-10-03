@@ -1,23 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import {
-  BiSearch,
-  BiPlus,
-  BiMinus,
-  BiTrash,
-  BiRefresh,
-  BiCheckCircle,
-  BiTime,
-  BiXCircle,
-  BiEdit,
-  BiX,
-  BiLoaderAlt,
-  BiCube,
-  BiReceipt,
-  BiShieldQuarter,
-} from 'react-icons/bi';
+
+
 import PaymentForm from 'src/component/marketing/developer/forms/PaymentForm';
 
 export default function AdminPaymentsPage() {
@@ -180,24 +165,24 @@ export default function AdminPaymentsPage() {
   return (
     <div className="space-y-6">
       {toastMessage && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-between shadow-xs">
+        <div className="p-4 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-normal flex items-center justify-between shadow-xs">
           <span>{toastMessage}</span>
           <button type="button" onClick={() => setToastMessage('')} className="text-emerald-500 hover:text-emerald-800">
-            <BiX className="text-base" />
+            
           </button>
         </div>
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded p-6 shadow-xs">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Payment Transactions</h1>
-            <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-secondary/10 text-secondary border border-secondary/20">
+            <h1 className="text-2xl font-medium text-slate-900 tracking-tight">Payment Transactions</h1>
+            <span className="text-[11px] font-medium uppercase tracking-wider px-2.5 py-0.5 rounded bg-secondary/10 text-secondary border border-secondary/20">
               Payments
             </span>
             {unpaidCount > 0 && (
-              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+              <span className="text-[11px] font-medium px-2.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
                 {unpaidCount} Awaiting Settlement
               </span>
             )}
@@ -211,28 +196,26 @@ export default function AdminPaymentsPage() {
           <button
             type="button"
             onClick={fetchPayments}
-            className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+            className="p-2 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
             title="Refresh table data"
-          >
-            <BiRefresh className="text-lg" />
-          </button>
+          >Refresh</button>
           <Link
             href="/developer/purchases"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 hover:bg-slate-50 text-slate-700 transition-all shadow-xs"
+            className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-medium border border-slate-200 hover:bg-slate-50 text-slate-700 transition-all shadow-xs"
           >
-            <BiReceipt className="text-base" />
+            
             <span>View Purchases</span>
           </Link>
           <button
             type="button"
             onClick={() => setShowForm(!showForm)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
+            className={`flex items-center gap-1.5 px-4 py-2 rounded text-xs font-medium transition-all shadow-xs cursor-pointer ${
               showForm
                 ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 : 'bg-secondary hover:bg-secondary-dark text-white'
             }`}
           >
-            {showForm ? <BiMinus className="text-base" /> : <BiPlus className="text-base" />}
+            
             <span>{showForm ? 'Hide Form' : 'Add Payment'}</span>
           </button>
         </div>
@@ -250,27 +233,27 @@ export default function AdminPaymentsPage() {
       )}
 
       {/* Table Card */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50">
           <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
             <div className="relative w-full sm:w-72">
-              <BiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
+              
               <input
                 type="text"
                 placeholder="Search by txn ID, creator, package..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
+                className="w-full bg-white border border-slate-300 rounded pl-3 pr-3.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
               />
             </div>
 
-            <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 text-xs">
+            <div className="inline-flex rounded border border-slate-200 bg-white p-1 text-xs">
               {['ALL', 'UNPAID', 'PENDING', 'COMPLETED', 'FAILED'].map((st) => (
                 <button
                   key={st}
                   type="button"
                   onClick={() => setStatusFilter(st)}
-                  className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                  className={`px-3 py-1 rounded font-normal transition-all cursor-pointer ${
                     statusFilter === st
                       ? 'bg-secondary text-white shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
@@ -283,14 +266,14 @@ export default function AdminPaymentsPage() {
           </div>
 
           <div className="text-xs text-slate-500 font-medium">
-            Showing <span className="font-bold text-slate-800">{filtered.length}</span> of {payments.length} records
+            Showing <span className="font-medium text-slate-800">{filtered.length}</span> of {payments.length} records
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/80 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
+              <tr className="border-b border-slate-100 bg-slate-50/80 text-slate-500 font-normal uppercase tracking-wider text-[10px]">
                 <th className="px-4 py-3 whitespace-nowrap">ID</th>
                 <th className="px-4 py-3 whitespace-nowrap">Transaction ID</th>
                 <th className="px-4 py-3 whitespace-nowrap">Creator</th>
@@ -307,7 +290,7 @@ export default function AdminPaymentsPage() {
               {loading ? (
                 <tr>
                   <td colSpan={10} className="py-12 text-center text-slate-400">
-                    <BiLoaderAlt className="animate-spin text-2xl text-secondary mx-auto mb-2" />
+                    
                     <span>Loading payments...</span>
                   </td>
                 </tr>
@@ -322,20 +305,20 @@ export default function AdminPaymentsPage() {
                   const amount = (Number(p.amount_in_cents || (Number(p.amount || 0) * 100)) / 100).toFixed(2);
                   return (
                     <tr key={p.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="px-4 py-3 font-mono font-bold text-slate-500">#{p.id}</td>
+                      <td className="px-4 py-3 font-mono font-medium text-slate-500">#{p.id}</td>
 
-                      <td className="px-4 py-3 font-mono font-bold text-slate-800">
+                      <td className="px-4 py-3 font-mono font-medium text-slate-800">
                         {p.transaction_id || `TXN_${p.id}`}
                       </td>
 
                       <td className="px-4 py-3">
-                        <div className="font-semibold text-slate-800">{p.creator_name || `Creator #${p.creator_id}`}</div>
+                        <div className="font-normal text-slate-800">{p.creator_name || `Creator #${p.creator_id}`}</div>
                         <div className="text-[11px] text-slate-400">{p.creator_email || `ID: ${p.creator_id}`}</div>
                       </td>
 
                       <td className="px-4 py-3">
-                        <div className="font-semibold text-slate-800 flex items-center gap-1">
-                          <BiCube className="text-secondary text-sm shrink-0" />
+                        <div className="font-normal text-slate-800 flex items-center gap-1">
+                          
                           <span>{p.package_name || (p.package_id ? `Package #${p.package_id}` : 'General Payment')}</span>
                         </div>
                         {p.billing_interval && (
@@ -343,31 +326,31 @@ export default function AdminPaymentsPage() {
                         )}
                       </td>
 
-                      <td className="px-4 py-3 font-bold text-slate-900 font-mono">
+                      <td className="px-4 py-3 font-medium text-slate-900 font-mono">
                         ${amount} {p.currency || 'USD'}
                       </td>
 
-                      <td className="px-4 py-3 text-slate-600 text-[11px] font-semibold">{p.payment_method}</td>
+                      <td className="px-4 py-3 text-slate-600 text-[11px] font-normal">{p.payment_method}</td>
 
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-medium ${
                           isCompleted
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : isUnpaid
                             ? 'bg-amber-50 text-amber-700 border border-amber-200'
                             : 'bg-rose-50 text-rose-700 border border-rose-200'
                         }`}>
-                          {isCompleted && <BiCheckCircle />}
-                          {isUnpaid && <BiTime />}
-                          {!isCompleted && !isUnpaid && <BiXCircle />}
+                          
+                          
+                          
                           <span>{p.status}</span>
                         </span>
                       </td>
 
                       <td className="px-4 py-3">
                         {p.subscription_id ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600">
-                            <BiCheckCircle />
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600">
+                            
                             <span>Sub #{p.subscription_id}</span>
                           </span>
                         ) : (
@@ -387,14 +370,10 @@ export default function AdminPaymentsPage() {
                               type="button"
                               disabled={updatingId === p.id}
                               onClick={() => handleMarkAsPaid(p)}
-                              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow-xs transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                              className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-medium shadow-xs transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
                               title="Mark as paid and activate package subscription"
                             >
-                              {updatingId === p.id ? (
-                                <BiLoaderAlt className="animate-spin text-xs" />
-                              ) : (
-                                <BiCheckCircle className="text-xs" />
-                              )}
+                              
                               <span>Make Paid</span>
                             </button>
                           )}
@@ -405,20 +384,20 @@ export default function AdminPaymentsPage() {
                               setEditingPayment(p);
                               setEditStatus(p.status || 'UNPAID');
                             }}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-secondary hover:bg-slate-100 transition-colors cursor-pointer"
+                            className="p-1.5 rounded text-slate-500 hover:text-secondary hover:bg-slate-100 transition-colors cursor-pointer"
                             title="Update status"
                           >
-                            <BiEdit className="text-base" />
+                            
                           </button>
 
                           <button
                             type="button"
                             disabled={deletingId === p.id}
                             onClick={() => handleDelete(p.id)}
-                            className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                            className="text-slate-400 hover:text-rose-600 p-1.5 rounded hover:bg-rose-50 transition-colors cursor-pointer"
                             title="Delete record"
                           >
-                            <BiTrash className="text-base" />
+                            
                           </button>
                         </div>
                       </td>
@@ -434,28 +413,28 @@ export default function AdminPaymentsPage() {
       {/* Edit Status Modal */}
       {editingPayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 border border-slate-200">
+          <div className="bg-white rounded p-6 max-w-md w-full shadow-2xl space-y-5 border border-slate-200">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <h3 className="text-base font-bold text-slate-900">Update Payment Status</h3>
+                <h3 className="text-base font-medium text-slate-900">Update Payment Status</h3>
                 <p className="text-xs text-slate-500">Invoice #{editingPayment.id} • Creator #{editingPayment.creator_id}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setEditingPayment(null)}
-                className="p-1 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                className="p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
               >
-                <BiX className="text-xl" />
+                
               </button>
             </div>
 
             <form onSubmit={handleSaveModalStatus} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
+                <label className="block text-xs font-normal text-slate-700 mb-1">Status</label>
                 <select
                   value={editStatus}
                   onChange={(e) => setEditStatus(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-secondary"
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-secondary"
                 >
                   <option value="UNPAID">UNPAID (Pending Customer Payment)</option>
                   <option value="PENDING">PENDING (Processing)</option>
@@ -466,7 +445,7 @@ export default function AdminPaymentsPage() {
               </div>
 
               {editStatus === 'COMPLETED' && !editingPayment.subscription_id && (
-                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] leading-relaxed">
+                <div className="p-3 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] leading-relaxed">
                   Notice: Setting status to <strong>COMPLETED</strong> will automatically generate and activate the creator&apos;s subscription.
                 </div>
               )}
@@ -475,14 +454,14 @@ export default function AdminPaymentsPage() {
                 <button
                   type="button"
                   onClick={() => setEditingPayment(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                  className="px-4 py-2 rounded text-xs font-normal text-slate-600 hover:bg-slate-100 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={updatingId === editingPayment.id}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-secondary hover:bg-secondary-dark text-white transition-all shadow-xs disabled:opacity-50"
+                  className="px-4 py-2 rounded text-xs font-medium bg-secondary hover:bg-secondary-dark text-white transition-all shadow-xs disabled:opacity-50"
                 >
                   {updatingId === editingPayment.id ? 'Saving...' : 'Update Status'}
                 </button>

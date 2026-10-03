@@ -61,7 +61,7 @@ export default function AdminUsersPage() {
           <span>/</span>
           <span>End-Users</span>
         </div>
-        <h1 className="text-2xl font-bold text-white mt-1 flex items-center gap-2">
+        <h1 className="text-2xl font-medium text-white mt-1 flex items-center gap-2">
           <UsersIcon className="w-6 h-6 text-rose-500" />
           <span>Registered End-Users Directory</span>
         </h1>
@@ -71,16 +71,16 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Users Table */}
-      <div className="rounded-3xl bg-slate-900/60 border border-white/10 overflow-hidden shadow-2xl">
+      <div className="rounded bg-slate-900/60 border border-white/10 overflow-hidden shadow-2xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-950/80 uppercase text-[10px] text-slate-400 border-b border-white/10">
               <tr>
-                <th className="py-3.5 px-4 font-semibold">User</th>
-                <th className="py-3.5 px-4 font-semibold">Activity Metrics</th>
-                <th className="py-3.5 px-4 font-semibold">Account Status</th>
-                <th className="py-3.5 px-4 font-semibold">Registered</th>
-                <th className="py-3.5 px-4 font-semibold text-right">Moderation Actions</th>
+                <th className="py-3.5 px-4 font-normal">User</th>
+                <th className="py-3.5 px-4 font-normal">Activity Metrics</th>
+                <th className="py-3.5 px-4 font-normal">Account Status</th>
+                <th className="py-3.5 px-4 font-normal">Registered</th>
+                <th className="py-3.5 px-4 font-normal text-right">Moderation Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -104,10 +104,10 @@ export default function AdminUsersPage() {
                         <img
                           src={u.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
                           alt={u.name}
-                          className="w-8 h-8 rounded-full object-cover border border-white/20"
+                          className="w-8 h-8 rounded object-cover border border-white/20"
                         />
                         <div>
-                          <span className="font-bold text-white block">{u.name}</span>
+                          <span className="font-medium text-white block">{u.name}</span>
                           <span className="text-[11px] text-slate-400 font-mono">{u.email}</span>
                         </div>
                       </div>
@@ -128,11 +128,11 @@ export default function AdminUsersPage() {
 
                     <td className="py-3.5 px-4">
                       {u.isBanned ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase bg-rose-500/20 text-rose-300 border border-rose-500/30">
                           BANNED
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 w-fit">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 w-fit">
                           <CheckCircleIcon className="w-3 h-3" />
                           ACTIVE
                         </span>
@@ -147,7 +147,7 @@ export default function AdminUsersPage() {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleBanToggle(u.id, u.isBanned)}
-                          className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                          className={`px-3 py-1 rounded text-xs font-normal transition-all ${
                             u.isBanned
                               ? 'bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30'
                               : 'bg-amber-600/20 text-amber-300 hover:bg-amber-600/30'
@@ -157,7 +157,7 @@ export default function AdminUsersPage() {
                         </button>
                         <button
                           onClick={() => handleDelete(u.id)}
-                          className="px-2.5 py-1 rounded-lg text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition-colors"
+                          className="px-2.5 py-1 rounded text-xs font-normal text-rose-400 hover:bg-rose-500/10 transition-colors"
                         >
                           Delete
                         </button>

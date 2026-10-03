@@ -3,22 +3,17 @@
 import { useContext, useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { BiLoaderAlt, BiShieldX, BiArrowBack } from 'react-icons/bi';
 import { Context } from 'src/component/helper/Context';
 import Navbar from 'src/component/marketing/developer/Navbar';
 import Sidebar from 'src/component/marketing/developer/Sidebar';
 
-/**
- * @deprecated ROLE_PERMISSIONS is deprecated in favor of dynamic permissions stored in the database
- * and returned by authenticateStaff / /api/marketing/developer/me. Retained solely as a fallback for unmigrated sessions.
- */
 export const ROLE_PERMISSIONS = {
   admin: [
     'overview', 'developers', 'roles', 'team', 'creators', 'users', 'websites',
     'blogs', 'packages', 'features', 'modules', 'purchases', 'payments', 'subscriptions', 'payroll', 'my-salaries',
     'live-chats', 'chats', 'contacts', 'support', 'projects', 'reports', 'reviews', 'spams',
     'facebook-messages', 'instagram-messages', 'whatsapp-messages',
-    'leads', 'subscribers',  'profile', 'settings', 'faqs', 'updates', 'tasks', 'notices', 'tutorials', 'careers', 'policies'
+    'leads', 'subscribers', 'profile', 'settings', 'faqs', 'updates', 'tasks', 'notices', 'tutorials', 'careers', 'policies'
   ],
   manager: [
     'overview', 'creators', 'users', 'websites', 'packages', 'features',
@@ -55,18 +50,16 @@ export default function DeveloperLayout({ children }) {
 
   if (loading) {
     return (
-      <div className="w-full min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-2">
-        <BiLoaderAlt className="animate-spin text-4xl text-slate-800" />
-        <p className="text-slate-600 text-sm font-semibold animate-pulse">Authenticating staff session...</p>
+      <div className="w-full min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
+        <p className="text-xs font-normal text-slate-500">Loading session...</p>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="w-full min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-2">
-        <BiLoaderAlt className="animate-spin text-4xl text-slate-800" />
-        <p className="text-slate-600 text-sm font-semibold">Redirecting to login...</p>
+      <div className="w-full min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
+        <p className="text-xs font-normal text-slate-500">Redirecting to login...</p>
       </div>
     );
   }
@@ -89,7 +82,7 @@ export default function DeveloperLayout({ children }) {
 
   if (!isAllowed) {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-800 flex">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex">
         <Sidebar
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
@@ -100,22 +93,20 @@ export default function DeveloperLayout({ children }) {
             onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
             currentUser={user}
           />
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto flex items-center justify-center">
-            <div className="max-w-md w-full bg-white border border-rose-200 rounded-2xl p-8 text-center shadow-xs">
-              <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center text-3xl">
-                <BiShieldX />
-              </div>
-              <h2 className="text-xl font-bold text-slate-900 mb-2">Access Restricted</h2>
-              <p className="text-sm text-slate-600 mb-6 leading-relaxed">
-                Your account ({user.roleName || user.role || 'Staff'}) does not have permission to access the <span className="font-semibold text-rose-600 font-mono">/{moduleName}</span> module.
+          <main className="flex-1 p-6 flex items-center justify-center">
+            <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 text-center space-y-3">
+              <h2 className="text-sm font-medium text-slate-900 dark:text-white">Access Restricted</h2>
+              <p className="text-xs font-normal text-slate-600 dark:text-slate-400">
+                Your account ({user.roleName || user.role || 'Staff'}) does not have permission to access the module <span className="font-mono">/{moduleName}</span>.
               </p>
-              <Link
-                href="/developer"
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors shadow-xs"
-              >
-                <BiArrowBack className="text-sm" />
-                <span>Return to Overview</span>
-              </Link>
+              <div className="pt-2">
+                <Link
+                  href="/developer"
+                  className="inline-block px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium transition-colors"
+                >
+                  Return to Overview
+                </Link>
+              </div>
             </div>
           </main>
         </div>
@@ -124,7 +115,7 @@ export default function DeveloperLayout({ children }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex transition-colors">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex">
       {/* Sidebar: persistent on desktop, drawer on mobile */}
       <Sidebar
         isOpen={sidebarOpen}
@@ -138,7 +129,7 @@ export default function DeveloperLayout({ children }) {
           onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
           currentUser={user}
         />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full">
+        <main className="flex-1 p-4 sm:p-6 w-full max-w-7xl mx-auto">
           {children}
         </main>
       </div>

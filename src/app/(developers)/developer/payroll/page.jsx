@@ -1,20 +1,8 @@
 'use client';
 
 import { useState, useEffect, useContext } from 'react';
-import {
-  BiCreditCard,
-  BiPlus,
-  BiCheckCircle,
-  BiTime,
-  BiUser,
-  BiDollar,
-  BiTrash,
-  BiRefresh,
-  BiCheckShield,
-  BiX,
-  BiDetail,
-  BiCheck,
-} from 'react-icons/bi';
+
+
 import { Context } from 'src/component/helper/Context';
 
 export default function DeveloperPayrollPage() {
@@ -197,10 +185,10 @@ export default function DeveloperPayrollPage() {
   if (!isAdmin) {
     return (
       <div className="p-8 max-w-4xl mx-auto text-center space-y-4">
-        <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-3xl flex items-center justify-center mx-auto text-3xl">
-          <BiCreditCard />
+        <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded flex items-center justify-center mx-auto text-3xl">
+          
         </div>
-        <h2 className="text-2xl font-bold text-slate-900">Access Restricted</h2>
+        <h2 className="text-2xl font-medium text-slate-900">Access Restricted</h2>
         <p className="text-sm text-slate-500 max-w-md mx-auto">
           The Payroll & Salary Management system contains sensitive financial data and is strictly restricted to platform Super Administrators.
         </p>
@@ -213,7 +201,7 @@ export default function DeveloperPayrollPage() {
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold flex items-center gap-2 border ${
+          className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded shadow-xl text-sm font-normal flex items-center gap-2 border ${
             toast.type === 'error'
               ? 'bg-rose-50 border-rose-200 text-rose-700'
               : 'bg-emerald-50 border-emerald-200 text-emerald-700'
@@ -226,10 +214,10 @@ export default function DeveloperPayrollPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-secondary uppercase tracking-widest mb-1">
-            <BiCheckShield className="text-base" /> Executive Payroll & Compensation
+          <div className="flex items-center gap-2 text-xs font-medium text-secondary uppercase tracking-widest mb-1">
+             Executive Payroll & Compensation
           </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-2xl md:text-3xl font-medium text-slate-900 tracking-tight">
             Developer Payroll & Salary System
           </h1>
           <p className="text-xs md:text-sm text-slate-500 mt-1">
@@ -239,89 +227,87 @@ export default function DeveloperPayrollPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={fetchPayrolls}
-            className="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors"
+            className="p-2.5 rounded border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors"
             title="Refresh"
-          >
-            <BiRefresh className="text-xl" />
-          </button>
+          >Refresh</button>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-secondary text-white font-semibold text-sm shadow-md hover:bg-secondary/90 transition-all active:scale-95"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded bg-secondary text-white font-normal text-sm shadow-md hover:bg-secondary/90 transition-all active:scale-95"
           >
-            <BiPlus className="text-lg" /> Create Payroll Run
+             Create Payroll Run
           </button>
         </div>
       </div>
 
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-2">
+        <div className="p-6 rounded bg-white border border-slate-200 shadow-sm space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Disbursed</span>
-            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
-              <BiDollar />
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Disbursed</span>
+            <div className="w-10 h-10 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
+              
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-900">
+          <div className="text-2xl font-medium text-slate-900">
             ${Number(stats.total_disbursed || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </div>
           <div className="text-xs text-emerald-600 font-medium">Completed platform payouts</div>
         </div>
 
-        <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-2">
+        <div className="p-6 rounded bg-white border border-slate-200 shadow-sm space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pending Payouts</span>
-            <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl">
-              <BiTime />
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Pending Payouts</span>
+            <div className="w-10 h-10 rounded bg-amber-50 text-amber-600 flex items-center justify-center text-xl">
+              
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-900">
+          <div className="text-2xl font-medium text-slate-900">
             ${Number(stats.pending_payouts || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </div>
           <div className="text-xs text-amber-600 font-medium">Unpaid developer salaries</div>
         </div>
 
-        <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-2">
+        <div className="p-6 rounded bg-white border border-slate-200 shadow-sm space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Payroll Runs</span>
-            <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl">
-              <BiCreditCard />
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Payroll Runs</span>
+            <div className="w-10 h-10 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl">
+              
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-900">{stats.total_runs || 0}</div>
+          <div className="text-2xl font-medium text-slate-900">{stats.total_runs || 0}</div>
           <div className="text-xs text-indigo-600 font-medium">Historical payment cycles</div>
         </div>
 
-        <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-2">
+        <div className="p-6 rounded bg-white border border-slate-200 shadow-sm space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Developers</span>
-            <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl">
-              <BiUser />
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Active Developers</span>
+            <div className="w-10 h-10 rounded bg-purple-50 text-purple-600 flex items-center justify-center text-xl">
+              
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-900">{stats.active_developers || 0}</div>
+          <div className="text-2xl font-medium text-slate-900">{stats.active_developers || 0}</div>
           <div className="text-xs text-purple-600 font-medium">Eligible staff members</div>
         </div>
       </div>
 
       {/* Main Content: Payroll Runs Table */}
-      <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-900">Payroll Disbursement Runs</h2>
-          <span className="text-xs text-slate-400 font-semibold">{payrolls.length} total cycles</span>
+          <h2 className="text-lg font-medium text-slate-900">Payroll Disbursement Runs</h2>
+          <span className="text-xs text-slate-400 font-normal">{payrolls.length} total cycles</span>
         </div>
 
         {loading ? (
           <div className="p-12 text-center text-slate-400 text-sm animate-pulse">Loading payroll records...</div>
         ) : payrolls.length === 0 ? (
           <div className="p-12 text-center space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-2xl">
-              <BiCreditCard />
+            <div className="w-12 h-12 rounded bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-2xl">
+              
             </div>
             <p className="text-slate-500 text-sm font-medium">No payroll cycles created yet.</p>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="text-xs text-secondary font-bold hover:underline"
+              className="text-xs text-secondary font-medium hover:underline"
             >
               + Create your first payroll cycle
             </button>
@@ -329,7 +315,7 @@ export default function DeveloperPayrollPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-700">
-              <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase border-b border-slate-100">
+              <thead className="bg-slate-50 text-xs font-medium text-slate-500 uppercase border-b border-slate-100">
                 <tr>
                   <th className="px-6 py-4">Title & Period</th>
                   <th className="px-6 py-4">Status</th>
@@ -344,15 +330,15 @@ export default function DeveloperPayrollPage() {
                   return (
                     <tr key={p.id} className="hover:bg-slate-50/75 transition-colors">
                       <td className="px-6 py-4">
-                        <div className="font-bold text-slate-900">{p.title}</div>
+                        <div className="font-medium text-slate-900">{p.title}</div>
                         <div className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                          <BiTime /> {new Date(p.pay_period_start).toLocaleDateString()} –{' '}
+                           {new Date(p.pay_period_start).toLocaleDateString()} –{' '}
                           {new Date(p.pay_period_end).toLocaleDateString()}
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                          className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-medium uppercase tracking-wider ${
                             p.status === 'PAID'
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                               : p.status === 'APPROVED'
@@ -363,16 +349,16 @@ export default function DeveloperPayrollPage() {
                           {p.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 font-extrabold text-slate-900">
+                      <td className="px-6 py-4 font-medium text-slate-900">
                         ${Number(p.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-xs font-semibold text-slate-600">
+                        <div className="text-xs font-normal text-slate-600">
                           {p.paid_count || 0} / {p.developer_count || 0} Paid
                         </div>
-                        <div className="w-28 h-1.5 bg-slate-100 rounded-full mt-1.5 overflow-hidden">
+                        <div className="w-28 h-1.5 bg-slate-100 rounded mt-1.5 overflow-hidden">
                           <div
-                            className="h-full bg-emerald-500 rounded-full"
+                            className="h-full bg-emerald-500 rounded"
                             style={{
                               width: `${p.developer_count ? (p.paid_count / p.developer_count) * 100 : 0}%`,
                             }}
@@ -385,16 +371,16 @@ export default function DeveloperPayrollPage() {
                             setSelectedPayroll(p);
                             fetchPayrollDetail(p.id);
                           }}
-                          className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
+                          className="px-3 py-1.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors"
                         >
                           Manage Salaries
                         </button>
                         <button
                           onClick={() => handleDeletePayroll(p.id)}
-                          className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-600 transition-colors"
+                          className="p-1.5 rounded hover:bg-rose-50 text-rose-600 transition-colors"
                           title="Delete Payroll Run"
                         >
-                          <BiTrash className="text-base" />
+                          
                         </button>
                       </td>
                     </tr>
@@ -408,11 +394,11 @@ export default function DeveloperPayrollPage() {
 
       {/* Selected Payroll Detail Drawer / Section */}
       {selectedPayroll && (
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
+        <div className="bg-white border border-slate-200 rounded p-6 md:p-8 shadow-sm space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
             <div>
-              <span className="text-xs font-bold text-secondary uppercase tracking-widest">Active Payroll Breakdown</span>
-              <h2 className="text-xl font-bold text-slate-900">{selectedPayroll.title}</h2>
+              <span className="text-xs font-medium text-secondary uppercase tracking-widest">Active Payroll Breakdown</span>
+              <h2 className="text-xl font-medium text-slate-900">{selectedPayroll.title}</h2>
               <p className="text-xs text-slate-400">
                 Period: {new Date(selectedPayroll.pay_period_start).toLocaleDateString()} to{' '}
                 {new Date(selectedPayroll.pay_period_end).toLocaleDateString()}
@@ -423,7 +409,7 @@ export default function DeveloperPayrollPage() {
                 setSelectedPayroll(null);
                 setPayrollDetail(null);
               }}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-500 text-xs font-semibold hover:bg-slate-50 self-start"
+              className="px-3 py-1.5 rounded border border-slate-200 text-slate-500 text-xs font-normal hover:bg-slate-50 self-start"
             >
               Close Breakdown ✕
             </button>
@@ -436,7 +422,7 @@ export default function DeveloperPayrollPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm text-slate-700">
-                <thead className="bg-slate-50 text-xs font-bold text-slate-500 uppercase border-b border-slate-100">
+                <thead className="bg-slate-50 text-xs font-medium text-slate-500 uppercase border-b border-slate-100">
                   <tr>
                     <th className="px-4 py-3">Developer</th>
                     <th className="px-4 py-3">Role</th>
@@ -452,21 +438,21 @@ export default function DeveloperPayrollPage() {
                   {payrollDetail.items.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50/50">
                       <td className="px-4 py-3">
-                        <div className="font-bold text-slate-900">{item.developer_name}</div>
+                        <div className="font-medium text-slate-900">{item.developer_name}</div>
                         <div className="text-xs text-slate-400">{item.developer_email}</div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 rounded text-xs font-semibold uppercase bg-slate-100 text-slate-600">
+                        <span className="px-2 py-0.5 rounded text-xs font-normal uppercase bg-slate-100 text-slate-600">
                           {item.developer_role}
                         </span>
                       </td>
                       <td className="px-4 py-3 font-medium">${Number(item.base_salary).toFixed(2)}</td>
                       <td className="px-4 py-3 text-emerald-600 font-medium">+${Number(item.bonus).toFixed(2)}</td>
                       <td className="px-4 py-3 text-rose-600 font-medium">-${Number(item.deductions).toFixed(2)}</td>
-                      <td className="px-4 py-3 font-extrabold text-slate-900">${Number(item.net_salary).toFixed(2)}</td>
+                      <td className="px-4 py-3 font-medium text-slate-900">${Number(item.net_salary).toFixed(2)}</td>
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold uppercase ${
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium uppercase ${
                             item.payment_status === 'PAID'
                               ? 'bg-emerald-50 text-emerald-700'
                               : 'bg-amber-50 text-amber-700'
@@ -477,8 +463,8 @@ export default function DeveloperPayrollPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         {item.payment_status === 'PAID' ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600">
-                            <BiCheck className="text-lg" /> Paid
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600">
+                             Paid
                           </span>
                         ) : (
                           <button
@@ -492,7 +478,7 @@ export default function DeveloperPayrollPage() {
                               });
                               setShowPayModal(true);
                             }}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all active:scale-95"
+                            className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium shadow-sm transition-all active:scale-95"
                           >
                             Record Payout
                           </button>
@@ -510,10 +496,10 @@ export default function DeveloperPayrollPage() {
       {/* Create Payroll Run Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 md:p-8 space-y-6 max-h-[90vh] overflow-y-auto border border-slate-100">
+          <div className="bg-white rounded shadow-2xl max-w-2xl w-full p-6 md:p-8 space-y-6 max-h-[90vh] overflow-y-auto border border-slate-100">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <h3 className="text-xl font-bold text-slate-900">Create New Payroll Cycle</h3>
+                <h3 className="text-xl font-medium text-slate-900">Create New Payroll Cycle</h3>
                 <p className="text-xs text-slate-500">Configure pay period and assign compensation per developer.</p>
               </div>
               <button
@@ -526,50 +512,50 @@ export default function DeveloperPayrollPage() {
 
             <form onSubmit={handleCreateSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Payroll Title</label>
+                <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Payroll Title</label>
                 <input
                   type="text"
                   required
                   value={createForm.title}
                   onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
                   placeholder="e.g. October 2026 Developer Salary Run"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-secondary focus:bg-white"
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-2.5 text-sm focus:outline-none focus:border-secondary focus:bg-white"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Period Start Date</label>
+                  <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Period Start Date</label>
                   <input
                     type="date"
                     required
                     value={createForm.pay_period_start}
                     onChange={(e) => setCreateForm({ ...createForm, pay_period_start: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-secondary focus:bg-white"
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-2.5 text-sm focus:outline-none focus:border-secondary focus:bg-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Period End Date</label>
+                  <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Period End Date</label>
                   <input
                     type="date"
                     required
                     value={createForm.pay_period_end}
                     onChange={(e) => setCreateForm({ ...createForm, pay_period_end: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-secondary focus:bg-white"
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-2.5 text-sm focus:outline-none focus:border-secondary focus:bg-white"
                   />
                 </div>
               </div>
 
               {/* Developer Salary Allocations Table */}
               <div className="space-y-2 pt-2">
-                <label className="block text-xs font-bold text-slate-700 uppercase">
+                <label className="block text-xs font-medium text-slate-700 uppercase">
                   Staff Salary Allocations ({createForm.items.length} Developers)
                 </label>
-                <div className="max-h-60 overflow-y-auto rounded-2xl border border-slate-200 divide-y divide-slate-100">
+                <div className="max-h-60 overflow-y-auto rounded border border-slate-200 divide-y divide-slate-100">
                   {createForm.items.map((itm, idx) => (
                     <div key={itm.developer_id} className="p-3 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                       <div className="min-w-[140px]">
-                        <div className="font-bold text-slate-900">{itm.name}</div>
+                        <div className="font-medium text-slate-900">{itm.name}</div>
                         <div className="text-slate-400 capitalize">{itm.role}</div>
                       </div>
                       <div className="grid grid-cols-3 gap-2 w-full sm:w-auto">
@@ -619,13 +605,13 @@ export default function DeveloperPayrollPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Administrative Notes</label>
+                <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Administrative Notes</label>
                 <textarea
                   rows={2}
                   value={createForm.notes}
                   onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
                   placeholder="Optional internal disbursement notes..."
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-secondary focus:bg-white"
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-2 text-sm focus:outline-none focus:border-secondary focus:bg-white"
                 />
               </div>
 
@@ -633,14 +619,14 @@ export default function DeveloperPayrollPage() {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50"
+                  className="px-5 py-2.5 rounded border border-slate-200 text-slate-600 text-sm font-normal hover:bg-slate-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-6 py-2.5 rounded-xl bg-secondary hover:bg-secondary/90 text-white text-sm font-bold shadow-md transition-all active:scale-95 disabled:opacity-50"
+                  className="px-6 py-2.5 rounded bg-secondary hover:bg-secondary/90 text-white text-sm font-medium shadow-md transition-all active:scale-95 disabled:opacity-50"
                 >
                   {saving ? 'Creating Run...' : 'Initialize Payroll Run'}
                 </button>
@@ -653,12 +639,12 @@ export default function DeveloperPayrollPage() {
       {/* Record Payment Modal */}
       {showPayModal && targetItemToPay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 md:p-8 space-y-5 border border-slate-100">
+          <div className="bg-white rounded shadow-2xl max-w-md w-full p-6 md:p-8 space-y-5 border border-slate-100">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Record Salary Disbursement</h3>
+                <h3 className="text-lg font-medium text-slate-900">Record Salary Disbursement</h3>
                 <p className="text-xs text-slate-500">
-                  Recipient: <span className="font-semibold text-slate-800">{targetItemToPay.developer_name}</span>
+                  Recipient: <span className="font-normal text-slate-800">{targetItemToPay.developer_name}</span>
                 </p>
               </div>
               <button
@@ -671,23 +657,23 @@ export default function DeveloperPayrollPage() {
 
             <form onSubmit={handleRecordPayment} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Disbursed Amount ($)</label>
+                <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Disbursed Amount ($)</label>
                 <input
                   type="number"
                   step="0.01"
                   required
                   value={payForm.amount}
                   onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:border-secondary focus:bg-white"
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:border-secondary focus:bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Disbursement Channel</label>
+                <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Disbursement Channel</label>
                 <select
                   value={payForm.payment_method}
                   onChange={(e) => setPayForm({ ...payForm, payment_method: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-secondary focus:bg-white"
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-2.5 text-sm focus:outline-none focus:border-secondary focus:bg-white"
                 >
                   <option value="BANK_TRANSFER">Direct Wire / Bank Transfer</option>
                   <option value="STRIPE">Stripe Payout</option>
@@ -699,24 +685,24 @@ export default function DeveloperPayrollPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Transaction Ref #</label>
+                <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Transaction Ref #</label>
                 <input
                   type="text"
                   required
                   value={payForm.transaction_reference}
                   onChange={(e) => setPayForm({ ...payForm, transaction_reference: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-secondary focus:bg-white"
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-2.5 text-sm focus:outline-none focus:border-secondary focus:bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Notes / Remarks</label>
+                <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Notes / Remarks</label>
                 <input
                   type="text"
                   value={payForm.notes}
                   onChange={(e) => setPayForm({ ...payForm, notes: e.target.value })}
                   placeholder="Optional bank confirmation code..."
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-secondary focus:bg-white"
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-2.5 text-sm focus:outline-none focus:border-secondary focus:bg-white"
                 />
               </div>
 
@@ -724,14 +710,14 @@ export default function DeveloperPayrollPage() {
                 <button
                   type="button"
                   onClick={() => setShowPayModal(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50"
+                  className="px-4 py-2 rounded border border-slate-200 text-slate-600 text-xs font-normal hover:bg-slate-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all active:scale-95 disabled:opacity-50"
+                  className="px-5 py-2 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium shadow-md transition-all active:scale-95 disabled:opacity-50"
                 >
                   {saving ? 'Processing...' : 'Confirm Paid'}
                 </button>

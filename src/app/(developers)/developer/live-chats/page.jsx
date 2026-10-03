@@ -1,23 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  BiSearch,
-  BiRefresh,
-  BiTrash,
-  BiSupport,
-  BiUser,
-  BiCheckCircle,
-  BiTimeFive,
-  BiLoaderAlt,
-  BiChevronRight,
-  BiMessageRoundedDots,
-  BiEnvelope,
-  BiMessageSquareDetail,
-  BiUserCheck,
-} from 'react-icons/bi';
+
+
 
 export default function AdminLiveChatsPage() {
   const router = useRouter();
@@ -129,11 +115,11 @@ export default function AdminLiveChatsPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded p-6 shadow-xs">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Live Chat Workspace</h1>
-            <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <h1 className="text-2xl font-medium text-slate-900 tracking-tight">Live Chat Workspace</h1>
+            <span className="text-[11px] font-medium uppercase tracking-wider px-2.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
               Support Hub
             </span>
           </div>
@@ -144,18 +130,18 @@ export default function AdminLiveChatsPage() {
 
         <div className="flex items-center gap-2">
           {currentUser && (
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded bg-slate-50 border border-slate-200 text-xs text-slate-700">
+              <span className="w-2 h-2 rounded bg-emerald-500 animate-pulse" />
               <span>{currentUser.name} ({currentUser.roleName || 'Developer'})</span>
             </div>
           )}
           <button
             type="button"
             onClick={() => fetchChats(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-normal transition-colors cursor-pointer shadow-xs"
             title="Refresh conversations"
           >
-            <BiRefresh className="text-base" />
+            
             <span>Refresh</span>
           </button>
         </div>
@@ -165,62 +151,62 @@ export default function AdminLiveChatsPage() {
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
         <div
           onClick={() => setStatusFilter('ALL')}
-          className={`bg-white border rounded-2xl p-4 shadow-xs cursor-pointer transition-all ${
+          className={`bg-white border rounded p-4 shadow-xs cursor-pointer transition-all ${
             statusFilter === 'ALL' ? 'border-slate-900 ring-2 ring-slate-900/10' : 'border-slate-200 hover:border-slate-300'
           }`}
         >
-          <div className="text-xs font-semibold text-slate-500 mb-1">All Sessions</div>
-          <div className="text-2xl font-black text-slate-900">{totalCount}</div>
+          <div className="text-xs font-normal text-slate-500 mb-1">All Sessions</div>
+          <div className="text-2xl font-medium text-slate-900">{totalCount}</div>
         </div>
         <div
           onClick={() => setStatusFilter('OPEN')}
-          className={`bg-white border rounded-2xl p-4 shadow-xs cursor-pointer transition-all ${
+          className={`bg-white border rounded p-4 shadow-xs cursor-pointer transition-all ${
             statusFilter === 'OPEN' ? 'border-blue-600 ring-2 ring-blue-600/10' : 'border-slate-200 hover:border-slate-300'
           }`}
         >
-          <div className="text-xs font-semibold text-blue-600 mb-1">Awaiting Reply</div>
-          <div className="text-2xl font-black text-blue-700">{openCount}</div>
+          <div className="text-xs font-normal text-blue-600 mb-1">Awaiting Reply</div>
+          <div className="text-2xl font-medium text-blue-700">{openCount}</div>
         </div>
         <div
           onClick={() => setStatusFilter('ACTIVE')}
-          className={`bg-white border rounded-2xl p-4 shadow-xs cursor-pointer transition-all ${
+          className={`bg-white border rounded p-4 shadow-xs cursor-pointer transition-all ${
             statusFilter === 'ACTIVE' ? 'border-emerald-600 ring-2 ring-emerald-600/10' : 'border-slate-200 hover:border-slate-300'
           }`}
         >
-          <div className="text-xs font-semibold text-emerald-600 mb-1">Active Chats</div>
-          <div className="text-2xl font-black text-emerald-700">{activeCount}</div>
+          <div className="text-xs font-normal text-emerald-600 mb-1">Active Chats</div>
+          <div className="text-2xl font-medium text-emerald-700">{activeCount}</div>
         </div>
         <div
           onClick={() => setStatusFilter('MY_CHATS')}
-          className={`bg-white border rounded-2xl p-4 shadow-xs cursor-pointer transition-all ${
+          className={`bg-white border rounded p-4 shadow-xs cursor-pointer transition-all ${
             statusFilter === 'MY_CHATS' ? 'border-indigo-600 ring-2 ring-indigo-600/10' : 'border-slate-200 hover:border-slate-300'
           }`}
         >
-          <div className="text-xs font-semibold text-indigo-600 mb-1">My Assigned</div>
-          <div className="text-2xl font-black text-indigo-700">{myChatsCount}</div>
+          <div className="text-xs font-normal text-indigo-600 mb-1">My Assigned</div>
+          <div className="text-2xl font-medium text-indigo-700">{myChatsCount}</div>
         </div>
         <div
           onClick={() => setStatusFilter('RESOLVED')}
-          className={`bg-white border rounded-2xl p-4 shadow-xs cursor-pointer transition-all col-span-2 sm:col-span-1 ${
+          className={`bg-white border rounded p-4 shadow-xs cursor-pointer transition-all col-span-2 sm:col-span-1 ${
             statusFilter === 'RESOLVED' ? 'border-amber-600 ring-2 ring-amber-600/10' : 'border-slate-200 hover:border-slate-300'
           }`}
         >
-          <div className="text-xs font-semibold text-amber-600 mb-1">Closed / Resolved</div>
-          <div className="text-2xl font-black text-amber-700">{resolvedCount}</div>
+          <div className="text-xs font-normal text-amber-600 mb-1">Closed / Resolved</div>
+          <div className="text-2xl font-medium text-amber-700">{resolvedCount}</div>
         </div>
       </div>
 
       {/* Search & Filter Toolbar */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200 rounded p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Search */}
         <div className="relative w-full sm:w-80">
-          <BiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
+          
           <input
             type="text"
             placeholder="Search visitor, developer, message..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 focus:bg-white transition-colors"
+            className="w-full bg-slate-50 border border-slate-200 rounded pl-3 pr-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 focus:bg-white transition-colors"
           />
         </div>
 
@@ -239,7 +225,7 @@ export default function AdminLiveChatsPage() {
               key={tab.id}
               type="button"
               onClick={() => setStatusFilter(tab.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
+              className={`px-3 py-1.5 rounded text-xs font-normal transition-colors cursor-pointer shrink-0 ${
                 statusFilter === tab.id
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100'
@@ -252,16 +238,16 @@ export default function AdminLiveChatsPage() {
       </div>
 
       {/* Chat Sessions List */}
-      <div className="bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden">
         {loading && chats.length === 0 ? (
           <div className="p-16 text-center text-slate-400 flex flex-col items-center justify-center gap-2">
-            <BiLoaderAlt className="animate-spin text-3xl text-slate-700" />
-            <span className="text-xs font-semibold">Loading live chat conversations...</span>
+            
+            <span className="text-xs font-normal">Loading live chat conversations...</span>
           </div>
         ) : filteredChats.length === 0 ? (
           <div className="p-16 text-center text-slate-400 flex flex-col items-center justify-center gap-2">
-            <BiMessageSquareDetail className="text-4xl text-slate-300" />
-            <p className="text-sm font-semibold text-slate-700">No conversations found</p>
+            
+            <p className="text-sm font-normal text-slate-700">No conversations found</p>
             <p className="text-xs text-slate-400 max-w-sm">
               {searchTerm || statusFilter !== 'ALL'
                 ? 'Try adjusting your search query or filter criteria.'
@@ -274,7 +260,7 @@ export default function AdminLiveChatsPage() {
                   setSearchTerm('');
                   setStatusFilter('ALL');
                 }}
-                className="mt-2 text-xs font-bold text-slate-800 underline cursor-pointer"
+                className="mt-2 text-xs font-medium text-slate-800 underline cursor-pointer"
               >
                 Clear filters
               </button>
@@ -292,13 +278,13 @@ export default function AdminLiveChatsPage() {
                 >
                   {/* Visitor Info & Message Snippet */}
                   <div className="flex items-start gap-4 min-w-0 flex-1">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-base shrink-0 group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                    <div className="w-12 h-12 rounded bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center font-medium text-base shrink-0 group-hover:bg-slate-900 group-hover:text-white transition-colors">
                       {chat.visitor_name?.charAt(0)?.toUpperCase() || 'V'}
                     </div>
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <h3 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                        <h3 className="text-sm font-medium text-slate-900 group-hover:text-indigo-600 transition-colors">
                           {chat.visitor_name}
                         </h3>
                         <span className="font-mono text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
@@ -307,7 +293,7 @@ export default function AdminLiveChatsPage() {
 
                         {/* Status Badge */}
                         <span
-                          className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                          className={`text-[9px] font-medium uppercase px-2 py-0.5 rounded ${
                             status === 'ACTIVE'
                               ? 'bg-emerald-100 text-emerald-700'
                               : status === 'OPEN'
@@ -322,25 +308,25 @@ export default function AdminLiveChatsPage() {
 
                         {/* Assigned Developer Badge */}
                         {chat.assigned_developer_name ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
-                            <BiUserCheck className="text-xs" />
+                          <span className="inline-flex items-center gap-1 text-[10px] font-normal text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
+                            
                             <span>{chat.assigned_developer_name}</span>
                           </span>
                         ) : (
-                          <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                          <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
                             Unassigned
                           </span>
                         )}
 
                         {/* Unread Visitor Message Badge */}
                         {chat.unread_count > 0 && (
-                          <span className="text-[9px] font-black uppercase text-rose-700 bg-rose-100 border border-rose-200 px-2 py-0.5 rounded-full animate-pulse">
+                          <span className="text-[9px] font-medium uppercase text-rose-700 bg-rose-100 border border-rose-200 px-2 py-0.5 rounded animate-pulse">
                             {chat.unread_count} new {chat.unread_count === 1 ? 'msg' : 'msgs'}
                           </span>
                         )}
 
                         {chat.message_count > 0 && (
-                          <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                          <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
                             {chat.message_count} total
                           </span>
                         )}
@@ -350,7 +336,7 @@ export default function AdminLiveChatsPage() {
                       <p className="text-xs text-slate-600 truncate mb-1">
                         {chat.last_message ? (
                           <>
-                            <span className="font-semibold text-slate-500">
+                            <span className="font-normal text-slate-500">
                               {chat.last_sender_type === 'ADMIN' ? 'Support: ' : 'Visitor: '}
                             </span>
                             {chat.last_message}
@@ -363,7 +349,7 @@ export default function AdminLiveChatsPage() {
                       {/* Metadata */}
                       <div className="flex items-center gap-3 text-[11px] text-slate-400 flex-wrap">
                         <span className="flex items-center gap-1">
-                          <BiEnvelope className="text-xs" />
+                          
                           <span>{chat.visitor_email || 'Guest visitor'}</span>
                         </span>
                         {chat.ip_address && (
@@ -387,24 +373,20 @@ export default function AdminLiveChatsPage() {
                     <Link
                       href={`/developer/live-chats/${chat.id}`}
                       onClick={(e) => e.stopPropagation()}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition-colors"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-xs transition-colors"
                     >
                       <span>Join Chat</span>
-                      <BiChevronRight className="text-base group-hover:translate-x-0.5 transition-transform" />
+                      
                     </Link>
 
                     <button
                       type="button"
                       disabled={deletingId === chat.id}
                       onClick={(e) => handleDelete(chat.id, e)}
-                      className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                      className="p-2 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                       title="Delete conversation"
                     >
-                      {deletingId === chat.id ? (
-                        <BiLoaderAlt className="animate-spin text-base" />
-                      ) : (
-                        <BiTrash className="text-base" />
-                      )}
+                      
                     </button>
                   </div>
                 </div>

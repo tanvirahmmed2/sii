@@ -3,21 +3,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { SITE_NAME } from 'src/lib/database/secret';
-import {
-  BiLayer,
-  BiUserCheck,
-  BiCube,
-  BiCreditCard,
-  BiHeadphone,
-  BiDesktop,
-  BiFile,
-  BiTrendingUp,
-  BiEnvelope,
-  BiPalette,
-  BiRightArrowAlt,
-  BiUser,
-  BiCog,
-} from 'react-icons/bi';
 
 export default function AdminOverviewPage() {
   const [developer, setDeveloper] = useState(null);
@@ -38,12 +23,10 @@ export default function AdminOverviewPage() {
       try {
         setLoading(true);
 
-        // 1. Fetch current logged-in developer profile
-        const devPromise = fetch('/api/marketing/developer')
+        const devPromise = fetch('/api/marketing/developer/me')
           .then((r) => r.json())
           .catch(() => ({ success: false }));
 
-        // 2. Fetch module records in parallel
         const statsPromises = Promise.allSettled([
           fetch('/api/marketing/developer/devs').then((r) => r.json()),
           fetch('/api/marketing/developer/packages').then((r) => r.json()),
@@ -57,8 +40,8 @@ export default function AdminOverviewPage() {
 
         const [devRes, statsRes] = await Promise.all([devPromise, statsPromises]);
 
-        if (devRes.success && devRes.developer) {
-          setDeveloper(devRes.developer);
+        if (devRes.success && (devRes.developer || devRes.user)) {
+          setDeveloper(devRes.developer || devRes.user);
         }
 
         const [devs, pkgs, webs, blogs, supp, pay, leads, subs] = statsRes;
@@ -105,58 +88,42 @@ export default function AdminOverviewPage() {
     {
       title: 'Platform Developers',
       value: counts.developers,
-      icon: BiUserCheck,
       href: '/developer/developers',
-      color: 'secondary',
     },
     {
       title: 'Active Packages',
       value: counts.packages,
-      icon: BiCube,
       href: '/developer/packages',
-      color: 'primary',
     },
     {
-      title: 'Websites',
+      title: 'Hosted Websites',
       value: counts.websites,
-      icon: BiDesktop,
       href: '/developer/websites',
-      color: 'secondary',
     },
     {
       title: 'Blog Articles',
       value: counts.blogs,
-      icon: BiFile,
       href: '/developer/blogs',
-      color: 'primary',
     },
     {
       title: 'Open Support Tickets',
       value: counts.support,
-      icon: BiHeadphone,
       href: '/developer/support',
-      color: 'secondary',
     },
     {
       title: 'Total Revenue',
       value: `$${counts.revenue.toFixed(2)}`,
-      icon: BiCreditCard,
       href: '/developer/payments',
-      color: 'primary',
     },
     {
       title: 'Inbound Leads',
       value: counts.leads,
-      icon: BiTrendingUp,
       href: '/developer/leads',
-      color: 'secondary',
     },
     {
       title: 'Subscribers',
       value: counts.subscribers,
-      icon: BiEnvelope,
       href: '/developer/subscribers',
-      color: 'primary',
     },
   ];
 
@@ -164,146 +131,129 @@ export default function AdminOverviewPage() {
     {
       category: 'Developer & Account',
       items: [
-        { label: 'Developer Profile', path: '/developer/profile', desc: 'Your account metadata and activity log' },
-        { label: 'Account Settings', path: '/developer/settings', desc: 'Update name, email, credentials, and 2FA' },
-        { label: 'Developer Team', path: '/developer/developers', desc: 'Internal platform operators and staff' },
-        { label: 'Hosted Websites', path: '/developer/websites', desc: 'Provisioned portfolio subdomains and containers' },
+        { label: 'Developer Profile', path: '/developer/profile', desc: 'Account metadata and session history' },
+        { label: 'Account Settings', path: '/developer/settings', desc: 'Update name, email, credentials' },
+        { label: 'Developers Team', path: '/developer/developers', desc: 'Platform staff and role permissions' },
+        { label: 'Hosted Websites', path: '/developer/websites', desc: 'Provisioned subdomains and portfolios' },
       ],
     },
     {
-      category: 'Content & Design',
+      category: 'Content & Policies',
       items: [
         { label: 'Blog Articles', path: '/developer/blogs', desc: 'Platform articles, guides, and releases' },
+        { label: 'Company Policies', path: '/developer/policies', desc: 'Internal operational and privacy terms' },
+        { label: 'Product Updates', path: '/developer/updates', desc: 'System changelog and roadmap items' },
+        { label: 'Tutorials', path: '/developer/tutorials', desc: 'Video and step-by-step guides' },
+        { label: 'FAQs', path: '/developer/faqs', desc: 'Frequently asked questions' },
       ],
     },
     {
       category: 'Billing & Monetization',
       items: [
-        { label: 'Packages', path: '/developer/packages', desc: 'Subscription tiers and pricing limits' },
-        { label: 'Feature Catalog', path: '/developer/features', desc: 'Modular platform feature definitions' },
-        { label: 'Payments', path: '/developer/payments', desc: 'Revenue transactions and billing records' },
-        { label: 'Subscriptions', path: '/developer/subscriptions', desc: 'Recurring memberships and renewal schedules' },
+        { label: 'Packages', path: '/developer/packages', desc: 'Subscription tiers and limits' },
+        { label: 'Features Catalog', path: '/developer/features', desc: 'Modular feature definitions' },
+        { label: 'Payments', path: '/developer/payments', desc: 'Revenue transactions and billing' },
+        { label: 'Subscriptions', path: '/developer/subscriptions', desc: 'Recurring memberships' },
       ],
     },
     {
-      category: 'Support & Real-Time Comms',
+      category: 'Support & Comms',
       items: [
         { label: 'Live Chats', path: '/developer/live-chats', desc: 'Active visitor and client chat sessions' },
-        { label: 'Contacts', path: '/developer/contacts', desc: 'Inbound inquiry forms from website' },
-        { label: 'Support Tickets', path: '/developer/support', desc: 'Technical trouble tickets and assistance' },
-        { label: 'Moderation Reports', path: '/developer/reports', desc: 'Platform abuse and content reports' },
+        { label: 'Contacts', path: '/developer/contacts', desc: 'Inbound inquiries from website' },
+        { label: 'Support Tickets', path: '/developer/support', desc: 'Technical trouble tickets' },
+        { label: 'Reports', path: '/developer/reports', desc: 'Platform abuse and content reports' },
       ],
     },
     {
       category: 'Audience & Growth',
       items: [
-        { label: 'Creators Directory', path: '/developer/creators', desc: 'Registered creators and appointed managers' },
-        { label: 'End-Users Directory', path: '/developer/users', desc: 'Registered site visitors and comment reviewers' },
-        { label: 'Sales Leads', path: '/developer/leads', desc: 'Inbound customer prospects and agency evaluations' },
+        { label: 'Creators Directory', path: '/developer/creators', desc: 'Registered creators and managers' },
+        { label: 'End-Users Directory', path: '/developer/users', desc: 'Registered site visitors' },
+        { label: 'Sales Leads', path: '/developer/leads', desc: 'Inbound customer prospects' },
         { label: 'Subscribers', path: '/developer/subscribers', desc: 'Newsletter audience email list' },
       ],
     },
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Banner */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
-        <div className="space-y-2 z-10">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-secondary/10 text-secondary border border-secondary/20">
-              {developer?.role ? `${developer.role.toUpperCase()} CONSOLE` : 'DEVELOPER CONSOLE'}
+            <span className="text-[10px] font-normal uppercase tracking-wider px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+              {developer?.role || 'Developer'}
             </span>
-            <span className="text-xs text-slate-500 font-semibold">• {SITE_NAME} Operations</span>
+            <span className="text-xs text-slate-500 font-normal">{SITE_NAME} Operations</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-            {developer?.name ? `Welcome back, ${developer.name}!` : `Welcome to ${SITE_NAME} Operations`}
+          <h1 className="text-lg font-medium text-slate-900 dark:text-white">
+            {developer?.name ? `Welcome, ${developer.name}` : `Welcome to ${SITE_NAME} Operations`}
           </h1>
-          <p className="text-sm text-slate-500 max-w-xl">
-            Central administration console for platform packages, website portfolios, customer support, and developer governance.
+          <p className="text-xs text-slate-500 max-w-xl font-normal">
+            Platform packages, websites, customer support, and developer governance console.
           </p>
         </div>
 
-        <div className="flex items-center gap-3 z-10">
+        <div className="flex items-center gap-2">
           <Link
             href="/developer/profile"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-secondary hover:bg-secondary-dark text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-normal"
           >
-            <BiUser className="text-base" />
-            <span>My Profile</span>
+            My Profile
           </Link>
           <Link
             href="/developer/settings"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer"
+            className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-normal"
           >
-            <BiCog className="text-base" />
-            <span>Settings</span>
+            Settings
           </Link>
         </div>
       </div>
 
       {/* KPI Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {statCards.map((stat, idx) => {
-          const Icon = stat.icon;
-          return (
-            <Link
-              key={idx}
-              href={stat.href}
-              className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:border-secondary/40 hover:shadow-sm transition-all group"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div
-                  className={`p-2 rounded-xl ${
-                    stat.color === 'secondary'
-                      ? 'bg-secondary/10 text-secondary'
-                      : 'bg-primary/10 text-primary'
-                  }`}
-                >
-                  <Icon className="text-xl" />
-                </div>
-                <BiRightArrowAlt className="text-slate-300 group-hover:text-secondary group-hover:translate-x-1 transition-all text-lg" />
-              </div>
-              <div className="text-2xl font-bold text-slate-900 tracking-tight">
-                {loading ? '—' : stat.value}
-              </div>
-              <div className="text-xs font-semibold text-slate-600 mt-1">{stat.title}</div>
-            </Link>
-          );
-        })}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {statCards.map((stat, idx) => (
+          <Link
+            key={idx}
+            href={stat.href}
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 hover:border-slate-400 dark:hover:border-slate-600 transition-colors"
+          >
+            <div className="text-xs font-normal text-slate-500 dark:text-slate-400">{stat.title}</div>
+            <div className="text-xl font-medium text-slate-900 dark:text-white mt-1">
+              {loading ? '—' : stat.value}
+            </div>
+          </Link>
+        ))}
       </div>
 
       {/* Modules Categorized Navigation */}
-      <div className="space-y-6">
-        <h2 className="text-lg font-bold text-slate-900 tracking-tight">Platform Operations Directory</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="space-y-4">
+        <h2 className="text-sm font-medium text-slate-900 dark:text-white">Operations Directory</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {moduleCategories.map((cat, idx) => (
             <div
               key={idx}
-              className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col justify-between"
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3"
             >
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
-                  <span>{cat.category}</span>
-                </h3>
-                <div className="space-y-3">
-                  {cat.items.map((item, i) => (
-                    <Link
-                      key={i}
-                      href={item.path}
-                      className="group flex items-start justify-between p-2.5 rounded-xl hover:bg-slate-50 transition-colors"
-                    >
-                      <div>
-                        <div className="text-xs font-bold text-slate-800 group-hover:text-secondary transition-colors">
-                          {item.label}
-                        </div>
-                        <div className="text-[11px] text-slate-500 line-clamp-1">{item.desc}</div>
-                      </div>
-                      <BiRightArrowAlt className="text-slate-300 group-hover:text-secondary group-hover:translate-x-0.5 transition-all text-base mt-0.5 shrink-0" />
-                    </Link>
-                  ))}
-                </div>
+              <h3 className="text-xs font-medium text-slate-700 dark:text-slate-300 pb-2 border-b border-slate-100 dark:border-slate-800">
+                {cat.category}
+              </h3>
+              <div className="space-y-2">
+                {cat.items.map((item, i) => (
+                  <Link
+                    key={i}
+                    href={item.path}
+                    className="block p-2 rounded hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+                  >
+                    <div className="text-xs font-medium text-slate-900 dark:text-white">
+                      {item.label}
+                    </div>
+                    <div className="text-[11px] text-slate-500 line-clamp-1 font-normal">
+                      {item.desc}
+                    </div>
+                  </Link>
+                ))}
               </div>
             </div>
           ))}

@@ -2,119 +2,84 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { SITE_NAME } from 'src/lib/database/secret';
-import {
-  BiX,
-  BiLogOut,
-  BiHome,
-  BiLayer,
-  BiCube,
-  BiMessageSquareDetail,
-  BiUserCheck,
-  BiFile,
-  BiChat,
-  BiHeadphone,
-  BiCreditCard,
-  BiReceipt,
-  BiCheckShield,
-  BiShieldQuarter,
-  BiDesktop,
-  BiEnvelope,
-  BiPalette,
-  BiTrendingUp,
-  BiUser,
-  BiGroup,
-  BiStar,
-  BiShieldX,
-  BiGridAlt,
-  BiCog,
-  BiHelpCircle,
-  BiBell,
-  BiTask,
-  BiVideo,
-  BiLogoFacebookCircle,
-  BiLogoInstagram,
-  BiLogoWhatsapp,
-  BiBriefcase,
-} from 'react-icons/bi';
 import { ROLE_PERMISSIONS } from 'src/app/(developers)/developer/layout';
 
 export const ADMIN_NAV_SECTIONS = [
   {
     title: 'Workspace & Overview',
     links: [
-      { href: '/developer', label: 'Overview', icon: BiLayer, exact: true },
-      { href: '/developer/tasks', label: 'Tasks & Sprints', icon: BiTask },
-      { href: '/developer/notices', label: 'Company Notices', icon: BiBell },
-      { href: '/developer/chats', label: 'Internal Chat', icon: BiMessageSquareDetail },
+      { href: '/developer', label: 'Overview', exact: true },
+      { href: '/developer/tasks', label: 'Tasks & Sprints' },
+      { href: '/developer/notices', label: 'Company Notices' },
+      { href: '/developer/chats', label: 'Internal Chat' },
     ],
   },
   {
     title: 'Websites & Audience',
     links: [
-      { href: '/developer/websites', label: 'Websites', icon: BiDesktop },
-      { href: '/developer/creators', label: 'Creators', icon: BiGroup },
-      { href: '/developer/users', label: 'End-Users', icon: BiUser },
-      { href: '/developer/leads', label: 'Leads', icon: BiTrendingUp },
-      { href: '/developer/subscribers', label: 'Subscribers', icon: BiEnvelope },
+      { href: '/developer/websites', label: 'Websites' },
+      { href: '/developer/creators', label: 'Creators' },
+      { href: '/developer/users', label: 'End-Users' },
+      { href: '/developer/leads', label: 'Leads' },
+      { href: '/developer/subscribers', label: 'Subscribers' },
     ],
   },
   {
     title: 'Commerce & Plans',
     links: [
-      { href: '/developer/packages', label: 'Packages', icon: BiCube },
-      { href: '/developer/features', label: 'Features', icon: BiCheckShield },
-      { href: '/developer/subscriptions', label: 'Subscriptions', icon: BiCheckShield },
-      { href: '/developer/purchases', label: 'Purchases', icon: BiReceipt },
-      { href: '/developer/payments', label: 'Payments', icon: BiCreditCard },
-      { href: '/developer/projects', label: 'Custom Projects', icon: BiBriefcase },
+      { href: '/developer/packages', label: 'Packages' },
+      { href: '/developer/features', label: 'Features' },
+      { href: '/developer/subscriptions', label: 'Subscriptions' },
+      { href: '/developer/purchases', label: 'Purchases' },
+      { href: '/developer/payments', label: 'Payments' },
+      { href: '/developer/projects', label: 'Custom Projects' },
     ],
   },
   {
-    title: 'Content & Design',
+    title: 'Content & Policies',
     links: [
-      { href: '/developer/blogs', label: 'Blogs', icon: BiFile },
-      { href: '/developer/policies', label: 'Company Policies', icon: BiCheckShield },
-      { href: '/developer/updates', label: 'Product Updates', icon: BiBell },
-      { href: '/developer/tutorials', label: 'Video Tutorials', icon: BiVideo },
-      { href: '/developer/faqs', label: 'FAQs', icon: BiHelpCircle },
+      { href: '/developer/blogs', label: 'Blogs' },
+      { href: '/developer/policies', label: 'Company Policies' },
+      { href: '/developer/updates', label: 'Product Updates' },
+      { href: '/developer/tutorials', label: 'Tutorials' },
+      { href: '/developer/faqs', label: 'FAQs' },
     ],
   },
   {
     title: 'Support & Comms',
     links: [
-      { href: '/developer/support', label: 'Support Tickets', icon: BiHeadphone },
-      { href: '/developer/live-chats', label: 'Live Chats', icon: BiChat },
-      { href: '/developer/contacts', label: 'Contacts', icon: BiEnvelope },
-      { href: '/developer/reports', label: 'Reports', icon: BiMessageSquareDetail },
-      { href: '/developer/reviews', label: 'Reviews', icon: BiStar },
+      { href: '/developer/support', label: 'Support Tickets' },
+      { href: '/developer/live-chats', label: 'Live Chats' },
+      { href: '/developer/contacts', label: 'Contacts' },
+      { href: '/developer/reports', label: 'Reports' },
+      { href: '/developer/reviews', label: 'Reviews' },
     ],
   },
   {
     title: 'Meta Channels',
     links: [
-      { href: '/developer/facebook-messages', label: 'Facebook Messages', icon: BiLogoFacebookCircle },
-      { href: '/developer/instagram-messages', label: 'Instagram Messages', icon: BiLogoInstagram },
-      { href: '/developer/whatsapp-messages', label: 'WhatsApp Messages', icon: BiLogoWhatsapp },
+      { href: '/developer/facebook-messages', label: 'Facebook Messages' },
+      { href: '/developer/instagram-messages', label: 'Instagram Messages' },
+      { href: '/developer/whatsapp-messages', label: 'WhatsApp Messages' },
     ],
   },
   {
     title: 'Team & Organization',
     links: [
-      { href: '/developer/developers', label: 'Developers Team', icon: BiUserCheck },
-      { href: '/developer/roles', label: 'Roles & Permissions', icon: BiShieldQuarter },
-      { href: '/developer/payroll', label: 'Payroll & Salaries', icon: BiCreditCard },
-      { href: '/developer/my-salaries', label: 'My Salaries', icon: BiCreditCard },
-      { href: '/developer/careers', label: 'Careers & Hiring', icon: BiBriefcase },
+      { href: '/developer/developers', label: 'Developers Team' },
+      { href: '/developer/roles', label: 'Roles & Permissions' },
+      { href: '/developer/payroll', label: 'Payroll & Salaries' },
+      { href: '/developer/my-salaries', label: 'My Salaries' },
+      { href: '/developer/careers', label: 'Careers & Hiring' },
     ],
   },
   {
     title: 'Platform & Settings',
     links: [
-      { href: '/developer/modules', label: 'Database Modules', icon: BiGridAlt },
-      { href: '/developer/spams', label: 'Spam Defense', icon: BiShieldX },
-      { href: '/developer/settings', label: 'Settings', icon: BiCog },
-      { href: '/developer/profile', label: 'My Profile', icon: BiUser },
+      { href: '/developer/modules', label: 'Database Modules' },
+      { href: '/developer/spams', label: 'Spam Defense' },
+      { href: '/developer/settings', label: 'Settings' },
+      { href: '/developer/profile', label: 'My Profile' },
     ],
   },
 ];
@@ -161,48 +126,44 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
 
   const navContent = (
     <div className="flex flex-col h-full overflow-y-auto">
-      <div className="h-14 px-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-10 transition-colors">
-       
-
-        {onClose && (
+      {onClose && (
+        <div className="h-12 px-4 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 md:hidden sticky top-0 z-10">
+          <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Navigation</span>
           <button
             type="button"
             onClick={onClose}
-            className="md:hidden text-2xl p-1 text-slate-500 hover:text-secondary rounded-md transition-colors cursor-pointer"
-            aria-label="Close menu"
+            className="text-xs font-normal text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 px-2 py-1 rounded border border-slate-200 dark:border-slate-700 cursor-pointer"
           >
-            <BiX />
+            Close
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Navigation Sections */}
-      <div className="p-3 space-y-5 flex-1">
+      <div className="p-3 space-y-4 flex-1">
         {DEVELOPER_NAV_SECTIONS.map((section) => {
           const visibleLinks = section.links.filter(isLinkAllowed);
           if (visibleLinks.length === 0) return null;
 
           return (
-            <div key={section.title} className="space-y-1">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 py-1">
+            <div key={section.title} className="space-y-0.5">
+              <div className="text-[10px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500 px-2.5 py-1">
                 {section.title}
               </div>
               {visibleLinks.map((link) => {
-                const Icon = link.icon;
                 const active = isLinkActive(link);
                 return (
                   <Link
                     key={link.href}
                     href={link.href}
                     onClick={onClose}
-                    className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                    className={`block px-2.5 py-1.5 rounded text-xs transition-colors ${
                       active
-                        ? 'bg-primary/15 text-slate-900 dark:text-white border-l-4 border-primary font-bold shadow-xs'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-medium'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60 font-normal'
                     }`}
                   >
-                    <Icon className={`text-base ${active ? 'text-primary' : 'text-slate-400'}`} />
-                    <span>{link.label}</span>
+                    {link.label}
                   </Link>
                 );
               })}
@@ -211,23 +172,21 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
         })}
       </div>
 
-      {/* Footer CTA and Actions */}
-      <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2 sticky bottom-0 transition-colors">
+      {/* Footer Actions */}
+      <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2 sticky bottom-0">
         <Link
           href="/"
           onClick={onClose}
-          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium transition-colors"
+          className="block text-center w-full py-1.5 px-3 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-normal transition-colors"
         >
-          <BiHome className="text-sm" />
-          <span>Platform Home</span>
+          Platform Home
         </Link>
         <button
           type="button"
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 border border-secondary text-secondary hover:bg-secondary hover:text-white py-2 px-3 rounded-lg font-semibold transition-colors duration-200 text-xs cursor-pointer"
+          className="w-full text-center py-1.5 px-3 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 text-xs font-normal transition-colors cursor-pointer"
         >
-          <BiLogOut className="text-sm" />
-          <span>Sign Out</span>
+          Sign Out
         </button>
       </div>
     </div>
@@ -235,9 +194,9 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
 
   return (
     <>
-      {/* Mobile Backdrop overlay */}
+      {/* Mobile Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/40 z-50 md:hidden transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black/40 z-50 md:hidden transition-opacity ${
           isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         onClick={onClose}
@@ -246,7 +205,7 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
 
       {/* Mobile Drawer */}
       <aside
-        className={`fixed top-0 left-0 bottom-0 w-72 max-w-[85vw] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-50 md:hidden flex flex-col justify-between shadow-2xl transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 bottom-0 w-64 max-w-[80vw] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-50 md:hidden flex flex-col justify-between shadow-sm transition-transform duration-200 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         aria-label="Developer Mobile Navigation"
@@ -256,7 +215,7 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
 
       {/* Desktop Persistent Sidebar */}
       <aside
-        className="hidden md:flex md:w-64 md:flex-col md:shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 h-screen sticky top-0 z-30 transition-colors"
+        className="hidden md:flex md:w-56 md:flex-col md:shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 h-screen sticky top-0 z-30"
         aria-label="Developer Desktop Navigation"
       >
         {navContent}

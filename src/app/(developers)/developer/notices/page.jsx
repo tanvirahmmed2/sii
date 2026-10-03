@@ -1,18 +1,8 @@
 'use client';
 
 import { useState, useEffect, useContext } from 'react';
-import {
-  BiBell,
-  BiPlus,
-  BiPin,
-  BiCheckShield,
-  BiRefresh,
-  BiTrash,
-  BiTime,
-  BiUser,
-  BiCheck,
-  BiCheckCircle,
-} from 'react-icons/bi';
+
+
 import { Context } from 'src/component/helper/Context';
 
 export default function DeveloperNoticesPage() {
@@ -154,8 +144,8 @@ export default function DeveloperNoticesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-            <BiBell className="text-secondary" /> Company & Team Notices
+          <h1 className="text-2xl font-medium text-slate-900 tracking-tight flex items-center gap-2">
+             Company & Team Notices
           </h1>
           <p className="text-xs md:text-sm text-slate-500">
             Platform bulletins, release announcements, infrastructure maintenance alerts, and policy updates.
@@ -164,17 +154,15 @@ export default function DeveloperNoticesPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={fetchNotices}
-            className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+            className="p-2.5 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
             title="Refresh notices"
-          >
-            <BiRefresh className="text-lg" />
-          </button>
+          >Refresh</button>
           {canManage && (
             <button
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-secondary hover:bg-secondary/90 text-white text-xs font-bold shadow-sm transition-all"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded bg-secondary hover:bg-secondary/90 text-white text-xs font-medium shadow-sm transition-all"
             >
-              <BiPlus className="text-base" /> Post Notice
+               Post Notice
             </button>
           )}
         </div>
@@ -183,8 +171,8 @@ export default function DeveloperNoticesPage() {
       {loading ? (
         <div className="p-12 text-center text-xs text-slate-400 animate-pulse">Loading notices bulletin...</div>
       ) : notices.length === 0 ? (
-        <div className="p-12 text-center bg-white border border-slate-200 rounded-3xl space-y-2 shadow-sm">
-          <BiBell className="text-3xl text-slate-400 mx-auto" />
+        <div className="p-12 text-center bg-white border border-slate-200 rounded space-y-2 shadow-sm">
+          
           <p className="text-xs text-slate-500 font-medium">No company notices have been published yet.</p>
         </div>
       ) : (
@@ -192,25 +180,25 @@ export default function DeveloperNoticesPage() {
           {/* Pinned Announcements */}
           {pinnedNotices.length > 0 && (
             <div className="space-y-3">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700 uppercase tracking-widest">
-                <BiPin className="text-base" /> Pinned Announcements
+              <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700 uppercase tracking-widest">
+                 Pinned Announcements
               </div>
               <div className="grid grid-cols-1 gap-4">
                 {pinnedNotices.map((n) => (
                   <div
                     key={n.id}
-                    className="p-6 rounded-3xl bg-gradient-to-br from-amber-50/70 via-white to-amber-50/30 border border-amber-200 shadow-sm space-y-3 relative group"
+                    className="p-6 rounded bg-gradient-to-br from-amber-50/70 via-white to-amber-50/30 border border-amber-200 shadow-sm space-y-3 relative group"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded ${getCategoryStyle(n.category)}`}>
+                        <span className={`text-[10px] font-medium uppercase px-2 py-0.5 rounded ${getCategoryStyle(n.category)}`}>
                           {n.category}
                         </span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getPriorityStyle(n.priority)}`}>
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded border ${getPriorityStyle(n.priority)}`}>
                           {n.priority}
                         </span>
                         {n.target_role !== 'ALL' && (
-                          <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                          <span className="text-[10px] font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
                             Target: {n.target_role}
                           </span>
                         )}
@@ -220,23 +208,23 @@ export default function DeveloperNoticesPage() {
                         <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => handleTogglePin(n)}
-                            className="p-1.5 rounded-lg hover:bg-amber-100 text-amber-800 text-xs font-semibold"
+                            className="p-1.5 rounded hover:bg-amber-100 text-amber-800 text-xs font-normal"
                             title="Unpin"
                           >
-                            <BiPin className="text-base" />
+                            
                           </button>
                           <button
                             onClick={() => handleDeleteNotice(n.id)}
-                            className="p-1.5 rounded-lg hover:bg-rose-100 text-rose-600"
+                            className="p-1.5 rounded hover:bg-rose-100 text-rose-600"
                             title="Delete Notice"
                           >
-                            <BiTrash className="text-base" />
+                            
                           </button>
                         </div>
                       )}
                     </div>
 
-                    <h3 className="text-base font-bold text-slate-900">{n.title}</h3>
+                    <h3 className="text-base font-medium text-slate-900">{n.title}</h3>
                     <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
                       {n.content}
                     </p>
@@ -254,7 +242,7 @@ export default function DeveloperNoticesPage() {
           {/* Regular Notices */}
           <div className="space-y-3">
             {pinnedNotices.length > 0 && (
-              <div className="text-xs font-bold text-slate-500 uppercase tracking-widest pt-2">
+              <div className="text-xs font-medium text-slate-500 uppercase tracking-widest pt-2">
                 All Announcements
               </div>
             )}
@@ -262,15 +250,15 @@ export default function DeveloperNoticesPage() {
               {regularNotices.map((n) => (
                 <div
                   key={n.id}
-                  className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-3 hover:shadow-md transition-all flex flex-col justify-between group"
+                  className="p-6 rounded bg-white border border-slate-200 shadow-sm space-y-3 hover:shadow-md transition-all flex flex-col justify-between group"
                 >
                   <div className="space-y-3">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded ${getCategoryStyle(n.category)}`}>
+                        <span className={`text-[10px] font-medium uppercase px-2 py-0.5 rounded ${getCategoryStyle(n.category)}`}>
                           {n.category}
                         </span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getPriorityStyle(n.priority)}`}>
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded border ${getPriorityStyle(n.priority)}`}>
                           {n.priority}
                         </span>
                       </div>
@@ -279,23 +267,23 @@ export default function DeveloperNoticesPage() {
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => handleTogglePin(n)}
-                            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
+                            className="p-1.5 rounded hover:bg-slate-100 text-slate-500"
                             title="Pin to top"
                           >
-                            <BiPin className="text-base" />
+                            
                           </button>
                           <button
                             onClick={() => handleDeleteNotice(n.id)}
-                            className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-600"
+                            className="p-1.5 rounded hover:bg-rose-50 text-rose-600"
                             title="Delete Notice"
                           >
-                            <BiTrash className="text-base" />
+                            
                           </button>
                         </div>
                       )}
                     </div>
 
-                    <h3 className="text-sm font-bold text-slate-900">{n.title}</h3>
+                    <h3 className="text-sm font-medium text-slate-900">{n.title}</h3>
                     <p className="text-xs text-slate-600 whitespace-pre-wrap leading-relaxed line-clamp-4">
                       {n.content}
                     </p>
@@ -315,9 +303,9 @@ export default function DeveloperNoticesPage() {
       {/* Post Notice Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 md:p-8 space-y-5 border border-slate-100">
+          <div className="bg-white rounded shadow-2xl max-w-lg w-full p-6 md:p-8 space-y-5 border border-slate-100">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-lg font-bold text-slate-900">Post Company Notice</h3>
+              <h3 className="text-lg font-medium text-slate-900">Post Company Notice</h3>
               <button
                 onClick={() => setShowCreateModal(false)}
                 className="text-slate-400 hover:text-slate-600 text-xl"
@@ -328,36 +316,36 @@ export default function DeveloperNoticesPage() {
 
             <form onSubmit={handleCreateNotice} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Notice Title</label>
+                <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Notice Title</label>
                 <input
                   type="text"
                   required
                   value={createForm.title}
                   onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
                   placeholder="e.g. Scheduled Infrastructure Maintenance Window"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Content / Message</label>
+                <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Content / Message</label>
                 <textarea
                   rows={4}
                   required
                   value={createForm.content}
                   onChange={(e) => setCreateForm({ ...createForm, content: e.target.value })}
                   placeholder="Details, impact, steps required from the team..."
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
+                  className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Category</label>
+                  <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Category</label>
                   <select
                     value={createForm.category}
                     onChange={(e) => setCreateForm({ ...createForm, category: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
                   >
                     <option value="GENERAL">General</option>
                     <option value="ANNOUNCEMENT">Announcement</option>
@@ -367,11 +355,11 @@ export default function DeveloperNoticesPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Priority</label>
+                  <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Priority</label>
                   <select
                     value={createForm.priority}
                     onChange={(e) => setCreateForm({ ...createForm, priority: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
+                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
                   >
                     <option value="LOW">Low</option>
                     <option value="NORMAL">Normal</option>
@@ -389,7 +377,7 @@ export default function DeveloperNoticesPage() {
                   onChange={(e) => setCreateForm({ ...createForm, is_pinned: e.target.checked })}
                   className="w-4 h-4 rounded text-secondary"
                 />
-                <label htmlFor="pinNotice" className="text-xs font-semibold text-slate-700 cursor-pointer">
+                <label htmlFor="pinNotice" className="text-xs font-normal text-slate-700 cursor-pointer">
                   Pin this notice as an alert banner at the top
                 </label>
               </div>
@@ -398,14 +386,14 @@ export default function DeveloperNoticesPage() {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50"
+                  className="px-4 py-2 rounded border border-slate-200 text-slate-600 text-xs font-normal hover:bg-slate-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingNotice}
-                  className="px-5 py-2 rounded-xl bg-secondary hover:bg-secondary/90 text-white text-xs font-bold shadow-md transition-all disabled:opacity-50"
+                  className="px-5 py-2 rounded bg-secondary hover:bg-secondary/90 text-white text-xs font-medium shadow-md transition-all disabled:opacity-50"
                 >
                   {savingNotice ? 'Posting...' : 'Publish Notice'}
                 </button>

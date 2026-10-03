@@ -1,52 +1,11 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import {
-  BiCube,
-  BiCheck,
-  BiX,
-  BiEdit,
-  BiPlus,
-  BiLayer,
-  BiCheckSquare,
-  BiSquare,
-  BiDollarCircle,
-  BiLoaderAlt,
-  BiUser,
-  BiGroup,
-  BiSearch,
-  BiStar,
-  BiCheckShield,
-  BiInfoCircle,
-  BiCalendarCheck,
-  BiAward,
-  BiBookOpen,
-  BiCreditCard,
-  BiLineChart,
-  BiTime,
-  BiBell,
-  BiBuilding,
-  BiBus,
-  BiDesktop,
-} from 'react-icons/bi';
 
-// Dynamic icon mapper for tenant module badges
-function getModuleIcon(iconName) {
-  const map = {
-    BiUser: <BiUser />,
-    BiCalendarCheck: <BiCalendarCheck />,
-    BiAward: <BiAward />,
-    BiBookOpen: <BiBookOpen />,
-    BiCreditCard: <BiCreditCard />,
-    BiLineChart: <BiLineChart />,
-    BiGroup: <BiGroup />,
-    BiTime: <BiTime />,
-    BiBell: <BiBell />,
-    BiBuilding: <BiBuilding />,
-    BiBus: <BiBus />,
-    BiDesktop: <BiDesktop />,
-  };
-  return map[iconName] || <BiLayer />;
+
+
+function getModuleIcon() {
+  return null;
 }
 
 export default function PackageForm({
@@ -308,15 +267,15 @@ export default function PackageForm({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs mb-8 transition-all">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 sm:p-8 shadow-xs mb-8 transition-all">
       {/* Form Header */}
       <div className="flex items-center justify-between pb-4 mb-6 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-2xl bg-secondary/10 text-secondary border border-secondary/20">
-            {isEditing ? <BiEdit className="text-2xl" /> : <BiCube className="text-2xl" />}
+          <div className="p-2.5 rounded bg-secondary/10 text-secondary border border-secondary/20">
+            
           </div>
           <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+            <h3 className="text-lg font-medium text-slate-900 dark:text-white tracking-tight">
               {isEditing ? `Edit Package: ${initialData.name}` : 'Create Platform Package'}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -330,17 +289,15 @@ export default function PackageForm({
           <button
             type="button"
             onClick={onCancel}
-            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             title="Close Form"
-          >
-            <BiX className="text-2xl" />
-          </button>
+          >Close</button>
         )}
       </div>
 
       {error && (
-        <div className="p-3.5 mb-6 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-400 text-xs font-semibold flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+        <div className="p-3.5 mb-6 rounded bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-400 text-xs font-normal flex items-center gap-2">
+          <span className="w-2 h-2 rounded bg-rose-500 shrink-0" />
           <span>{error}</span>
         </div>
       )}
@@ -349,7 +306,7 @@ export default function PackageForm({
         {/* 1. BASIC INFORMATION */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Package Name <span className="text-rose-500">*</span>
             </label>
             <input
@@ -358,12 +315,12 @@ export default function PackageForm({
               placeholder="e.g. Standard School Tier, Campus Pro, Enterprise"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-secondary transition-all font-medium"
+              className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-secondary transition-all font-medium"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Plan Tagline
             </label>
             <input
@@ -371,17 +328,17 @@ export default function PackageForm({
               placeholder="e.g. Ideal for growing colleges & multi-branch institutes"
               value={formData.tagline}
               onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
-              className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-secondary transition-all font-medium"
+              className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-secondary transition-all font-medium"
             />
           </div>
         </div>
 
         {/* 2. DUAL-CURRENCY PRICING CONFIGURATION (USD & BDT) */}
-        <div className="p-5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-4">
+        <div className="p-5 rounded bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <BiDollarCircle className="text-secondary text-base" />
+              <h4 className="text-xs font-medium text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                
                 <span>Multi-Currency Pricing Configuration</span>
               </h4>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
@@ -389,7 +346,7 @@ export default function PackageForm({
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] text-slate-500 font-semibold">Discount %:</span>
+              <span className="text-[11px] text-slate-500 font-normal">Discount %:</span>
               <input
                 type="number"
                 min="0"
@@ -397,7 +354,7 @@ export default function PackageForm({
                 step="0.5"
                 value={formData.discount_percentage}
                 onChange={(e) => setFormData({ ...formData, discount_percentage: e.target.value })}
-                className="w-20 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-secondary"
+                className="w-20 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-2.5 py-1 text-xs font-mono font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:border-secondary"
                 placeholder="15"
               />
             </div>
@@ -405,17 +362,17 @@ export default function PackageForm({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* USD Monthly */}
-            <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 focus-within:border-secondary transition-all">
+            <div className="p-4 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 focus-within:border-secondary transition-all">
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   USD Monthly ($)
                 </label>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40">
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40">
                   USD / mo
                 </span>
               </div>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium text-sm">$</span>
                 <input
                   type="number"
                   step="0.01"
@@ -424,24 +381,24 @@ export default function PackageForm({
                   placeholder="29.00"
                   value={formData.monthly_price_usd}
                   onChange={(e) => setFormData({ ...formData, monthly_price_usd: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-3 py-2 text-sm font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-secondary transition-all"
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded pl-8 pr-3 py-2 text-sm font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-secondary transition-all"
                 />
               </div>
               <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Dollar rate per month</p>
             </div>
 
             {/* USD Yearly */}
-            <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 focus-within:border-secondary transition-all">
+            <div className="p-4 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 focus-within:border-secondary transition-all">
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   USD Yearly ($)
                 </label>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40">
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40">
                   USD / yr
                 </span>
               </div>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium text-sm">$</span>
                 <input
                   type="number"
                   step="0.01"
@@ -450,24 +407,24 @@ export default function PackageForm({
                   placeholder="290.00"
                   value={formData.yearly_price_usd}
                   onChange={(e) => setFormData({ ...formData, yearly_price_usd: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-3 py-2 text-sm font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-secondary transition-all"
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded pl-8 pr-3 py-2 text-sm font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-secondary transition-all"
                 />
               </div>
               <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Annual dollar billing</p>
             </div>
 
             {/* BDT Monthly */}
-            <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 focus-within:border-secondary transition-all">
+            <div className="p-4 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 focus-within:border-secondary transition-all">
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   BDT Monthly (৳)
                 </label>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40">
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40">
                   BDT / mo
                 </span>
               </div>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">৳</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium text-sm">৳</span>
                 <input
                   type="number"
                   step="0.01"
@@ -476,24 +433,24 @@ export default function PackageForm({
                   placeholder="3500.00"
                   value={formData.monthly_price_bdt}
                   onChange={(e) => setFormData({ ...formData, monthly_price_bdt: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-3 py-2 text-sm font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-secondary transition-all"
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded pl-8 pr-3 py-2 text-sm font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-secondary transition-all"
                 />
               </div>
               <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Taka rate per month</p>
             </div>
 
             {/* BDT Yearly */}
-            <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 focus-within:border-secondary transition-all">
+            <div className="p-4 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 focus-within:border-secondary transition-all">
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   BDT Yearly (৳)
                 </label>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40">
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40">
                   BDT / yr
                 </span>
               </div>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">৳</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium text-sm">৳</span>
                 <input
                   type="number"
                   step="0.01"
@@ -502,7 +459,7 @@ export default function PackageForm({
                   placeholder="35000.00"
                   value={formData.yearly_price_bdt}
                   onChange={(e) => setFormData({ ...formData, yearly_price_bdt: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-3 py-2 text-sm font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-secondary transition-all"
+                  className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded pl-8 pr-3 py-2 text-sm font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-secondary transition-all"
                 />
               </div>
               <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Annual Taka billing</p>
@@ -511,10 +468,10 @@ export default function PackageForm({
         </div>
 
         {/* 3. INSTITUTION CAPACITY & QUOTAS */}
-        <div className="p-5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-4">
+        <div className="p-5 rounded bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-4">
           <div>
-            <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-              <BiGroup className="text-secondary text-base" />
+            <h4 className="text-xs font-medium text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+              
               <span>School Capacity Quotas &amp; Limits</span>
             </h4>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
@@ -524,7 +481,7 @@ export default function PackageForm({
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Max Students
               </label>
               <input
@@ -533,13 +490,13 @@ export default function PackageForm({
                 required
                 value={formData.max_students}
                 onChange={(e) => setFormData({ ...formData, max_students: e.target.value })}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-3 py-2 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
               />
               <span className="text-[10px] text-slate-400 mt-0.5 block">Student records</span>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Max Teachers
               </label>
               <input
@@ -548,13 +505,13 @@ export default function PackageForm({
                 required
                 value={formData.max_teachers}
                 onChange={(e) => setFormData({ ...formData, max_teachers: e.target.value })}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-3 py-2 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
               />
               <span className="text-[10px] text-slate-400 mt-0.5 block">Faculty staff</span>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Max Staff
               </label>
               <input
@@ -563,13 +520,13 @@ export default function PackageForm({
                 required
                 value={formData.max_staff}
                 onChange={(e) => setFormData({ ...formData, max_staff: e.target.value })}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-3 py-2 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
               />
               <span className="text-[10px] text-slate-400 mt-0.5 block">Admin personnel</span>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Storage (MB)
               </label>
               <input
@@ -578,7 +535,7 @@ export default function PackageForm({
                 required
                 value={formData.max_storage_mb}
                 onChange={(e) => setFormData({ ...formData, max_storage_mb: e.target.value })}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-3 py-2 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
               />
               <span className="text-[10px] text-slate-400 mt-0.5 block">
                 {(Number(formData.max_storage_mb) / 1024).toFixed(1)} GB cloud storage
@@ -586,7 +543,7 @@ export default function PackageForm({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Websites / Domains
               </label>
               <input
@@ -595,7 +552,7 @@ export default function PackageForm({
                 required
                 value={formData.max_websites}
                 onChange={(e) => setFormData({ ...formData, max_websites: e.target.value })}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-3 py-2 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
               />
               <span className="text-[10px] text-slate-400 mt-0.5 block">Web portal allowance</span>
             </div>
@@ -603,15 +560,15 @@ export default function PackageForm({
         </div>
 
         {/* 4. LINKED TENANT MODULES (ATTENDANCE, EXAMS, LMS, FEES, ETC.) */}
-        <div className="p-5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-4">
+        <div className="p-5 rounded bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80 dark:border-slate-700">
             <div>
               <div className="flex items-center gap-2">
-                <BiLayer className="text-secondary text-lg" />
-                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                
+                <h4 className="text-sm font-medium text-slate-900 dark:text-white">
                   Linked Tenant System Modules
                 </h4>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-secondary/10 text-secondary border border-secondary/20">
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-secondary/10 text-secondary border border-secondary/20">
                   {selectedModuleIds.length} of {tenantModules.length} enabled
                 </span>
               </div>
@@ -622,19 +579,19 @@ export default function PackageForm({
 
             <div className="flex items-center gap-2 shrink-0">
               <div className="relative">
-                <BiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+                
                 <input
                   type="text"
                   placeholder="Filter modules..."
                   value={moduleSearch}
                   onChange={(e) => setModuleSearch(e.target.value)}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg pl-7 pr-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-secondary w-36 sm:w-44"
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded pl-7 pr-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-secondary w-36 sm:w-44"
                 />
               </div>
               <button
                 type="button"
                 onClick={handleSelectAll}
-                className="px-2.5 py-1 text-[11px] font-bold text-secondary hover:bg-secondary/10 rounded-lg transition-colors cursor-pointer"
+                className="px-2.5 py-1 text-[11px] font-medium text-secondary hover:bg-secondary/10 rounded transition-colors cursor-pointer"
               >
                 Select All
               </button>
@@ -642,7 +599,7 @@ export default function PackageForm({
               <button
                 type="button"
                 onClick={handleDeselectAll}
-                className="px-2.5 py-1 text-[11px] font-bold text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
+                className="px-2.5 py-1 text-[11px] font-medium text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors cursor-pointer"
               >
                 Clear All
               </button>
@@ -651,7 +608,7 @@ export default function PackageForm({
 
           {loadingModules ? (
             <div className="py-8 text-center text-slate-400 flex items-center justify-center gap-2">
-              <BiLoaderAlt className="animate-spin text-xl text-secondary" />
+              
               <span className="text-xs">Loading tenant modules catalog...</span>
             </div>
           ) : filteredTenantModules.length === 0 ? (
@@ -667,14 +624,14 @@ export default function PackageForm({
                     key={mod.id}
                     type="button"
                     onClick={() => toggleModule(mod.id)}
-                    className={`flex items-start gap-3 p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                    className={`flex items-start gap-3 p-3.5 rounded border text-left transition-all cursor-pointer ${
                       isSelected
                         ? 'bg-white dark:bg-slate-900 border-secondary text-slate-900 dark:text-white shadow-xs ring-1 ring-secondary/30'
                         : 'bg-white/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:border-slate-300'
                     }`}
                   >
                     <div
-                      className={`text-xl shrink-0 mt-0.5 p-1 rounded-lg ${
+                      className={`text-xl shrink-0 mt-0.5 p-1 rounded ${
                         isSelected
                           ? 'bg-secondary/10 text-secondary'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
@@ -684,7 +641,7 @@ export default function PackageForm({
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-1.5">
-                        <span className="font-bold text-xs truncate text-slate-800 dark:text-slate-100">
+                        <span className="font-medium text-xs truncate text-slate-800 dark:text-slate-100">
                           {mod.name}
                         </span>
                         <span
@@ -692,7 +649,7 @@ export default function PackageForm({
                             isSelected ? 'text-secondary' : 'text-slate-300 dark:text-slate-600'
                           }`}
                         >
-                          {isSelected ? <BiCheckSquare /> : <BiSquare />}
+                          
                         </span>
                       </div>
                       {mod.description && (
@@ -711,7 +668,7 @@ export default function PackageForm({
         {/* 5. DESCRIPTION, TRIAL & TOGGLES */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <div className="sm:col-span-2 space-y-1.5">
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
               Description &amp; Highlights
             </label>
             <textarea
@@ -719,14 +676,14 @@ export default function PackageForm({
               placeholder="Highlight special inclusions, support SLAs, or institutional requirements..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-secondary transition-all"
+              className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded px-4 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-secondary transition-all"
             />
           </div>
 
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Trial Days
                 </label>
                 <input
@@ -734,24 +691,24 @@ export default function PackageForm({
                   min="0"
                   value={formData.trial_days}
                   onChange={(e) => setFormData({ ...formData, trial_days: e.target.value })}
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-secondary"
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-3 py-2 text-xs font-mono font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:border-secondary"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Sort Order
                 </label>
                 <input
                   type="number"
                   value={formData.sort_order}
                   onChange={(e) => setFormData({ ...formData, sort_order: e.target.value })}
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-secondary"
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-3 py-2 text-xs font-mono font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:border-secondary"
                 />
               </div>
             </div>
 
             <div className="space-y-2 pt-1">
-              <label className="flex items-center gap-2.5 cursor-pointer p-2.5 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors">
+              <label className="flex items-center gap-2.5 cursor-pointer p-2.5 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 rounded border border-slate-200 dark:border-slate-700 transition-colors">
                 <input
                   type="checkbox"
                   checked={formData.is_popular}
@@ -759,14 +716,14 @@ export default function PackageForm({
                   className="w-4 h-4 text-secondary rounded border-slate-300 focus:ring-secondary cursor-pointer"
                 />
                 <div>
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                    <BiStar className="text-amber-500" />
+                  <span className="text-xs font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                    
                     <span>Popular / Featured Tier</span>
                   </span>
                 </div>
               </label>
 
-              <label className="flex items-center gap-2.5 cursor-pointer p-2.5 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors">
+              <label className="flex items-center gap-2.5 cursor-pointer p-2.5 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 rounded border border-slate-200 dark:border-slate-700 transition-colors">
                 <input
                   type="checkbox"
                   checked={formData.is_active}
@@ -774,8 +731,8 @@ export default function PackageForm({
                   className="w-4 h-4 text-secondary rounded border-slate-300 focus:ring-secondary cursor-pointer"
                 />
                 <div>
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                    <BiCheckShield className="text-emerald-500" />
+                  <span className="text-xs font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                    
                     <span>Active &amp; Published</span>
                   </span>
                 </div>
@@ -790,7 +747,7 @@ export default function PackageForm({
             <button
               type="button"
               onClick={onCancel}
-              className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
+              className="px-5 py-2.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-normal hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
             >
               Cancel
             </button>
@@ -798,15 +755,9 @@ export default function PackageForm({
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-secondary hover:bg-secondary-dark text-white text-xs font-bold shadow-sm disabled:opacity-50 transition-all cursor-pointer"
+            className="flex items-center gap-2 px-6 py-2.5 rounded bg-secondary hover:bg-secondary-dark text-white text-xs font-medium shadow-sm disabled:opacity-50 transition-all cursor-pointer"
           >
-            {loading ? (
-              <BiLoaderAlt className="animate-spin text-base" />
-            ) : isEditing ? (
-              <BiCheck className="text-lg" />
-            ) : (
-              <BiPlus className="text-lg" />
-            )}
+            
             <span>
               {loading
                 ? isEditing
