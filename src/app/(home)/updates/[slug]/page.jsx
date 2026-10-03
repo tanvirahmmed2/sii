@@ -9,6 +9,8 @@ import {
   BiBell,
   BiCheckCircle,
   BiLoaderAlt,
+  BiTag,
+  BiListCheck,
 } from 'react-icons/bi';
 
 export default function SingleUpdatePage({ params }) {
@@ -27,7 +29,7 @@ export default function SingleUpdatePage({ params }) {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`/api/marketing/updates?slug=${encodeURIComponent(slug)}`);
+        const res = await fetch(`/api/marketing/updates/${encodeURIComponent(slug)}`);
         const data = res.ok ? await res.json() : { success: false };
         if (data.success && data.update) {
           setUpdate(data.update);
@@ -48,7 +50,7 @@ export default function SingleUpdatePage({ params }) {
   if (loading) {
     return (
       <div className="w-full min-h-[60vh] flex flex-col items-center justify-center gap-3 text-slate-400">
-        <BiLoaderAlt className="animate-spin text-4xl text-emerald-600" />
+        <BiLoaderAlt className="animate-spin text-4xl text-secondary" />
         <p className="text-xs font-semibold">Loading product update...</p>
       </div>
     );
@@ -60,7 +62,7 @@ export default function SingleUpdatePage({ params }) {
         <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center text-3xl">
           <BiBell />
         </div>
-        <h2 className="text-xl font-bold text-slate-800">Update Not Found</h2>
+        <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">Update Not Found</h2>
         <p className="text-xs text-slate-500 max-w-sm">
           {error || 'The requested product announcement could not be found.'}
         </p>
@@ -75,7 +77,8 @@ export default function SingleUpdatePage({ params }) {
     );
   }
 
-  const formattedDate = new Date(update.created_at).toLocaleDateString('en-US', {
+  const releaseDateVal = update.release_date || update.created_at;
+  const formattedDate = new Date(releaseDateVal).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -84,11 +87,11 @@ export default function SingleUpdatePage({ params }) {
   return (
     <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 py-12 px-4 sm:px-6 lg:px-8 transition-colors">
       <div className="max-w-3xl mx-auto space-y-8">
-        {/* Navigation Breadcrumb */}
+        {/* Navigation Breadcrumb (No slug!) */}
         <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
           <Link
             href="/updates"
-            className="inline-flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
+            className="inline-flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary transition-colors"
           >
             <BiArrowBack className="text-base" />
             <span>Back to all updates</span>
@@ -97,7 +100,7 @@ export default function SingleUpdatePage({ params }) {
           <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-400">
             <span>Updates</span>
             <span>/</span>
-            <span className="text-slate-600 dark:text-slate-400 truncate max-w-[150px]">{update.slug}</span>
+            <span className="text-secondary font-bold">{update.version || 'Release'}</span>
           </div>
         </div>
 
@@ -105,9 +108,9 @@ export default function SingleUpdatePage({ params }) {
         <article className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-10 shadow-xs space-y-8">
           {/* Header Info */}
           <div className="space-y-4 border-b border-slate-100 dark:border-slate-800 pb-8">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold border border-emerald-200 dark:border-emerald-800">
-                <BiBell className="text-sm" /> Product Update
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-secondary/10 text-secondary text-xs font-mono font-bold border border-secondary/20">
+                <BiTag className="text-sm" /> {update.version || 'v1.0.0'}
               </span>
               <span className="text-xs text-slate-400">•</span>
               <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -121,17 +124,31 @@ export default function SingleUpdatePage({ params }) {
             </h1>
           </div>
 
-          {/* Description Content with TipTap Rich Typography */}
-          <div
-            className="prose prose-slate dark:prose-invert max-w-none whitespace-pre-line prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-p:text-slate-600 dark:prose-p:text-slate-300 prose-p:leading-relaxed prose-li:text-slate-600 dark:prose-li:text-slate-300 prose-code:text-emerald-700 dark:prose-code:text-emerald-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-pre:bg-slate-900 prose-pre:text-slate-100 prose-pre:rounded-xl prose-blockquote:border-emerald-600 prose-blockquote:text-slate-700 dark:prose-blockquote:text-slate-300"
-            dangerouslySetInnerHTML={{ __html: update.description }}
-          />
+          {/* Description Content */}
+          {update.description && (
+            <div className="prose prose-slate dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 text-sm sm:text-base leading-relaxed whitespace-pre-wrap font-sans">
+              {update.description}
+            </div>
+          )}
+
+          {/* Detailed Changelog Section */}
+          {update.changelog && (
+            <div className="space-y-3 pt-4">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <BiListCheck className="text-secondary text-xl" />
+                <span>Changelog &amp; Detailed Notes</span>
+              </h3>
+              <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl p-5 sm:p-6 text-xs sm:text-sm font-mono text-slate-700 dark:text-slate-200 whitespace-pre-line leading-relaxed">
+                {update.changelog}
+              </div>
+            </div>
+          )}
 
           {/* Footer Callout */}
           <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
             <div className="flex items-center gap-2">
-              <BiCheckCircle className="text-emerald-600 text-base" />
-              <span>Published by {SITE_NAME} Engineering Team</span>
+              <BiCheckCircle className="text-secondary text-base" />
+              <span>Published by {SITE_NAME} Platform Architecture Team</span>
             </div>
 
             <Link
@@ -153,16 +170,19 @@ export default function SingleUpdatePage({ params }) {
               {recentUpdates.map((rec) => (
                 <Link
                   key={rec.id}
-                  href={`/updates/${rec.slug}`}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-sm transition-all block group"
+                  href={`/updates/${rec.slug || rec.id}`}
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs hover:border-secondary/40 dark:hover:border-secondary/40 hover:shadow-sm transition-all block group"
                 >
-                  <p className="text-[11px] text-slate-400 mb-1">
-                    {new Date(rec.created_at).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                    })}
-                  </p>
-                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors line-clamp-2">
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+                    <span className="font-mono text-secondary font-bold">{rec.version || 'Release'}</span>
+                    <span>
+                      {new Date(rec.release_date || rec.created_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-secondary transition-colors line-clamp-2">
                     {rec.title}
                   </h4>
                 </Link>

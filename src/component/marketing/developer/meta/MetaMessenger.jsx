@@ -1,8 +1,21 @@
 'use client';
 
 import { useState, useEffect, useContext, useCallback, useRef } from 'react';
-
-
+import { Context } from 'src/component/helper/Context';
+import {
+  BiSearch,
+  BiRefresh,
+  BiSend,
+  BiCheck,
+  BiCheckDouble,
+  BiTrash,
+  BiArrowBack,
+  BiPlus,
+  BiInfoCircle,
+  BiErrorCircle,
+  BiPhone,
+  BiShieldQuarter,
+} from 'react-icons/bi';
 
 export default function MetaMessenger({
   platform = 'facebook',
@@ -14,13 +27,14 @@ export default function MetaMessenger({
   brandBadge = 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
 }) {
   const { user } = useContext(Context);
+  const role = (user?.role || 'developer').toLowerCase();
   const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
-  const hasPlatformPerm = permissions.includes(`${platform}-messages`) || permissions.includes('chats');
-  const canManage = Boolean(hasPlatformPerm || permissions.includes('support'));
-  const canDelete = Boolean(hasPlatformPerm);
+  const isAdminOrManager = ['admin', 'superadmin', 'manager'].includes(role);
+  const hasPlatformPerm = isAdminOrManager || permissions.includes(`${platform}-messages`) || permissions.includes('chats');
+  const canManage = Boolean(isAdminOrManager || hasPlatformPerm || permissions.includes('support') || role === 'support');
+  const canDelete = Boolean(isAdminOrManager || hasPlatformPerm);
 
   const [conversations, setConversations] = useState([]);
-
   const [selectedConv, setSelectedConv] = useState(null);
   const [messages, setMessages] = useState([]);
   const [config, setConfig] = useState(null);
@@ -32,6 +46,7 @@ export default function MetaMessenger({
   const [sending, setSending] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [apiNotice, setApiNotice] = useState(null);
+  const [creatingTestConv, setCreatingTestConv] = useState(false);
 
   const messagesEndRef = useRef(null);
 
@@ -53,25 +68,29 @@ export default function MetaMessenger({
   }, []);
 
   // 2. Fetch conversations
-  const fetchConversations = useCallback(async (silent = false) => {
-    try {
-      if (!silent) setLoadingConvs(true);
-      const url = `/api/marketing/developer/meta/conversations?platform=${platform}&status=${statusFilter}&search=${encodeURIComponent(searchTerm)}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.success && Array.isArray(data.records)) {
-        setConversations(data.records);
-        // Auto-select first conversation on initial load if none selected
-        if (!selectedConv && data.records.length > 0 && !silent) {
-          setSelectedConv(data.records[0]);
+  const fetchConversations = useCallback(
+    async (silent = false) => {
+      try {
+        if (!silent) setLoadingConvs(true);
+        const url = `/api/marketing/developer/meta/conversations?platform=${platform}&status=${statusFilter}&search=${encodeURIComponent(
+          searchTerm
+        )}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.records)) {
+          setConversations(data.records);
+          if (!selectedConv && data.records.length > 0 && !silent) {
+            setSelectedConv(data.records[0]);
+          }
         }
+      } catch (err) {
+        console.error('Failed to fetch conversations:', err);
+      } finally {
+        if (!silent) setLoadingConvs(false);
       }
-    } catch (err) {
-      console.error('Failed to fetch conversations:', err);
-    } finally {
-      if (!silent) setLoadingConvs(false);
-    }
-  }, [platform, statusFilter, searchTerm, selectedConv]);
+    },
+    [platform, statusFilter, searchTerm, selectedConv]
+  );
 
   // 3. Fetch messages for active conversation
   const fetchMessages = useCallback(async (convId, silent = false) => {
@@ -110,14 +129,14 @@ export default function MetaMessenger({
     scrollToBottom();
   }, [messages]);
 
-  // Background polling every 5 seconds
+  // Background polling every 6 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       fetchConversations(true);
       if (selectedConv?.id) {
         fetchMessages(selectedConv.id, true);
       }
-    }, 5000);
+    }, 6000);
     return () => clearInterval(interval);
   }, [fetchConversations, fetchMessages, selectedConv?.id]);
 
@@ -136,7 +155,7 @@ export default function MetaMessenger({
       id: `temp_${Date.now()}`,
       conversation_id: selectedConv.id,
       sender_type: 'STAFF',
-      sender_name: 'You',
+      sender_name: user?.name || 'Staff Agent',
       message_text: text,
       delivery_status: 'SENDING',
       created_at: new Date().toISOString(),
@@ -155,16 +174,16 @@ export default function MetaMessenger({
 
       const data = await res.json();
       if (data.success && data.record) {
-        // Replace temp message with persisted record
         setMessages((prev) => prev.map((m) => (m.id === tempMsg.id ? data.record : m)));
         if (data.warning) {
           setApiNotice(data.warning);
         }
         fetchConversations(true);
       } else {
-        // Mark delivery failed
         setMessages((prev) =>
-          prev.map((m) => (m.id === tempMsg.id ? { ...m, delivery_status: 'FAILED', error_message: data.error } : m))
+          prev.map((m) =>
+            m.id === tempMsg.id ? { ...m, delivery_status: 'FAILED', error_message: data.error } : m
+          )
         );
         setApiNotice(data.error || 'Failed to dispatch message via Meta Graph API.');
       }
@@ -220,19 +239,46 @@ export default function MetaMessenger({
     }
   };
 
+  // Create test conversation for instant developer simulation
+  const handleCreateTestConversation = async () => {
+    try {
+      setCreatingTestConv(true);
+      const randomId = Math.floor(1000 + Math.random() * 9000);
+      const res = await fetch('/api/marketing/developer/meta/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform,
+          recipientName: `${platform === 'whatsapp' ? 'WhatsApp Lead' : platform === 'instagram' ? 'Instagram Lead' : 'Facebook Customer'} #${randomId}`,
+          recipientPhone: platform === 'whatsapp' ? `+1-555-${randomId}` : null,
+          initialMessage: `Hello! I am reaching out with a question about our enrollment system on ${title}.`,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.record) {
+        await fetchConversations(false);
+        setSelectedConv(data.record);
+      }
+    } catch (err) {
+      console.error('Failed to create test conversation:', err);
+    } finally {
+      setCreatingTestConv(false);
+    }
+  };
+
   const isValidAvatarUrl = (url) => {
     if (!url || typeof url !== 'string') return false;
     return url.startsWith('https://') || url.startsWith('http://') || url.startsWith('/');
   };
 
   const channelConfig = config?.[platform] || {};
-  const isConfigured = channelConfig.configured;
+  const isConfigured = Boolean(channelConfig.configured);
 
   if (!canManage) {
     return (
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-8 text-center max-w-md mx-auto my-12 shadow-xs">
         <div className="w-14 h-14 mx-auto mb-4 rounded bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center text-3xl">
-          
+          <BiShieldQuarter />
         </div>
         <h2 className="text-lg font-medium text-slate-900 dark:text-white mb-2">Access Restricted</h2>
         <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
@@ -261,8 +307,7 @@ export default function MetaMessenger({
           </div>
         </div>
 
-
-        {/* Channel Health Status */}
+        {/* Channel Health Status & Actions */}
         <div className="flex items-center gap-2">
           <div
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-normal border transition-colors ${
@@ -272,10 +317,21 @@ export default function MetaMessenger({
             }`}
           >
             <span
-              className={`w-2 h-2 rounded ${isConfigured ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}
+              className={`w-2 h-2 rounded-full ${isConfigured ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}
             />
             <span>{isConfigured ? 'Meta Graph API Connected' : 'Live Credentials Pending'}</span>
           </div>
+
+          <button
+            type="button"
+            onClick={handleCreateTestConversation}
+            disabled={creatingTestConv}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-xs font-normal border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Create a simulated conversation to test responses"
+          >
+            <BiPlus className="text-base" />
+            <span>{creatingTestConv ? 'Creating...' : 'Test Thread'}</span>
+          </button>
 
           <button
             type="button"
@@ -286,7 +342,7 @@ export default function MetaMessenger({
             className="p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             title="Refresh messages"
           >
-            
+            <BiRefresh className="text-base" />
           </button>
         </div>
       </div>
@@ -294,14 +350,14 @@ export default function MetaMessenger({
       {/* Configuration Advisory (if keys missing) */}
       {!isConfigured && (
         <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded p-3.5 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2.5">
-          
+          <BiInfoCircle className="text-base shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
           <div className="space-y-1">
-            <span className="font-normal">Meta Graph API Environment Setup:</span>
+            <span className="font-medium">Meta Graph API Environment Notice:</span>
             <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-300">
-              {platform === 'facebook' && 'Configure META_PAGE_ACCESS_TOKEN and META_PAGE_ID in .env to transmit live Facebook messages.'}
+              {platform === 'facebook' && 'Configure META_PAGE_ACCESS_TOKEN and META_PAGE_ID in .env to transmit live Facebook Page messages.'}
               {platform === 'instagram' && 'Configure META_PAGE_ACCESS_TOKEN and META_INSTAGRAM_ACCOUNT_ID in .env for Instagram Direct messaging.'}
               {platform === 'whatsapp' && 'Configure META_WHATSAPP_TOKEN and META_WHATSAPP_PHONE_NUMBER_ID in .env for WhatsApp Cloud API messaging.'}
-              {' Staff can preview threads, manage statuses, and test local storage now.'}
+              {' Staff can still receive, test, manage conversations, and save replies locally in the database.'}
             </p>
           </div>
         </div>
@@ -318,13 +374,13 @@ export default function MetaMessenger({
           {/* Search and Filters */}
           <div className="p-3.5 border-b border-slate-100 dark:border-slate-800 space-y-2.5">
             <div className="relative">
-              
+              <BiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
               <input
                 type="text"
                 placeholder="Search conversations..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-3 pr-3 py-1.5 text-xs rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-primary"
+                className="w-full pl-9 pr-3 py-1.5 text-xs rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-primary"
               />
             </div>
 
@@ -351,16 +407,29 @@ export default function MetaMessenger({
           <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
             {loadingConvs ? (
               <div className="p-8 text-center text-slate-400 space-y-2">
-                
+                <BiRefresh className="text-2xl mx-auto animate-spin" />
                 <p className="text-xs">Loading conversations...</p>
               </div>
             ) : conversations.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 space-y-2">
-                
-                <p className="text-xs font-normal text-slate-600 dark:text-slate-400">No conversations found</p>
-                <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
-                  Incoming messages from {title} will appear here via webhook.
-                </p>
+              <div className="p-8 text-center text-slate-400 space-y-3">
+                <div className={`w-12 h-12 mx-auto rounded flex items-center justify-center text-2xl ${brandBadge}`}>
+                  {IconComponent && <IconComponent />}
+                </div>
+                <div>
+                  <p className="text-xs font-normal text-slate-600 dark:text-slate-300">No conversations found</p>
+                  <p className="text-[11px] text-slate-400 max-w-xs mx-auto mt-1">
+                    Incoming messages from {title} will appear here via webhook.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCreateTestConversation}
+                  disabled={creatingTestConv}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded ${brandBg} text-white text-xs font-normal shadow-xs hover:opacity-90 transition-opacity cursor-pointer`}
+                >
+                  <BiPlus className="text-sm" />
+                  <span>Start Test Thread</span>
+                </button>
               </div>
             ) : (
               conversations.map((conv) => {
@@ -372,7 +441,7 @@ export default function MetaMessenger({
                     onClick={() => setSelectedConv(conv)}
                     className={`w-full text-left p-3.5 flex items-start gap-3 transition-colors cursor-pointer ${
                       isSelected
-                        ? 'bg-primary/10 dark:bg-primary/15 border-l-4 border-primary'
+                        ? 'bg-blue-50/60 dark:bg-blue-950/20 border-l-4 border-blue-600'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
                     }`}
                   >
@@ -425,7 +494,7 @@ export default function MetaMessenger({
                         )}
 
                         {conv.unread_count > 0 && (
-                          <span className="ml-auto bg-primary text-white text-[10px] font-medium px-1.5 py-0.2 rounded">
+                          <span className="ml-auto bg-blue-600 text-white text-[10px] font-medium px-1.5 py-0.2 rounded">
                             {conv.unread_count}
                           </span>
                         )}
@@ -454,10 +523,10 @@ export default function MetaMessenger({
                     onClick={() => setSelectedConv(null)}
                     className="lg:hidden p-1.5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white rounded cursor-pointer"
                   >
-                    
+                    <BiArrowBack className="text-lg" />
                   </button>
 
-                  <div className="w-10 h-10 rounded bg-primary/10 text-primary flex items-center justify-center font-medium text-sm shrink-0">
+                  <div className="w-10 h-10 rounded bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 flex items-center justify-center font-medium text-sm shrink-0">
                     {(selectedConv.recipient_name?.[0] || 'C').toUpperCase()}
                   </div>
 
@@ -483,7 +552,7 @@ export default function MetaMessenger({
                         <>
                           <span>•</span>
                           <span className="flex items-center gap-1 font-mono">
-                            
+                            <BiPhone className="text-xs" />
                             {selectedConv.recipient_phone}
                           </span>
                         </>
@@ -504,7 +573,7 @@ export default function MetaMessenger({
                         : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
                     }`}
                   >
-                    
+                    <BiCheck className="text-sm" />
                     <span>{selectedConv.status === 'OPEN' ? 'Mark Resolved' : 'Reopen'}</span>
                   </button>
 
@@ -514,16 +583,18 @@ export default function MetaMessenger({
                       onClick={handleDeleteConversation}
                       className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition-colors cursor-pointer"
                       title="Delete conversation (Admin & Manager only)"
-                    >Delete</button>
+                    >
+                      <BiTrash className="text-base" />
+                    </button>
                   )}
                 </div>
               </div>
 
-              {/* API Notice / Warning Banner if dispatch failed */}
+              {/* API Notice / Warning Banner */}
               {apiNotice && (
                 <div className="mx-4 mt-3 p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded text-xs text-amber-800 dark:text-amber-200 flex items-start justify-between gap-2">
                   <div className="flex items-start gap-2">
-                    
+                    <BiInfoCircle className="text-base shrink-0 mt-0.5 text-amber-600" />
                     <span>{apiNotice}</span>
                   </div>
                   <button
@@ -540,7 +611,7 @@ export default function MetaMessenger({
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {loadingMsgs ? (
                   <div className="h-full flex items-center justify-center text-slate-400 gap-2">
-                    
+                    <BiRefresh className="text-xl animate-spin" />
                     <span className="text-xs">Loading message history...</span>
                   </div>
                 ) : messages.length === 0 ? (
@@ -550,7 +621,7 @@ export default function MetaMessenger({
                     </div>
                     <h3 className="text-sm font-medium text-slate-800 dark:text-slate-200">Start the conversation</h3>
                     <p className="text-xs text-slate-500 max-w-sm">
-                      Send a direct reply below. Your message will be routed via Meta Graph API to the user.
+                      Send a response message below. Your reply is saved to the database and dispatched to the platform.
                     </p>
                   </div>
                 ) : (
@@ -581,27 +652,30 @@ export default function MetaMessenger({
                               : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-bl-xs'
                           }`}
                         >
-                          <p className="whitespace-pre-wrap wrap-break-words">{msg.message_text}</p>
+                          <p className="whitespace-pre-wrap break-words">{msg.message_text}</p>
                         </div>
 
-                        {/* Status Checkmark for staff messages */}
+                        {/* Status indicator for staff messages */}
                         {isStaff && (
                           <div className="flex items-center gap-1 text-[10px] text-slate-400 mt-1 px-1">
                             {msg.delivery_status === 'DELIVERED' || msg.delivery_status === 'READ' ? (
                               <span className="flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
-                                 Delivered
+                                <BiCheckDouble className="text-xs" /> Delivered
                               </span>
                             ) : msg.delivery_status === 'SENT' ? (
                               <span className="flex items-center gap-0.5 text-slate-400">
-                                 Sent
+                                <BiCheck className="text-xs" /> Sent & Saved
                               </span>
                             ) : msg.delivery_status === 'SENDING' ? (
                               <span className="flex items-center gap-0.5 text-slate-400 animate-pulse">
-                                 Sending...
+                                Sending...
                               </span>
                             ) : (
-                              <span className="flex items-center gap-0.5 text-rose-500 font-medium" title={msg.error_message}>
-                                 Failed to send
+                              <span
+                                className="flex items-center gap-0.5 text-rose-500 font-medium"
+                                title={msg.error_message || 'Dispatch failed'}
+                              >
+                                <BiErrorCircle className="text-xs" /> Saved (Meta Dispatch Offline)
                               </span>
                             )}
                           </div>
@@ -618,7 +692,7 @@ export default function MetaMessenger({
                 <span className="text-slate-400 shrink-0 font-medium">Quick Replies:</span>
                 {[
                   'Hello! How can we help you today?',
-                  'We are currently investigating your request.',
+                  'We are currently checking your institution account.',
                   'Thank you for reaching out! Our team has updated your ticket.',
                 ].map((template) => (
                   <button
@@ -651,7 +725,8 @@ export default function MetaMessenger({
                   disabled={sending || !inputText.trim()}
                   className={`inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded ${brandBg} hover:opacity-90 disabled:opacity-50 text-white text-xs font-normal transition-all shadow-xs cursor-pointer`}
                 >
-                  {sending ? 'Sending...' : 'Send'}
+                  <BiSend className="text-sm" />
+                  <span>{sending ? 'Sending...' : 'Send'}</span>
                 </button>
               </form>
             </>
@@ -662,7 +737,7 @@ export default function MetaMessenger({
               </div>
               <h3 className="text-base font-medium text-slate-800 dark:text-slate-200">No Conversation Selected</h3>
               <p className="text-xs text-slate-500 max-w-sm leading-relaxed">
-                Choose a conversation from the left sidebar to read customer history and dispatch direct replies.
+                Choose a conversation from the left sidebar to view message history and send direct replies.
               </p>
             </div>
           )}

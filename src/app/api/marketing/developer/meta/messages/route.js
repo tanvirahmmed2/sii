@@ -88,8 +88,9 @@ export async function POST(request) {
     }
 
     const conv = convRes.rows[0];
-    const staffName = auth.staff.name ? String(auth.staff.name).slice(0, 255) : 'Staff Agent';
-    const staffId = String(auth.staff.id);
+    const staffUser = auth.user || auth.staff || {};
+    const staffName = staffUser.name ? String(staffUser.name).slice(0, 255) : 'Staff Agent';
+    const staffId = String(staffUser.id || '0');
 
     let externalMessageId = null;
     let deliveryStatus = 'SENT';
@@ -98,12 +99,13 @@ export async function POST(request) {
 
     // 2. Dispatch via Meta Graph API
     try {
-      const metaResult = await sendPlatformMessage(conv.platform, {
-        recipientId: conv.recipient_id,
-        toPhoneNumber: conv.recipient_phone,
-        messageText: cleanText,
+      const recipient = conv.platform === 'whatsapp' ? (conv.recipient_phone || conv.recipient_id) : conv.recipient_id;
+      const metaResult = await sendPlatformMessage({
+        platform: conv.platform,
+        recipientId: recipient,
+        message: cleanText,
       });
-      externalMessageId = metaResult.messageId || null;
+      externalMessageId = metaResult.messageId || metaResult.messages?.[0]?.id || null;
     } catch (metaErr) {
       console.warn(`Meta Graph API dispatch warning for ${conv.platform}:`, metaErr.message);
       deliveryStatus = 'FAILED';

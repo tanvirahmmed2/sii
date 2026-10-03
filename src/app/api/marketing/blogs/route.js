@@ -21,11 +21,7 @@ export async function GET(request) {
         b.excerpt,
         b.excerpt AS summary,
         b.content,
-        b.image,
-        b.image AS cover_image,
-        b.image_id,
         b.category,
-        b.tags,
         b.meta_title,
         b.meta_description,
         b.is_published,
@@ -35,24 +31,44 @@ export async function GET(request) {
         b.updated_at,
         d.name AS author_name,
         COALESCE(
-          CASE 
-            WHEN b.image IS NOT NULL AND b.image != '' THEN
-              json_build_array(
-                json_build_object(
-                  'id', 1,
-                  'image_url', b.image,
-                  'image', b.image,
-                  'image_id', b.image_id,
-                  'title', b.title,
-                  'alt_text', b.title,
-                  'caption', b.excerpt
-                )
-              )
-            ELSE
-              '[]'::json
-          END,
+          (
+            SELECT json_agg(
+              json_build_object(
+                'id', bi.id,
+                'image_url', bi.image,
+                'image', bi.image,
+                'image_id', bi.image_id,
+                'caption', bi.caption,
+                'is_primary', bi.is_primary,
+                'display_order', bi.display_order
+              ) ORDER BY bi.is_primary DESC, bi.display_order ASC, bi.id ASC
+            )
+            FROM blog_images bi
+            WHERE bi.blog_id = b.id
+          ),
           '[]'::json
-        ) AS images
+        ) AS images,
+        (
+          SELECT bi.image
+          FROM blog_images bi
+          WHERE bi.blog_id = b.id
+          ORDER BY bi.is_primary DESC, bi.display_order ASC, bi.id ASC
+          LIMIT 1
+        ) AS image,
+        (
+          SELECT bi.image
+          FROM blog_images bi
+          WHERE bi.blog_id = b.id
+          ORDER BY bi.is_primary DESC, bi.display_order ASC, bi.id ASC
+          LIMIT 1
+        ) AS cover_image,
+        (
+          SELECT bi.image_id
+          FROM blog_images bi
+          WHERE bi.blog_id = b.id
+          ORDER BY bi.is_primary DESC, bi.display_order ASC, bi.id ASC
+          LIMIT 1
+        ) AS image_id
       FROM blogs b
       LEFT JOIN developers d ON b.developer_id = d.id
       WHERE b.is_published = TRUE

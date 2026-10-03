@@ -172,11 +172,11 @@ export async function getAdminSession(request) {
 
     // Standard fallback modules if not explicitly configured in role_permissions
     const standardModules = {
-      admin: ['overview', 'developers', 'roles', 'team', 'creators', 'users', 'websites', 'blogs', 'packages', 'features', 'modules', 'purchases', 'payments', 'subscriptions', 'payroll', 'my-salaries', 'live-chats', 'chats', 'contacts', 'support', 'projects', 'reports', 'reviews', 'spams', 'leads', 'subscribers', 'profile', 'settings', 'faqs', 'updates', 'tasks', 'notices', 'tutorials', 'careers', 'policies'],
-      manager: ['overview', 'creators', 'users', 'websites', 'packages', 'features', 'purchases', 'payments', 'subscriptions', 'live-chats', 'chats', 'contacts', 'support', 'projects', 'my-salaries', 'reports', 'reviews', 'leads', 'subscribers', 'profile', 'settings', 'faqs', 'updates', 'tasks', 'notices', 'tutorials', 'careers', 'policies'],
+      admin: ['overview', 'developers', 'roles', 'team', 'creators', 'users', 'websites', 'blogs', 'packages', 'features', 'modules', 'purchases', 'payments', 'subscriptions', 'payroll', 'my-salaries', 'live-chats', 'chats', 'contacts', 'support', 'projects', 'reports', 'reviews', 'spams', 'facebook-messages', 'instagram-messages', 'whatsapp-messages', 'leads', 'subscribers', 'profile', 'settings', 'faqs', 'updates', 'tasks', 'notices', 'tutorials', 'policies'],
+      manager: ['overview', 'creators', 'users', 'websites', 'packages', 'features', 'purchases', 'payments', 'subscriptions', 'live-chats', 'chats', 'contacts', 'support', 'projects', 'my-salaries', 'facebook-messages', 'instagram-messages', 'whatsapp-messages', 'reports', 'reviews', 'leads', 'subscribers', 'profile', 'settings', 'faqs', 'updates', 'tasks', 'notices', 'tutorials', 'policies'],
       developer: ['overview', 'websites', 'packages', 'features', 'spams', 'reports', 'blogs', 'support', 'live-chats', 'projects', 'profile', 'settings', 'chats', 'tasks', 'notices', 'my-salaries', 'tutorials', 'faqs', 'updates', 'policies'],
       marketer: ['overview', 'blogs', 'leads', 'packages', 'reviews', 'profile', 'settings', 'chats', 'tasks', 'notices', 'my-salaries', 'tutorials', 'faqs', 'updates', 'policies'],
-      support: ['overview', 'live-chats', 'chats', 'contacts', 'support', 'reports', 'reviews', 'users', 'creators', 'subscribers', 'profile', 'settings', 'tasks', 'notices', 'my-salaries', 'tutorials', 'faqs', 'updates', 'policies'],
+      support: ['overview', 'live-chats', 'chats', 'contacts', 'support', 'reports', 'facebook-messages', 'instagram-messages', 'whatsapp-messages', 'reviews', 'users', 'creators', 'subscribers', 'profile', 'settings', 'tasks', 'notices', 'my-salaries', 'tutorials', 'faqs', 'updates', 'policies'],
     };
 
     const roleSlug = (dev.role || 'developer').toLowerCase();
@@ -213,9 +213,9 @@ export const getAuthenticatedUser = getAdminSession;
 export async function isStaff(request) {
   const session = await getAdminSession(request);
   if (!session || !session.isActive) {
-    return { success: false, user: null };
+    return { success: false, user: null, staff: null };
   }
-  return { success: true, user: session };
+  return { success: true, user: session, staff: session };
 }
 
 export const authenticateStaff = isStaff;
@@ -227,17 +227,26 @@ export async function hasModulePermission(request, moduleSlug) {
   try {
     const session = await getAdminSession(request);
     if (!session || !session.isActive) {
-      return { success: false, user: null, message: 'Unauthenticated' };
+      return { success: false, user: null, staff: null, message: 'Unauthenticated' };
     }
 
     // Admins and Superadmins have all permissions
     const userRole = (session.role || '').toLowerCase();
     if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'manager') {
-      return { success: true, user: session };
+      return { success: true, user: session, staff: session };
     }
 
     if (!moduleSlug || moduleSlug === 'overview' || moduleSlug === 'profile') {
-      return { success: true, user: session };
+      return { success: true, user: session, staff: session };
+    }
+
+    // Normalize module slugs into an array of lowercase strings
+    const slugs = (Array.isArray(moduleSlug) ? moduleSlug : [moduleSlug])
+      .map((s) => String(s || '').toLowerCase().trim())
+      .filter(Boolean);
+
+    if (slugs.length === 0) {
+      return { success: true, user: session, staff: session };
     }
 
     // Dynamic role-based permission lookup
@@ -245,24 +254,27 @@ export async function hasModulePermission(request, moduleSlug) {
       `SELECT 1 FROM developer_role_permissions drp
        JOIN module_permissions mp ON drp.permission_id = mp.id
        JOIN developer_modules dm ON mp.module_id = dm.id
-       WHERE drp.role_id = $1 AND (LOWER(dm.slug) = LOWER($2) OR LOWER(mp.permission_key) = LOWER($2))
+       WHERE drp.role_id = $1 AND (LOWER(dm.slug) = ANY($2::text[]) OR LOWER(mp.permission_key) = ANY($2::text[]))
        LIMIT 1`,
-      [session.roleId, moduleSlug]
+      [session.roleId, slugs]
     );
 
     if (permRes.rows.length > 0) {
-      return { success: true, user: session };
+      return { success: true, user: session, staff: session };
     }
 
     // Fallback: check session permissions array
-    if (session.permissions?.includes(moduleSlug.toLowerCase())) {
-      return { success: true, user: session };
+    const userPerms = (session.permissions || []).map((p) => String(p).toLowerCase().trim());
+    const hasPerm = slugs.some((slug) => userPerms.includes(slug));
+
+    if (hasPerm) {
+      return { success: true, user: session, staff: session };
     }
 
-    return { success: false, user: session, message: 'Permission denied for this module' };
+    return { success: false, user: session, staff: session, message: 'Permission denied for this module' };
   } catch (error) {
     console.error('Permission validation error:', error);
-    return { success: false, user: null, message: error.message };
+    return { success: false, user: null, staff: null, message: error.message };
   }
 }
 

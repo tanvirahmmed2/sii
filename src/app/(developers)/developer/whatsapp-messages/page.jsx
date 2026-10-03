@@ -1,6 +1,7 @@
 'use client';
 
 import MetaMessenger from 'src/component/marketing/developer/meta/MetaMessenger';
+import { BiLogoWhatsapp } from 'react-icons/bi';
 
 export default function WhatsAppMessagesPage() {
   return (

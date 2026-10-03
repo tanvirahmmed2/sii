@@ -238,7 +238,51 @@ async function main() {
         reviewed_at TIMESTAMPTZ
       );
     `);
-    console.log('✔ career_application table verified');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS meta_conversations (
+        id BIGSERIAL PRIMARY KEY,
+        platform VARCHAR(50) NOT NULL CHECK (platform IN ('facebook', 'instagram', 'whatsapp')),
+        external_conversation_id VARCHAR(255) NOT NULL,
+        recipient_id VARCHAR(255) NOT NULL,
+        recipient_name VARCHAR(255) DEFAULT 'Customer',
+        recipient_phone VARCHAR(50),
+        recipient_avatar TEXT,
+        last_message TEXT,
+        last_message_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        status VARCHAR(50) NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'RESOLVED', 'SPAM')),
+        unread_count INT NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(platform, external_conversation_id)
+      );
+    `);
+    console.log('✔ meta_conversations table verified');
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS meta_messages (
+        id BIGSERIAL PRIMARY KEY,
+        conversation_id BIGINT NOT NULL REFERENCES meta_conversations(id) ON DELETE CASCADE,
+        platform VARCHAR(50) NOT NULL CHECK (platform IN ('facebook', 'instagram', 'whatsapp')),
+        sender_type VARCHAR(50) NOT NULL CHECK (sender_type IN ('CUSTOMER', 'STAFF', 'SYSTEM', 'customer', 'staff', 'system')),
+        sender_id VARCHAR(255),
+        sender_name VARCHAR(255),
+        message_text TEXT NOT NULL,
+        media_url TEXT,
+        media_type VARCHAR(50),
+        external_message_id VARCHAR(255),
+        delivery_status VARCHAR(50) DEFAULT 'SENT' CHECK (delivery_status IN ('SENDING', 'SENT', 'DELIVERED', 'READ', 'FAILED', 'sending', 'sent', 'delivered', 'read', 'failed')),
+        error_message TEXT,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('✔ meta_messages table verified');
+
+    await pool.query(`
+      CREATE OR REPLACE VIEW facebook_messages AS SELECT * FROM meta_messages WHERE platform = 'facebook';
+      CREATE OR REPLACE VIEW instagram_messages AS SELECT * FROM meta_messages WHERE platform = 'instagram';
+      CREATE OR REPLACE VIEW whatsapp_messages AS SELECT * FROM meta_messages WHERE platform = 'whatsapp';
+    `);
+    console.log('✔ facebook, instagram, whatsapp views verified');
 
     // Also check if any columns in schema.psql need to be executed
     const schemaPath = path.join(__dirname, '..', 'psql', 'schema.psql');

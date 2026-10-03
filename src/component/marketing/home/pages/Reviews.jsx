@@ -12,7 +12,6 @@ export default function Reviews() {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
 
     fetch('/api/marketing/reviews/home?limit=12')
       .then((res) => (res.ok ? res.json() : { success: false }))

@@ -70,7 +70,6 @@ export const ADMIN_NAV_SECTIONS = [
       { href: '/developer/roles', label: 'Roles & Permissions' },
       { href: '/developer/payroll', label: 'Payroll & Salaries' },
       { href: '/developer/my-salaries', label: 'My Salaries' },
-      { href: '/developer/careers', label: 'Careers & Hiring' },
     ],
   },
   {

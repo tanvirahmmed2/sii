@@ -14,6 +14,22 @@ function slugify(text) {
     .replace(/-+$/, '');
 }
 
+async function generateUniqueSlug(baseTitle, excludeId = null) {
+  let baseSlug = slugify(baseTitle) || 'policy';
+  let slug = baseSlug;
+  let counter = 1;
+  while (true) {
+    const checkSql = excludeId 
+      ? 'SELECT id FROM policies WHERE slug = $1 AND id != $2 LIMIT 1'
+      : 'SELECT id FROM policies WHERE slug = $1 LIMIT 1';
+    const params = excludeId ? [slug, Number(excludeId)] : [slug];
+    const existing = await queryDb(checkSql, params);
+    if (existing.rows.length === 0) return slug;
+    counter++;
+    slug = `${baseSlug}-${counter}`;
+  }
+}
+
 // ============================================================================
 // GET: Fetch policies (all or single by ID/slug)
 // ============================================================================
@@ -80,7 +96,6 @@ export async function POST(request) {
     const body = await request.json();
     const title = body.title?.trim();
     const description = body.description?.trim();
-    let slug = body.slug?.trim();
     const isActive = body.is_active !== undefined ? Boolean(body.is_active) : (body.is_published !== undefined ? Boolean(body.is_published) : true);
 
     if (!title || !description) {
@@ -90,20 +105,7 @@ export async function POST(request) {
       );
     }
 
-    if (!slug) {
-      slug = slugify(title);
-    } else {
-      slug = slugify(slug);
-    }
-
-    // Check duplicate slug
-    const existing = await queryDb('SELECT id FROM policies WHERE slug = $1 LIMIT 1', [slug]);
-    if (existing.rows.length > 0) {
-      return NextResponse.json(
-        { success: false, error: `A policy with slug "${slug}" already exists.` },
-        { status: 400 }
-      );
-    }
+    const slug = await generateUniqueSlug(title);
 
     const res = await queryDb(
       `INSERT INTO policies (title, slug, description, is_active) 
@@ -139,7 +141,6 @@ export async function PUT(request) {
     const id = body.id || body.policyId;
     const title = body.title?.trim();
     const description = body.description?.trim();
-    let slug = body.slug?.trim();
     const isActive = body.is_active !== undefined ? Boolean(body.is_active) : (body.is_published !== undefined ? Boolean(body.is_published) : true);
 
     if (!id) {
@@ -153,20 +154,7 @@ export async function PUT(request) {
       );
     }
 
-    if (!slug) {
-      slug = slugify(title);
-    } else {
-      slug = slugify(slug);
-    }
-
-    // Check duplicate slug on other records
-    const existing = await queryDb('SELECT id FROM policies WHERE slug = $1 AND id != $2 LIMIT 1', [slug, Number(id)]);
-    if (existing.rows.length > 0) {
-      return NextResponse.json(
-        { success: false, error: `Another policy with slug "${slug}" already exists.` },
-        { status: 400 }
-      );
-    }
+    const slug = await generateUniqueSlug(title, Number(id));
 
     const res = await queryDb(
       `UPDATE policies 

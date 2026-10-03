@@ -3,13 +3,12 @@ import { queryDb } from 'src/lib/database/db';
 
 export async function GET(request) {
   try {
-
     const { searchParams } = new URL(request.url);
     const slug = searchParams.get('slug');
 
     if (slug) {
       const res = await queryDb(
-        `SELECT id, version, title, description, release_notes, slug, created_at, updated_at 
+        `SELECT id, version, title, description, changelog, release_date, slug, is_published, created_at, updated_at 
          FROM updates 
          WHERE (slug = $1 OR id::text = $1) AND COALESCE(is_published, TRUE) = TRUE 
          LIMIT 1`,
@@ -25,10 +24,10 @@ export async function GET(request) {
 
       const current = res.rows[0];
       const recentRes = await queryDb(
-        `SELECT id, version, title, slug, created_at 
+        `SELECT id, version, title, slug, release_date, created_at 
          FROM updates 
          WHERE id != $1 AND COALESCE(is_published, TRUE) = TRUE 
-         ORDER BY created_at DESC 
+         ORDER BY COALESCE(release_date, created_at::date) DESC, created_at DESC 
          LIMIT 3`,
         [current.id]
       ).catch(() => ({ rows: [] }));
@@ -41,10 +40,10 @@ export async function GET(request) {
     }
 
     const res = await queryDb(
-      `SELECT id, version, title, description, release_notes, slug, created_at, updated_at 
+      `SELECT id, version, title, description, changelog, release_date, slug, is_published, created_at, updated_at 
        FROM updates 
        WHERE COALESCE(is_published, TRUE) = TRUE 
-       ORDER BY created_at DESC`
+       ORDER BY COALESCE(release_date, created_at::date) DESC, created_at DESC`
     ).catch((err) => {
       console.warn('updates query error:', err.message);
       return { rows: [] };

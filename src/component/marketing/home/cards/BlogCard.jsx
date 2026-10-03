@@ -10,7 +10,6 @@ export default function HomeBlogCard({ blog }) {
   const images = Array.isArray(blog.images) ? blog.images : [];
   const coverImage = images[0]?.image_url || images[0]?.image || blog.cover_image || blog.image || null;
 
-  // Clean HTML from summary/excerpt/content for clean card snippet
   const cleanSnippet = blog.summary
     ? blog.summary.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
     : blog.excerpt
@@ -65,12 +64,7 @@ export default function HomeBlogCard({ blog }) {
               </div>
             )}
 
-            {/* Gallery counter pill if multiple images */}
-            {images.length > 0 && (
-              <div className="absolute bottom-3 right-3 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-white font-mono text-[10px] flex items-center gap-1">
-                <BiImage className="text-xs" /> {images.length}
-              </div>
-            )}
+            
           </div>
 
           {/* Content Details */}

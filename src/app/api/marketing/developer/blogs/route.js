@@ -10,11 +10,213 @@ function slugify(text) {
     .trim()
     .replace(/\s+/g, '-')
     .replace(/[^\w\-]+/g, '')
-    .replace(/\-\-+/g, '-');
+    .replace(/\-\-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+async function generateUniqueSlug(text, excludeId = null) {
+  const baseSlug = slugify(text) || 'article';
+  let candidate = baseSlug;
+  let counter = 1;
+
+  while (true) {
+    let checkQuery = 'SELECT id FROM blogs WHERE slug = $1';
+    const params = [candidate];
+    if (excludeId) {
+      checkQuery += ' AND id != $2';
+      params.push(excludeId);
+    }
+    checkQuery += ' LIMIT 1';
+
+    const checkRes = await queryDb(checkQuery, params);
+    if (checkRes.rows.length === 0) {
+      return candidate;
+    }
+    candidate = `${baseSlug}-${counter++}`;
+  }
+}
+
+function parseTags(tagsInput) {
+  if (Array.isArray(tagsInput)) {
+    return tagsInput.map((t) => String(t).trim()).filter(Boolean);
+  }
+  if (typeof tagsInput === 'string') {
+    return tagsInput
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+const BLOG_SELECT_FIELDS = `
+  b.id,
+  b.developer_id,
+  b.title,
+  b.slug,
+  b.excerpt,
+  b.excerpt AS summary,
+  b.content,
+  b.category,
+  b.meta_title,
+  b.meta_description,
+  b.is_published,
+  b.published_at,
+  b.views_count,
+  b.created_at,
+  b.updated_at,
+  d.name AS author_name,
+  d.email AS author_email,
+  COALESCE(dr.slug, 'developer') AS author_role,
+  COALESCE(
+    (
+      SELECT json_agg(
+        json_build_object(
+          'id', bi.id,
+          'blog_id', bi.blog_id,
+          'image', bi.image,
+          'image_id', bi.image_id,
+          'caption', bi.caption,
+          'is_primary', bi.is_primary,
+          'display_order', bi.display_order,
+          'created_at', bi.created_at
+        ) ORDER BY bi.is_primary DESC, bi.display_order ASC, bi.id ASC
+      )
+      FROM blog_images bi
+      WHERE bi.blog_id = b.id
+    ),
+    '[]'::json
+  ) AS images,
+  (
+    SELECT bi.image
+    FROM blog_images bi
+    WHERE bi.blog_id = b.id
+    ORDER BY bi.is_primary DESC, bi.display_order ASC, bi.id ASC
+    LIMIT 1
+  ) AS image,
+  (
+    SELECT bi.image_id
+    FROM blog_images bi
+    WHERE bi.blog_id = b.id
+    ORDER BY bi.is_primary DESC, bi.display_order ASC, bi.id ASC
+    LIMIT 1
+  ) AS image_id
+`;
+
+async function getFullBlog(blogId) {
+  const query = `
+    SELECT ${BLOG_SELECT_FIELDS}
+    FROM blogs b
+    LEFT JOIN developers d ON b.developer_id = d.id
+    LEFT JOIN developer_roles dr ON d.role_id = dr.id
+    WHERE b.id = $1
+    LIMIT 1
+  `;
+  const res = await queryDb(query, [blogId]);
+  return res.rows[0] || null;
+}
+
+/**
+ * Synchronize images for a blog: handles newly uploaded files,
+ * library selections, order/primary updates, and deletions.
+ */
+async function syncBlogImages(blogId, existingImages = null, newFiles = []) {
+  const newUploaded = [];
+
+  // 1. Upload new image files
+  if (Array.isArray(newFiles) && newFiles.length > 0) {
+    for (const file of newFiles) {
+      if (file && typeof file === 'object' && typeof file.arrayBuffer === 'function' && file.size > 0) {
+        try {
+          const res = await uploadToCloudinary(file, 'saas/blogs');
+          if (res) {
+            newUploaded.push({
+              image: res.url || res.secure_url || res.id,
+              image_id: res.id || res.public_id,
+              caption: null,
+              is_primary: false,
+            });
+          }
+        } catch (e) {
+          console.warn('Failed to upload file to Cloudinary:', e.message);
+        }
+      }
+    }
+  }
+
+  // 2. If existingImages array was provided, sync with current database records
+  if (Array.isArray(existingImages)) {
+    const curRowsRes = await queryDb('SELECT * FROM blog_images WHERE blog_id = $1', [blogId]);
+    const curRows = curRowsRes.rows;
+
+    const keepIds = new Set(
+      existingImages
+        .map((img) => (typeof img === 'object' && img.id ? String(img.id) : null))
+        .filter(Boolean)
+    );
+
+    // Delete any currently stored images that are omitted from existingImages
+    for (const cur of curRows) {
+      if (!keepIds.has(String(cur.id))) {
+        await queryDb('DELETE FROM blog_images WHERE id = $1', [cur.id]);
+        if (cur.image_id) {
+          try {
+            await deleteFromCloudinary(cur.image_id);
+          } catch (e) {}
+        }
+      }
+    }
+
+    // Update kept images or stage new library items
+    for (let i = 0; i < existingImages.length; i++) {
+      const item = existingImages[i];
+      if (item && item.id) {
+        await queryDb(
+          `UPDATE blog_images
+           SET is_primary = $1,
+               caption = $2,
+               display_order = $3
+           WHERE id = $4 AND blog_id = $5`,
+          [Boolean(item.is_primary), item.caption || null, item.display_order ?? i, item.id, blogId]
+        );
+      } else if (item && item.image && !item.id) {
+        // Fresh image object added from Cloudinary library
+        newUploaded.push({
+          image: item.image || item.secure_url,
+          image_id: item.image_id || item.public_id || null,
+          caption: item.caption || null,
+          is_primary: Boolean(item.is_primary),
+          display_order: item.display_order ?? (existingImages.length + i),
+        });
+      }
+    }
+  }
+
+  // 3. Insert newly uploaded or added images
+  for (let i = 0; i < newUploaded.length; i++) {
+    const img = newUploaded[i];
+    await queryDb(
+      `INSERT INTO blog_images (blog_id, image, image_id, caption, is_primary, display_order)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [blogId, img.image, img.image_id || null, img.caption || null, Boolean(img.is_primary), img.display_order ?? (100 + i)]
+    );
+  }
+
+  // 4. Ensure at least one image is primary if images exist
+  const checkCurrent = await queryDb(
+    'SELECT id, is_primary FROM blog_images WHERE blog_id = $1 ORDER BY is_primary DESC, display_order ASC, id ASC',
+    [blogId]
+  );
+  if (checkCurrent.rows.length > 0) {
+    const hasPrimary = checkCurrent.rows.some((r) => r.is_primary);
+    if (!hasPrimary) {
+      await queryDb('UPDATE blog_images SET is_primary = TRUE WHERE id = $1', [checkCurrent.rows[0].id]);
+    }
+  }
 }
 
 // ============================================================================
-// GET: List blogs with author info, associated app, and blogs_image gallery
+// GET: List blogs or get single blog by ID / slug
 // ============================================================================
 export async function GET(request) {
   try {
@@ -28,6 +230,7 @@ export async function GET(request) {
     const slug = searchParams.get('slug');
     const status = searchParams.get('status');
     const search = searchParams.get('search') || searchParams.get('q');
+    const category = searchParams.get('category');
     const listCloudinary = searchParams.get('cloudinary_assets');
 
     // Return Cloudinary asset library for media picker
@@ -50,36 +253,7 @@ export async function GET(request) {
     }
 
     let query = `
-      SELECT 
-        b.id,
-        NULL::bigint AS app_id,
-        b.title,
-        b.slug,
-        b.excerpt AS summary,
-        b.excerpt,
-        b.content,
-        b.developer_id AS author_id,
-        b.developer_id,
-        b.image,
-        b.image_id,
-        b.category,
-        b.tags,
-        b.meta_title,
-        b.meta_description,
-        b.views_count,
-        b.is_published,
-        b.published_at,
-        b.created_at,
-        b.updated_at,
-        d.name AS author_name,
-        d.email AS author_email,
-        COALESCE(dr.slug, 'developer') AS author_role,
-        NULL::text AS app_title,
-        NULL::text AS app_slug,
-        (CASE 
-           WHEN b.image IS NOT NULL THEN json_build_array(json_build_object('id', 1, 'image_url', b.image, 'image', b.image, 'image_id', b.image_id, 'title', b.title, 'alt_text', b.title))
-           ELSE '[]'::json 
-         END) AS images
+      SELECT ${BLOG_SELECT_FIELDS}
       FROM blogs b
       LEFT JOIN developers d ON b.developer_id = d.id
       LEFT JOIN developer_roles dr ON d.role_id = dr.id
@@ -102,8 +276,16 @@ export async function GET(request) {
     } else if (status === 'draft') {
       conditions.push(`b.is_published = FALSE`);
     }
+    if (category && category.trim()) {
+      conditions.push(`LOWER(b.category) = $${idx++}`);
+      params.push(category.trim().toLowerCase());
+    }
     if (search && search.trim()) {
-      conditions.push(`(LOWER(b.title) LIKE $${idx} OR LOWER(COALESCE(b.excerpt, '')) LIKE $${idx})`);
+      conditions.push(`(
+        LOWER(b.title) LIKE $${idx} OR 
+        LOWER(COALESCE(b.excerpt, '')) LIKE $${idx} OR 
+        LOWER(COALESCE(b.category, '')) LIKE $${idx}
+      )`);
       params.push(`%${search.trim().toLowerCase()}%`);
       idx++;
     }
@@ -124,15 +306,17 @@ export async function GET(request) {
       return NextResponse.json({ success: true, record, blog: record, ...record });
     }
 
-    // List of apps for the app_id selector if apps table exists
-    const appsRes = await queryDb('SELECT id, title, slug FROM apps ORDER BY title ASC').catch(() => ({ rows: [] }));
+    // Categories list for filters
+    const catRes = await queryDb(
+      'SELECT DISTINCT category FROM blogs WHERE category IS NOT NULL AND category != \'\' ORDER BY category ASC'
+    ).catch(() => ({ rows: [] }));
 
     return NextResponse.json({
       success: true,
       table: 'blogs',
       records: res.rows,
       blogs: res.rows,
-      apps: appsRes.rows,
+      categories: catRes.rows.map((r) => r.category),
     });
   } catch (error) {
     console.error('Developer blogs GET error:', error);
@@ -141,7 +325,7 @@ export async function GET(request) {
 }
 
 // ============================================================================
-// POST: Create a new blog article and upload/attach images to blogs_image
+// POST: Create a new blog article
 // ============================================================================
 export async function POST(request) {
   try {
@@ -151,181 +335,143 @@ export async function POST(request) {
     }
 
     let title = '';
-    let summary = '';
+    let excerpt = '';
     let content = '';
-    let app_id = null;
-    let is_published = false; // Default unpublished for newly created drafts
-    let imageFiles = [];
-    let attachPublicId = null;
-    let attachAssetId = null;
-    let attachTitle = null;
-    let attachSecureUrl = null;
-    let imagesPayload = [];
+    let category = '';
+    let tagsInput = [];
+    let meta_title = '';
+    let meta_description = '';
+    let is_published = false;
+    let published_at = null;
+    let newFiles = [];
+    let initialImages = [];
 
     const contentType = request.headers.get('content-type') || '';
     if (contentType.includes('multipart/form-data') || contentType.includes('application/x-www-form-urlencoded')) {
       const formData = await request.formData();
       title = (formData.get('title') || '').trim();
-      summary = (formData.get('summary') || '').trim();
+      excerpt = (formData.get('excerpt') ?? formData.get('summary') ?? '').trim();
       content = (formData.get('content') || '').trim();
-      app_id = formData.get('app_id') ? Number(formData.get('app_id')) : null;
+      category = (formData.get('category') || '').trim();
+      meta_title = (formData.get('meta_title') || '').trim();
+      meta_description = (formData.get('meta_description') || '').trim();
 
       const pubVal = formData.get('is_published') ?? formData.get('is_active');
       if (pubVal !== null && pubVal !== undefined) {
-        is_published = pubVal === 'true' || pubVal === true;
+        is_published = pubVal === 'true' || pubVal === true || pubVal === '1';
       }
 
-      attachPublicId = formData.get('public_id');
-      attachAssetId = formData.get('asset_id');
-      attachTitle = formData.get('image_title') || formData.get('alt_text');
-      attachSecureUrl = formData.get('secure_url');
+      if (formData.has('published_at') && formData.get('published_at')) {
+        published_at = new Date(formData.get('published_at')).toISOString();
+      }
 
-      for (const [key, val] of formData.entries()) {
-        if (val && typeof val === 'object' && typeof val.arrayBuffer === 'function' && val.size > 0) {
-          imageFiles.push(val);
+      // Collect multiple uploaded image files
+      const collectedFiles = [
+        ...formData.getAll('files'),
+        ...formData.getAll('imageFiles'),
+        formData.get('file'),
+      ].filter((f) => f && typeof f === 'object' && typeof f.arrayBuffer === 'function' && f.size > 0);
+      newFiles = collectedFiles;
+
+      // Collect any library images (passed as JSON string)
+      const rawImages = formData.get('images') || formData.get('existing_images');
+      if (rawImages && typeof rawImages === 'string') {
+        try {
+          const parsed = JSON.parse(rawImages);
+          if (Array.isArray(parsed)) initialImages = parsed;
+        } catch (e) {
+          if (rawImages.startsWith('http')) {
+            initialImages.push({ image: rawImages, is_primary: true });
+          }
         }
       }
     } else {
       const body = await request.json().catch(() => ({}));
       const data = body.data || body;
       title = (data.title || '').trim();
-      summary = (data.summary || '').trim();
+      excerpt = (data.excerpt ?? data.summary ?? '').trim();
       content = (data.content || '').trim();
-      app_id = data.app_id ? Number(data.app_id) : null;
+      category = (data.category || '').trim();
+      meta_title = (data.meta_title || '').trim();
+      meta_description = (data.meta_description || '').trim();
       if (data.is_published !== undefined) {
         is_published = Boolean(data.is_published);
       }
-      attachPublicId = data.public_id || body.public_id;
-      attachAssetId = data.asset_id || body.asset_id;
-      attachTitle = data.image_title || data.alt_text || body.image_title;
-      attachSecureUrl = data.secure_url || body.secure_url;
-      imagesPayload = Array.isArray(data.images) ? data.images : [];
-    }
-
-    const cleanTitle = title || 'Untitled Article';
-    const cleanContent = content || '<p>Write your article content here...</p>';
-
-    const baseSlug = slugify(cleanTitle) || 'article';
-    let slug = baseSlug;
-
-    // Check slug uniqueness
-    const checkSlug = await queryDb('SELECT id FROM blogs WHERE slug = $1 LIMIT 1', [slug]);
-    if (checkSlug.rows.length > 0) {
-      slug = `${baseSlug}-${Math.floor(1000 + Math.random() * 9000)}`;
-    }
-
-    const authorId = auth.developer?.id || auth.staff?.id || null;
-
-    let primaryImageUrl = attachSecureUrl || null;
-    let primaryImageId = attachAssetId || attachPublicId || null;
-
-    for (const imgFile of imageFiles) {
-      try {
-        const uploadResult = await uploadToCloudinary(imgFile, 'portfoliobuilder/blogs');
-        if (uploadResult) {
-          primaryImageUrl = uploadResult.url || uploadResult.id;
-          primaryImageId = uploadResult.id;
-          break;
-        }
-      } catch (err) {
-        console.warn('Cloudinary upload warning:', err.message);
+      if (data.published_at) {
+        published_at = new Date(data.published_at).toISOString();
+      }
+      if (Array.isArray(data.images)) {
+        initialImages = data.images;
+      } else if (data.image) {
+        initialImages = [{ image: data.image, image_id: data.image_id || null, is_primary: true }];
       }
     }
 
-    if (!primaryImageUrl && imagesPayload.length > 0) {
-      primaryImageUrl = imagesPayload[0].image_url || imagesPayload[0].image || null;
-      primaryImageId = imagesPayload[0].image_id || null;
+    if (!title) {
+      return NextResponse.json({ success: false, error: 'Article title is required.' }, { status: 400 });
+    }
+    if (!content) {
+      return NextResponse.json({ success: false, error: 'Article body content is required.' }, { status: 400 });
     }
 
-    await queryDb('BEGIN');
+    // API strictly generates unique slug from article title
+    const slug = await generateUniqueSlug(title);
+
+    const developerId = auth.user?.id || auth.staff?.id || null;
+    const finalPublishedAt = is_published ? (published_at || new Date().toISOString()) : null;
 
     const insertRes = await queryDb(
       `INSERT INTO blogs (
-        developer_id, title, slug, excerpt, content, image, image_id, is_published, published_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)
-      RETURNING *`,
-      [
-        authorId,
-        cleanTitle,
+        developer_id,
+        title,
         slug,
-        summary || null,
-        cleanContent,
-        primaryImageUrl,
-        primaryImageId,
+        excerpt,
+        content,
+        category,
+        meta_title,
+        meta_description,
         is_published,
+        published_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING id`,
+      [
+        developerId,
+        title,
+        slug,
+        excerpt || null,
+        content,
+        category || null,
+        meta_title || null,
+        meta_description || null,
+        is_published,
+        finalPublishedAt,
       ]
     );
 
-    const newBlog = insertRes.rows[0];
+    const newBlogId = insertRes.rows[0].id;
 
-    // Safely attempt blogs_image insert if table exists
-    if (primaryImageUrl) {
-      await queryDb(
-        `INSERT INTO blogs_image (blog_id, image_url, image, image_id, title, alt_text)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [newBlog.id, primaryImageUrl, primaryImageUrl, primaryImageId, cleanTitle, cleanTitle]
-      ).catch(() => {});
-    }
+    // Sync / insert images into blog_images
+    await syncBlogImages(newBlogId, initialImages, newFiles);
 
-    await queryDb('COMMIT');
+    const newBlog = await getFullBlog(newBlogId);
 
-    // Retrieve full blog with schema-conforming fields
-    const fullBlogRes = await queryDb(
-      `SELECT 
-        b.id,
-        NULL::bigint AS app_id,
-        b.title,
-        b.slug,
-        b.excerpt AS summary,
-        b.excerpt,
-        b.content,
-        b.developer_id AS author_id,
-        b.developer_id,
-        b.image,
-        b.image_id,
-        b.category,
-        b.tags,
-        b.meta_title,
-        b.meta_description,
-        b.views_count,
-        b.is_published,
-        b.published_at,
-        b.created_at,
-        b.updated_at,
-        d.name AS author_name,
-        d.email AS author_email,
-        COALESCE(dr.slug, 'developer') AS author_role,
-        NULL::text AS app_title,
-        NULL::text AS app_slug,
-        (CASE 
-           WHEN b.image IS NOT NULL THEN json_build_array(json_build_object('id', 1, 'image_url', b.image, 'image', b.image, 'image_id', b.image_id, 'title', b.title, 'alt_text', b.title))
-           ELSE '[]'::json 
-         END) AS images
-       FROM blogs b
-       LEFT JOIN developers d ON b.developer_id = d.id
-       LEFT JOIN developer_roles dr ON d.role_id = dr.id
-       WHERE b.id = $1`,
-      [newBlog.id]
-    ).catch(() => ({ rows: [newBlog] }));
-
-    const record = fullBlogRes.rows[0] || { ...newBlog, images: [] };
-
-    return NextResponse.json({
-      success: true,
-      record,
-      blog: record,
-      ...record,
-      message: 'Blog article created successfully.',
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        success: true,
+        record: newBlog,
+        blog: newBlog,
+        message: 'Blog article created successfully.',
+      },
+      { status: 201 }
+    );
   } catch (error) {
-    await queryDb('ROLLBACK').catch(() => {});
     console.error('Blog POST error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    return NextResponse.json({ success: false, error: error.message || 'Failed to create blog' }, { status: 400 });
   }
 }
 
 // ============================================================================
-// PUT: Update blog article and upload/manage blogs_image gallery
+// PUT: Update an existing blog article
 // ============================================================================
 export async function PUT(request) {
   try {
@@ -336,182 +482,167 @@ export async function PUT(request) {
 
     let id = null;
     let title = null;
-    let summary = null;
+    let excerpt = null;
     let content = null;
-    let app_id = undefined;
+    let category = null;
+    let tagsInput = null;
+    let meta_title = null;
+    let meta_description = null;
     let is_published = null;
-    let imageFiles = [];
-    let attachPublicId = null;
-    let attachAssetId = null;
-    let attachTitle = null;
-    let attachSecureUrl = null;
-    let newImages = [];
+    let published_at = null;
+    let newFiles = [];
+    let imagesPayload = null; // null if untouched, array if provided
 
     const contentType = request.headers.get('content-type') || '';
     if (contentType.includes('multipart/form-data') || contentType.includes('application/x-www-form-urlencoded')) {
       const formData = await request.formData();
       id = formData.get('id') || formData.get('blog_id');
       if (formData.has('title')) title = (formData.get('title') || '').trim();
-      if (formData.has('summary')) summary = formData.get('summary');
-      if (formData.has('content')) content = formData.get('content');
-      if (formData.has('app_id')) {
-        const rawApp = formData.get('app_id');
-        app_id = rawApp ? Number(rawApp) : null;
+      if (formData.has('excerpt') || formData.has('summary')) {
+        excerpt = (formData.get('excerpt') ?? formData.get('summary') ?? '').trim();
       }
+      if (formData.has('content')) content = (formData.get('content') || '').trim();
+      if (formData.has('category')) category = (formData.get('category') || '').trim();
+      if (formData.has('meta_title')) meta_title = (formData.get('meta_title') || '').trim();
+      if (formData.has('meta_description')) meta_description = (formData.get('meta_description') || '').trim();
+
       if (formData.has('is_published') || formData.has('is_active')) {
         const pubVal = formData.get('is_published') ?? formData.get('is_active');
-        is_published = pubVal === 'true' || pubVal === true;
+        is_published = pubVal === 'true' || pubVal === true || pubVal === '1';
       }
 
-      attachPublicId = formData.get('public_id');
-      attachAssetId = formData.get('asset_id');
-      attachTitle = formData.get('image_title') || formData.get('alt_text');
-      attachSecureUrl = formData.get('secure_url');
+      if (formData.has('published_at')) {
+        const val = formData.get('published_at');
+        published_at = val ? new Date(val).toISOString() : null;
+      }
 
-      for (const [key, val] of formData.entries()) {
-        if (val && typeof val === 'object' && typeof val.arrayBuffer === 'function' && val.size > 0) {
-          imageFiles.push(val);
+      const collectedFiles = [
+        ...formData.getAll('files'),
+        ...formData.getAll('imageFiles'),
+        formData.get('file'),
+      ].filter((f) => f && typeof f === 'object' && typeof f.arrayBuffer === 'function' && f.size > 0);
+      newFiles = collectedFiles;
+
+      const rawImages = formData.get('images') || formData.get('existing_images');
+      if (rawImages) {
+        try {
+          imagesPayload = typeof rawImages === 'string' ? JSON.parse(rawImages) : rawImages;
+        } catch (e) {
+          imagesPayload = [];
         }
       }
     } else {
       const body = await request.json().catch(() => ({}));
       const data = body.data || body;
       id = body.id || data.id;
-      if (data.title !== undefined) title = data.title.trim();
-      if (data.summary !== undefined) summary = data.summary;
-      if (data.content !== undefined) content = data.content;
-      if (data.app_id !== undefined) app_id = data.app_id ? Number(data.app_id) : null;
+      if (data.title !== undefined) title = (data.title || '').trim();
+      if (data.excerpt !== undefined || data.summary !== undefined) {
+        excerpt = (data.excerpt ?? data.summary ?? '').trim();
+      }
+      if (data.content !== undefined) content = (data.content || '').trim();
+      if (data.category !== undefined) category = (data.category || '').trim();
+      if (data.meta_title !== undefined) meta_title = (data.meta_title || '').trim();
+      if (data.meta_description !== undefined) meta_description = (data.meta_description || '').trim();
       if (data.is_published !== undefined || data.is_active !== undefined) {
         const val = data.is_published ?? data.is_active;
         is_published = Boolean(val);
       }
-      attachPublicId = data.public_id || body.public_id;
-      attachAssetId = data.asset_id || body.asset_id;
-      attachTitle = data.image_title || data.alt_text || body.image_title;
-      attachSecureUrl = data.secure_url || body.secure_url;
-      newImages = Array.isArray(data.new_images) ? data.new_images : Array.isArray(data.images) ? data.images : [];
+      if (data.published_at !== undefined) {
+        published_at = data.published_at ? new Date(data.published_at).toISOString() : null;
+      }
+      if (data.images !== undefined) {
+        imagesPayload = Array.isArray(data.images) ? data.images : [];
+      }
     }
 
     if (!id) {
-      return NextResponse.json({ success: false, error: 'Blog ID is required.' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Valid blog ID is required.' }, { status: 400 });
     }
 
     const blogId = Number(id);
-
-    await queryDb('BEGIN');
-
-    // Verify blog exists
-    const currentRes = await queryDb('SELECT * FROM blogs WHERE id = $1', [blogId]);
-    if (currentRes.rows.length === 0) {
-      await queryDb('ROLLBACK');
-      return NextResponse.json({ success: false, error: 'Blog not found.' }, { status: 404 });
-    }
-    const currentBlog = currentRes.rows[0];
-
-    const newTitle = title !== null ? title : currentBlog.title;
-    let newSlug = currentBlog.slug;
-    if (title !== null && title !== currentBlog.title && title.trim()) {
-      const baseSlug = slugify(newTitle) || 'article';
-      newSlug = baseSlug;
-      const slugCheck = await queryDb('SELECT id FROM blogs WHERE slug = $1 AND id != $2 LIMIT 1', [newSlug, blogId]);
-      if (slugCheck.rows.length > 0) {
-        newSlug = `${baseSlug}-${Math.floor(1000 + Math.random() * 9000)}`;
-      }
+    const existingRes = await queryDb('SELECT * FROM blogs WHERE id = $1 LIMIT 1', [blogId]);
+    if (existingRes.rows.length === 0) {
+      return NextResponse.json({ success: false, error: 'Blog article not found.' }, { status: 404 });
     }
 
-    const newSummary = summary !== null ? (summary ? summary.trim() : null) : (currentBlog.excerpt || currentBlog.summary);
-    const newContent = content !== null ? content.trim() : currentBlog.content;
-    const newPublished = is_published !== null ? is_published : currentBlog.is_published;
+    const currentBlog = existingRes.rows[0];
 
-    let updatedImageUrl = currentBlog.image || null;
-    let updatedImageId = currentBlog.image_id || null;
-
-    for (const file of imageFiles) {
-      try {
-        const uploadResult = await uploadToCloudinary(file, 'portfoliobuilder/blogs');
-        if (uploadResult) {
-          updatedImageUrl = uploadResult.url || uploadResult.id;
-          updatedImageId = uploadResult.id;
-          break;
-        }
-      } catch (err) {
-        console.warn('Cloudinary upload warning:', err.message);
-      }
+    const finalTitle = title !== null ? title : currentBlog.title;
+    if (!finalTitle) {
+      return NextResponse.json({ success: false, error: 'Article title cannot be empty.' }, { status: 400 });
     }
 
-    if (attachSecureUrl || attachPublicId) {
-      updatedImageUrl = attachSecureUrl || `https://res.cloudinary.com/${cloudinary.config().cloud_name}/image/upload/${attachPublicId}`;
-      updatedImageId = attachAssetId || attachPublicId;
+    let finalSlug = currentBlog.slug;
+    if (title !== null && title.trim() !== '' && title.trim() !== currentBlog.title) {
+      finalSlug = await generateUniqueSlug(title.trim(), blogId);
+    } else if (!finalSlug) {
+      finalSlug = await generateUniqueSlug(finalTitle, blogId);
+    }
+
+    const finalExcerpt = excerpt !== null ? (excerpt || null) : currentBlog.excerpt;
+    const finalContent = content !== null ? content : currentBlog.content;
+    const finalCategory = category !== null ? (category || null) : currentBlog.category;
+    const finalMetaTitle = meta_title !== null ? (meta_title || null) : currentBlog.meta_title;
+    const finalMetaDescription = meta_description !== null ? (meta_description || null) : currentBlog.meta_description;
+    const finalPublished = is_published !== null ? is_published : currentBlog.is_published;
+
+    let finalPublishedAt = currentBlog.published_at;
+    if (published_at !== null) {
+      finalPublishedAt = published_at;
+    } else if (finalPublished && !currentBlog.published_at) {
+      finalPublishedAt = new Date().toISOString();
+    } else if (!finalPublished) {
+      finalPublishedAt = null;
     }
 
     await queryDb(
-      `UPDATE blogs 
-       SET title = $1, slug = $2, excerpt = $3, content = $4,
-           is_published = $5, image = $6, image_id = $7, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $8`,
-      [newTitle, newSlug, newSummary, newContent, newPublished, updatedImageUrl, updatedImageId, blogId]
+      `UPDATE blogs
+       SET title = $1,
+           slug = $2,
+           excerpt = $3,
+           content = $4,
+           category = $5,
+           meta_title = $6,
+           meta_description = $7,
+           is_published = $8,
+           published_at = $9,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $10`,
+      [
+        finalTitle,
+        finalSlug,
+        finalExcerpt,
+        finalContent,
+        finalCategory,
+        finalMetaTitle,
+        finalMetaDescription,
+        finalPublished,
+        finalPublishedAt,
+        blogId,
+      ]
     );
 
-    await queryDb('COMMIT');
+    // Sync images if imagesPayload or new files provided
+    if (imagesPayload !== null || newFiles.length > 0) {
+      await syncBlogImages(blogId, imagesPayload, newFiles);
+    }
 
-    // Return updated record with all images
-    const updatedRes = await queryDb(
-      `SELECT 
-        b.id,
-        NULL::bigint AS app_id,
-        b.title,
-        b.slug,
-        b.excerpt AS summary,
-        b.excerpt,
-        b.content,
-        b.developer_id AS author_id,
-        b.developer_id,
-        b.image,
-        b.image_id,
-        b.category,
-        b.tags,
-        b.meta_title,
-        b.meta_description,
-        b.views_count,
-        b.is_published,
-        b.published_at,
-        b.created_at,
-        b.updated_at,
-        d.name AS author_name,
-        d.email AS author_email,
-        COALESCE(dr.slug, 'developer') AS author_role,
-        NULL::text AS app_title,
-        NULL::text AS app_slug,
-        (CASE 
-           WHEN b.image IS NOT NULL THEN json_build_array(json_build_object('id', 1, 'image_url', b.image, 'image', b.image, 'image_id', b.image_id, 'title', b.title, 'alt_text', b.title))
-           ELSE '[]'::json 
-         END) AS images
-      FROM blogs b
-      LEFT JOIN developers d ON b.developer_id = d.id
-      LEFT JOIN developer_roles dr ON d.role_id = dr.id
-      WHERE b.id = $1`,
-      [blogId]
-    ).catch(() => ({ rows: [] }));
-
-    const record = updatedRes.rows[0] || null;
+    const updatedBlog = await getFullBlog(blogId);
 
     return NextResponse.json({
       success: true,
-      record,
-      blog: record,
-      images: record?.images || [],
-      ...record,
-      message: 'Blog updated successfully.',
+      record: updatedBlog,
+      blog: updatedBlog,
+      message: 'Blog article updated successfully.',
     });
   } catch (error) {
-    await queryDb('ROLLBACK').catch(() => {});
     console.error('Blog PUT error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    return NextResponse.json({ success: false, error: error.message || 'Failed to update blog' }, { status: 400 });
   }
 }
 
 // ============================================================================
-// DELETE: Delete a blog post or an individual blogs_image from Cloudinary & DB
+// DELETE: Delete a blog article OR delete a specific image
 // ============================================================================
 export async function DELETE(request) {
   try {
@@ -521,54 +652,68 @@ export async function DELETE(request) {
     }
 
     const { searchParams } = new URL(request.url);
-    let id = searchParams.get('id') || searchParams.get('blog_id');
-    let imageId = searchParams.get('image_id');
+    const blogImageId = searchParams.get('image_id') || searchParams.get('blog_image_id');
+    const blogId = searchParams.get('id');
+    const slug = searchParams.get('slug');
 
-    if (!id && !imageId) {
-      const body = await request.json().catch(() => ({}));
-      id = body.id || body.blog_id;
-      imageId = body.image_id;
-    }
-
-    // 1. Delete single image from blogs_image and Cloudinary
-    if (imageId) {
-      const imgRow = await queryDb('SELECT image, image_url, image_id FROM blogs_image WHERE id = $1', [imageId]);
-      if (imgRow.rows.length > 0) {
-        const row = imgRow.rows[0];
-        const publicId = row.image_id || row.image_url || row.image;
-        if (publicId) {
-          try {
-            await deleteFromCloudinary(publicId);
-          } catch (err) {
-            console.warn('Cloudinary delete image warning:', err.message);
-          }
-        }
-        await queryDb('DELETE FROM blogs_image WHERE id = $1', [imageId]);
+    // 1. Specific image deletion
+    if (blogImageId) {
+      const imgRes = await queryDb('SELECT * FROM blog_images WHERE id = $1 LIMIT 1', [Number(blogImageId)]);
+      if (imgRes.rows.length === 0) {
+        return NextResponse.json({ success: false, error: 'Image not found' }, { status: 404 });
       }
-      return NextResponse.json({ success: true, message: 'Blog image deleted from Cloudinary and database.' });
-    }
-
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'Blog ID or Image ID is required for deletion.' }, { status: 400 });
-    }
-
-    const blogId = Number(id);
-
-    // 2. Delete all Cloudinary assets associated with this blog
-    const imgRows = await queryDb('SELECT image, image_url, image_id FROM blogs_image WHERE blog_id = $1', [blogId]);
-    for (const r of imgRows.rows) {
-      const publicId = r.image_id || r.image_url || r.image;
-      if (publicId) {
+      const img = imgRes.rows[0];
+      if (img.image_id) {
         try {
-          await deleteFromCloudinary(publicId);
-        } catch (_) {}
+          await deleteFromCloudinary(img.image_id);
+        } catch (e) {}
+      }
+      await queryDb('DELETE FROM blog_images WHERE id = $1', [img.id]);
+
+      // If removed image was primary, set another as primary
+      if (img.is_primary) {
+        await queryDb(`
+          UPDATE blog_images
+          SET is_primary = TRUE
+          WHERE id = (
+            SELECT id FROM blog_images WHERE blog_id = $1 ORDER BY display_order ASC, id ASC LIMIT 1
+          )
+        `, [img.blog_id]);
+      }
+      return NextResponse.json({ success: true, message: 'Image deleted successfully' });
+    }
+
+    // 2. Full blog deletion
+    if (!blogId && !slug) {
+      return NextResponse.json({ success: false, error: 'Blog ID or slug is required.' }, { status: 400 });
+    }
+
+    const checkRes = blogId
+      ? await queryDb('SELECT id FROM blogs WHERE id = $1', [Number(blogId)])
+      : await queryDb('SELECT id FROM blogs WHERE slug = $1', [slug.trim()]);
+
+    if (checkRes.rows.length === 0) {
+      return NextResponse.json({ success: false, error: 'Blog not found.' }, { status: 404 });
+    }
+
+    const targetBlog = checkRes.rows[0];
+
+    // Clean up all Cloudinary assets associated with this blog
+    const imagesRes = await queryDb('SELECT image_id FROM blog_images WHERE blog_id = $1', [targetBlog.id]);
+    for (const row of imagesRes.rows) {
+      if (row.image_id) {
+        try {
+          await deleteFromCloudinary(row.image_id);
+        } catch (err) {
+          console.warn('Cloudinary delete warning:', err.message);
+        }
       }
     }
 
-    await queryDb('DELETE FROM blogs_image WHERE blog_id = $1', [blogId]);
-    await queryDb('DELETE FROM blogs WHERE id = $1', [blogId]);
+    // Cascades deletion to blog_images
+    await queryDb('DELETE FROM blogs WHERE id = $1', [targetBlog.id]);
 
-    return NextResponse.json({ success: true, message: 'Blog article and associated Cloudinary assets deleted.' });
+    return NextResponse.json({ success: true, message: 'Blog article and media deleted successfully.' });
   } catch (error) {
     console.error('Blog DELETE error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

@@ -69,35 +69,40 @@ export default function UpdatesPage() {
     const q = search.toLowerCase();
     return (
       (item.title || '').toLowerCase().includes(q) ||
+      (item.version || '').toLowerCase().includes(q) ||
       (item.description || '').toLowerCase().includes(q) ||
-      (item.slug || '').toLowerCase().includes(q)
+      (item.changelog || '').toLowerCase().includes(q)
     );
   });
 
   return (
-    <main className="min-h-screen bg-slate-50/60 pb-24">
+    <main className="min-h-screen bg-slate-50/60 dark:bg-slate-950 pb-24 transition-colors">
       {/* Hero Header */}
       <section className="relative overflow-hidden bg-primary text-white pt-20 pb-20 px-4 lg:px-8 border-b border-white/10">
         <div className="absolute inset-0 bg-linear-to-b from-primary/10 via-transparent to-transparent pointer-events-none" />
-        <div className="max-w-6xl mx-auto text-center relative z-10 space-y-4">
+        <div className="max-w-4xl mx-auto text-center relative z-10 space-y-4">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-white/10 border border-white/20">
+            <BiBell className="text-sm" /> Product Releases
+          </div>
+
           <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight max-w-3xl mx-auto leading-tight">
             Product Updates &amp; Changelog
           </h1>
 
-          <p className="text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
-            Follow our journey as we continuously enhance the portfolio builder. Discover our latest feature releases, performance boosts, and design studio tools.
+          <p className="text-sm sm:text-base max-w-2xl mx-auto leading-relaxed text-slate-200">
+            Follow our journey as we continuously enhance the platform. Explore our latest system releases, feature rollouts, and improvements.
           </p>
 
           {/* Search Bar */}
-          <div className="pt-6 max-w-xl mx-auto">
+          <div className="pt-4 max-w-xl mx-auto">
             <div className="relative">
-              <BiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-lg" />
+              <BiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-slate-400" />
               <input
                 type="text"
-                placeholder="Search updates by feature, release, or topic..."
+                placeholder="Search updates by feature, version, or keyword..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-white/10 border border-white/15 rounded-2xl pl-11 pr-4 py-3 text-sm text-white focus:outline-none focus:border-primary focus:bg-white/15 transition-all shadow-lg backdrop-blur-md"
+                className="w-full bg-white/10 border border-white/15 rounded-2xl pl-11 pr-4 py-3 text-sm text-white placeholder-slate-300 focus:outline-none focus:border-white focus:bg-white/15 transition-all shadow-lg backdrop-blur-md"
               />
               {search && (
                 <button
@@ -113,15 +118,15 @@ export default function UpdatesPage() {
         </div>
       </section>
 
-      {/* Main Updates Directory Section */}
-      <section className="w-full px-4 lg:px-8 pt-12">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-6 border-b border-slate-200">
+      {/* Main Updates Section (List View) */}
+      <section className="w-full px-4 sm:px-6 lg:px-8 pt-12 max-w-4xl mx-auto space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-slate-800">
           <div>
-            <h2 className="text-xl font-semibold text-slate-900 flex items-center gap-2">
-              <BiBell className="text-primary text-2xl" /> Product Changelog
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <BiBell className="text-secondary text-2xl" /> All Releases
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Showing {filteredUpdates.length} release update{filteredUpdates.length === 1 ? '' : 's'}
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Showing {filteredUpdates.length} product update{filteredUpdates.length === 1 ? '' : 's'}
             </p>
           </div>
 
@@ -129,7 +134,7 @@ export default function UpdatesPage() {
             type="button"
             onClick={fetchPublishedUpdates}
             disabled={loading}
-            className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-white text-xs font-semibold transition-colors cursor-pointer"
+            className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-900 text-xs font-semibold transition-colors cursor-pointer"
           >
             <BiRefresh className={`text-sm ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -137,7 +142,7 @@ export default function UpdatesPage() {
         </div>
 
         {error && (
-          <div className="mt-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center justify-between">
+          <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center justify-between">
             <span>{error}</span>
             <button
               type="button"
@@ -151,133 +156,107 @@ export default function UpdatesPage() {
 
         {/* Loading Skeleton */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-8">
-            {[1, 2, 3, 4, 5, 6].map((idx) => (
+          <div className="space-y-4 pt-2">
+            {[1, 2, 3, 4].map((idx) => (
               <div
                 key={idx}
-                className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs animate-pulse space-y-4"
+                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs animate-pulse space-y-3"
               >
                 <div className="flex items-center justify-between">
-                  <div className="h-4 bg-slate-200 rounded-md w-24" />
-                  <div className="h-4 bg-slate-100 rounded-full w-16" />
+                  <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded-md w-24" />
+                  <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-full w-20" />
                 </div>
-                <div className="h-5 bg-slate-200 rounded-md w-3/4 pt-2" />
-                <div className="space-y-2 pt-2">
-                  <div className="h-3 bg-slate-100 rounded-md w-full" />
-                  <div className="h-3 bg-slate-100 rounded-md w-5/6" />
-                  <div className="h-3 bg-slate-100 rounded-md w-2/3" />
-                </div>
-                <div className="h-4 bg-slate-100 rounded-md w-28 pt-4" />
+                <div className="h-5 bg-slate-200 dark:bg-slate-800 rounded-md w-2/3" />
+                <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-md w-full" />
+                <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-md w-4/5" />
               </div>
             ))}
           </div>
         ) : filteredUpdates.length === 0 ? (
           /* Empty State */
-          <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center my-8 shadow-xs max-w-lg mx-auto">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-3xl mx-auto mb-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-12 text-center my-8 shadow-xs max-w-lg mx-auto">
+            <div className="w-16 h-16 rounded-2xl bg-secondary/10 text-secondary flex items-center justify-center text-3xl mx-auto mb-4">
               <BiBell />
             </div>
-            <h3 className="text-base font-semibold text-slate-800">
-              {search ? 'No Matching Updates Found' : 'No Changelog Updates Published Yet'}
+            <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200">
+              {search ? 'No Matching Updates Found' : 'No Updates Published Yet'}
             </h3>
-            <p className="text-xs text-slate-500 mt-1.5 max-w-sm mx-auto leading-relaxed">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 max-w-sm mx-auto leading-relaxed">
               {search
                 ? `No updates matched "${search}". Try checking for typos or searching a different keyword.`
-                : 'Stay tuned! Exciting features and platform upgrades will be announced here soon.'}
+                : 'Exciting features and system updates will be announced here soon.'}
             </p>
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="mt-4 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
+                className="mt-4 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors cursor-pointer"
               >
                 Clear Search Filter
               </button>
             )}
           </div>
         ) : (
-          /* Updates Grid */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-8">
+          /* Clean List View with Title, Summary, and Link */
+          <div className="space-y-4 pt-2">
             {filteredUpdates.map((item) => {
-              const formattedDate = item.created_at
-                ? new Date(item.created_at).toLocaleDateString('en-US', {
+              const releaseDateVal = item.release_date || item.created_at;
+              const formattedDate = releaseDateVal
+                ? new Date(releaseDateVal).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric',
                   })
                 : null;
-              const plainSnippet = stripHtml(item.description);
+              const summaryText = stripHtml(item.description);
+              const targetUrl = `/updates/${item.slug || item.id}`;
 
               return (
-                <div
+                <article
                   key={item.id}
-                  className="group rounded-3xl bg-white border border-slate-200/80 hover:border-secondary/40 transition-all duration-300 shadow-xs hover:shadow-xl hover:-translate-y-1 flex flex-col justify-between overflow-hidden p-6 sm:p-7 space-y-4"
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-secondary/50 rounded-2xl p-6 sm:p-7 shadow-xs hover:shadow-md transition-all space-y-3.5 group"
                 >
-                  <div className="space-y-3">
-                    {/* Header Row: Date & Release Badge */}
-                    <div className="flex items-center justify-between gap-2">
-                      {formattedDate ? (
-                        <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
-                          <BiCalendar className="text-secondary text-sm" />
-                          <span>{formattedDate}</span>
-                        </div>
-                      ) : (
-                        <div />
-                      )}
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-secondary/10 text-secondary border border-secondary/20">
-                        Release
-                      </span>
-                    </div>
+                  {/* Top Metadata: Version & Date */}
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <span className="inline-block px-2.5 py-0.5 rounded-full bg-secondary/10 text-secondary font-mono font-bold text-xs border border-secondary/20">
+                      {item.version || 'Release'}
+                    </span>
 
-                    {/* Title */}
-                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 group-hover:text-secondary transition-colors tracking-tight line-clamp-2">
-                      <Link href={`/updates/${item.slug}`}>
-                        {item.title}
-                      </Link>
-                    </h3>
-
-                    {/* Summary Snippet */}
-                    <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
-                      {plainSnippet || 'Explore newly published updates and feature improvements in this release.'}
-                    </p>
+                    {formattedDate && (
+                      <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
+                        <BiCalendar className="text-secondary text-sm" />
+                        <span>{formattedDate}</span>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Read More Link */}
-                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                  {/* Title */}
+                  <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white group-hover:text-secondary transition-colors tracking-tight">
+                    <Link href={targetUrl} className="hover:underline">
+                      {item.title}
+                    </Link>
+                  </h3>
+
+                  {/* Summary */}
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                    {summaryText || 'Click to view full release notes and feature improvements.'}
+                  </p>
+
+                  {/* Link */}
+                  <div className="pt-2 flex items-center justify-between border-t border-slate-100 dark:border-slate-800/80">
                     <Link
-                      href={`/updates/${item.slug}`}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-secondary group-hover:text-secondary-dark transition-colors"
+                      href={targetUrl}
+                      className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-secondary hover:text-secondary-dark transition-colors"
                     >
                       <span>Read Full Update</span>
                       <BiRightArrowAlt className="text-base group-hover:translate-x-1 transition-transform" />
                     </Link>
                   </div>
-                </div>
+                </article>
               );
             })}
           </div>
         )}
-      </section>
-
-      {/* Creator Call To Action */}
-      <section className="w-full px-4 lg:px-8 mt-20">
-        <div className="bg-linear-to-r from-slate-900 to-slate-950 rounded-3xl p-8 sm:p-12 text-white border border-white/10 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="space-y-2 max-w-xl text-center md:text-left">
-            <h3 className="text-2xl font-semibold tracking-tight">
-              Ready to build with the latest tools?
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Create your account in seconds, connect your custom domain, and launch a complete online presence with all our newest features.
-            </p>
-          </div>
-          <Link
-            href="/creator/login"
-            className="px-6 py-3.5 rounded-2xl bg-secondary hover:bg-secondary-dark text-white font-semibold text-sm shadow-xl flex items-center gap-2 shrink-0 transition-all hover:scale-105 cursor-pointer"
-          >
-            <span>Get Started Now</span>
-            <BiRightArrowAlt className="text-lg" />
-          </Link>
-        </div>
       </section>
     </main>
   );

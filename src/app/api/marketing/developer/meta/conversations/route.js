@@ -155,3 +155,57 @@ export async function DELETE(request) {
     return NextResponse.json({ success: false, error: 'Failed to delete conversation' }, { status: 500 });
   }
 }
+
+/**
+ * POST /api/developer/meta/conversations
+ * Create/Initiate a conversation or seed a customer test conversation
+ */
+export async function POST(request) {
+  try {
+    const auth = await hasModulePermission(request, META_PERMISSIONS);
+    if (!auth.success) {
+      return NextResponse.json({ success: false, error: auth.message }, { status: auth.status });
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const { platform, recipientName, recipientId, recipientPhone, initialMessage } = body;
+
+    const cleanPlatform = ALLOWED_PLATFORMS.includes(String(platform).toLowerCase().trim())
+      ? String(platform).toLowerCase().trim()
+      : 'facebook';
+
+    const safeName = String(recipientName || 'Customer').trim().slice(0, 255);
+    const safeRecipientId = String(recipientId || `user_${Date.now()}`).trim().slice(0, 255);
+    const safePhone = recipientPhone ? String(recipientPhone).trim().slice(0, 50) : null;
+    const safeText = initialMessage ? String(initialMessage).trim().slice(0, 4000) : 'Hello, I have an inquiry.';
+    const externalConvId = `conv_${cleanPlatform}_${Date.now()}`;
+
+    const convRes = await pool.query(
+      `INSERT INTO meta_conversations (
+         platform, external_conversation_id, recipient_id, recipient_name,
+         recipient_phone, last_message, last_message_at, status, unread_count
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, 'OPEN', 1)
+       RETURNING *`,
+      [cleanPlatform, externalConvId, safeRecipientId, safeName, safePhone, safeText]
+    );
+
+    const conv = convRes.rows[0];
+
+    // Insert the initial customer message
+    await pool.query(
+      `INSERT INTO meta_messages (
+         conversation_id, platform, sender_type, sender_id, sender_name,
+         message_text, delivery_status, created_at
+       )
+       VALUES ($1, $2, 'CUSTOMER', $3, $4, $5, 'DELIVERED', CURRENT_TIMESTAMP)`,
+      [conv.id, cleanPlatform, safeRecipientId, safeName, safeText]
+    );
+
+    return NextResponse.json({ success: true, record: conv });
+  } catch (error) {
+    console.error('Failed to create Meta conversation:', error.message);
+    return NextResponse.json({ success: false, error: 'Failed to create conversation' }, { status: 500 });
+  }
+}
+
