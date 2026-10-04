@@ -82,7 +82,7 @@ export async function POST(request) {
         return new Response('Forbidden: Signature required', { status: 403 });
       }
 
-      const isValid = verifyMetaWebhookSignature(signature, rawBody, META_APP_SECRET);
+      const isValid = verifyMetaWebhookSignature(rawBody, signature, META_APP_SECRET);
       if (!isValid) {
         console.warn('Meta webhook POST rejected: Invalid signature.');
         return new Response('Forbidden: Invalid signature', { status: 403 });

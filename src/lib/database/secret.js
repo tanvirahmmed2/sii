@@ -38,8 +38,13 @@ export const STAFF_TOKEN='hiesci-staff'
 export const STUDENT_TOKEN='hiesci-student'
 export const LIVE_CHAT_TOKEN='hiesci-live'
 
-export const META_WEBHOOK_VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || 'meta_webhook_verify_token';
+// Meta Graph API (Facebook Messenger, Instagram Direct & WhatsApp Cloud API)
+export const META_APP_ID = process.env.META_APP_ID || '';
 export const META_APP_SECRET = process.env.META_APP_SECRET || '';
 export const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN || '';
+export const META_PAGE_ID = process.env.META_PAGE_ID || '';
+export const META_PAGE_ACCESS_TOKEN = process.env.META_PAGE_ACCESS_TOKEN || '';
+export const META_INSTAGRAM_ACCOUNT_ID = process.env.META_INSTAGRAM_ACCOUNT_ID || '';
 export const META_PHONE_NUMBER_ID = process.env.META_PHONE_NUMBER_ID || '';
 export const META_WABA_ID = process.env.META_WABA_ID || '';
+export const META_WEBHOOK_VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || 'sii_meta_secure_verify_token_2026';

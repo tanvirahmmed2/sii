@@ -518,6 +518,46 @@ CREATE TRIGGER update_updates_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
+-- 21.2 TUTORIALS TABLE (Video Guides, Platform Walkthroughs & Documentation)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS tutorials (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    youtube_link VARCHAR(500) NOT NULL,
+    is_published BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_tutorials_updated_at ON tutorials;
+CREATE TRIGGER update_tutorials_updated_at
+    BEFORE UPDATE ON tutorials
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 21.3. REPORTS TABLE (Platform Content Moderation & Abuse Reports)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS reports (
+    id BIGSERIAL PRIMARY KEY,
+    reporter_name VARCHAR(255) NOT NULL,
+    reporter_email VARCHAR(255) NOT NULL,
+    subject VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    category VARCHAR(50) DEFAULT 'GENERAL',
+    priority VARCHAR(50) DEFAULT 'MEDIUM',
+    status VARCHAR(50) DEFAULT 'OPEN',
+    admin_response TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_reports_updated_at ON reports;
+CREATE TRIGGER update_reports_updated_at
+    BEFORE UPDATE ON reports
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
 -- 22. SUPPORTS TABLE (Support Tickets & Helpdesk Sessions)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS supports (

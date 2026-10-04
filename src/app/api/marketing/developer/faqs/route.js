@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 
+// GET all FAQs or a single FAQ by ID
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, 'faqs');
@@ -13,22 +14,26 @@ export async function GET(request) {
     const id = searchParams.get('id');
 
     if (id) {
-      const res = await queryDb('SELECT * FROM faqs WHERE id = $1 LIMIT 1', [Number(id)]);
+      const res = await queryDb('SELECT id, question, answer, created_at, updated_at FROM faq WHERE id = $1 LIMIT 1', [Number(id)]);
       if (res.rows.length === 0) {
         return NextResponse.json({ success: false, error: 'FAQ not found.' }, { status: 404 });
       }
-      return NextResponse.json({ success: true, record: res.rows[0] });
+      return NextResponse.json({ success: true, record: res.rows[0], faq: res.rows[0] });
     }
 
-    const res = await queryDb('SELECT * FROM faqs ORDER BY id ASC').catch(() => ({ rows: [] }));
-    return NextResponse.json({ success: true, table: 'faqs', records: res.rows });
+    const res = await queryDb('SELECT id, question, answer, created_at, updated_at FROM faq ORDER BY id ASC').catch((err) => {
+      console.warn('FAQ list query error:', err.message);
+      return { rows: [] };
+    });
+
+    return NextResponse.json({ success: true, table: 'faq', records: res.rows, faqs: res.rows });
   } catch (error) {
     console.error('Error fetching FAQs:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
-// CREATE FAQ
+// CREATE FAQ (POST)
 export async function POST(request) {
   try {
     const authCheck = await hasModulePermission(request, 'faqs');
@@ -48,12 +53,12 @@ export async function POST(request) {
     }
 
     const res = await queryDb(
-      `INSERT INTO faqs (question, answer) VALUES ($1, $2) RETURNING *`,
+      `INSERT INTO faq (question, answer) VALUES ($1, $2) RETURNING id, question, answer, created_at, updated_at`,
       [question, answer]
     );
 
     return NextResponse.json(
-      { success: true, record: res.rows[0], message: 'FAQ created successfully.' },
+      { success: true, record: res.rows[0], faq: res.rows[0], message: 'FAQ created successfully.' },
       { status: 201 }
     );
   } catch (error) {
@@ -62,7 +67,7 @@ export async function POST(request) {
   }
 }
 
-// UPDATE FAQ
+// UPDATE FAQ (PUT)
 export async function PUT(request) {
   try {
     const authCheck = await hasModulePermission(request, 'faqs');
@@ -86,7 +91,7 @@ export async function PUT(request) {
     }
 
     const res = await queryDb(
-      `UPDATE faqs SET question = $1, answer = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *`,
+      `UPDATE faq SET question = $1, answer = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING id, question, answer, created_at, updated_at`,
       [question, answer, Number(id)]
     );
 
@@ -94,14 +99,14 @@ export async function PUT(request) {
       return NextResponse.json({ success: false, error: 'FAQ item not found.' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, record: res.rows[0], message: 'FAQ updated successfully.' });
+    return NextResponse.json({ success: true, record: res.rows[0], faq: res.rows[0], message: 'FAQ updated successfully.' });
   } catch (error) {
     console.error('Error updating FAQ:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
-// DELETE FAQ
+// DELETE FAQ (DELETE)
 export async function DELETE(request) {
   try {
     const authCheck = await hasModulePermission(request, 'faqs');
@@ -122,7 +127,7 @@ export async function DELETE(request) {
       return NextResponse.json({ success: false, error: 'FAQ ID is required.' }, { status: 400 });
     }
 
-    const res = await queryDb('DELETE FROM faqs WHERE id = $1 RETURNING id', [Number(id)]);
+    const res = await queryDb('DELETE FROM faq WHERE id = $1 RETURNING id', [Number(id)]);
     if (res.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'FAQ item not found or already deleted.' }, { status: 404 });
     }

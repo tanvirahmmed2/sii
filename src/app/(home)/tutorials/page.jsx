@@ -10,8 +10,6 @@ import {
   BiRightArrowAlt,
   BiPlayCircle,
   BiCalendar,
-  BiUser,
-  BiX,
   BiLinkExternal,
 } from 'react-icons/bi';
 
@@ -27,7 +25,6 @@ export default function TutorialsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
-  const [activeVideo, setActiveVideo] = useState(null);
 
   const fetchPublishedTutorials = async () => {
     setLoading(true);
@@ -77,8 +74,7 @@ export default function TutorialsPage() {
     const q = search.toLowerCase();
     return (
       (tut.title || '').toLowerCase().includes(q) ||
-      (tut.description || '').toLowerCase().includes(q) ||
-      (tut.author_name || '').toLowerCase().includes(q)
+      (tut.description || '').toLowerCase().includes(q)
     );
   });
 
@@ -92,20 +88,20 @@ export default function TutorialsPage() {
             Learn How to Build, Customize &amp; Scale
           </h1>
 
-          <p className="text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+          <p className="text-sm sm:text-base max-w-2xl mx-auto leading-relaxed text-slate-200">
             Step-by-step masterclasses covering visual portfolio building, custom domain routing, e-commerce storefronts, and team workflows.
           </p>
 
           {/* Search Bar */}
           <div className="pt-6 max-w-xl mx-auto">
             <div className="relative">
-              <BiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-lg" />
+              <BiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-slate-400" />
               <input
                 type="text"
-                placeholder="Search tutorials by topic, feature, or keyword..."
+                placeholder="Search tutorials by keyword or feature..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-white/10 border border-white/15 rounded-2xl pl-11 pr-4 py-3 text-sm text-white focus:outline-none focus:border-primary focus:bg-white/15 transition-all shadow-lg backdrop-blur-md"
+                className="w-full bg-white/10 border border-white/15 rounded-2xl pl-11 pr-4 py-3 text-sm text-white placeholder-slate-300 focus:outline-none focus:border-white focus:bg-white/15 transition-all shadow-lg backdrop-blur-md"
               />
               {search && (
                 <button
@@ -121,15 +117,15 @@ export default function TutorialsPage() {
         </div>
       </section>
 
-      {/* Main Tutorials Directory Section */}
-      <section className="w-full px-4 lg:px-8 pt-12">
+      {/* Main Tutorials Grid */}
+      <section className="w-full px-4 lg:px-8 pt-12 max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-6 border-b border-slate-200">
           <div>
             <h2 className="text-xl font-semibold text-slate-900 flex items-center gap-2">
-              <BiVideo className="text-primary text-2xl" /> Video Masterclasses
+              <BiVideo className="text-secondary text-2xl" /> Video Masterclasses
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Showing {filteredTutorials.length} published guide{filteredTutorials.length === 1 ? '' : 's'}
+              Showing {filteredTutorials.length} video tutorial{filteredTutorials.length === 1 ? '' : 's'}
             </p>
           </div>
 
@@ -178,7 +174,7 @@ export default function TutorialsPage() {
         ) : filteredTutorials.length === 0 ? (
           /* Empty State */
           <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center my-8 shadow-xs max-w-lg mx-auto">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-3xl mx-auto mb-4">
+            <div className="w-16 h-16 rounded-2xl bg-secondary/10 text-secondary flex items-center justify-center text-3xl mx-auto mb-4">
               <BiVideo />
             </div>
             <h3 className="text-base font-semibold text-slate-800">
@@ -200,10 +196,10 @@ export default function TutorialsPage() {
             )}
           </div>
         ) : (
-          /* Tutorials Grid */
+          /* Tutorials Grid (Redirects directly to YouTube - NO POPUP PLAYER) */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-8">
             {filteredTutorials.map((tut) => {
-              const videoLink = tut.youtube_link || tut.video_url;
+              const videoLink = tut.youtube_link || '#';
               const videoId = extractYoutubeId(videoLink);
               const thumbUrl = videoId
                 ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
@@ -217,18 +213,21 @@ export default function TutorialsPage() {
                 : null;
 
               return (
-                <div
+                <a
                   key={tut.id}
+                  href={videoLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="group rounded-3xl bg-white border border-slate-200/80 hover:border-secondary/40 transition-all duration-300 shadow-xs hover:shadow-xl hover:-translate-y-1 flex flex-col justify-between overflow-hidden cursor-pointer"
-                  onClick={() => setActiveVideo(tut)}
+                  title={`Watch "${tut.title}" on YouTube`}
                 >
                   <div>
-                    {/* Thumbnail / Video Preview Area */}
+                    {/* Thumbnail Area with YouTube Play Overlay */}
                     <div className="relative aspect-16/10 overflow-hidden bg-slate-900 flex items-center justify-center">
                       {thumbUrl ? (
                         <Image
                           src={thumbUrl}
-                          alt={tut.title || 'Tutorial cover'}
+                          alt={tut.title || 'Tutorial video cover'}
                           fill
                           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                           className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -237,14 +236,14 @@ export default function TutorialsPage() {
                         <div className="w-full h-full bg-linear-to-br from-slate-900 via-slate-800 to-slate-950 flex flex-col items-center justify-center text-slate-400 p-6 text-center">
                           <BiVideo className="text-4xl text-slate-500 mb-2" />
                           <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                            Video Guide
+                            YouTube Guide
                           </span>
                         </div>
                       )}
 
                       {/* Video Play Overlay */}
                       <div className="absolute inset-0 bg-slate-950/20 group-hover:bg-slate-950/40 transition-colors flex items-center justify-center">
-                        <div className="w-12 h-12 rounded-full bg-white/90 group-hover:bg-white text-secondary flex items-center justify-center text-2xl shadow-xl group-hover:scale-110 transition-transform">
+                        <div className="w-12 h-12 rounded-full bg-white/95 group-hover:bg-white text-secondary flex items-center justify-center text-2xl shadow-xl group-hover:scale-110 transition-transform">
                           <BiPlayCircle />
                         </div>
                       </div>
@@ -265,86 +264,26 @@ export default function TutorialsPage() {
                   </div>
 
                   {/* Metadata Footer */}
-                  <div className="px-6 pb-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-                    <span className="flex items-center gap-1.5 truncate">
-                      <BiUser className="text-secondary shrink-0" />
-                      <span className="truncate">{tut.author_name || 'Platform Team'}</span>
+                  <div className="px-6 pb-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-secondary group-hover:text-secondary-dark transition-colors">
+                      <span>Watch on YouTube</span>
+                      <BiLinkExternal className="text-sm group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                     </span>
                     {formattedDate && (
-                      <span className="flex items-center gap-1 shrink-0">
+                      <span className="flex items-center gap-1 text-slate-400 shrink-0">
                         <BiCalendar /> {formattedDate}
                       </span>
                     )}
                   </div>
-                </div>
+                </a>
               );
             })}
           </div>
         )}
       </section>
 
-      {/* Video Modal Player */}
-      {activeVideo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-          <div className="relative w-full max-w-4xl bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-white/10 space-y-4 p-4 sm:p-6">
-            <div className="flex items-center justify-between gap-4 pb-2 border-b border-white/10">
-              <h3 className="text-base sm:text-lg font-bold text-white truncate">
-                {activeVideo.title}
-              </h3>
-              <div className="flex items-center gap-2 shrink-0">
-                {(activeVideo.youtube_link || activeVideo.video_url) && (
-                  <a
-                    href={activeVideo.youtube_link || activeVideo.video_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-1.5 rounded-lg bg-white/10 text-white/80 hover:text-white hover:bg-white/20 text-sm transition-colors"
-                    title="Open on YouTube"
-                  >
-                    <BiLinkExternal />
-                  </a>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setActiveVideo(null)}
-                  className="p-1.5 rounded-lg bg-white/10 text-white/80 hover:text-white hover:bg-white/20 text-lg transition-colors cursor-pointer"
-                  title="Close player"
-                >
-                  <BiX />
-                </button>
-              </div>
-            </div>
-
-            {/* Video Iframe Container */}
-            <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black shadow-inner">
-              {extractYoutubeId(activeVideo.youtube_link || activeVideo.video_url) ? (
-                <iframe
-                  src={`https://www.youtube-nocookie.com/embed/${extractYoutubeId(
-                    activeVideo.youtube_link || activeVideo.video_url
-                  )}?autoplay=1&rel=0`}
-                  title={activeVideo.title}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="w-full h-full border-0"
-                />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 gap-2">
-                  <BiPlayCircle className="text-5xl" />
-                  <p className="text-sm">Video link could not be loaded</p>
-                </div>
-              )}
-            </div>
-
-            {activeVideo.description && (
-              <p className="text-xs text-slate-300 leading-relaxed max-w-3xl pt-1">
-                {activeVideo.description}
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Creator Call To Action */}
-      <section className="w-full px-4 lg:px-8 mt-20">
+      <section className="w-full px-4 lg:px-8 mt-20 max-w-7xl mx-auto">
         <div className="bg-linear-to-r from-slate-900 to-slate-950 rounded-3xl p-8 sm:p-12 text-white border border-white/10 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2 max-w-xl text-center md:text-left">
             <h3 className="text-2xl font-semibold tracking-tight">

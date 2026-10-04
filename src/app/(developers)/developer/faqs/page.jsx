@@ -2,8 +2,18 @@
 
 import { useState, useEffect, useContext, useRef } from 'react';
 import { Context } from 'src/component/helper/Context';
-
-
+import {
+  BiHelpCircle,
+  BiPlus,
+  BiEditAlt,
+  BiTrash,
+  BiRefresh,
+  BiSearch,
+  BiX,
+  BiCheckCircle,
+  BiInfoCircle,
+  BiLoaderAlt,
+} from 'react-icons/bi';
 
 export default function DeveloperFaqsPage() {
   const { user } = useContext(Context);
@@ -21,7 +31,10 @@ export default function DeveloperFaqsPage() {
   const formRef = useRef(null);
 
   const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
-  const canManage = permissions.includes('faqs');
+  const canManage =
+    permissions.includes('faqs') ||
+    user?.role === 'admin' ||
+    user?.role === 'manager';
 
   const fetchFaqs = async () => {
     try {
@@ -29,7 +42,7 @@ export default function DeveloperFaqsPage() {
       const res = await fetch('/api/marketing/developer/faqs');
       const data = await res.json();
       if (data.success) {
-        setFaqs(data.records || []);
+        setFaqs(data.records || data.faqs || []);
       }
     } catch (err) {
       console.error('Failed to fetch FAQs:', err);
@@ -45,7 +58,7 @@ export default function DeveloperFaqsPage() {
       .then((data) => {
         if (!active) return;
         if (data.success) {
-          setFaqs(data.records || []);
+          setFaqs(data.records || data.faqs || []);
         }
         setLoading(false);
       })
@@ -98,7 +111,7 @@ export default function DeveloperFaqsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!canManage) {
-      setFeedback({ type: 'error', message: 'Access denied: faqs permission required to create or edit FAQs.' });
+      setFeedback({ type: 'error', message: 'Access denied: faqs permission required to manage FAQs.' });
       return;
     }
 
@@ -167,8 +180,8 @@ export default function DeveloperFaqsPage() {
     if (!searchTerm.trim()) return true;
     const term = searchTerm.toLowerCase();
     return (
-      faq.question?.toLowerCase().includes(term) ||
-      faq.answer?.toLowerCase().includes(term)
+      (faq.question || '').toLowerCase().includes(term) ||
+      (faq.answer || '').toLowerCase().includes(term)
     );
   });
 
@@ -186,7 +199,7 @@ export default function DeveloperFaqsPage() {
             </span>
             {!canManage && (
               <span className="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
-                
+                <BiInfoCircle />
                 <span>Read-Only</span>
               </span>
             )}
@@ -200,25 +213,26 @@ export default function DeveloperFaqsPage() {
           <button
             type="button"
             onClick={fetchFaqs}
-            className="p-2 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-3 py-2 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium transition-colors cursor-pointer"
             title="Refresh FAQs"
-            aria-label="Refresh"
-          >Refresh</button>
+          >
+            <BiRefresh className={`text-base ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
           {canManage && (
             <button
               type="button"
               onClick={showForm && !editingFaq ? closeForm : openCreateForm}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded text-xs font-medium transition-all shadow-xs bg-secondary hover:bg-secondary-dark text-white cursor-pointer shrink-0"
-              title="Add New FAQ"
             >
               {showForm && !editingFaq ? (
                 <>
-                  
+                  <BiX className="text-base" />
                   <span>Close Form</span>
                 </>
               ) : (
                 <>
-                  
+                  <BiPlus className="text-base" />
                   <span>Add FAQ</span>
                 </>
               )}
@@ -227,10 +241,10 @@ export default function DeveloperFaqsPage() {
         </div>
       </div>
 
-      {/* Permission Warning if not admin or manager */}
+      {/* Permission Warning if not authorized */}
       {!canManage && (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded p-3.5 flex items-center gap-2.5 text-xs">
-          
+          <BiInfoCircle className="text-base shrink-0" />
           <span>
             You are currently viewing FAQs in read-only mode. Only <strong>Admin</strong> and <strong>Manager</strong> accounts can create, edit, or delete items.
           </span>
@@ -246,35 +260,35 @@ export default function DeveloperFaqsPage() {
           className="bg-white border-2 border-secondary/30 rounded p-5 sm:p-6 shadow-sm space-y-4 animate-fade-in"
         >
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h3 className="text-sm font-medium text-slate-900 flex items-center gap-2">
-              
+            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+              <BiHelpCircle className="text-secondary text-base" />
               <span>{editingFaq ? `Edit FAQ #${editingFaq.id}` : 'Create New FAQ Item'}</span>
             </h3>
             <button
               type="button"
               onClick={closeForm}
-              className="text-xs font-normal text-slate-400 hover:text-slate-600 cursor-pointer"
+              className="text-xs font-medium text-slate-400 hover:text-slate-600 flex items-center gap-1 cursor-pointer"
             >
-              Cancel
+              <BiX className="text-sm" /> Cancel
             </button>
           </div>
 
           {feedback.message && (
             <div
-              className={`p-3 rounded text-xs font-normal flex items-center gap-2 ${
+              className={`p-3 rounded text-xs font-medium flex items-center gap-2 ${
                 feedback.type === 'error'
                   ? 'bg-rose-50 text-rose-700 border border-rose-200'
                   : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
               }`}
             >
-              
+              {feedback.type === 'error' ? <BiInfoCircle className="text-sm shrink-0" /> : <BiCheckCircle className="text-sm shrink-0" />}
               <span>{feedback.message}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Question <span className="text-rose-500">*</span>
               </label>
               <input
@@ -283,12 +297,12 @@ export default function DeveloperFaqsPage() {
                 value={formData.question}
                 onChange={(e) => setFormData({ ...formData, question: e.target.value })}
                 placeholder="e.g. How do I point my custom domain to the platform?"
-                className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
+                className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Answer <span className="text-rose-500">*</span>
               </label>
               <textarea
@@ -297,7 +311,7 @@ export default function DeveloperFaqsPage() {
                 value={formData.answer}
                 onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
                 placeholder="Detailed explanation answering the question..."
-                className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
+                className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white transition-colors"
               />
             </div>
 
@@ -305,7 +319,7 @@ export default function DeveloperFaqsPage() {
               <button
                 type="button"
                 onClick={closeForm}
-                className="px-4 py-2 rounded border border-slate-200 text-slate-600 text-xs font-normal hover:bg-slate-50 cursor-pointer"
+                className="px-4 py-2 rounded border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50 cursor-pointer"
               >
                 Cancel
               </button>
@@ -316,12 +330,12 @@ export default function DeveloperFaqsPage() {
               >
                 {submitting ? (
                   <>
-                    
+                    <BiLoaderAlt className="animate-spin text-sm" />
                     <span>Saving...</span>
                   </>
                 ) : (
                   <>
-                    
+                    <BiCheckCircle className="text-sm" />
                     <span>{editingFaq ? 'Update FAQ' : 'Create FAQ'}</span>
                   </>
                 )}
@@ -337,54 +351,54 @@ export default function DeveloperFaqsPage() {
         <div className="p-3.5 sm:p-4 border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/50 w-full">
           {/* Search Input */}
           <div className="relative w-full sm:w-80">
-            
+            <BiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
             <input
               type="text"
               placeholder="Search FAQs by question or answer keywords..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white border border-slate-300 rounded pl-8.5 pr-8 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
+              className="w-full bg-white border border-slate-300 rounded pl-8 pr-8 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-secondary transition-all"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
                 title="Clear search"
               >
-                
+                <BiX className="text-xs" />
               </button>
             )}
           </div>
 
           <div className="text-xs text-slate-500 font-medium shrink-0">
-            Showing <span className="font-medium text-slate-800">{filteredFaqs.length}</span> of {faqs.length} FAQs
+            Showing <span className="font-semibold text-slate-800">{filteredFaqs.length}</span> of {faqs.length} FAQs
           </div>
         </div>
 
-        {/* Responsive View List (Strictly zero horizontal overflow) */}
+        {/* Responsive View List */}
         <div className="w-full max-w-full overflow-hidden">
           {/* Header Row */}
-          <div className="hidden md:flex items-center gap-3 px-4 py-2.5 bg-slate-50/80 border-b border-slate-100 text-[10px] font-medium uppercase tracking-wider text-slate-400 select-none">
+          <div className="hidden md:flex items-center gap-3 px-4 py-2.5 bg-slate-50/80 border-b border-slate-100 text-[10px] font-semibold uppercase tracking-wider text-slate-400 select-none">
             <span className="w-8 shrink-0">#</span>
-            <span className="w-12 shrink-0">Type</span>
+            <span className="w-12 shrink-0">Icon</span>
             <span className="flex-1 min-w-0">Question &amp; Answer Summary</span>
             <span className="w-24 shrink-0 text-center hidden sm:block">Updated</span>
-            <span className="w-20 shrink-0 text-right">Actions</span>
+            <span className="w-24 shrink-0 text-right">Actions</span>
           </div>
 
           {/* List Content */}
           {loading ? (
             <div className="py-20 text-center flex flex-col items-center justify-center gap-2 text-slate-400">
-              
+              <BiLoaderAlt className="animate-spin text-2xl text-secondary" />
               <span className="text-xs font-normal">Loading FAQs from database...</span>
             </div>
           ) : filteredFaqs.length === 0 ? (
             <div className="py-16 px-4 text-center space-y-2">
               <div className="w-12 h-12 rounded bg-slate-100 text-slate-400 flex items-center justify-center text-2xl mx-auto">
-                
+                <BiHelpCircle />
               </div>
-              <h3 className="text-sm font-medium text-slate-800">No FAQs Found</h3>
+              <h3 className="text-sm font-semibold text-slate-800">No FAQs Found</h3>
               <p className="text-xs text-slate-500 max-w-xs mx-auto">
                 {searchTerm
                   ? `No FAQ matching "${searchTerm}". Try a different search term.`
@@ -394,9 +408,9 @@ export default function DeveloperFaqsPage() {
                 <button
                   type="button"
                   onClick={openCreateForm}
-                  className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded bg-secondary text-white text-xs font-medium hover:bg-secondary-dark transition-colors cursor-pointer mt-2"
+                  className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded bg-secondary text-white text-xs font-semibold hover:bg-secondary-dark transition-colors cursor-pointer mt-2"
                 >
-                  
+                  <BiPlus className="text-sm" />
                   <span>Create First FAQ</span>
                 </button>
               )}
@@ -423,8 +437,8 @@ export default function DeveloperFaqsPage() {
                     </span>
 
                     {/* Icon Box */}
-                    <div className="w-10 h-8 sm:w-12 sm:h-9 rounded border border-secondary/20 bg-secondary/10 text-secondary shrink-0 relative flex items-center justify-center">
-                      
+                    <div className="w-9 h-9 rounded-xl border border-secondary/20 bg-secondary/10 text-secondary shrink-0 flex items-center justify-center text-lg">
+                      <BiHelpCircle />
                     </div>
 
                     {/* Question & Answer Details */}
@@ -434,14 +448,14 @@ export default function DeveloperFaqsPage() {
                           <button
                             type="button"
                             onClick={() => openEditForm(faq)}
-                            className="text-xs sm:text-sm font-medium text-slate-900 hover:text-secondary truncate block tracking-tight text-left cursor-pointer"
+                            className="text-xs sm:text-sm font-semibold text-slate-900 hover:text-secondary truncate block tracking-tight text-left cursor-pointer"
                             title={faq.question}
                           >
                             {faq.question}
                           </button>
                         ) : (
                           <span
-                            className="text-xs sm:text-sm font-medium text-slate-900 truncate block tracking-tight"
+                            className="text-xs sm:text-sm font-semibold text-slate-900 truncate block tracking-tight"
                             title={faq.question}
                           >
                             {faq.question}
@@ -471,25 +485,25 @@ export default function DeveloperFaqsPage() {
                     </div>
 
                     {/* Actions Column */}
-                    <div className="w-20 shrink-0 flex items-center justify-end gap-1">
+                    <div className="w-24 shrink-0 flex items-center justify-end gap-1.5">
                       {canManage && (
                         <>
                           <button
                             type="button"
                             onClick={() => openEditForm(faq)}
-                            className="p-1.5 rounded border border-slate-200 text-slate-600 hover:text-secondary hover:bg-slate-50 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-secondary hover:bg-slate-50 transition-colors cursor-pointer"
                             title="Edit FAQ in form"
                           >
-                            
+                            <BiEditAlt className="text-sm" />
                           </button>
                           <button
                             type="button"
                             disabled={deletingId === faq.id}
                             onClick={() => handleDelete(faq.id, faq.question)}
-                            className="p-1.5 rounded border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50"
+                            className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50"
                             title="Delete FAQ"
                           >
-                            
+                            <BiTrash className="text-sm" />
                           </button>
                         </>
                       )}

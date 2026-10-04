@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useContext, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import { Context } from 'src/component/helper/Context';
 import {
   BiSearch,
@@ -71,7 +72,6 @@ export default function MetaMessenger({
   const fetchConversations = useCallback(
     async (silent = false) => {
       try {
-        if (!silent) setLoadingConvs(true);
         const url = `/api/marketing/developer/meta/conversations?platform=${platform}&status=${statusFilter}&search=${encodeURIComponent(
           searchTerm
         )}`;
@@ -96,7 +96,6 @@ export default function MetaMessenger({
   const fetchMessages = useCallback(async (convId, silent = false) => {
     if (!convId) return;
     try {
-      if (!silent) setLoadingMsgs(true);
       const res = await fetch(`/api/marketing/developer/meta/messages?conversationId=${convId}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.records)) {
@@ -111,18 +110,64 @@ export default function MetaMessenger({
 
   // Initial load
   useEffect(() => {
-    fetchConfig();
-    fetchConversations();
-  }, [fetchConfig, fetchConversations]);
+    let isMounted = true;
+
+    fetch('/api/marketing/developer/meta/config')
+      .then((res) => res.json())
+      .then((data) => {
+        if (isMounted && data?.success && data?.config) {
+          setConfig(data.config);
+        }
+      })
+      .catch((err) => console.error('Failed to fetch Meta config:', err));
+
+    fetch(
+      `/api/marketing/developer/meta/conversations?platform=${platform}&status=${statusFilter}&search=${encodeURIComponent(
+        searchTerm
+      )}`
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        if (isMounted) {
+          if (data?.success && Array.isArray(data?.records)) {
+            setConversations(data.records);
+            setSelectedConv((prev) => prev || data.records[0] || null);
+          }
+          setLoadingConvs(false);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load conversations:', err);
+        if (isMounted) setLoadingConvs(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [platform, statusFilter, searchTerm]);
 
   // When selected conversation changes
   useEffect(() => {
-    if (selectedConv?.id) {
-      fetchMessages(selectedConv.id);
-    } else {
-      setMessages([]);
-    }
-  }, [selectedConv?.id, fetchMessages]);
+    let isMounted = true;
+    if (!selectedConv?.id) return;
+
+    fetch(`/api/marketing/developer/meta/messages?conversationId=${selectedConv.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (isMounted && data?.success && Array.isArray(data?.records)) {
+          setMessages(data.records);
+          setLoadingMsgs(false);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch messages:', err);
+        if (isMounted) setLoadingMsgs(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedConv?.id]);
 
   // Auto scroll when new messages arrive
   useEffect(() => {
@@ -271,8 +316,12 @@ export default function MetaMessenger({
     return url.startsWith('https://') || url.startsWith('http://') || url.startsWith('/');
   };
 
-  const channelConfig = config?.[platform] || {};
-  const isConfigured = Boolean(channelConfig.configured);
+  const channelConfig = config?.[platform];
+  const isConfigured = Boolean(
+    typeof channelConfig === 'object' && channelConfig !== null
+      ? channelConfig.configured
+      : channelConfig
+  );
 
   if (!canManage) {
     return (
@@ -448,9 +497,12 @@ export default function MetaMessenger({
                     {/* Avatar */}
                     <div className="w-10 h-10 rounded bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-medium shrink-0 text-sm">
                       {conv.recipient_avatar && isValidAvatarUrl(conv.recipient_avatar) ? (
-                        <img
+                        <Image
                           src={conv.recipient_avatar}
-                          alt={conv.recipient_name}
+                          alt={conv.recipient_name || 'Customer'}
+                          width={40}
+                          height={40}
+                          unoptimized
                           className="w-full h-full rounded object-cover"
                         />
                       ) : (

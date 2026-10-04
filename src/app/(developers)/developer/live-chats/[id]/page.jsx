@@ -1,9 +1,21 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-
-
+import { useRouter, useParams } from 'next/navigation';
+import Link from 'next/link';
+import {
+  FiArrowLeft,
+  FiRefreshCw,
+  FiTrash2,
+  FiSend,
+  FiUser,
+  FiShield,
+  FiAlertCircle,
+  FiLoader,
+  FiCheckCircle,
+  FiClock,
+  FiMessageSquare,
+} from 'react-icons/fi';
 
 export default function SingleLiveChatPage() {
   const params = useParams();
@@ -209,7 +221,7 @@ export default function SingleLiveChatPage() {
   if (loading) {
     return (
       <div className="min-h-[500px] flex flex-col items-center justify-center gap-3 text-slate-500">
-        
+        <FiRefreshCw className="w-8 h-8 animate-spin text-indigo-600" />
         <p className="text-xs font-normal">Connecting to live chat stream #{chatId}...</p>
       </div>
     );
@@ -218,19 +230,19 @@ export default function SingleLiveChatPage() {
   if (error || !chat) {
     return (
       <div className="max-w-xl mx-auto py-12 px-4 text-center">
-        <div className="bg-white border border-slate-200 rounded p-8 shadow-xs space-y-4">
-          <div className="w-14 h-14 bg-rose-50 text-rose-600 rounded flex items-center justify-center text-3xl mx-auto">
-            
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 shadow-xs space-y-4">
+          <div className="w-14 h-14 bg-rose-50 dark:bg-rose-950/60 text-rose-600 rounded-xl flex items-center justify-center text-3xl mx-auto">
+            <FiAlertCircle className="w-8 h-8" />
           </div>
-          <h2 className="text-lg font-medium text-slate-900">Chat Session Not Found</h2>
-          <p className="text-xs text-slate-500 leading-relaxed">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Chat Session Not Found</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
             {error || `The chat session with ID #${chatId} does not exist or has been deleted.`}
           </p>
           <Link
             href="/developer/live-chats"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 text-white dark:text-slate-900 text-xs font-medium transition-colors cursor-pointer"
           >
-            
+            <FiArrowLeft className="w-4 h-4" />
             <span>Back to Live Chat Workspace</span>
           </Link>
         </div>
@@ -244,30 +256,32 @@ export default function SingleLiveChatPage() {
   return (
     <div className="space-y-4 max-w-6xl mx-auto">
       {/* Top Action & Session Management Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded p-4 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 shadow-xs">
         <div className="flex items-center gap-3">
           <Link
             href="/developer/live-chats"
-            className="p-2 rounded border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition-colors"
+            className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
             title="Back to All Live Chats"
-          >Back</Link>
+          >
+            <FiArrowLeft className="w-4 h-4" />
+          </Link>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-base font-medium text-slate-900 leading-tight">
+              <h1 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-tight">
                 {chat.visitor_name}
               </h1>
-              <span className="font-mono text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+              <span className="font-mono text-xs text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
                 #{chat.id}
               </span>
               <span
-                className={`text-[10px] font-medium uppercase px-2 py-0.5 rounded ${
+                className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md ${
                   status === 'ACTIVE'
-                    ? 'bg-emerald-100 text-emerald-700'
+                    ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400'
                     : status === 'OPEN'
-                    ? 'bg-blue-100 text-blue-700'
+                    ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400'
                     : status === 'RESOLVED'
-                    ? 'bg-amber-100 text-amber-700'
-                    : 'bg-slate-200 text-slate-600'
+                    ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400'
+                    : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                 }`}
               >
                 {status}
@@ -275,12 +289,12 @@ export default function SingleLiveChatPage() {
 
               {/* Assigned Developer Chip */}
               {chat.assigned_developer_name ? (
-                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded">
-                  
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded-md">
+                  <FiShield className="w-3 h-3" />
                   <span>Assigned: {chat.assigned_developer_name}</span>
                 </span>
               ) : (
-                <span className="text-[10px] font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
+                <span className="text-[10px] font-normal text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
                   Unassigned
                 </span>
               )}
@@ -288,9 +302,9 @@ export default function SingleLiveChatPage() {
 
             <p className="text-xs text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
               <span>{chat.visitor_email || 'No email provided'}</span>
-              {chat.ip_address && <span>• IP: {chat.ip_address}</span>}
+              {chat.ip_address && <span>&bull; IP: {chat.ip_address}</span>}
               <span>
-                • Started{' '}
+                &bull; Started{' '}
                 {new Date(chat.created_at).toLocaleDateString([], {
                   month: 'short',
                   day: 'numeric',
@@ -303,17 +317,17 @@ export default function SingleLiveChatPage() {
         </div>
 
         {/* Developer Action Toolbar */}
-        <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
           {/* Quick "Assign to Me" button */}
           {currentUser && !isAssignedToMe && (
             <button
               type="button"
               disabled={assignLoading}
               onClick={() => handleAssignDeveloper(currentUser.id)}
-              className="inline-flex items-center gap-1 px-3 py-2 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-medium border border-indigo-200 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 text-xs font-medium border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer"
               title="Assign this live chat to me"
             >
-              
+              <FiShield className="w-3.5 h-3.5" />
               <span>Assign to Me</span>
             </button>
           )}
@@ -323,7 +337,7 @@ export default function SingleLiveChatPage() {
             value={chat.assigned_developer_id || ''}
             disabled={assignLoading}
             onChange={(e) => handleAssignDeveloper(e.target.value)}
-            className="bg-slate-50 border border-slate-300 rounded px-2.5 py-2 text-xs text-slate-700 font-normal focus:outline-none focus:border-slate-800 cursor-pointer disabled:opacity-50 transition-colors"
+            className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 dark:text-slate-200 font-normal focus:outline-none focus:border-indigo-600 cursor-pointer disabled:opacity-50 transition-colors"
             title="Reassign developer"
           >
             <option value="">Assign Developer...</option>
@@ -339,7 +353,7 @@ export default function SingleLiveChatPage() {
             value={status}
             disabled={statusLoading}
             onChange={(e) => handleStatusChange(e.target.value)}
-            className="bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-800 font-medium focus:outline-none focus:border-slate-800 cursor-pointer disabled:opacity-50 transition-colors"
+            className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 font-medium focus:outline-none focus:border-indigo-600 cursor-pointer disabled:opacity-50 transition-colors"
           >
             <option value="OPEN">Status: OPEN</option>
             <option value="ACTIVE">Status: ACTIVE</option>
@@ -352,47 +366,49 @@ export default function SingleLiveChatPage() {
             type="button"
             disabled={refreshing}
             onClick={handleManualRefresh}
-            className="p-2 rounded border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer disabled:opacity-50"
+            className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer disabled:opacity-50"
             title="Refresh stream"
-          >Refresh</button>
+          >
+            <FiRefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
 
           {/* Delete */}
           <button
             type="button"
             disabled={deleting}
             onClick={handleDeleteChat}
-            className="p-2 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50"
+            className="p-2 rounded-lg border border-rose-200 dark:border-rose-900 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors cursor-pointer disabled:opacity-50"
             title="Delete chat session"
           >
-            
+            <FiTrash2 className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
       {/* Main Chat Box Container */}
-      <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden flex flex-col h-[680px]">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden flex flex-col h-[600px] sm:h-[660px]">
         {/* Messages Stream */}
-        <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-50/40">
+        <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 bg-slate-50/40 dark:bg-slate-950/30">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center text-slate-400 gap-2">
-              
+              <FiMessageSquare className="w-8 h-8 stroke-1 text-slate-300 dark:text-slate-600" />
               <p className="text-xs font-normal">No messages in this chat session yet.</p>
             </div>
           ) : (
             messages.map((msg, idx) => {
-              const isStaff = msg.sender_type === 'ADMIN';
+              const isStaff = ['ADMIN', 'STAFF', 'DEVELOPER'].includes(String(msg.sender_type || '').toUpperCase());
               return (
                 <div
                   key={msg.id || idx}
                   className={`flex flex-col ${isStaff ? 'items-end' : 'items-start'}`}
                 >
                   <div className="flex items-center gap-1.5 mb-1 px-1">
-                    <span className="text-[11px] font-medium text-slate-600">
+                    <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
                       {isStaff
                         ? msg.sender_name || 'Support Specialist'
                         : `${msg.sender_name || chat.visitor_name} (Visitor)`}
                     </span>
-                    <span className="text-[9px] text-slate-400">
+                    <span className="text-[10px] text-slate-400">
                       {msg.created_at
                         ? new Date(msg.created_at).toLocaleTimeString([], {
                             hour: '2-digit',
@@ -400,14 +416,13 @@ export default function SingleLiveChatPage() {
                           })
                         : ''}
                     </span>
-                    
                   </div>
 
                   <div
-                    className={`max-w-[78%] sm:max-w-[70%] px-4 py-3 rounded text-xs sm:text-sm leading-relaxed shadow-xs ${
+                    className={`max-w-[85%] sm:max-w-[70%] px-4 py-3 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-xs whitespace-pre-wrap ${
                       isStaff
-                        ? 'bg-slate-900 text-white rounded-br-xs'
-                        : 'bg-white text-slate-900 border border-slate-200 rounded-bl-xs'
+                        ? 'bg-indigo-600 text-white rounded-tr-none'
+                        : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-tl-none'
                     }`}
                   >
                     {msg.message}
@@ -422,7 +437,7 @@ export default function SingleLiveChatPage() {
         {/* Reply Box Footer */}
         <form
           onSubmit={handleSendReply}
-          className="p-4 bg-white border-t border-slate-200 flex items-center gap-3"
+          className="p-3 sm:p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2 sm:gap-3"
         >
           <input
             type="text"
@@ -430,23 +445,23 @@ export default function SingleLiveChatPage() {
             placeholder={`Reply to ${chat.visitor_name} as ${currentUser?.name || 'Support'} (Press Enter to send)...`}
             value={replyMessage}
             onChange={(e) => setReplyMessage(e.target.value)}
-            className="flex-1 bg-slate-50 border border-slate-200 rounded px-4 py-3 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 focus:bg-white transition-colors"
+            className="flex-1 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition-colors"
           />
 
           <button
             type="submit"
             disabled={!replyMessage.trim() || sendingReply}
-            className="px-6 py-3 rounded bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-xs sm:text-sm font-medium shadow-xs transition-colors flex items-center gap-2 cursor-pointer shrink-0"
+            className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-xs sm:text-sm font-medium shadow-xs transition-colors flex items-center gap-2 cursor-pointer shrink-0"
           >
             {sendingReply ? (
               <>
-                
-                <span>Sending...</span>
+                <FiLoader className="w-4 h-4 animate-spin" />
+                <span className="hidden sm:inline">Sending...</span>
               </>
             ) : (
               <>
-                <span>Send Reply</span>
-                
+                <span className="hidden sm:inline">Send Reply</span>
+                <FiSend className="w-4 h-4" />
               </>
             )}
           </button>

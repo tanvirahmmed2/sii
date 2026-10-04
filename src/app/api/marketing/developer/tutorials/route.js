@@ -17,12 +17,12 @@ export async function GET(request) {
 
     if (id) {
       const res = await queryDb(
-        `SELECT t.*, d.name AS creator_name, d.email AS creator_email
-         FROM tutorials t
-         LEFT JOIN developers d ON t.created_by_developer_id = d.id
-         WHERE t.id = $1 LIMIT 1`,
+        `SELECT id, title, description, youtube_link, is_published, created_at, updated_at
+         FROM tutorials
+         WHERE id = $1 LIMIT 1`,
         [Number(id)]
       ).catch(() => ({ rows: [] }));
+
       if (res.rows.length === 0) {
         return NextResponse.json({ success: false, error: 'Tutorial not found.' }, { status: 404 });
       }
@@ -30,24 +30,22 @@ export async function GET(request) {
     }
 
     const res = await queryDb(`
-      SELECT 
-        t.*,
-        d.name AS creator_name,
-        d.email AS creator_email,
-        COALESCE(dr.slug, 'developer') AS creator_role
-      FROM tutorials t
-      LEFT JOIN developers d ON t.created_by_developer_id = d.id
-      LEFT JOIN developer_roles dr ON d.role_id = dr.id
-      ORDER BY t.created_at DESC
-    `).catch(() => ({ rows: [] }));
+      SELECT id, title, description, youtube_link, is_published, created_at, updated_at
+      FROM tutorials
+      ORDER BY created_at DESC
+    `).catch((err) => {
+      console.warn('tutorials query error:', err.message);
+      return { rows: [] };
+    });
 
     const currentStaff = auth.user || auth.staff;
     const perms = Array.isArray(currentStaff?.permissions) ? currentStaff.permissions : [];
-    const canManage = perms.includes('tutorials') || currentStaff?.role === 'admin';
+    const canManage = perms.includes('tutorials') || currentStaff?.role === 'admin' || currentStaff?.role === 'manager';
 
     return NextResponse.json({
       success: true,
-      tutorials: res.rows,
+      tutorials: res.rows || [],
+      records: res.rows || [],
       canManage,
     });
   } catch (error) {
@@ -70,30 +68,38 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { title, description, youtube_link } = body;
+    const { title, description, youtube_link, is_published } = body;
 
     if (!title || !youtube_link) {
       return NextResponse.json(
-        { success: false, error: 'Tutorial title and YouTube link are required.' },
+        { success: false, error: 'Tutorial title and YouTube video link are required.' },
         { status: 400 }
       );
     }
 
-    const currentStaffId = auth.user?.id || auth.staff?.id;
+    const isPublishedVal = is_published !== undefined ? Boolean(is_published) : true;
 
     const res = await queryDb(
-      `INSERT INTO tutorials (title, description, youtube_link, created_by_developer_id)
+      `INSERT INTO tutorials (title, description, youtube_link, is_published)
        VALUES ($1, $2, $3, $4)
-       RETURNING *`,
-      [title.trim(), description ? description.trim() : null, youtube_link.trim(), currentStaffId]
+       RETURNING id, title, description, youtube_link, is_published, created_at, updated_at`,
+      [
+        title.trim(),
+        description ? description.trim() : null,
+        youtube_link.trim(),
+        isPublishedVal,
+      ]
     );
 
-    return NextResponse.json({
-      success: true,
-      tutorial: res.rows[0],
-      record: res.rows[0],
-      message: 'Tutorial created successfully.',
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        success: true,
+        tutorial: res.rows[0],
+        record: res.rows[0],
+        message: 'Tutorial created successfully.',
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error('Developer tutorial POST error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -115,13 +121,13 @@ export async function PUT(request) {
 
     const body = await request.json();
     const id = body.id || body.tutorialId;
-    const { title, description, youtube_link } = body;
+    const { title, description, youtube_link, is_published } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Tutorial ID is required for update.' }, { status: 400 });
     }
 
-    const existingRes = await queryDb('SELECT * FROM tutorials WHERE id = $1', [Number(id)]);
+    const existingRes = await queryDb('SELECT id, title, description, youtube_link, is_published FROM tutorials WHERE id = $1', [Number(id)]);
     if (existingRes.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Tutorial not found.' }, { status: 404 });
     }
@@ -130,10 +136,14 @@ export async function PUT(request) {
     const newTitle = title !== undefined ? title.trim() : current.title;
     const newDescription = description !== undefined ? (description ? description.trim() : null) : current.description;
     const newYoutubeLink = youtube_link !== undefined ? youtube_link.trim() : current.youtube_link;
+    const newIsPublished = is_published !== undefined ? Boolean(is_published) : current.is_published;
 
     const res = await queryDb(
-      `UPDATE tutorials SET title = $1, description = $2, youtube_link = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING *`,
-      [newTitle, newDescription, newYoutubeLink, current.id]
+      `UPDATE tutorials 
+       SET title = $1, description = $2, youtube_link = $3, is_published = $4, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $5 
+       RETURNING id, title, description, youtube_link, is_published, created_at, updated_at`,
+      [newTitle, newDescription, newYoutubeLink, newIsPublished, current.id]
     );
 
     return NextResponse.json({
@@ -144,6 +154,42 @@ export async function PUT(request) {
     });
   } catch (error) {
     console.error('Developer tutorial PUT error:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+// ============================================================================
+// PATCH: Quick inline toggle for publish status
+// ============================================================================
+export async function PATCH(request) {
+  try {
+    const auth = await hasModulePermission(request, 'tutorials');
+    if (!auth.success) {
+      return NextResponse.json(
+        { success: false, error: auth.message || 'Forbidden: Permission tutorials required.' },
+        { status: auth.status || 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { id, is_published } = body;
+
+    if (!id || is_published === undefined) {
+      return NextResponse.json({ success: false, error: 'ID and is_published status are required.' }, { status: 400 });
+    }
+
+    const res = await queryDb(
+      `UPDATE tutorials SET is_published = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id, is_published`,
+      [Boolean(is_published), Number(id)]
+    );
+
+    if (res.rows.length === 0) {
+      return NextResponse.json({ success: false, error: 'Tutorial not found.' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, record: res.rows[0], message: 'Status updated.' });
+  } catch (error) {
+    console.error('Developer tutorial PATCH error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
