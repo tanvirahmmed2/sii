@@ -15,7 +15,9 @@ import {
   FiCheckCircle,
   FiClock,
   FiMessageSquare,
+  FiX,
 } from 'react-icons/fi';
+import ChatUsersSwipeBar from 'src/component/marketing/developer/ChatUsersSwipeBar';
 
 export default function SingleLiveChatPage() {
   const params = useParams();
@@ -26,6 +28,7 @@ export default function SingleLiveChatPage() {
   const [messages, setMessages] = useState([]);
   const [developers, setDevelopers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [allChats, setAllChats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [replyMessage, setReplyMessage] = useState('');
@@ -34,6 +37,12 @@ export default function SingleLiveChatPage() {
   const [assignLoading, setAssignLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [actionNotice, setActionNotice] = useState({ text: '', type: '' });
+
+  const notify = (text, type = 'success') => {
+    setActionNotice({ text, type });
+    setTimeout(() => setActionNotice({ text: '', type: '' }), 5000);
+  };
 
   const messagesEndRef = useRef(null);
 
@@ -69,19 +78,34 @@ export default function SingleLiveChatPage() {
     }
   }, [chatId]);
 
+  // Fetch all chats for the top swipe bar
+  const fetchAllChats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/marketing/developer/live_chats');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.records)) {
+        setAllChats(data.records);
+      }
+    } catch (e) {
+      console.error('Failed to fetch live chats for bar:', e);
+    }
+  }, []);
+
   // Initial fetch
   useEffect(() => {
     fetchChatDetails(true);
-  }, [fetchChatDetails]);
+    fetchAllChats();
+  }, [fetchChatDetails, fetchAllChats]);
 
-  // Real-time live polling every 3 seconds for visitor replies
+  // Real-time live polling every 3-4 seconds for visitor replies and chat list updates
   useEffect(() => {
     if (!chatId) return;
     const interval = setInterval(() => {
       fetchChatDetails(false);
-    }, 3000);
+      fetchAllChats();
+    }, 4000);
     return () => clearInterval(interval);
-  }, [chatId, fetchChatDetails]);
+  }, [chatId, fetchChatDetails, fetchAllChats]);
 
   const handleManualRefresh = async () => {
     if (!chatId || refreshing) return;
@@ -124,11 +148,11 @@ export default function SingleLiveChatPage() {
           );
         }
       } else {
-        alert(data.error || 'Failed to dispatch reply.');
+        notify(data.error || 'Failed to dispatch reply.', 'error');
       }
     } catch (err) {
       console.error('Failed to send reply:', err);
-      alert('Error sending message. Please try again.');
+      notify('Error sending message. Please try again.', 'error');
     } finally {
       setSendingReply(false);
     }
@@ -150,11 +174,13 @@ export default function SingleLiveChatPage() {
       const data = await res.json();
       if (data.success) {
         setChat((prev) => (prev ? { ...prev, status: newStatus } : prev));
+        notify(`Chat status updated to ${newStatus}.`);
       } else {
-        alert(data.error || 'Failed to update status.');
+        notify(data.error || 'Failed to update status.', 'error');
       }
     } catch (err) {
       console.error('Error changing status:', err);
+      notify('Error changing status.', 'error');
     } finally {
       setStatusLoading(false);
     }
@@ -186,11 +212,13 @@ export default function SingleLiveChatPage() {
               }
             : prev
         );
+        notify(assignedDev ? `Assigned to ${assignedDev.name}.` : 'Chat session unassigned.');
       } else {
-        alert(data.error || 'Failed to assign developer.');
+        notify(data.error || 'Failed to assign developer.', 'error');
       }
     } catch (err) {
       console.error('Error assigning developer:', err);
+      notify('Error assigning developer.', 'error');
     } finally {
       setAssignLoading(false);
     }
@@ -208,12 +236,12 @@ export default function SingleLiveChatPage() {
       if (data.success) {
         router.push('/developer/live-chats');
       } else {
-        alert(data.error || 'Failed to delete chat.');
+        notify(data.error || 'Failed to delete chat.', 'error');
         setDeleting(false);
       }
     } catch (err) {
       console.error('Error deleting chat:', err);
-      alert('Error deleting chat session.');
+      notify('Error deleting chat session.', 'error');
       setDeleting(false);
     }
   };
@@ -255,6 +283,40 @@ export default function SingleLiveChatPage() {
 
   return (
     <div className="space-y-4 max-w-6xl mx-auto">
+      {/* Top Touch-Swipeable Visitors Bar */}
+      <ChatUsersSwipeBar
+        users={allChats.map((c) => ({
+          id: c.id,
+          name: c.visitor_name || 'Visitor',
+          avatar: null,
+          lastMessageAt: c.last_message_at || c.updated_at || c.created_at,
+          unreadCount: c.unread_count || 0,
+          href: `/developer/live-chats/${c.id}`,
+        }))}
+        activeId={chatId}
+      />
+
+      {/* Toast Alert */}
+      {actionNotice.text && (
+        <div
+          className={`p-4 rounded-xl flex items-center justify-between text-xs font-medium shadow-sm transition-all ${
+            actionNotice.type === 'error'
+              ? 'bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300'
+              : 'bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-300'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {actionNotice.type === 'error' ? <FiAlertCircle className="w-4 h-4 shrink-0" /> : <FiCheckCircle className="w-4 h-4 shrink-0" />}
+            <span>{actionNotice.text}</span>
+          </div>
+          <button
+            onClick={() => setActionNotice({ text: '', type: '' })}
+            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+          >
+            <FiX className="w-4 h-4" />
+          </button>
+        </div>
+      )}
       {/* Top Action & Session Management Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 shadow-xs">
         <div className="flex items-center gap-3">

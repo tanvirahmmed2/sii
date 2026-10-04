@@ -19,6 +19,7 @@ import {
   FiPaperclip,
 } from 'react-icons/fi';
 import { Context } from 'src/component/helper/Context';
+import ChatUsersSwipeBar from 'src/component/marketing/developer/ChatUsersSwipeBar';
 
 export default function SingleSupportTicketPage() {
   const params = useParams();
@@ -42,12 +43,24 @@ export default function SingleSupportTicketPage() {
   const [deleting, setDeleting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [targetStatus, setTargetStatus] = useState('in_progress');
+  const [allTickets, setAllTickets] = useState([]);
   const [actionNotice, setActionNotice] = useState({ text: '', type: '' });
 
   const notify = (text, type = 'success') => {
     setActionNotice({ text, type });
     setTimeout(() => setActionNotice({ text: '', type: '' }), 5000);
   };
+
+  useEffect(() => {
+    fetch('/api/marketing/developer/support')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.records)) {
+          setAllTickets(data.records);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const messagesEndRef = useRef(null);
 
@@ -296,6 +309,19 @@ export default function SingleSupportTicketPage() {
           </button>
         </div>
       )}
+
+      {/* Top Touch-Swipeable Ticket Senders Bar */}
+      <ChatUsersSwipeBar
+        users={allTickets.map((t) => ({
+          id: t.id,
+          name: t.requester_name || t.creator_name || 'Creator',
+          avatar: t.creator_avatar,
+          lastMessageAt: t.last_message_at || t.updated_at || t.created_at,
+          active: String(t.id) === String(ticketId),
+          href: `/developer/support/${t.id}`,
+        }))}
+        activeId={ticketId}
+      />
 
       {/* Top Header & Actions Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 sm:p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">

@@ -2,21 +2,20 @@
 
 import { useState, useEffect, useContext, useCallback, useRef } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Context } from 'src/component/helper/Context';
+import ChatUsersSwipeBar from '../ChatUsersSwipeBar';
 import {
-  BiSearch,
-  BiRefresh,
   BiSend,
   BiCheck,
   BiCheckDouble,
   BiTrash,
-  BiArrowBack,
-  BiPlus,
   BiInfoCircle,
-  BiErrorCircle,
   BiPhone,
   BiShieldQuarter,
 } from 'react-icons/bi';
+import { FiRefreshCw, FiArrowRight, FiMessageSquare } from 'react-icons/fi';
 
 export default function MetaMessenger({
   platform = 'facebook',
@@ -27,6 +26,9 @@ export default function MetaMessenger({
   brandBg = 'bg-blue-600',
   brandBadge = 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
 }) {
+  const searchParams = useSearchParams();
+  const queryConvId = searchParams.get('convId') || searchParams.get('id');
+
   const { user } = useContext(Context);
   const role = (user?.role || 'developer').toLowerCase();
   const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
@@ -38,16 +40,12 @@ export default function MetaMessenger({
   const [conversations, setConversations] = useState([]);
   const [selectedConv, setSelectedConv] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [config, setConfig] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
   const [inputText, setInputText] = useState('');
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [sending, setSending] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [apiNotice, setApiNotice] = useState(null);
-  const [creatingTestConv, setCreatingTestConv] = useState(false);
 
   const messagesEndRef = useRef(null);
 
@@ -55,32 +53,41 @@ export default function MetaMessenger({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // 1. Fetch Meta configuration status
-  const fetchConfig = useCallback(async () => {
-    try {
-      const res = await fetch('/api/marketing/developer/meta/config');
-      const data = await res.json();
-      if (data.success && data.config) {
-        setConfig(data.config);
-      }
-    } catch (err) {
-      console.error('Failed to fetch Meta config:', err);
-    }
-  }, []);
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
-  // 2. Fetch conversations
+  // 1. Fetch conversations
   const fetchConversations = useCallback(
     async (silent = false) => {
       try {
-        const url = `/api/marketing/developer/meta/conversations?platform=${platform}&status=${statusFilter}&search=${encodeURIComponent(
-          searchTerm
-        )}`;
+        const url = `/api/marketing/developer/meta/conversations?platform=${platform}&status=ALL`;
         const res = await fetch(url);
         const data = await res.json();
         if (data.success && Array.isArray(data.records)) {
           setConversations(data.records);
-          if (!selectedConv && data.records.length > 0 && !silent) {
-            setSelectedConv(data.records[0]);
+
+          // Sort latest sender first to pick active chat
+          if (data.records.length > 0) {
+            const sorted = [...data.records].sort((a, b) => {
+              const timeA = a.last_message_at || a.updated_at || a.created_at;
+              const timeB = b.last_message_at || b.updated_at || b.created_at;
+              return new Date(timeB) - new Date(timeA);
+            });
+            setSelectedConv((prev) => {
+              if (queryConvId) {
+                const matched = data.records.find((c) => String(c.id) === String(queryConvId));
+                if (matched) return matched;
+              }
+              if (prev) {
+                const stillExists = data.records.find((c) => c.id === prev.id);
+                if (stillExists) return stillExists;
+              }
+              return sorted[0] || null;
+            });
+          } else {
+            setSelectedConv(null);
+            setMessages([]);
           }
         }
       } catch (err) {
@@ -89,13 +96,14 @@ export default function MetaMessenger({
         if (!silent) setLoadingConvs(false);
       }
     },
-    [platform, statusFilter, searchTerm, selectedConv]
+    [platform, queryConvId]
   );
 
-  // 3. Fetch messages for active conversation
+  // 2. Fetch messages for active conversation
   const fetchMessages = useCallback(async (convId, silent = false) => {
     if (!convId) return;
     try {
+      if (!silent) setLoadingMsgs(true);
       const res = await fetch(`/api/marketing/developer/meta/messages?conversationId=${convId}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.records)) {
@@ -110,102 +118,35 @@ export default function MetaMessenger({
 
   // Initial load
   useEffect(() => {
-    let isMounted = true;
+    fetchConversations();
+  }, [fetchConversations]);
 
-    fetch('/api/marketing/developer/meta/config')
-      .then((res) => res.json())
-      .then((data) => {
-        if (isMounted && data?.success && data?.config) {
-          setConfig(data.config);
-        }
-      })
-      .catch((err) => console.error('Failed to fetch Meta config:', err));
-
-    fetch(
-      `/api/marketing/developer/meta/conversations?platform=${platform}&status=${statusFilter}&search=${encodeURIComponent(
-        searchTerm
-      )}`
-    )
-      .then((res) => res.json())
-      .then((data) => {
-        if (isMounted) {
-          if (data?.success && Array.isArray(data?.records)) {
-            setConversations(data.records);
-            setSelectedConv((prev) => prev || data.records[0] || null);
-          }
-          setLoadingConvs(false);
-        }
-      })
-      .catch((err) => {
-        console.error('Failed to load conversations:', err);
-        if (isMounted) setLoadingConvs(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [platform, statusFilter, searchTerm]);
-
-  // When selected conversation changes
+  // Load messages when conversation changes
   useEffect(() => {
-    let isMounted = true;
-    if (!selectedConv?.id) return;
+    if (selectedConv?.id) {
+      fetchMessages(selectedConv.id);
+    }
+  }, [selectedConv?.id, fetchMessages]);
 
-    fetch(`/api/marketing/developer/meta/messages?conversationId=${selectedConv.id}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (isMounted && data?.success && Array.isArray(data?.records)) {
-          setMessages(data.records);
-          setLoadingMsgs(false);
-        }
-      })
-      .catch((err) => {
-        console.error('Failed to fetch messages:', err);
-        if (isMounted) setLoadingMsgs(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedConv?.id]);
-
-  // Auto scroll when new messages arrive
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  // Background polling every 6 seconds
+  // Background polling every 4 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       fetchConversations(true);
       if (selectedConv?.id) {
         fetchMessages(selectedConv.id, true);
       }
-    }, 6000);
+    }, 4000);
     return () => clearInterval(interval);
-  }, [fetchConversations, fetchMessages, selectedConv?.id]);
+  }, [selectedConv?.id, fetchConversations, fetchMessages]);
 
-  // Send message handler
+  // Send message
   const handleSendMessage = async (e) => {
-    e?.preventDefault();
-    if (!inputText.trim() || !selectedConv?.id || sending) return;
-
+    if (e) e.preventDefault();
     const text = inputText.trim();
-    setInputText('');
+    if (!text || !selectedConv?.id || sending) return;
+
     setSending(true);
     setApiNotice(null);
-
-    // Optimistic UI message insertion
-    const tempMsg = {
-      id: `temp_${Date.now()}`,
-      conversation_id: selectedConv.id,
-      sender_type: 'STAFF',
-      sender_name: user?.name || 'Staff Agent',
-      message_text: text,
-      delivery_status: 'SENDING',
-      created_at: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, tempMsg]);
 
     try {
       const res = await fetch('/api/marketing/developer/meta/messages', {
@@ -213,36 +154,26 @@ export default function MetaMessenger({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           conversationId: selectedConv.id,
-          messageText: text,
+          message: text,
         }),
       });
-
       const data = await res.json();
       if (data.success && data.record) {
-        setMessages((prev) => prev.map((m) => (m.id === tempMsg.id ? data.record : m)));
-        if (data.warning) {
-          setApiNotice(data.warning);
-        }
+        setInputText('');
+        setMessages((prev) => [...prev, data.record]);
+        if (data.apiNotice) setApiNotice(data.apiNotice);
         fetchConversations(true);
       } else {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === tempMsg.id ? { ...m, delivery_status: 'FAILED', error_message: data.error } : m
-          )
-        );
-        setApiNotice(data.error || 'Failed to dispatch message via Meta Graph API.');
+        alert(data.error || 'Failed to send message');
       }
     } catch (err) {
       console.error('Send error:', err);
-      setMessages((prev) =>
-        prev.map((m) => (m.id === tempMsg.id ? { ...m, delivery_status: 'FAILED' } : m))
-      );
     } finally {
       setSending(false);
     }
   };
 
-  // Toggle conversation status (OPEN <-> RESOLVED)
+  // Toggle status
   const handleToggleStatus = async () => {
     if (!selectedConv?.id || statusUpdating) return;
     const newStatus = selectedConv.status === 'OPEN' ? 'RESOLVED' : 'OPEN';
@@ -284,517 +215,240 @@ export default function MetaMessenger({
     }
   };
 
-  // Create test conversation for instant developer simulation
-  const handleCreateTestConversation = async () => {
-    try {
-      setCreatingTestConv(true);
-      const randomId = Math.floor(1000 + Math.random() * 9000);
-      const res = await fetch('/api/marketing/developer/meta/conversations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          platform,
-          recipientName: `${platform === 'whatsapp' ? 'WhatsApp Lead' : platform === 'instagram' ? 'Instagram Lead' : 'Facebook Customer'} #${randomId}`,
-          recipientPhone: platform === 'whatsapp' ? `+1-555-${randomId}` : null,
-          initialMessage: `Hello! I am reaching out with a question about our enrollment system on ${title}.`,
-        }),
-      });
-      const data = await res.json();
-      if (data.success && data.record) {
-        await fetchConversations(false);
-        setSelectedConv(data.record);
-      }
-    } catch (err) {
-      console.error('Failed to create test conversation:', err);
-    } finally {
-      setCreatingTestConv(false);
-    }
-  };
-
-  const isValidAvatarUrl = (url) => {
-    if (!url || typeof url !== 'string') return false;
-    return url.startsWith('https://') || url.startsWith('http://') || url.startsWith('/');
-  };
-
-  const channelConfig = config?.[platform];
-  const isConfigured = Boolean(
-    typeof channelConfig === 'object' && channelConfig !== null
-      ? channelConfig.configured
-      : channelConfig
-  );
-
   if (!canManage) {
     return (
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-8 text-center max-w-md mx-auto my-12 shadow-xs">
-        <div className="w-14 h-14 mx-auto mb-4 rounded bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center text-3xl">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 text-center max-w-md mx-auto my-12 shadow-xs">
+        <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center text-3xl">
           <BiShieldQuarter />
         </div>
         <h2 className="text-lg font-medium text-slate-900 dark:text-white mb-2">Access Restricted</h2>
         <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-          Your account role (<span className="font-medium capitalize">{role}</span>) does not have permission to manage Meta customer messaging. Access is restricted to Admin, Manager, and Support staff.
+          Your account role (<span className="font-medium capitalize">{role}</span>) does not have permission to manage {title}.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-xs transition-colors">
-        <div className="flex items-center gap-3">
-          <div className={`w-12 h-12 rounded flex items-center justify-center text-2xl ${brandBadge}`}>
-            {IconComponent && <IconComponent />}
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-medium text-slate-900 dark:text-white">{title}</h1>
-              <span className={`text-[11px] font-normal px-2 py-0.5 rounded border ${brandBadge} capitalize`}>
-                {platform}
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>
-          </div>
+    <div className="space-y-3 max-w-6xl mx-auto">
+      {/* Top Touch-Swipeable Users Bar (icon and name only, latest on left) */}
+      <ChatUsersSwipeBar
+        users={conversations.map((c) => ({
+          id: c.id,
+          name: c.recipient_name || (platform === 'whatsapp' ? c.recipient_phone : null) || 'Customer',
+          avatar: c.recipient_avatar,
+          lastMessageAt: c.last_message_at || c.updated_at || c.created_at,
+          unreadCount: c.unread_count || 0,
+          active: selectedConv?.id === c.id,
+          onClick: () => setSelectedConv(c),
+        }))}
+        activeId={selectedConv?.id}
+      />
+
+      {/* Main Content Area: No extra bar or data box */}
+      {loadingConvs && conversations.length === 0 ? (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-16 text-center text-slate-400 shadow-xs flex flex-col items-center justify-center gap-2">
+          <FiRefreshCw className="w-6 h-6 animate-spin text-slate-400" />
+          <span className="text-xs font-normal">Loading {title} conversations...</span>
         </div>
-
-        {/* Channel Health Status & Actions */}
-        <div className="flex items-center gap-2">
-          <div
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-normal border transition-colors ${
-              isConfigured
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
-            }`}
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${isConfigured ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}
-            />
-            <span>{isConfigured ? 'Meta Graph API Connected' : 'Live Credentials Pending'}</span>
+      ) : conversations.length === 0 ? (
+        /* Empty State: No chats are available */
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-16 text-center shadow-xs">
+          <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-3">
+            {IconComponent ? <IconComponent className="text-2xl" /> : <FiMessageSquare className="w-6 h-6" />}
           </div>
-
-          <button
-            type="button"
-            onClick={handleCreateTestConversation}
-            disabled={creatingTestConv}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-xs font-normal border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-            title="Create a simulated conversation to test responses"
+          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">
+            No chats are available
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mb-4">
+            There are currently no active {title} customer conversations.
+          </p>
+          <Link
+            href={`/developer/${platform}-messages/details`}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-medium hover:bg-slate-800 transition-colors"
           >
-            <BiPlus className="text-base" />
-            <span>{creatingTestConv ? 'Creating...' : 'Test Thread'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              fetchConversations();
-              if (selectedConv?.id) fetchMessages(selectedConv.id);
-            }}
-            className="p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-            title="Refresh messages"
-          >
-            <BiRefresh className="text-base" />
-          </button>
+            <span>Workspace Details</span>
+            <FiArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
-      </div>
-
-      {/* Configuration Advisory (if keys missing) */}
-      {!isConfigured && (
-        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded p-3.5 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2.5">
-          <BiInfoCircle className="text-base shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
-          <div className="space-y-1">
-            <span className="font-medium">Meta Graph API Environment Notice:</span>
-            <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-300">
-              {platform === 'facebook' && 'Configure META_PAGE_ACCESS_TOKEN and META_PAGE_ID in .env to transmit live Facebook Page messages.'}
-              {platform === 'instagram' && 'Configure META_PAGE_ACCESS_TOKEN and META_INSTAGRAM_ACCOUNT_ID in .env for Instagram Direct messaging.'}
-              {platform === 'whatsapp' && 'Configure META_WHATSAPP_TOKEN and META_WHATSAPP_PHONE_NUMBER_ID in .env for WhatsApp Cloud API messaging.'}
-              {' Staff can still receive, test, manage conversations, and save replies locally in the database.'}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Main Two-Pane Messenger Workspace */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-xs overflow-hidden h-[680px]">
-        {/* Left Pane: Conversation List */}
-        <div
-          className={`lg:col-span-4 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full bg-white dark:bg-slate-900 ${
-            selectedConv ? 'hidden lg:flex' : 'flex'
-          }`}
-        >
-          {/* Search and Filters */}
-          <div className="p-3.5 border-b border-slate-100 dark:border-slate-800 space-y-2.5">
-            <div className="relative">
-              <BiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
-              <input
-                type="text"
-                placeholder="Search conversations..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 text-xs rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-primary"
-              />
-            </div>
-
-            {/* Status Filter Tabs */}
-            <div className="flex gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded">
-              {['ALL', 'OPEN', 'RESOLVED'].map((st) => (
-                <button
-                  key={st}
-                  type="button"
-                  onClick={() => setStatusFilter(st)}
-                  className={`flex-1 py-1 text-[11px] font-normal rounded transition-colors cursor-pointer ${
-                    statusFilter === st
-                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  {st}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Conversations Scrollable List */}
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
-            {loadingConvs ? (
-              <div className="p-8 text-center text-slate-400 space-y-2">
-                <BiRefresh className="text-2xl mx-auto animate-spin" />
-                <p className="text-xs">Loading conversations...</p>
+      ) : selectedConv ? (
+        /* Active Chat Workspace: Simple and Minimal without extra bars or data boxes */
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden flex flex-col h-[650px]">
+          {/* Minimal Chat Header */}
+          <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center justify-center font-bold text-xs shrink-0">
+                {(selectedConv.recipient_name?.[0] || 'C').toUpperCase()}
               </div>
-            ) : conversations.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 space-y-3">
-                <div className={`w-12 h-12 mx-auto rounded flex items-center justify-center text-2xl ${brandBadge}`}>
-                  {IconComponent && <IconComponent />}
-                </div>
-                <div>
-                  <p className="text-xs font-normal text-slate-600 dark:text-slate-300">No conversations found</p>
-                  <p className="text-[11px] text-slate-400 max-w-xs mx-auto mt-1">
-                    Incoming messages from {title} will appear here via webhook.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleCreateTestConversation}
-                  disabled={creatingTestConv}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded ${brandBg} text-white text-xs font-normal shadow-xs hover:opacity-90 transition-opacity cursor-pointer`}
-                >
-                  <BiPlus className="text-sm" />
-                  <span>Start Test Thread</span>
-                </button>
-              </div>
-            ) : (
-              conversations.map((conv) => {
-                const isSelected = selectedConv?.id === conv.id;
-                return (
-                  <button
-                    key={conv.id}
-                    type="button"
-                    onClick={() => setSelectedConv(conv)}
-                    className={`w-full text-left p-3.5 flex items-start gap-3 transition-colors cursor-pointer ${
-                      isSelected
-                        ? 'bg-blue-50/60 dark:bg-blue-950/20 border-l-4 border-blue-600'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                    }`}
-                  >
-                    {/* Avatar */}
-                    <div className="w-10 h-10 rounded bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-medium shrink-0 text-sm">
-                      {conv.recipient_avatar && isValidAvatarUrl(conv.recipient_avatar) ? (
-                        <Image
-                          src={conv.recipient_avatar}
-                          alt={conv.recipient_name || 'Customer'}
-                          width={40}
-                          height={40}
-                          unoptimized
-                          className="w-full h-full rounded object-cover"
-                        />
-                      ) : (
-                        (conv.recipient_name?.[0] || 'C').toUpperCase()
-                      )}
-                    </div>
-
-                    {/* Meta preview */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1 mb-0.5">
-                        <span className="text-xs font-medium text-slate-900 dark:text-white truncate">
-                          {conv.recipient_name || 'Customer'}
-                        </span>
-                        <span className="text-[10px] text-slate-400 shrink-0">
-                          {new Date(conv.last_message_at || conv.updated_at).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      </div>
-
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                        {conv.last_message || 'No messages yet'}
-                      </p>
-
-                      <div className="flex items-center gap-1.5 mt-1.5">
-                        <span
-                          className={`text-[9px] font-medium px-1.5 py-0.5 rounded-sm uppercase ${
-                            conv.status === 'OPEN'
-                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                              : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                          }`}
-                        >
-                          {conv.status}
-                        </span>
-
-                        {conv.recipient_phone && (
-                          <span className="text-[10px] text-slate-400 font-mono truncate">
-                            {conv.recipient_phone}
-                          </span>
-                        )}
-
-                        {conv.unread_count > 0 && (
-                          <span className="ml-auto bg-blue-600 text-white text-[10px] font-medium px-1.5 py-0.2 rounded">
-                            {conv.unread_count}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Right Pane: Message Thread & Composer */}
-        <div
-          className={`lg:col-span-8 flex flex-col h-full bg-slate-50/50 dark:bg-slate-950/40 ${
-            !selectedConv ? 'hidden lg:flex' : 'flex'
-          }`}
-        >
-          {selectedConv ? (
-            <>
-              {/* Active Conversation Header */}
-              <div className="h-16 px-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between gap-3 shrink-0">
-                <div className="flex items-center gap-3 min-w-0">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedConv(null)}
-                    className="lg:hidden p-1.5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white rounded cursor-pointer"
-                  >
-                    <BiArrowBack className="text-lg" />
-                  </button>
-
-                  <div className="w-10 h-10 rounded bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 flex items-center justify-center font-medium text-sm shrink-0">
-                    {(selectedConv.recipient_name?.[0] || 'C').toUpperCase()}
-                  </div>
-
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                        {selectedConv.recipient_name || 'Customer'}
-                      </h2>
-                      <span
-                        className={`text-[9px] font-medium px-1.5 py-0.5 rounded-sm uppercase ${
-                          selectedConv.status === 'OPEN'
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                        }`}
-                      >
-                        {selectedConv.status}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-[11px] text-slate-400 truncate">
-                      <span>ID: {selectedConv.recipient_id}</span>
-                      {selectedConv.recipient_phone && (
-                        <>
-                          <span>•</span>
-                          <span className="flex items-center gap-1 font-mono">
-                            <BiPhone className="text-xs" />
-                            {selectedConv.recipient_phone}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Header Action Controls */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={handleToggleStatus}
-                    disabled={statusUpdating}
-                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded text-xs font-normal border transition-colors cursor-pointer ${
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                    {selectedConv.recipient_name || 'Customer'}
+                  </h2>
+                  <span
+                    className={`text-[9px] font-semibold uppercase px-2 py-0.5 rounded ${
                       selectedConv.status === 'OPEN'
-                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300'
-                        : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
+                        ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                     }`}
                   >
-                    <BiCheck className="text-sm" />
-                    <span>{selectedConv.status === 'OPEN' ? 'Mark Resolved' : 'Reopen'}</span>
-                  </button>
-
-                  {canDelete && (
-                    <button
-                      type="button"
-                      onClick={handleDeleteConversation}
-                      className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition-colors cursor-pointer"
-                      title="Delete conversation (Admin & Manager only)"
-                    >
-                      <BiTrash className="text-base" />
-                    </button>
+                    {selectedConv.status || 'OPEN'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-[11px] text-slate-400 truncate">
+                  <span>ID: {selectedConv.recipient_id}</span>
+                  {selectedConv.recipient_phone && (
+                    <>
+                      <span>&bull;</span>
+                      <span className="flex items-center gap-1 font-mono">
+                        <BiPhone className="text-xs" />
+                        {selectedConv.recipient_phone}
+                      </span>
+                    </>
                   )}
                 </div>
               </div>
+            </div>
 
-              {/* API Notice / Warning Banner */}
-              {apiNotice && (
-                <div className="mx-4 mt-3 p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded text-xs text-amber-800 dark:text-amber-200 flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-2">
-                    <BiInfoCircle className="text-base shrink-0 mt-0.5 text-amber-600" />
-                    <span>{apiNotice}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setApiNotice(null)}
-                    className="text-amber-600 font-medium hover:text-amber-900 cursor-pointer"
-                  >
-                    ✕
-                  </button>
-                </div>
-              )}
-
-              {/* Chat Thread Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {loadingMsgs ? (
-                  <div className="h-full flex items-center justify-center text-slate-400 gap-2">
-                    <BiRefresh className="text-xl animate-spin" />
-                    <span className="text-xs">Loading message history...</span>
-                  </div>
-                ) : messages.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-400 text-center p-6 space-y-2">
-                    <div className={`w-12 h-12 rounded flex items-center justify-center text-2xl ${brandBadge}`}>
-                      {IconComponent && <IconComponent />}
-                    </div>
-                    <h3 className="text-sm font-medium text-slate-800 dark:text-slate-200">Start the conversation</h3>
-                    <p className="text-xs text-slate-500 max-w-sm">
-                      Send a response message below. Your reply is saved to the database and dispatched to the platform.
-                    </p>
-                  </div>
-                ) : (
-                  messages.map((msg) => {
-                    const isStaff = msg.sender_type === 'STAFF';
-                    return (
-                      <div
-                        key={msg.id}
-                        className={`flex flex-col ${isStaff ? 'items-end' : 'items-start'}`}
-                      >
-                        <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mb-1 px-1">
-                          <span className="font-normal text-slate-600 dark:text-slate-300">
-                            {msg.sender_name || (isStaff ? 'Staff' : 'Customer')}
-                          </span>
-                          <span>•</span>
-                          <span>
-                            {new Date(msg.created_at).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
-                        </div>
-
-                        <div
-                          className={`max-w-[75%] rounded px-4 py-2.5 text-xs leading-relaxed shadow-xs ${
-                            isStaff
-                              ? `${brandBg} text-white rounded-br-xs`
-                              : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-bl-xs'
-                          }`}
-                        >
-                          <p className="whitespace-pre-wrap break-words">{msg.message_text}</p>
-                        </div>
-
-                        {/* Status indicator for staff messages */}
-                        {isStaff && (
-                          <div className="flex items-center gap-1 text-[10px] text-slate-400 mt-1 px-1">
-                            {msg.delivery_status === 'DELIVERED' || msg.delivery_status === 'READ' ? (
-                              <span className="flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
-                                <BiCheckDouble className="text-xs" /> Delivered
-                              </span>
-                            ) : msg.delivery_status === 'SENT' ? (
-                              <span className="flex items-center gap-0.5 text-slate-400">
-                                <BiCheck className="text-xs" /> Sent & Saved
-                              </span>
-                            ) : msg.delivery_status === 'SENDING' ? (
-                              <span className="flex items-center gap-0.5 text-slate-400 animate-pulse">
-                                Sending...
-                              </span>
-                            ) : (
-                              <span
-                                className="flex items-center gap-0.5 text-rose-500 font-medium"
-                                title={msg.error_message || 'Dispatch failed'}
-                              >
-                                <BiErrorCircle className="text-xs" /> Saved (Meta Dispatch Offline)
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Quick Template Replies */}
-              <div className="px-4 py-2 bg-white/70 dark:bg-slate-900/70 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2 overflow-x-auto text-[11px]">
-                <span className="text-slate-400 shrink-0 font-medium">Quick Replies:</span>
-                {[
-                  'Hello! How can we help you today?',
-                  'We are currently checking your institution account.',
-                  'Thank you for reaching out! Our team has updated your ticket.',
-                ].map((template) => (
-                  <button
-                    key={template}
-                    type="button"
-                    onClick={() => setInputText(template)}
-                    className="shrink-0 px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
-                  >
-                    {template}
-                  </button>
-                ))}
-              </div>
-
-              {/* Reply Composer */}
-              <form
-                onSubmit={handleSendMessage}
-                className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2"
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Quick status toggle */}
+              <button
+                type="button"
+                onClick={handleToggleStatus}
+                disabled={statusUpdating}
+                className={`px-2.5 py-1 text-[11px] font-medium rounded-lg transition-colors cursor-pointer ${
+                  selectedConv.status === 'OPEN'
+                    ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100'
+                    : 'text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200'
+                }`}
               >
-                <input
-                  type="text"
-                  placeholder={`Reply via ${title} (Press Enter to send)...`}
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  disabled={sending}
-                  className="flex-1 px-4 py-2.5 text-xs rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-primary"
-                />
+                {selectedConv.status === 'OPEN' ? 'Resolve' : 'Re-open'}
+              </button>
 
+              {/* Link to /details */}
+              <Link
+                href={`/developer/${platform}-messages/details`}
+                className="inline-flex items-center gap-1 px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-medium transition-colors"
+                title="View full workspace details and metrics"
+              >
+                <span>Details</span>
+                <FiArrowRight className="w-3 h-3" />
+              </Link>
+
+              {canDelete && (
                 <button
-                  type="submit"
-                  disabled={sending || !inputText.trim()}
-                  className={`inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded ${brandBg} hover:opacity-90 disabled:opacity-50 text-white text-xs font-normal transition-all shadow-xs cursor-pointer`}
+                  type="button"
+                  onClick={handleDeleteConversation}
+                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition-colors cursor-pointer"
+                  title="Delete conversation"
                 >
-                  <BiSend className="text-sm" />
-                  <span>{sending ? 'Sending...' : 'Send'}</span>
+                  <BiTrash className="text-base" />
                 </button>
-              </form>
-            </>
-          ) : (
-            <div className="h-full flex flex-col items-center justify-center text-slate-400 text-center p-8 space-y-3">
-              <div className={`w-16 h-16 rounded flex items-center justify-center text-3xl ${brandBadge}`}>
-                {IconComponent && <IconComponent />}
+              )}
+            </div>
+          </div>
+
+          {/* API notice */}
+          {apiNotice && (
+            <div className="mx-4 mt-2.5 p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-800 dark:text-amber-200 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <BiInfoCircle className="text-base shrink-0 text-amber-600" />
+                <span>{apiNotice}</span>
               </div>
-              <h3 className="text-base font-medium text-slate-800 dark:text-slate-200">No Conversation Selected</h3>
-              <p className="text-xs text-slate-500 max-w-sm leading-relaxed">
-                Choose a conversation from the left sidebar to view message history and send direct replies.
-              </p>
+              <button
+                type="button"
+                onClick={() => setApiNotice(null)}
+                className="text-amber-600 font-bold hover:text-amber-900 cursor-pointer"
+              >
+                ✕
+              </button>
             </div>
           )}
+
+          {/* Messages Stream */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3 bg-slate-50/30 dark:bg-slate-900/30">
+            {loadingMsgs && messages.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-slate-400 text-xs">
+                <FiRefreshCw className="w-4 h-4 animate-spin mr-2" />
+                Loading messages...
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs gap-1">
+                <FiMessageSquare className="w-6 h-6 stroke-1 text-slate-300 dark:text-slate-600" />
+                <p>No messages in this conversation yet.</p>
+              </div>
+            ) : (
+              messages.map((m) => {
+                const isOutbound = m.sender_type === 'page';
+                return (
+                  <div
+                    key={m.id}
+                    className={`flex items-end gap-2 ${isOutbound ? 'justify-end' : 'justify-start'}`}
+                  >
+                    {!isOutbound && (
+                      <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-bold text-[10px] shrink-0 mb-1">
+                        {(m.sender_name?.[0] || 'C').toUpperCase()}
+                      </div>
+                    )}
+                    <div
+                      className={`max-w-[75%] sm:max-w-md rounded-2xl px-4 py-2.5 text-xs shadow-xs leading-relaxed ${
+                        isOutbound
+                          ? 'bg-blue-600 text-white rounded-br-xs'
+                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-bl-xs'
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap break-words">{m.message_text}</p>
+                      <div className="flex items-center justify-end gap-1 mt-1 text-[10px] opacity-75">
+                        <span>
+                          {m.created_at
+                            ? new Date(m.created_at).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : ''}
+                        </span>
+                        {isOutbound && (
+                          <span>
+                            {m.status === 'read' ? (
+                              <BiCheckDouble className="text-sm" />
+                            ) : (
+                              <BiCheck className="text-sm" />
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Message Input Box */}
+          <form
+            onSubmit={handleSendMessage}
+            className="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center gap-2"
+          >
+            <input
+              type="text"
+              placeholder={`Reply to ${selectedConv.recipient_name || 'customer'}...`}
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              disabled={sending}
+              className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-600 transition-colors"
+            />
+            <button
+              type="submit"
+              disabled={!inputText.trim() || sending}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-medium shadow-xs transition-colors cursor-pointer shrink-0"
+            >
+              <span>Send</span>
+              <BiSend className="text-base" />
+            </button>
+          </form>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

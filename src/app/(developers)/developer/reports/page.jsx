@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext, useCallback } from 'react';
 import ReportForm from 'src/component/marketing/developer/forms/ReportForm';
+import { Context } from 'src/component/helper/Context';
 import {
   FiAlertTriangle,
   FiSearch,
@@ -16,9 +17,15 @@ import {
   FiFilter,
   FiChevronDown,
   FiChevronUp,
+  FiAlertCircle,
 } from 'react-icons/fi';
 
 export default function AdminReportsPage() {
+  const { user } = useContext(Context);
+  const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
+  const canManage = permissions.includes('reports') || ['admin', 'manager', 'developer'].includes((user?.role || '').toLowerCase());
+  const canDelete = permissions.includes('reports') || ['admin', 'manager'].includes((user?.role || '').toLowerCase());
+
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -30,25 +37,34 @@ export default function AdminReportsPage() {
   const [updateStatus, setUpdateStatus] = useState('');
   const [updatePriority, setUpdatePriority] = useState('');
   const [adminResponse, setAdminResponse] = useState('');
+  const [actionNotice, setActionNotice] = useState({ text: '', type: '' });
 
-  const fetchReports = async () => {
+  const notify = (text, type = 'success') => {
+    setActionNotice({ text, type });
+    setTimeout(() => setActionNotice({ text: '', type: '' }), 5000);
+  };
+
+  const fetchReports = useCallback(async (showLoading = false) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const res = await fetch('/api/marketing/developer/reports');
       const data = await res.json();
       if (data.success) {
         setReports(data.records || []);
+      } else {
+        notify(data.error || 'Failed to fetch reports.', 'error');
       }
     } catch (e) {
       console.error(e);
+      notify('Network error fetching reports.', 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchReports();
-  }, []);
+    fetchReports(true);
+  }, [fetchReports]);
 
   const openReviewModal = (report) => {
     setSelectedReport(report);
@@ -77,19 +93,24 @@ export default function AdminReportsPage() {
       const data = await res.json();
       if (data.success) {
         setSelectedReport(null);
-        fetchReports();
+        notify(`Report #${selectedReport.id} updated successfully.`);
+        fetchReports(false);
       } else {
-        alert(data.error || 'Failed to update report');
+        notify(data.error || 'Failed to update report', 'error');
       }
     } catch (err) {
-      alert(err.message || 'Error updating report');
+      notify(err.message || 'Error updating report', 'error');
     } finally {
       setUpdating(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this report?')) return;
+    if (!canDelete) {
+      notify('Permission denied: delete permission required.', 'error');
+      return;
+    }
+    if (!confirm('Are you sure you want to permanently delete this report?')) return;
     setDeletingId(id);
     try {
       const res = await fetch(`/api/marketing/developer/reports?id=${id}`, {
@@ -98,12 +119,14 @@ export default function AdminReportsPage() {
       const data = await res.json();
       if (data.success) {
         if (selectedReport?.id === id) setSelectedReport(null);
-        fetchReports();
+        notify('Report deleted successfully.');
+        fetchReports(false);
       } else if (data.error) {
-        alert(data.error);
+        notify(data.error, 'error');
       }
     } catch (e) {
       console.error(e);
+      notify('Network error deleting report.', 'error');
     } finally {
       setDeletingId(null);
     }
@@ -130,6 +153,28 @@ export default function AdminReportsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Toast Alert */}
+      {actionNotice.text && (
+        <div
+          className={`p-4 rounded-xl flex items-center justify-between text-xs font-medium shadow-sm transition-all ${
+            actionNotice.type === 'error'
+              ? 'bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300'
+              : 'bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-300'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {actionNotice.type === 'error' ? <FiAlertCircle className="w-4 h-4 shrink-0" /> : <FiCheckCircle className="w-4 h-4 shrink-0" />}
+            <span>{actionNotice.text}</span>
+          </div>
+          <button
+            onClick={() => setActionNotice({ text: '', type: '' })}
+            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+          >
+            <FiX className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 sm:p-6 shadow-xs">
         <div>
@@ -149,25 +194,27 @@ export default function AdminReportsPage() {
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
           <button
             type="button"
-            onClick={fetchReports}
+            onClick={() => fetchReports(true)}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium transition-colors cursor-pointer"
             title="Refresh table data"
           >
             <FiRefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Refresh</span>
           </button>
-          <button
-            type="button"
-            onClick={() => setShowForm(!showForm)}
-            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all shadow-xs cursor-pointer ${
-              showForm
-                ? 'bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-700'
-                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-            }`}
-          >
-            {showForm ? <FiX className="w-3.5 h-3.5" /> : <FiPlus className="w-3.5 h-3.5" />}
-            <span>{showForm ? 'Close Form' : 'File Report'}</span>
-          </button>
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => setShowForm(!showForm)}
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all shadow-xs cursor-pointer ${
+                showForm
+                  ? 'bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-700'
+                  : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+              }`}
+            >
+              {showForm ? <FiX className="w-3.5 h-3.5" /> : <FiPlus className="w-3.5 h-3.5" />}
+              <span>{showForm ? 'Close Form' : 'File Report'}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -193,9 +240,10 @@ export default function AdminReportsPage() {
 
       {showForm && (
         <ReportForm
-          onSuccess={() => {
+          onSuccess={(record) => {
             setShowForm(false);
-            fetchReports();
+            notify(`Moderation report #${record?.id || ''} filed successfully.`);
+            fetchReports(false);
           }}
           onCancel={() => setShowForm(false)}
         />
@@ -424,15 +472,17 @@ export default function AdminReportsPage() {
                         >
                           <FiEye className="w-4 h-4" />
                         </button>
-                        <button
-                          type="button"
-                          disabled={deletingId === r.id}
-                          onClick={() => handleDelete(r.id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors cursor-pointer"
-                          title="Delete report"
-                        >
-                          <FiTrash2 className="w-4 h-4" />
-                        </button>
+                        {canDelete && (
+                          <button
+                            type="button"
+                            disabled={deletingId === r.id}
+                            onClick={() => handleDelete(r.id)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors cursor-pointer"
+                            title="Delete report"
+                          >
+                            <FiTrash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -500,14 +550,16 @@ export default function AdminReportsPage() {
                     >
                       Review
                     </button>
-                    <button
-                      type="button"
-                      disabled={deletingId === r.id}
-                      onClick={() => handleDelete(r.id)}
-                      className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer"
-                    >
-                      <FiTrash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {canDelete && (
+                      <button
+                        type="button"
+                        disabled={deletingId === r.id}
+                        onClick={() => handleDelete(r.id)}
+                        className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer"
+                      >
+                        <FiTrash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

@@ -163,6 +163,7 @@ export default function AdminOverviewPage() {
         { label: 'Contacts', path: '/developer/contacts', desc: 'Inbound inquiries from website' },
         { label: 'Support Tickets', path: '/developer/support', desc: 'Technical trouble tickets' },
         { label: 'Reports', path: '/developer/reports', desc: 'Platform abuse and content reports' },
+        { label: 'Reviews', path: '/developer/reviews', desc: 'Creator testimonials and star ratings moderation' },
       ],
     },
     {
