@@ -271,11 +271,11 @@ export default function CreatorPaymentInvoicePage({ params }) {
               <span>This invoice is paid in full. Your subscription is active.</span>
             </div>
             <Link
-              href={`/creator/${creatorId}/webites`}
+              href="/workspace"
               className="inline-flex items-center gap-1.5 py-2 px-4 rounded-lg bg-secondary hover:bg-secondary-dark text-white text-xs font-bold transition-all shadow-xs"
             >
               <BiDesktop />
-              <span>Go to Website Builder &rarr;</span>
+              <span>Go to Workspace &rarr;</span>
             </Link>
           </div>
         ) : (
@@ -303,9 +303,9 @@ export default function CreatorPaymentInvoicePage({ params }) {
                 </span>
               </Link>
 
-              {/* Option 2: Payoneer */}
+              {/* Option 2: Paddle */}
               <Link
-                href={`/creator/${creatorId}/payments/${paymentId}/pay?gateway=payoneer`}
+                href={`/creator/${creatorId}/payments/${paymentId}/pay?gateway=paddle`}
                 className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-slate-900 dark:hover:border-slate-100 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center justify-between group cursor-pointer"
               >
                 <div className="flex items-center gap-2.5">
@@ -313,8 +313,8 @@ export default function CreatorPaymentInvoicePage({ params }) {
                     <BiCreditCard className="text-lg" />
                   </div>
                   <div>
-                    <div className="font-bold text-slate-900 dark:text-white text-xs">Payoneer / Card</div>
-                    <div className="text-[10px] text-slate-400">Debit / Credit Cards</div>
+                    <div className="font-bold text-slate-900 dark:text-white text-xs">Paddle / Card</div>
+                    <div className="text-[10px] text-slate-400">Credit / Debit Cards & PayPal</div>
                   </div>
                 </div>
                 <span className="text-xs font-bold text-slate-900 dark:text-white group-hover:translate-x-0.5 transition-transform">

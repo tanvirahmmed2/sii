@@ -63,7 +63,7 @@ function PaymentsContent() {
           action: 'pay_invoice',
           creatorId: creator.id,
           paymentId: payment.id,
-          paymentMethod: 'PAYONEER',
+          paymentMethod: 'PADDLE',
         }),
       });
       const data = await res.json();
@@ -75,7 +75,7 @@ function PaymentsContent() {
       }
     } catch (err) {
       console.error(err);
-      setPayError('Network error processing Payoneer payment.');
+      setPayError('Network error processing payment.');
     } finally {
       setPaying(false);
     }
@@ -105,7 +105,7 @@ function PaymentsContent() {
               <h3 className="font-bold text-sm text-slate-900">Order Created Successfully!</h3>
             </div>
             <p className="text-xs text-slate-600">
-              Your unpaid package invoice is listed below. Click <strong className="font-semibold text-secondary">&quot;Pay Now&quot;</strong> to complete payment via Payoneer and activate your subscription.
+              Your unpaid package invoice is listed below. Click <strong className="font-semibold text-secondary">&quot;Pay Now&quot;</strong> to complete payment via Paddle or bKash and activate your subscription.
             </p>
           </div>
           {highlightedPaymentId && (
@@ -134,7 +134,7 @@ function PaymentsContent() {
             )}
           </div>
           <p className="text-xs text-slate-500">
-            Review payment receipts, outstanding invoices, Payoneer transactions, and activate your package subscriptions.
+            Review payment receipts, outstanding invoices, transactions, and activate your package subscriptions.
           </p>
         </div>
 
@@ -173,7 +173,7 @@ function PaymentsContent() {
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Payment Gateway</span>
           <div className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
             <span className="w-5 h-5 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] font-black">৳</span>
-            <span>bKash & Payoneer</span>
+            <span>bKash & Paddle</span>
           </div>
           <p className="text-[11px] text-slate-500">BDT Mobile Banking & Global Card</p>
         </div>
@@ -297,7 +297,7 @@ function PaymentsContent() {
         </div>
       </div>
 
-      {/* Payoneer Payment Modal */}
+      {/* Paddle Payment Modal */}
       {payModalPayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden p-6 space-y-5">
@@ -307,7 +307,7 @@ function PaymentsContent() {
                   P
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Payoneer Payment Gateway</h3>
+                  <h3 className="text-base font-bold text-slate-900">Paddle Billing Gateway</h3>
                   <p className="text-[11px] text-slate-500">Invoice: {payModalPayment.transaction_id}</p>
                 </div>
               </div>
@@ -332,7 +332,7 @@ function PaymentsContent() {
                 <div>
                   <h4 className="text-xl font-bold text-slate-900">Payment Completed!</h4>
                   <p className="text-xs text-slate-500 mt-1">
-                    Your payment of ${(Number(payModalPayment.amount_in_cents || 0) / 100).toFixed(2)} {payModalPayment.currency || 'USD'} has been confirmed via Payoneer. Your subscription is now <strong className="text-emerald-600 font-bold">ACTIVE</strong>.
+                    Your payment of ${(Number(payModalPayment.amount_in_cents || 0) / 100).toFixed(2)} {payModalPayment.currency || 'USD'} has been confirmed via Paddle. Your subscription is now <strong className="text-emerald-600 font-bold">ACTIVE</strong>.
                   </p>
                 </div>
 
@@ -349,12 +349,12 @@ function PaymentsContent() {
 
                 <div className="pt-2 flex flex-col gap-2.5">
                   <Link
-                    href={`/creator/${creator.id}/webites?setup=true`}
+                    href="/workspace"
                     onClick={() => setPayModalPayment(null)}
                     className="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-2"
                   >
                     <BiWorld className="text-base" />
-                    <span>Setup Subscription & Provision Website →</span>
+                    <span>Manage Websites in Workspace →</span>
                   </Link>
                   <button
                     type="button"
@@ -402,10 +402,10 @@ function PaymentsContent() {
                 <div className="p-3.5 rounded-2xl border border-indigo-100 bg-indigo-50/40 text-[11px] text-indigo-800 space-y-1">
                   <div className="font-bold flex items-center gap-1.5 text-indigo-900">
                     <BiCheckShield className="text-sm" />
-                    <span>Payoneer Checkout Integration</span>
+                    <span>Paddle Billing Gateway</span>
                   </div>
                   <p>
-                    Clicking &quot;Pay with Payoneer&quot; will authorize and execute payment for this invoice, immediately activating your package subscription quota.
+                    Clicking &quot;View Invoice & Settle Payment&quot; will authorize and execute payment for this invoice, immediately activating your package subscription quota.
                   </p>
                 </div>
 

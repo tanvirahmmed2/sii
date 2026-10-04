@@ -14,6 +14,7 @@ import {
   BiPackage,
   BiCreditCard,
   BiStar,
+  BiSolidHeart,
 } from 'react-icons/bi';
 
 function CheckoutContent() {
@@ -28,7 +29,8 @@ function CheckoutContent() {
   const [loadingPackages, setLoadingPackages] = useState(true);
   const [selectedPkgId, setSelectedPkgId] = useState(initialPkgId ? Number(initialPkgId) : null);
   const [billingCycle, setBillingCycle] = useState(initialInterval === 'YEARLY' ? 'YEARLY' : 'MONTHLY');
-  const [paymentMethod, setPaymentMethod] = useState('BKASH'); // 'BKASH' | 'PAYONEER'
+  const [paymentMethod, setPaymentMethod] = useState('PADDLE'); // 'PADDLE' | 'BKASH'
+  const [wishlistPkgId, setWishlistPkgId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -72,13 +74,33 @@ function CheckoutContent() {
       .finally(() => setLoadingPackages(false));
   }, [initialPkgId]);
 
+  // 3. If no package specified in URL, check creator's saved wishlist package
+  useEffect(() => {
+    if (creator && !initialPkgId) {
+      fetch('/api/marketing/creator/wishlist')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.package_ids?.length > 0) {
+            const savedId = Number(data.package_ids[0]);
+            setWishlistPkgId(savedId);
+            setSelectedPkgId((current) => current || savedId);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [creator, initialPkgId]);
+
   const selectedPkg = packages.find((p) => p.id === selectedPkgId) || null;
 
   // Pricing calculations
   const isYearly = billingCycle === 'YEARLY';
-  const monthlyUsd = Number(selectedPkg?.monthly_price_usd ?? (selectedPkg ? (selectedPkg.price_in_cents || 0) / 100 : 0));
-  const yearlyUsd = Number(selectedPkg?.yearly_price_usd ?? Math.round(monthlyUsd * 10));
-  const displayPrice = isYearly ? yearlyUsd.toFixed(2) : monthlyUsd.toFixed(2);
+  const usdPrice = isYearly
+    ? Number(selectedPkg?.yearly_price_usd ?? selectedPkg?.yearly_price ?? 0)
+    : Number(selectedPkg?.monthly_price_usd ?? selectedPkg?.monthly_price ?? 0);
+  const bdtPrice = isYearly
+    ? Number(selectedPkg?.yearly_price_bdt ?? 0)
+    : Number(selectedPkg?.monthly_price_bdt ?? 0);
+  const displayPrice = paymentMethod === 'BKASH' ? bdtPrice : usdPrice.toFixed(2);
 
   const features = Array.isArray(selectedPkg?.features) && selectedPkg.features.length > 0
     ? selectedPkg.features.map((f) => f.name || f.description || f)
@@ -195,7 +217,7 @@ function CheckoutContent() {
           Review & Complete Order
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-          Confirm your package plan. An unpaid invoice will be created for Payoneer payment settlement and immediate subscription activation.
+          Confirm your package plan. An invoice will be generated for Paddle or bKash payment settlement and immediate subscription activation.
         </p>
       </div>
 
@@ -281,9 +303,17 @@ function CheckoutContent() {
                       <span>{selectedPkg.app_title}</span>
                     </span>
                   )}
-                  <h2 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white tracking-tight">
-                    {selectedPkg.name}
-                  </h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white tracking-tight">
+                      {selectedPkg.name}
+                    </h2>
+                    {selectedPkgId === wishlistPkgId && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400 border border-rose-200 dark:border-rose-900">
+                        <BiSolidHeart className="text-xs" />
+                        <span>Wishlisted</span>
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-md">
                     {selectedPkg.description || 'Complete digital portfolio and creator website system.'}
                   </p>
@@ -385,6 +415,18 @@ function CheckoutContent() {
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
+                      onClick={() => setPaymentMethod('PADDLE')}
+                      className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        paymentMethod === 'PADDLE'
+                          ? 'bg-secondary text-white border-secondary shadow-sm'
+                          : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:text-white'
+                      }`}
+                    >
+                      <BiCreditCard className="text-base" />
+                      <span>Paddle (USD)</span>
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setPaymentMethod('BKASH')}
                       className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                         paymentMethod === 'BKASH'
@@ -395,17 +437,6 @@ function CheckoutContent() {
                       <span className="w-2 h-2 rounded-full bg-white" />
                       <span>bKash (বিকাশ)</span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('PAYONEER')}
-                      className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                        paymentMethod === 'PAYONEER'
-                          ? 'bg-secondary text-white border-secondary shadow-sm'
-                          : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:text-white'
-                      }`}
-                    >
-                      <span>Payoneer Card</span>
-                    </button>
                   </div>
                 </div>
 
@@ -413,13 +444,12 @@ function CheckoutContent() {
                   <span className="text-sm font-semibold text-white">Total:</span>
                   <div className="text-right">
                     <div className="text-2xl font-black text-white font-mono">
-                      ${displayPrice} <span className="text-xs text-slate-400 font-normal">USD</span>
+                      {paymentMethod === 'BKASH' ? (
+                        <>৳{bdtPrice} <span className="text-xs text-slate-400 font-normal">BDT</span></>
+                      ) : (
+                        <>${usdPrice.toFixed(2)} <span className="text-xs text-slate-400 font-normal">USD</span></>
+                      )}
                     </div>
-                    {paymentMethod === 'BKASH' && (
-                      <span className="text-xs font-semibold text-[#E2136E]">
-                        ≈ ৳{Math.round(Number(displayPrice) * 120)} BDT
-                      </span>
-                    )}
                   </div>
                 </div>
               </div>
@@ -440,7 +470,7 @@ function CheckoutContent() {
                     <span>Creating Order...</span>
                   </>
                 ) : (
-                  <span>Continue to {paymentMethod === 'BKASH' ? 'bKash' : 'Payoneer'} Payment &rarr;</span>
+                  <span>Continue to {paymentMethod === 'BKASH' ? 'bKash' : 'Paddle'} Payment &rarr;</span>
                 )}
               </button>
             </div>

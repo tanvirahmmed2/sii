@@ -53,21 +53,14 @@ async function fetchPackageById(id) {
               '[]'::json
             ) AS tenant_module_ids,
             COALESCE(
-              (
-                SELECT json_agg(DISTINCT mod_title ORDER BY mod_title ASC)
-                FROM (
-                  SELECT am.module_title AS mod_title
-                  FROM allowed_modules am
-                  WHERE am.package_id = p.id
-                  UNION
-                  SELECT tm.name AS mod_title
-                  FROM package_modules pm
-                  JOIN tenant_modules tm ON pm.tenant_module_id = tm.id
-                  WHERE pm.package_id = p.id
-                ) combined_mods
-              ),
-              '[]'::json
-            ) AS allowed_modules
+               (
+                 SELECT json_agg(DISTINCT tm.name ORDER BY tm.name ASC)
+                 FROM package_modules pm
+                 JOIN tenant_modules tm ON pm.tenant_module_id = tm.id
+                 WHERE pm.package_id = p.id
+               ),
+               '[]'::json
+             ) AS allowed_modules
      FROM packages p
      WHERE p.id = $1
      LIMIT 1`,
@@ -129,21 +122,14 @@ export async function GET(request) {
                 '[]'::json
               ) AS tenant_module_ids,
               COALESCE(
-                (
-                  SELECT json_agg(DISTINCT mod_title ORDER BY mod_title ASC)
-                  FROM (
-                    SELECT am.module_title AS mod_title
-                    FROM allowed_modules am
-                    WHERE am.package_id = p.id
-                    UNION
-                    SELECT tm.name AS mod_title
-                    FROM package_modules pm
-                    JOIN tenant_modules tm ON pm.tenant_module_id = tm.id
-                    WHERE pm.package_id = p.id
-                  ) combined_mods
-                ),
-                '[]'::json
-              ) AS allowed_modules
+               (
+                 SELECT json_agg(DISTINCT tm.name ORDER BY tm.name ASC)
+                 FROM package_modules pm
+                 JOIN tenant_modules tm ON pm.tenant_module_id = tm.id
+                 WHERE pm.package_id = p.id
+               ),
+               '[]'::json
+             ) AS allowed_modules
        FROM packages p
        ORDER BY COALESCE(p.monthly_price_usd, p.monthly_price, 0) ASC, p.id ASC`
     ).catch(() => ({ rows: [] }));
@@ -287,7 +273,7 @@ export async function POST(request) {
 
       for (const row of linkedMods.rows) {
         await queryDb(
-          `INSERT INTO allowed_modules (package_id, module_title) VALUES ($1, $2)`,
+          // Legacy allowed_modules skipped (catalog table)
           [newPackage.id, row.name]
         ).catch(() => {});
       }
@@ -478,7 +464,7 @@ export async function PUT(request) {
 
         for (const row of linkedMods.rows) {
           await queryDb(
-            `INSERT INTO allowed_modules (package_id, module_title) VALUES ($1, $2)`,
+            // Legacy allowed_modules skipped (catalog table)
             [Number(id), row.name]
           ).catch(() => {});
         }

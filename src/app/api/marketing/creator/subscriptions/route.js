@@ -13,38 +13,60 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const creatorIdParam = searchParams.get('creatorId');
 
-    const creatorId = creatorIdParam ? Number(creatorIdParam) : sessionCreator?.id;
+    const creatorId = creatorIdParam ? Number(creatorIdParam) : Number(sessionCreator?.id);
     if (!creatorId) {
       return NextResponse.json({ success: false, error: 'Unauthorized or missing creator ID' }, { status: 401 });
     }
 
-    if (sessionCreator && sessionCreator.id !== creatorId) {
+    if (sessionCreator && Number(sessionCreator.id) !== creatorId) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
     // Parallel fetch: active subscription and all historical subscriptions from purchases table
     const [activeSubRes, allSubsRes] = await Promise.all([
       queryDb(
-        `SELECT pu.*, 
-                pu.period_start AS current_period_start,
-                pu.period_end AS current_period_end,
+        `SELECT s.id, s.creator_id, s.package_id, s.purchase_id, s.status,
+                s.current_period_start, s.current_period_end,
                 p.name AS package_name, 
                 p.slug AS package_slug, 
                 p.description AS package_description, 
                 COALESCE(p.monthly_price_usd, p.monthly_price, 0) AS price,
                 (COALESCE(p.monthly_price_usd, p.monthly_price, 0) * 100)::int AS price_in_cents, 
                 'USD' AS currency, 
-                pu.billing_cycle AS billing_interval, 
+                s.billing_cycle AS billing_interval, 
                 COALESCE(p.max_websites, 1) AS max_websites,
                 COALESCE(p.max_websites, 1) AS max_portfolios
-         FROM purchases pu
-         JOIN packages p ON pu.package_id = p.id
-         WHERE pu.creator_id = $1 
-           AND pu.status IN ('completed', 'active')
-           AND (pu.period_end IS NULL OR pu.period_end > CURRENT_TIMESTAMP)
-         ORDER BY pu.id DESC LIMIT 1`,
+         FROM subscriptions s
+         JOIN packages p ON s.package_id = p.id
+         WHERE s.creator_id = $1 
+           AND s.status IN ('completed', 'active')
+           AND (s.current_period_end IS NULL OR s.current_period_end > CURRENT_TIMESTAMP)
+         ORDER BY s.id DESC LIMIT 1`,
         [creatorId]
-      ).catch(() => ({ rows: [] })),
+      ).then(async (subRes) => {
+        if (subRes.rows.length > 0) return subRes;
+        return queryDb(
+          `SELECT pu.*, 
+                  pu.period_start AS current_period_start,
+                  pu.period_end AS current_period_end,
+                  p.name AS package_name, 
+                  p.slug AS package_slug, 
+                  p.description AS package_description, 
+                  COALESCE(p.monthly_price_usd, p.monthly_price, 0) AS price,
+                  (COALESCE(p.monthly_price_usd, p.monthly_price, 0) * 100)::int AS price_in_cents, 
+                  'USD' AS currency, 
+                  pu.billing_cycle AS billing_interval, 
+                  COALESCE(p.max_websites, 1) AS max_websites,
+                  COALESCE(p.max_websites, 1) AS max_portfolios
+           FROM purchases pu
+           JOIN packages p ON pu.package_id = p.id
+           WHERE pu.creator_id = $1 
+             AND pu.status IN ('completed', 'active')
+             AND (pu.period_end IS NULL OR pu.period_end > CURRENT_TIMESTAMP)
+           ORDER BY pu.id DESC LIMIT 1`,
+          [creatorId]
+        );
+      }).catch(() => ({ rows: [] })),
       queryDb(
         `SELECT pu.*, 
                 pu.period_start AS current_period_start,
@@ -96,7 +118,7 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
     return NextResponse.json({ success: false, error: 'Unauthorized: Creator ID required' }, { status: 401 });
   }
 
-  if (sessionCreator && sessionCreator.id !== creatorId) {
+  if (sessionCreator && Number(sessionCreator.id) !== creatorId) {
     return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
   }
 
@@ -139,6 +161,9 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
       [purchase.id, creatorId, txnId, baseAmount, paymentMethod]
     );
 
+    // 3. Clear creator's wishlist upon successful package purchase
+    await queryDb('DELETE FROM wishlists WHERE creator_id = $1', [creatorId]).catch(() => {});
+
     return NextResponse.json({
       success: true,
       subscription: {
@@ -148,6 +173,7 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
       },
       purchase,
       payment: payRes.rows[0],
+      wishlistCleared: true,
     });
   }
 

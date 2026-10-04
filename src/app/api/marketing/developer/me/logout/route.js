@@ -5,11 +5,8 @@ import { queryDb } from 'src/lib/database/db';
 
 export async function POST(request) {
   try {
-    const cookieName = DEVELOPER_TOKEN || 'hiesci-dev';
     const token =
-      request?.cookies?.get?.(cookieName)?.value ||
-      request?.cookies?.get?.('dev_admin_token')?.value ||
-      request?.cookies?.get?.('fit-dev')?.value ||
+      request?.cookies?.get?.(DEVELOPER_TOKEN)?.value ||
       request?.headers?.get?.('authorization')?.replace('Bearer ', '');
 
     if (token) {
@@ -19,14 +16,8 @@ export async function POST(request) {
       ).catch(() => {});
     }
 
-    await clearAdminSessionCookie();
     const response = NextResponse.json({ success: true, message: 'Logged out successfully.' });
-
-    const clearOptions = { path: '/', maxAge: 0, expires: new Date(0) };
-
-    response.cookies.set(cookieName, '', clearOptions);
-    response.cookies.set('dev_admin_token', '', clearOptions);
-    response.cookies.set('fit-dev', '', clearOptions);
+    await clearAdminSessionCookie(response);
 
     return response;
   } catch (error) {

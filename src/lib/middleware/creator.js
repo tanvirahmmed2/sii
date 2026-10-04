@@ -1,11 +1,11 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
-import { JWT_SECRET } from '../database/secret.js';
+import { JWT_SECRET, CREATOR_TOKEN } from '../database/secret.js';
 import { query, queryDb } from '../database/db.js';
 
 const DEFAULT_JWT_SECRET = JWT_SECRET || 'creator_studio_jwt_secret_key_2026';
-const CREATOR_COOKIE_NAME = 'creator_session_token';
+const CREATOR_COOKIE_NAME = CREATOR_TOKEN;
 
 // Password helpers
 export async function hashPassword(password) {
@@ -104,8 +104,33 @@ export async function getCreatorSession(request) {
     if (res.rows.length === 0) return null;
     const c = res.rows[0];
 
+    if (!c.is_active) return null;
+
+    // Check creator_login_sessions for revocation and activity
+    if (token) {
+      try {
+        const sessRes = await query(
+          `SELECT is_active, expires_at FROM creator_login_sessions WHERE token = $1 LIMIT 1`,
+          [token]
+        );
+        if (sessRes.rows.length > 0) {
+          const s = sessRes.rows[0];
+          if (s.is_active === false) return null;
+          if (s.expires_at && new Date(s.expires_at) < new Date()) return null;
+
+          // Touch last_active_at asynchronously
+          query(
+            `UPDATE creator_login_sessions SET last_active_at = CURRENT_TIMESTAMP WHERE token = $1`,
+            [token]
+          ).catch(() => {});
+        }
+      } catch (e) {
+        // Fallback if session table isn't accessible
+      }
+    }
+
     return {
-      id: c.id,
+      id: Number(c.id),
       name: c.name,
       email: c.email,
       phone: c.phone,
@@ -178,20 +203,26 @@ export async function authenticateCreator(email, password, { ip = '127.0.0.1', u
   }
 
   const token = generateToken({
-    id: creator.id,
+    id: Number(creator.id),
     email: creator.email,
     role: 'creator',
     type: 'creator',
   });
 
-  // Update last_login_at
+  // Update last_login_at and insert into creator_login_sessions
   try {
     await queryDb(
       `UPDATE creators SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1`,
       [creator.id]
     );
+
+    await queryDb(
+      `INSERT INTO creator_login_sessions (creator_id, token, ip_address, user_agent, expires_at)
+       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP + INTERVAL '7 days')`,
+      [creator.id, token, ip, userAgent]
+    );
   } catch (e) {
-    // Non-blocking
+    console.warn('Notice saving creator login session:', e.message);
   }
 
   // Set cookie
@@ -199,7 +230,7 @@ export async function authenticateCreator(email, password, { ip = '127.0.0.1', u
 
   return {
     creator: {
-      id: creator.id,
+      id: Number(creator.id),
       name: creator.name,
       email: creator.email,
       phone: creator.phone,

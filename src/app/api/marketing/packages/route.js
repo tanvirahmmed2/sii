@@ -33,17 +33,9 @@ function formatPackageRecord(p) {
       : Math.round(monthlyUsd * 10)
   ) || 0;
 
-  const monthlyBdt = Number(
-    p.monthly_price_bdt !== undefined
-      ? p.monthly_price_bdt
-      : Math.round(monthlyUsd * 120)
-  ) || 0;
+  const monthlyBdt = Number(p.monthly_price_bdt ?? 0);
 
-  const yearlyBdt = Number(
-    p.yearly_price_bdt !== undefined
-      ? p.yearly_price_bdt
-      : Math.round(monthlyBdt * 10)
-  ) || 0;
+  const yearlyBdt = Number(p.yearly_price_bdt ?? (monthlyBdt ? Math.round(monthlyBdt * 10) : 0));
 
   const maxWebsites = Number(p.max_websites ?? p.max_portfolios ?? 1);
 
@@ -114,17 +106,10 @@ export async function GET(request) {
              ) AS tenant_module_ids,
              COALESCE(
                (
-                 SELECT json_agg(DISTINCT mod_title ORDER BY mod_title ASC)
-                 FROM (
-                   SELECT am.module_title AS mod_title
-                   FROM allowed_modules am
-                   WHERE am.package_id = p.id
-                   UNION
-                   SELECT tm.name AS mod_title
-                   FROM package_modules pm
-                   JOIN tenant_modules tm ON pm.tenant_module_id = tm.id
-                   WHERE pm.package_id = p.id
-                 ) combined_mods
+                 SELECT json_agg(DISTINCT tm.name ORDER BY tm.name ASC)
+                 FROM package_modules pm
+                 JOIN tenant_modules tm ON pm.tenant_module_id = tm.id
+                 WHERE pm.package_id = p.id
                ),
                '[]'::json
              ) AS allowed_modules

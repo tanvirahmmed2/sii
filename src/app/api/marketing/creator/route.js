@@ -29,13 +29,14 @@ export async function GET(request) {
       }, { status: 401 });
     }
 
+    const sessionCreatorId = Number(sessionCreator.id);
     let creator = sessionCreator;
+    let redirectUrl = null;
+
     if (creatorIdParam && !isNaN(Number(creatorIdParam))) {
-      if (Number(creatorIdParam) !== sessionCreator.id) {
-        return NextResponse.json({
-          success: false,
-          error: 'Forbidden: Access to another creator profile is restricted',
-        }, { status: 403 });
+      const requestedId = Number(creatorIdParam);
+      if (requestedId !== sessionCreatorId) {
+        redirectUrl = `/creator/${sessionCreatorId}`;
       }
     }
 
@@ -57,29 +58,56 @@ export async function GET(request) {
       pendingPurchaseRes,
       websitesRes,
       paymentsRes,
+      packagesRes,
+      ticketsRes,
+      purchasesRes,
     ] = await Promise.all([
-      // 1. Active subscription (from purchases table where status is completed/active and period_end > NOW)
+      // 1. Active subscription (from subscriptions table first, fallback to purchases)
       queryDb(
-        `SELECT pu.*, 
-                pu.period_start AS current_period_start,
-                pu.period_end AS current_period_end,
+        `SELECT s.id, s.creator_id, s.package_id, s.purchase_id, s.status,
+                s.current_period_start, s.current_period_end,
+                s.current_period_start AS period_start,
+                s.current_period_end AS period_end,
+                s.billing_cycle AS billing_interval,
                 p.name AS package_name, 
                 p.slug AS package_slug, 
                 p.description AS package_description, 
                 COALESCE(p.monthly_price_usd, p.monthly_price, 0) AS price,
                 (COALESCE(p.monthly_price_usd, p.monthly_price, 0) * 100)::int AS price_in_cents, 
                 'USD' AS currency, 
-                pu.billing_cycle AS billing_interval, 
                 COALESCE(p.max_websites, 1) AS max_websites,
                 COALESCE(p.max_websites, 1) AS max_portfolios
-         FROM purchases pu
-         JOIN packages p ON pu.package_id = p.id
-         WHERE pu.creator_id = $1 
-           AND pu.status IN ('completed', 'active')
-           AND (pu.period_end IS NULL OR pu.period_end > CURRENT_TIMESTAMP)
-         ORDER BY pu.id DESC LIMIT 1`,
+         FROM subscriptions s
+         JOIN packages p ON s.package_id = p.id
+         WHERE s.creator_id = $1 
+           AND s.status IN ('active', 'completed')
+           AND (s.current_period_end IS NULL OR s.current_period_end > CURRENT_TIMESTAMP)
+         ORDER BY s.id DESC LIMIT 1`,
         [creatorId]
-      ).catch(() => ({ rows: [] })),
+      ).then(async (subRes) => {
+        if (subRes.rows.length > 0) return subRes;
+        return queryDb(
+          `SELECT pu.*, 
+                  pu.period_start AS current_period_start,
+                  pu.period_end AS current_period_end,
+                  p.name AS package_name, 
+                  p.slug AS package_slug, 
+                  p.description AS package_description, 
+                  COALESCE(p.monthly_price_usd, p.monthly_price, 0) AS price,
+                  (COALESCE(p.monthly_price_usd, p.monthly_price, 0) * 100)::int AS price_in_cents, 
+                  'USD' AS currency, 
+                  pu.billing_cycle AS billing_interval, 
+                  COALESCE(p.max_websites, 1) AS max_websites,
+                  COALESCE(p.max_websites, 1) AS max_portfolios
+           FROM purchases pu
+           JOIN packages p ON pu.package_id = p.id
+           WHERE pu.creator_id = $1 
+             AND pu.status IN ('completed', 'active')
+             AND (pu.period_end IS NULL OR pu.period_end > CURRENT_TIMESTAMP)
+           ORDER BY pu.id DESC LIMIT 1`,
+          [creatorId]
+        );
+      }).catch(() => ({ rows: [] })),
 
       // 2. Pending or unpaid subscription order
       queryDb(
@@ -217,6 +245,7 @@ export async function GET(request) {
     return NextResponse.json({
       success: true,
       creator,
+      redirectUrl,
       activeSubscription: activeSub,
       pendingSubscription: pendingSub,
       subscription: activeSub,

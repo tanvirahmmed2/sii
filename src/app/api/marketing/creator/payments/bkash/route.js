@@ -11,7 +11,6 @@ import {
   validateBkashOtp,
   validateBkashPin,
   isBkashConfigured,
-  USD_TO_BDT_RATE,
 } from 'src/lib/database/bkash';
 
 /**
@@ -90,7 +89,6 @@ export async function GET(request) {
       isConfigured: isBkashConfigured(),
       mode: isBkashConfigured() ? 'live_or_sandbox' : 'simulation_mode',
       currency: 'BDT',
-      usdToBdtRate: USD_TO_BDT_RATE,
       supportedOperators: ['Grameenphone (017, 013)', 'Banglalink (019, 014)', 'Robi (018)', 'Airtel (016)', 'Teletalk (015)'],
     });
   } catch (error) {
@@ -407,9 +405,15 @@ export async function POST(request) {
         ]
       ).catch((logErr) => console.warn('Payment transaction log warning:', logErr.message));
 
+      // Clear creator's wishlist upon successful package purchase
+      await queryDb('DELETE FROM wishlists WHERE creator_id = $1', [creatorId]).catch((wlErr) => {
+        console.warn('Notice clearing wishlist after bKash purchase:', wlErr.message);
+      });
+
       return NextResponse.json({
         success: true,
         message: 'bKash payment completed successfully. Your package subscription is now active!',
+        wishlistCleared: true,
         trxId: finalTxnId,
         payment: completedPayment,
         purchase: completedPurchase,

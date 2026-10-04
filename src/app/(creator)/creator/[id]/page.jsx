@@ -40,7 +40,7 @@ export default function CreatorOverviewPage() {
   const folderCards = [
     {
       title: 'My Websites',
-      href: `/creator/${creatorId}/webites`,
+      href: `/creator/${creatorId}/workspace`,
       icon: BiDesktop,
       badge: `${websites.length} ${websites.length === 1 ? 'Site' : 'Sites'}`,
       badgeStyle: 'bg-emerald-50 text-emerald-700 border-emerald-200',

@@ -102,6 +102,9 @@ export async function GET(request) {
       );
     }
 
+    // Clear creator's wishlist upon successful package purchase
+    await queryDb('DELETE FROM wishlists WHERE creator_id = $1', [payRecord.creator_id]).catch(console.warn);
+
     // Log transaction record
     await queryDb(
       `INSERT INTO payment_transactions (payment_id, creator_id, purchase_id, transaction_id, gateway, amount_in_cents, currency, status, gateway_response, metadata)

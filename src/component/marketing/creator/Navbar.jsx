@@ -113,7 +113,7 @@ export default function CreatorNavbar({
                     </div>
                     <div className="pt-2 border-t border-slate-100">
                       <Link
-                        href={`/creator/${creatorId}/webites`}
+                        href={`/creator/${creatorId}/workspace`}
                         onClick={() => setWebsiteDropdownOpen(false)}
                         className="flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 transition-colors"
                       >

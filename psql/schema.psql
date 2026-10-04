@@ -261,6 +261,29 @@ CREATE TRIGGER update_creators_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
+-- 11B. CREATOR LOGIN SESSIONS TABLE (Active Creator Auth Sessions)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS creator_login_sessions (
+    id BIGSERIAL PRIMARY KEY,
+    creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
+    token TEXT UNIQUE NOT NULL,
+    ip_address VARCHAR(100),
+    user_agent TEXT,
+    expires_at TIMESTAMPTZ NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    last_active_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE OR REPLACE VIEW creator_login_session AS SELECT * FROM creator_login_sessions;
+
+DROP TRIGGER IF EXISTS update_creator_login_sessions_updated_at ON creator_login_sessions;
+CREATE TRIGGER update_creator_login_sessions_updated_at
+    BEFORE UPDATE ON creator_login_sessions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
 -- 12. SUBSCRIBERS TABLE (Marketing & Newsletter Subscribers)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS subscribers (
@@ -373,6 +396,50 @@ CREATE TABLE IF NOT EXISTS payments (
 DROP TRIGGER IF EXISTS update_payments_updated_at ON payments;
 CREATE TRIGGER update_payments_updated_at
     BEFORE UPDATE ON payments
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 16.1. WISHLISTS TABLE (Package Wishlists / Saved Plans by Creators)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS wishlists (
+    id BIGSERIAL PRIMARY KEY,
+    creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
+    package_id BIGINT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(creator_id, package_id)
+);
+
+CREATE OR REPLACE VIEW wishlist AS SELECT * FROM wishlists;
+
+DROP TRIGGER IF EXISTS update_wishlists_updated_at ON wishlists;
+CREATE TRIGGER update_wishlists_updated_at
+    BEFORE UPDATE ON wishlists
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 16.2. SUBSCRIPTIONS TABLE (Active Educational Website Subscriptions)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS subscriptions (
+    id BIGSERIAL PRIMARY KEY,
+    creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
+    website_id BIGINT REFERENCES websites(id) ON DELETE SET NULL,
+    package_id BIGINT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
+    purchase_id BIGINT REFERENCES purchases(id) ON DELETE SET NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'trailing', 'past_due', 'cancelled', 'expired')),
+    billing_cycle VARCHAR(50) NOT NULL DEFAULT 'monthly' CHECK (billing_cycle IN ('monthly', 'yearly', 'lifetime', 'custom')),
+    current_period_start TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    current_period_end TIMESTAMPTZ,
+    cancel_at_period_end BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE OR REPLACE VIEW subscription AS SELECT * FROM subscriptions;
+
+DROP TRIGGER IF EXISTS update_subscriptions_updated_at ON subscriptions;
+CREATE TRIGGER update_subscriptions_updated_at
+    BEFORE UPDATE ON subscriptions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
@@ -722,6 +789,12 @@ CREATE INDEX IF NOT EXISTS idx_websites_custom_domain ON websites(custom_domain)
 CREATE INDEX IF NOT EXISTS idx_purchases_creator ON purchases(creator_id);
 CREATE INDEX IF NOT EXISTS idx_purchases_website ON purchases(website_id);
 CREATE INDEX IF NOT EXISTS idx_payments_purchase ON payments(purchase_id);
+CREATE INDEX IF NOT EXISTS idx_wishlists_creator ON wishlists(creator_id);
+CREATE INDEX IF NOT EXISTS idx_wishlists_package ON wishlists(package_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_creator ON subscriptions(creator_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_website ON subscriptions(website_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_package ON subscriptions(package_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
 CREATE INDEX IF NOT EXISTS idx_supports_creator ON supports(creator_id);
 CREATE INDEX IF NOT EXISTS idx_supports_website ON supports(website_id);
 CREATE INDEX IF NOT EXISTS idx_support_messages_support ON support_messages(support_id);
@@ -730,6 +803,9 @@ CREATE INDEX IF NOT EXISTS idx_blogs_slug ON blogs(slug);
 CREATE INDEX IF NOT EXISTS idx_dev_login_activities_dev ON developer_login_activities(developer_id);
 CREATE INDEX IF NOT EXISTS idx_dev_login_sessions_dev ON developer_login_sessions(developer_id);
 CREATE INDEX IF NOT EXISTS idx_dev_login_sessions_token ON developer_login_sessions(token);
+CREATE INDEX IF NOT EXISTS idx_creator_login_sessions_creator ON creator_login_sessions(creator_id);
+CREATE INDEX IF NOT EXISTS idx_creator_login_sessions_token ON creator_login_sessions(token);
+CREATE INDEX IF NOT EXISTS idx_creator_login_sessions_active ON creator_login_sessions(is_active);
 CREATE INDEX IF NOT EXISTS idx_live_chats_session ON live_chats(session_id);
 CREATE INDEX IF NOT EXISTS idx_live_chats_creator ON live_chats(creator_id);
 CREATE INDEX IF NOT EXISTS idx_live_chats_developer ON live_chats(assigned_developer_id);

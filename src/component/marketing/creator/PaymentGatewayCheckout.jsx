@@ -23,8 +23,11 @@ export default function PaymentGatewayCheckout({ creatorId, paymentId, initialGa
   const [isSuccess, setIsSuccess] = useState(false);
   const [resultTxnId, setResultTxnId] = useState('');
 
-  // Selected payment gateway: 'BKASH' | 'PAYONEER'
-  const [gateway, setGateway] = useState((initialGateway || 'BKASH').toUpperCase());
+  // Selected payment gateway: 'BKASH' | 'PADDLE'
+  const [gateway, setGateway] = useState(() => {
+    const init = (initialGateway || 'BKASH').toUpperCase();
+    return init === 'PAYONEER' ? 'PADDLE' : init;
+  });
 
   // bKash Multi-step state: 'ACCOUNT' | 'OTP' | 'PIN' | 'PROCESSING'
   const [bkashStep, setBkashStep] = useState('ACCOUNT');
@@ -70,9 +73,10 @@ export default function PaymentGatewayCheckout({ creatorId, paymentId, initialGa
             setPayment(data.payment);
             setCardHolder(data.payment.creator_name || '');
             if (initialGateway) {
-              setGateway(initialGateway.toUpperCase());
-            } else if (data.payment.payment_method === 'PAYONEER') {
-              setGateway('PAYONEER');
+              const gw = initialGateway.toUpperCase();
+              setGateway(gw === 'PAYONEER' ? 'PADDLE' : gw);
+            } else if (data.payment.payment_method === 'PADDLE' || data.payment.payment_method === 'PAYONEER') {
+              setGateway('PADDLE');
             } else {
               setGateway('BKASH');
             }
@@ -100,11 +104,11 @@ export default function PaymentGatewayCheckout({ creatorId, paymentId, initialGa
   // Calculate prices based on billing interval
   const isYearly = String(payment?.billing_interval || '').toUpperCase() === 'YEARLY';
   const bdtPrice = isYearly
-    ? Number(payment?.yearly_price_bdt || payment?.package_bdt_price || 3000)
-    : Number(payment?.monthly_price_bdt || payment?.package_bdt_price || 300);
+    ? Number(payment?.yearly_price_bdt ?? payment?.package_bdt_price ?? payment?.amount ?? 0)
+    : Number(payment?.monthly_price_bdt ?? payment?.package_bdt_price ?? payment?.amount ?? 0);
   const usdPrice = isYearly
-    ? Number(payment?.yearly_price_usd || payment?.package_usd_price || 30)
-    : Number(payment?.monthly_price_usd || payment?.package_usd_price || 3);
+    ? Number(payment?.yearly_price_usd ?? payment?.package_usd_price ?? payment?.amount ?? 0)
+    : Number(payment?.monthly_price_usd ?? payment?.package_usd_price ?? payment?.amount ?? 0);
 
   // Detect card network
   const cleanCardNumber = cardNumber.replace(/\s+/g, '');
@@ -350,7 +354,7 @@ export default function PaymentGatewayCheckout({ creatorId, paymentId, initialGa
           action: 'pay_invoice',
           creatorId: Number(creatorId),
           paymentId: Number(paymentId),
-          paymentMethod: 'PAYONEER',
+          paymentMethod: 'PADDLE',
           cardNumber: cardNumber.replace(/\s+/g, ''),
           cardExpiry: cardExpiry.trim(),
           cardCvv: cardCvv.trim(),
@@ -436,7 +440,7 @@ export default function PaymentGatewayCheckout({ creatorId, paymentId, initialGa
             <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
               <span>Payment Gateway:</span>
               <span className="font-bold text-slate-800 dark:text-slate-200">
-                {payment?.payment_method === 'BKASH' ? 'bKash (বিকাশ)' : 'International Card'}
+                {payment?.payment_method === 'BKASH' ? 'bKash (বিকাশ)' : 'Paddle (Global Card / PayPal)'}
               </span>
             </div>
             <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
@@ -457,10 +461,10 @@ export default function PaymentGatewayCheckout({ creatorId, paymentId, initialGa
 
           <div className="pt-2 flex flex-col gap-2.5">
             <Link
-              href={`/creator/${creatorId}/webites`}
+              href="/workspace"
               className="w-full py-3 px-4 rounded-xl bg-secondary hover:bg-secondary-dark text-white text-xs font-bold transition-all text-center cursor-pointer shadow-md shadow-secondary/20"
             >
-              Build Your Website &rarr;
+              Manage Your Websites in Workspace &rarr;
             </Link>
             <Link
               href={`/creator/${creatorId}/payments/${paymentId}`}
@@ -519,17 +523,17 @@ export default function PaymentGatewayCheckout({ creatorId, paymentId, initialGa
               <button
                 type="button"
                 onClick={() => {
-                  setGateway('PAYONEER');
+                  setGateway('PADDLE');
                   setError('');
                 }}
                 className={`py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  gateway === 'PAYONEER'
+                  gateway === 'PADDLE'
                     ? 'bg-secondary text-white shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <BiCreditCard className="text-sm" />
-                <span>Card ($ USD)</span>
+                <span>Paddle / Card ($ USD)</span>
               </button>
             </div>
           </div>

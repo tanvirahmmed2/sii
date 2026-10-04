@@ -24,7 +24,7 @@ export const CREATOR_NAV_SECTIONS = [
     title: 'Workspace',
     links: [
       { href: '', label: 'Overview', icon: BiLayer, exact: true },
-      { href: '/webites', label: 'My Websites', icon: BiDesktop },
+      { href: '/workspace', label: 'My Websites', icon: BiDesktop },
       { href: '/projects', label: 'Custom Projects', icon: BiBriefcase },
       { href: '/subscription', label: 'My Subscription', icon: BiCheckShield },
       { href: '/purchases', label: 'Packages & Plans', icon: BiCube },
@@ -135,7 +135,7 @@ export default function CreatorSidebar({
                     <span>{link.label}</span>
                   </div>
 
-                  {link.href === '/webites' && websites.length > 0 && (
+                  {(link.href === '/workspace' || link.href === '/webites') && websites.length > 0 && (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
                       {websites.length}
                     </span>

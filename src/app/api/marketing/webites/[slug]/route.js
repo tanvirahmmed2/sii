@@ -35,12 +35,13 @@ export async function GET(request, context) {
       queryDb('SELECT * FROM website_testimonials WHERE website_id = $1 ORDER BY sort_order ASC, id DESC', [websiteId]).catch(() => ({ rows: [] })),
       queryDb('SELECT * FROM website_offers WHERE website_id = $1 AND is_active = TRUE ORDER BY id DESC', [websiteId]).catch(() => ({ rows: [] })),
       queryDb(
-        `SELECT DISTINCT am.module_title
+        `SELECT DISTINCT tm.name AS module_title
          FROM websites w
-         LEFT JOIN subscription s ON s.creator_id = w.creator_id AND s.status = 'ACTIVE'
-         JOIN allowed_modules am ON am.package_id = s.package_id
+         LEFT JOIN subscriptions s ON s.creator_id = w.creator_id AND s.status = 'active'
+         JOIN package_modules pm ON pm.package_id = s.package_id
+         JOIN tenant_modules tm ON pm.tenant_module_id = tm.id
          WHERE w.id = $1
-         ORDER BY am.module_title ASC`,
+         ORDER BY tm.name ASC`,
         [websiteId]
       ).catch(() => ({ rows: [] })),
     ]);
@@ -48,11 +49,10 @@ export async function GET(request, context) {
     let allowedModules = (allowedModsRes.rows || []).map((r) => r.module_title);
     if (allowedModules.length === 0) {
       const defaultModRes = await queryDb(
-        `SELECT DISTINCT am.module_title
-         FROM allowed_modules am
-         JOIN packages p ON p.id = am.package_id
-         WHERE p.is_active = TRUE
-         ORDER BY am.module_title ASC`
+        `SELECT DISTINCT tm.name AS module_title
+         FROM tenant_modules tm
+         WHERE tm.is_active = TRUE
+         ORDER BY tm.name ASC`
       ).catch(() => ({ rows: [] }));
       allowedModules = defaultModRes.rows.map((r) => r.module_title);
     }

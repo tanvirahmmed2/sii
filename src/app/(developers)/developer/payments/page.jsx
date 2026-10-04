@@ -189,7 +189,7 @@ export default function AdminPaymentsPage() {
             )}
           </div>
           <p className="text-xs text-slate-500">
-            Financial transactions, Payoneer checkout settlements, and subscription activation management.
+            Financial transactions, Paddle & bKash checkout settlements, and subscription activation management.
           </p>
         </div>
 

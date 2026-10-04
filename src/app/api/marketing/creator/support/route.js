@@ -13,12 +13,12 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const creatorIdParam = searchParams.get('creatorId');
 
-    const creatorId = creatorIdParam ? Number(creatorIdParam) : sessionCreator?.id;
+    const creatorId = creatorIdParam ? Number(creatorIdParam) : Number(sessionCreator?.id);
     if (!creatorId) {
       return NextResponse.json({ success: false, error: 'Unauthorized: Valid creator session required' }, { status: 401 });
     }
 
-    if (sessionCreator && sessionCreator.id !== creatorId) {
+    if (sessionCreator && Number(sessionCreator.id) !== creatorId) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
@@ -48,7 +48,7 @@ export async function handleSupportAction(body, sessionCreator) {
     return NextResponse.json({ success: false, error: 'Creator ID required.' }, { status: 401 });
   }
 
-  if (sessionCreator && sessionCreator.id !== creatorId) {
+  if (sessionCreator && Number(sessionCreator.id) !== creatorId) {
     return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
   }
 

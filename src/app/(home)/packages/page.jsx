@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   BiLoaderAlt,
   BiPackage,
@@ -16,16 +17,24 @@ import {
   BiEnvelope,
   BiArrowBack,
   BiX,
+  BiHeart,
+  BiSolidHeart,
 } from 'react-icons/bi';
 import Package from 'src/component/marketing/home/cards/Package';
 import { SITE_MAIL, SITE_CONTACT } from 'src/lib/database/secret';
 
 export default function PackagesPage() {
+  const router = useRouter();
   const [currency, setCurrency] = useState('USD');
   const [billingCycle, setBillingCycle] = useState('MONTHLY');
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creator, setCreator] = useState(null);
+
+  // Creator Wishlist state
+  const [wishlistIds, setWishlistIds] = useState([]);
+  const [wishlistLoadingId, setWishlistLoadingId] = useState(null);
+  const [wishlistToast, setWishlistToast] = useState('');
 
   // Quick Custom Package Inquiry Modal state
   const [showInquiryModal, setShowInquiryModal] = useState(false);
@@ -57,10 +66,23 @@ export default function PackagesPage() {
     }
   };
 
+  // Fetch creator's wishlisted packages
+  const fetchWishlist = async () => {
+    try {
+      const res = await fetch('/api/marketing/creator/wishlist');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.package_ids)) {
+        setWishlistIds(data.package_ids);
+      }
+    } catch (e) {
+      // Unauthenticated or network error, ignore
+    }
+  };
+
   useEffect(() => {
     fetchPackages();
 
-    // Check creator session to personalize Creator Support link
+    // Check creator session to personalize Creator Support link & wishlist
     fetch('/api/marketing/creator/auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -72,18 +94,57 @@ export default function PackagesPage() {
           setCreator(data.creator);
           setInquiryName(data.creator.name || '');
           setInquiryEmail(data.creator.email || '');
+          fetchWishlist();
         }
       })
       .catch(() => setCreator(null));
   }, []);
+
+  // Handle wishlist toggle
+  const handleToggleWishlist = async (packageId) => {
+    if (!creator) {
+      router.push(`/creator/login?redirect=${encodeURIComponent('/packages')}`);
+      return;
+    }
+
+    setWishlistLoadingId(Number(packageId));
+    try {
+      const res = await fetch('/api/marketing/creator/wishlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          packageId: Number(packageId),
+          creatorId: Number(creator.id),
+          action: 'toggle',
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        if (data.isWishlisted) {
+          setWishlistIds([Number(packageId)]);
+        } else {
+          setWishlistIds([]);
+        }
+        setWishlistToast(data.message || (data.isWishlisted ? 'Package saved to wishlist!' : 'Removed from wishlist.'));
+        setTimeout(() => setWishlistToast(''), 3500);
+      } else {
+        alert(data.error || 'Failed to update wishlist');
+      }
+    } catch (err) {
+      console.error('Error toggling wishlist:', err);
+    } finally {
+      setWishlistLoadingId(null);
+    }
+  };
 
   // Sort packages from lowest to highest price based on currency and billing cycle
   const sortedPackages = useMemo(() => {
     const getPrice = (pkg) => {
       if (currency === 'BDT') {
         return billingCycle === 'YEARLY'
-          ? Number(pkg.yearly_price_bdt ?? (pkg.yearly_price ? pkg.yearly_price * 120 : 0))
-          : Number(pkg.monthly_price_bdt ?? (pkg.monthly_price ? pkg.monthly_price * 120 : 0));
+          ? Number(pkg.yearly_price_bdt ?? 0)
+          : Number(pkg.monthly_price_bdt ?? 0);
       }
       return billingCycle === 'YEARLY'
         ? Number(pkg.yearly_price_usd ?? pkg.yearly_price ?? 0)
@@ -163,7 +224,15 @@ ${inquiryMessage}`,
   };
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-16 space-y-16 max-w-7xl mx-auto">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-16 space-y-16 max-w-7xl mx-auto relative">
+      {/* Toast Notification for Wishlist */}
+      {wishlistToast && (
+        <div className="fixed top-6 right-6 z-50 flex items-center gap-2 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 text-xs font-semibold animate-fade-in">
+          <BiSolidHeart className="text-rose-500 text-base" />
+          <span>{wishlistToast}</span>
+        </div>
+      )}
+
       {/* Header Section */}
       <div className="text-center max-w-3xl mx-auto space-y-4">
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-secondary/10 text-secondary border border-secondary/20">
@@ -296,11 +365,11 @@ ${inquiryMessage}`,
               const price =
                 currency === 'BDT'
                   ? billingCycle === 'YEARLY'
-                    ? (pkg.yearly_price_bdt ?? (pkg.yearly_price ? pkg.yearly_price * 120 : 0))
-                    : (pkg.monthly_price_bdt ?? (pkg.monthly_price ? pkg.monthly_price * 120 : 0))
+                    ? Number(pkg.yearly_price_bdt ?? 0)
+                    : Number(pkg.monthly_price_bdt ?? 0)
                   : billingCycle === 'YEARLY'
-                  ? (pkg.yearly_price_usd ?? pkg.yearly_price ?? 0)
-                  : (pkg.monthly_price_usd ?? pkg.monthly_price ?? 0);
+                  ? Number(pkg.yearly_price_usd ?? pkg.yearly_price ?? 0)
+                  : Number(pkg.monthly_price_usd ?? pkg.monthly_price ?? 0);
 
               const hasExplicitPopular = sortedPackages.some((p) => Boolean(p.is_popular));
               const isPopular = hasExplicitPopular
@@ -314,6 +383,9 @@ ${inquiryMessage}`,
                   price={price}
                   billingCycle={billingCycle}
                   currency={currency}
+                  isWishlisted={wishlistIds.includes(Number(pkg.id))}
+                  onToggleWishlist={handleToggleWishlist}
+                  wishlistLoading={wishlistLoadingId === Number(pkg.id)}
                 />
               );
             })}

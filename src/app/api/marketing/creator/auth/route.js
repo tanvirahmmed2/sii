@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { queryDb } from 'src/lib/database/db';
-import { SITE_NAME } from 'src/lib/database/secret';
+import { SITE_NAME, CREATOR_TOKEN } from 'src/lib/database/secret';
 import {
   authenticateCreator,
   getCreatorSession,
@@ -169,15 +169,24 @@ export async function handleAuthAction(body, request) {
     );
 
     const sessionToken = generateToken(
-      { id: creator.id, email: cleanEmail, role: 'creator', type: 'creator' },
+      { id: Number(creator.id), email: cleanEmail, role: 'creator', type: 'creator' },
       '7d'
     );
+
+    const ip = request?.headers?.get('x-forwarded-for')?.split(',')[0]?.trim() || request?.headers?.get('x-real-ip') || '127.0.0.1';
+    const userAgent = request?.headers?.get('user-agent') || 'Unknown';
+
+    await queryDb(
+      `INSERT INTO creator_login_sessions (creator_id, token, ip_address, user_agent, expires_at)
+       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP + INTERVAL '7 days')`,
+      [creator.id, sessionToken, ip, userAgent]
+    ).catch(() => {});
 
     const resp = NextResponse.json({
       success: true,
       message: 'Your creator account has been successfully verified! You are now logged in.',
       creator: {
-        id: creator.id,
+        id: Number(creator.id),
         name: creator.name,
         email: creator.email,
         institution: creator.institution,
@@ -281,12 +290,15 @@ export async function handleAuthAction(body, request) {
 
     try {
       const result = await authenticateCreator(email, password, { ip, userAgent, twoFactorCode });
-      return NextResponse.json({
+      const response = NextResponse.json({
         success: true,
         creator: result.creator,
         token: result.token,
         message: 'Logged in successfully.',
       });
+
+      await setCreatorSessionCookie(response, result.token);
+      return response;
     } catch (authErr) {
       return NextResponse.json(
         {
@@ -305,8 +317,20 @@ export async function handleAuthAction(body, request) {
 
   // 5. Logout
   if (action === 'logout') {
-    await clearCreatorSessionCookie();
-    return NextResponse.json({ success: true, message: 'Logged out successfully.' });
+    const token =
+      request?.cookies?.get?.(CREATOR_TOKEN)?.value ||
+      request?.headers?.get?.('authorization')?.replace('Bearer ', '');
+
+    if (token) {
+      await queryDb(
+        `UPDATE creator_login_sessions SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE token = $1`,
+        [token]
+      ).catch(() => {});
+    }
+
+    const response = NextResponse.json({ success: true, message: 'Logged out successfully.' });
+    await clearCreatorSessionCookie(response);
+    return response;
   }
 
   // 6. Me

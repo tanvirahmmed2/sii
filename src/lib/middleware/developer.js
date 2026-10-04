@@ -4,9 +4,7 @@ import { cookies } from 'next/headers';
 import { JWT_SECRET, DEVELOPER_TOKEN } from '../database/secret.js';
 import { query, queryDb } from '../database/db.js';
 const DEFAULT_JWT_SECRET = JWT_SECRET || 'developer_superadmin_jwt_secret_key_2026';
-const ADMIN_COOKIE_NAME = DEVELOPER_TOKEN || 'hiesci-dev';
-const FALLBACK_COOKIE_NAME = 'dev_admin_token';
-const LEGACY_COOKIE_NAME = 'fit-dev';
+const ADMIN_COOKIE_NAME = DEVELOPER_TOKEN;
 
 // Password helpers
 export async function hashPassword(password) {
@@ -48,12 +46,10 @@ export async function setAdminSessionCookie(response, token) {
 
   if (response && response.cookies) {
     response.cookies.set(ADMIN_COOKIE_NAME, token, cookieOptions);
-    response.cookies.set(FALLBACK_COOKIE_NAME, token, cookieOptions);
   } else {
     try {
       const cookieStore = await cookies();
       cookieStore.set(ADMIN_COOKIE_NAME, token, cookieOptions);
-      cookieStore.set(FALLBACK_COOKIE_NAME, token, cookieOptions);
     } catch (e) {
       // In non-server-action context, ignore
     }
@@ -63,14 +59,10 @@ export async function setAdminSessionCookie(response, token) {
 export async function clearAdminSessionCookie(response) {
   if (response && response.cookies) {
     response.cookies.delete(ADMIN_COOKIE_NAME);
-    response.cookies.delete(FALLBACK_COOKIE_NAME);
-    response.cookies.delete(LEGACY_COOKIE_NAME);
   } else {
     try {
       const cookieStore = await cookies();
       cookieStore.delete(ADMIN_COOKIE_NAME);
-      cookieStore.delete(FALLBACK_COOKIE_NAME);
-      cookieStore.delete(LEGACY_COOKIE_NAME);
     } catch (e) {
       // Ignore
     }
@@ -89,20 +81,14 @@ export async function getAdminSession(request) {
       if (authHeader && authHeader.startsWith('Bearer ')) {
         token = authHeader.substring(7);
       } else if (request.cookies?.get) {
-        token =
-          request.cookies.get(ADMIN_COOKIE_NAME)?.value ||
-          request.cookies.get(FALLBACK_COOKIE_NAME)?.value ||
-          request.cookies.get(LEGACY_COOKIE_NAME)?.value;
+        token = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
       }
     }
 
     if (!token) {
       try {
         const cookieStore = await cookies();
-        token =
-          cookieStore.get(ADMIN_COOKIE_NAME)?.value ||
-          cookieStore.get(FALLBACK_COOKIE_NAME)?.value ||
-          cookieStore.get(LEGACY_COOKIE_NAME)?.value;
+        token = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
       } catch (e) {
         // Not in server request context
       }

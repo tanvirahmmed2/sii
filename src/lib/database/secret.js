@@ -48,3 +48,18 @@ export const META_INSTAGRAM_ACCOUNT_ID = process.env.META_INSTAGRAM_ACCOUNT_ID |
 export const META_PHONE_NUMBER_ID = process.env.META_PHONE_NUMBER_ID || '';
 export const META_WABA_ID = process.env.META_WABA_ID || '';
 export const META_WEBHOOK_VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || 'sii_meta_secure_verify_token_2026';
+
+// Paddle Payment Gateway
+export const PADDLE_API_KEY = process.env.PADDLE_API_KEY || '';
+export const PADDLE_ENVIRONMENT = process.env.PADDLE_ENVIRONMENT || 'sandbox';
+export const PADDLE_CLIENT_TOKEN = process.env.PADDLE_CLIENT_TOKEN || '';
+export const PADDLE_WEBHOOK_SECRET = process.env.PADDLE_WEBHOOK_SECRET || '';
+
+// bKash Payment Gateway
+export const BKASH_BASE_URL = process.env.BKASH_BASE_URL || 'https://tokenized.sandbox.bka.sh/v1.2.0-beta';
+export const BKASH_APP_KEY = process.env.BKASH_APP_KEY || '';
+export const BKASH_APP_SECRET = process.env.BKASH_APP_SECRET || '';
+export const BKASH_USERNAME = process.env.BKASH_USERNAME || '';
+export const BKASH_PASSWORD = process.env.BKASH_PASSWORD || '';
+export const BKASH_CALLBACK_URL = process.env.BKASH_CALLBACK_URL || '';
+export const USD_TO_BDT_RATE = parseFloat(process.env.USD_TO_BDT_RATE || '120');

@@ -2,8 +2,24 @@
 
 import { useState, useEffect, useContext, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-
-
+import Link from 'next/link';
+import { Context } from 'src/component/helper/Context';
+import {
+  BiPlus,
+  BiRefresh,
+  BiSearch,
+  BiTrash,
+  BiEditAlt,
+  BiCheckCircle,
+  BiX,
+  BiLayer,
+  BiDollar,
+  BiCreditCard,
+  BiCheckShield,
+  BiCube,
+  BiLockAlt,
+  BiCheck,
+} from 'react-icons/bi';
 import PackageForm from 'src/component/marketing/developer/forms/PackageForm';
 
 export default function AdminPackagesPage() {
@@ -185,25 +201,25 @@ export default function AdminPackagesPage() {
     <div className="space-y-6">
       {/* Toast Feedback */}
       {feedback && (
-        <div className="fixed top-6 right-6 z-50 flex items-center gap-2 bg-slate-900 text-white px-5 py-3 rounded shadow-xl border border-slate-700 text-xs font-normal animate-fade-in">
-          
+        <div className="fixed top-6 right-6 z-50 flex items-center gap-2 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl border border-slate-700 text-xs font-medium animate-fade-in">
+          <BiCheckCircle className="text-emerald-400 text-base" />
           <span>{feedback}</span>
         </div>
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 sm:p-8 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xs">
         <div>
           <div className="flex items-center gap-2.5 mb-1.5">
-            <h1 className="text-2xl sm:text-3xl font-medium text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
               Platform Packages &amp; Plans
             </h1>
-            <span className="text-[11px] font-medium uppercase tracking-wider px-3 py-0.5 rounded bg-secondary/10 text-secondary border border-secondary/20">
+            <span className="text-[11px] font-bold uppercase tracking-wider px-3 py-0.5 rounded-full bg-secondary/10 text-secondary border border-secondary/20">
               Billing Tiers
             </span>
             {!isAdminUser && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
-                
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                <BiLockAlt className="text-xs" />
                 <span>Read-Only</span>
               </span>
             )}
@@ -217,22 +233,25 @@ export default function AdminPackagesPage() {
           <button
             type="button"
             onClick={fetchPackages}
-            className="p-2.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer flex items-center gap-1 text-xs font-semibold"
             title="Refresh packages"
-          >Refresh</button>
+          >
+            <BiRefresh className="text-base" />
+            <span>Refresh</span>
+          </button>
           {isAdminUser ? (
             <button
               type="button"
               onClick={() => setShowCreateForm((prev) => !prev)}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded text-xs font-medium transition-all shadow-xs bg-secondary hover:bg-secondary-dark text-white cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs bg-secondary hover:bg-secondary-dark text-white cursor-pointer"
               title="Toggle Package Creation Form"
             >
-              
+              {showCreateForm ? <BiX className="text-base" /> : <BiPlus className="text-base" />}
               <span>{showCreateForm ? 'Close Form' : 'Create Package'}</span>
             </button>
           ) : (
-            <div className="flex items-center gap-1 px-4 py-2 rounded bg-slate-100 text-slate-500 text-xs font-normal">
-              
+            <div className="flex items-center gap-1 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 text-xs font-medium">
+              <BiLockAlt className="text-xs" />
               <span>Admin Role Required</span>
             </div>
           )}
@@ -253,63 +272,63 @@ export default function AdminPackagesPage() {
 
       {/* Metrics KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-xs">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-500">Total Plans</span>
-            <div className="p-2 rounded bg-secondary/10 text-secondary">
-              
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Plans</span>
+            <div className="p-2 rounded-xl bg-secondary/10 text-secondary text-lg">
+              <BiCube />
             </div>
           </div>
-          <div className="text-2xl font-medium text-slate-900 dark:text-white">{totalPackages}</div>
+          <div className="text-2xl font-bold text-slate-900 dark:text-white">{totalPackages}</div>
           <p className="text-[11px] text-slate-400 mt-1">Configured subscription tiers</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-xs">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-500">Active Tiers</span>
-            <div className="p-2 rounded bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600">
-              
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Active Tiers</span>
+            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 text-lg">
+              <BiCheckShield />
             </div>
           </div>
-          <div className="text-2xl font-medium text-emerald-600">{activePackages}</div>
+          <div className="text-2xl font-bold text-emerald-600">{activePackages}</div>
           <p className="text-[11px] text-slate-400 mt-1">Published for checkout</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-xs">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-500">Avg USD Monthly</span>
-            <div className="p-2 rounded bg-primary/20 text-primary-dark">
-              
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Avg USD Monthly</span>
+            <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 text-lg">
+              <BiDollar />
             </div>
           </div>
-          <div className="text-2xl font-medium text-slate-900 dark:text-white">${avgMonthlyUsd}</div>
+          <div className="text-2xl font-bold text-slate-900 dark:text-white">${avgMonthlyUsd}</div>
           <p className="text-[11px] text-slate-400 mt-1">Average dollar rate</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-xs">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-500">Avg BDT Monthly</span>
-            <div className="p-2 rounded bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600">
-              
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Avg BDT Monthly</span>
+            <div className="p-2 rounded-xl bg-pink-50 dark:bg-pink-950/50 text-pink-600 text-lg">
+              <BiCreditCard />
             </div>
           </div>
-          <div className="text-2xl font-medium text-indigo-600">৳{avgMonthlyBdt}</div>
+          <div className="text-2xl font-bold text-pink-600">৳{avgMonthlyBdt}</div>
           <p className="text-[11px] text-slate-400 mt-1">Average Taka rate</p>
         </div>
       </div>
 
       {/* Table Card */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-xs overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
         {/* Table Filters & Search */}
         <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-800/20">
           <div className="relative flex-1 max-w-md">
-            
+            <BiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
             <input
               type="text"
               placeholder="Search packages by name, tagline, or module..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded pl-3 pr-4 py-2 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all font-medium"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all font-medium"
             />
           </div>
 
@@ -318,7 +337,7 @@ export default function AdminPackagesPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-700 dark:text-slate-300 focus:outline-none focus:border-secondary cursor-pointer"
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:border-secondary cursor-pointer"
             >
               <option value="ALL">All Statuses</option>
               <option value="ACTIVE">Active Only</option>
@@ -329,7 +348,7 @@ export default function AdminPackagesPage() {
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-700 dark:text-slate-300 focus:outline-none focus:border-secondary cursor-pointer"
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:border-secondary cursor-pointer"
               title="Sort packages order"
             >
               <option value="PRICE_ASC">Price: Low to High</option>
@@ -338,8 +357,8 @@ export default function AdminPackagesPage() {
               <option value="NEWEST">Newest First</option>
             </select>
 
-            <div className="text-xs text-slate-500 font-medium pl-2 hidden sm:block">
-              <span className="font-medium text-slate-800 dark:text-slate-200">{filtered.length}</span> of {packages.length}
+            <div className="text-xs text-slate-500 font-semibold pl-2 hidden sm:block">
+              <span className="font-bold text-slate-800 dark:text-slate-200">{filtered.length}</span> of {packages.length}
             </div>
           </div>
         </div>
@@ -348,7 +367,7 @@ export default function AdminPackagesPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 font-normal uppercase tracking-wider text-[10px]">
+              <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[10px]">
                 <th className="px-5 py-3.5 whitespace-nowrap">ID</th>
                 <th className="px-5 py-3.5 whitespace-nowrap">Package Tier</th>
                 <th className="px-5 py-3.5 whitespace-nowrap">USD Pricing ($)</th>
@@ -365,8 +384,8 @@ export default function AdminPackagesPage() {
                 <tr>
                   <td colSpan={9} className="py-16 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="w-6 h-6 border-2 border-secondary border-t-transparent rounded animate-spin" />
-                      <span className="text-xs font-normal">Loading packages from database...</span>
+                      <div className="w-6 h-6 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
+                      <span className="text-xs font-medium">Loading packages from database...</span>
                     </div>
                   </td>
                 </tr>
@@ -374,8 +393,8 @@ export default function AdminPackagesPage() {
                 <tr>
                   <td colSpan={9} className="py-16 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      
-                      <span className="text-xs font-normal">No packages found matching your criteria.</span>
+                      <BiCube className="text-3xl text-slate-300" />
+                      <span className="text-xs font-medium">No packages found matching your criteria.</span>
                     </div>
                   </td>
                 </tr>
@@ -406,13 +425,13 @@ export default function AdminPackagesPage() {
                         <div className="flex items-center gap-2">
                           <Link
                             href={`/developer/packages/${pkg.slug}`}
-                            className="font-medium text-slate-900 dark:text-white hover:text-secondary block truncate"
+                            className="font-bold text-slate-900 dark:text-white hover:text-secondary block truncate"
                             title="Open Plan Workspace"
                           >
                             {pkg.name}
                           </Link>
                           {pkg.is_popular && (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40">
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40">
                               Popular
                             </span>
                           )}
@@ -429,7 +448,7 @@ export default function AdminPackagesPage() {
                       </td>
 
                       <td className="px-5 py-4">
-                        <div className="font-mono font-medium text-slate-900 dark:text-white text-sm">
+                        <div className="font-mono font-bold text-slate-900 dark:text-white text-sm">
                           ${monthlyUsd.toFixed(2)}<span className="text-[10px] text-slate-400 font-normal">/mo</span>
                         </div>
                         <div className="text-[10px] text-slate-500 font-mono">
@@ -438,7 +457,7 @@ export default function AdminPackagesPage() {
                       </td>
 
                       <td className="px-5 py-4">
-                        <div className="font-mono font-medium text-slate-900 dark:text-white text-sm">
+                        <div className="font-mono font-bold text-slate-900 dark:text-white text-sm">
                           ৳{monthlyBdt.toFixed(2)}<span className="text-[10px] text-slate-400 font-normal">/mo</span>
                         </div>
                         <div className="text-[10px] text-slate-500 font-mono">
@@ -447,7 +466,7 @@ export default function AdminPackagesPage() {
                       </td>
 
                       <td className="px-5 py-4">
-                        <div className="font-normal text-slate-800 dark:text-slate-200">
+                        <div className="font-semibold text-slate-800 dark:text-slate-200">
                           {pkg.max_students || 500} Students
                         </div>
                         <div className="text-[10px] text-slate-400">
@@ -462,7 +481,7 @@ export default function AdminPackagesPage() {
                               {modulesList.slice(0, 2).map((mod) => (
                                 <span
                                   key={mod}
-                                  className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-normal bg-secondary/10 text-secondary border border-secondary/20"
+                                  className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-secondary/10 text-secondary border border-secondary/20"
                                 >
                                   {mod}
                                 </span>
@@ -487,7 +506,7 @@ export default function AdminPackagesPage() {
                           type="button"
                           disabled={togglingId === pkg.id || !isAdminUser}
                           onClick={() => handleToggleStatus(pkg)}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-medium transition-all ${
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all ${
                             !isAdminUser ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'
                           } ${
                             isRowActive
@@ -496,7 +515,7 @@ export default function AdminPackagesPage() {
                           }`}
                           title={isAdminUser ? 'Click to toggle status' : 'packages permission required to toggle status'}
                         >
-                          
+                          <span className={`w-1.5 h-1.5 rounded-full ${isRowActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                           <span>{togglingId === pkg.id ? 'Updating...' : isRowActive ? 'Active' : 'Disabled'}</span>
                         </button>
                       </td>
@@ -510,18 +529,21 @@ export default function AdminPackagesPage() {
                           <div className="inline-flex items-center gap-1">
                             <Link
                               href={`/developer/packages/${pkg.slug}`}
-                              className="p-1.5 text-slate-500 hover:text-secondary hover:bg-secondary/10 rounded transition-colors cursor-pointer"
+                              className="p-1.5 text-slate-500 hover:text-secondary hover:bg-secondary/10 rounded-lg transition-colors cursor-pointer flex items-center gap-1 font-semibold"
                               title="Edit Package in Workspace"
-                            >Edit</Link>
+                            >
+                              <BiEditAlt className="text-sm" />
+                              <span>Edit</span>
+                            </Link>
 
                             <button
                               type="button"
                               disabled={deletingId === pkg.id}
                               onClick={() => handleDelete(pkg.id, pkg.name)}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded transition-colors cursor-pointer"
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer"
                               title="Delete package"
                             >
-                              
+                              <BiTrash className="text-base" />
                             </button>
                           </div>
                         ) : (

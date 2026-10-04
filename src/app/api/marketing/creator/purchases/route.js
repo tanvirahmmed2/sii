@@ -14,12 +14,12 @@ export async function GET(request) {
     const creatorIdParam = searchParams.get('creatorId');
     const purchaseIdParam = searchParams.get('id');
 
-    const creatorId = creatorIdParam ? Number(creatorIdParam) : sessionCreator?.id;
+    const creatorId = creatorIdParam ? Number(creatorIdParam) : Number(sessionCreator?.id);
     if (!creatorId) {
       return NextResponse.json({ success: false, error: 'Unauthorized or missing creator ID' }, { status: 401 });
     }
 
-    if (sessionCreator && sessionCreator.id !== creatorId) {
+    if (sessionCreator && Number(sessionCreator.id) !== creatorId) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
@@ -90,14 +90,14 @@ export async function handlePurchasesAction(body, sessionCreator) {
     return NextResponse.json({ success: false, error: 'Unauthorized: Creator ID required' }, { status: 401 });
   }
 
-  if (sessionCreator && sessionCreator.id !== creatorId) {
+  if (sessionCreator && Number(sessionCreator.id) !== creatorId) {
     return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
   }
 
   // 1. Create Purchase Order (creates pending purchase and pending payment invoice)
   if (action === 'create_order' || !action) {
     const packageId = Number(body.packageId);
-    const paymentMethod = body.paymentMethod || 'PAYONEER';
+    const paymentMethod = (body.paymentMethod || 'PADDLE').toUpperCase();
     const billingCycle = (body.billingInterval || body.billingCycle || 'monthly').toLowerCase();
     const subdomain = (body.subdomain || '').trim().toLowerCase();
     const websiteName = (body.websiteName || '').trim();
@@ -114,13 +114,25 @@ export async function handlePurchasesAction(body, sessionCreator) {
     }
 
     const isYearly = billingCycle === 'yearly';
-    let baseAmount = isYearly 
-      ? Number(pkg.yearly_price_usd || pkg.yearly_price || 0)
-      : Number(pkg.monthly_price_usd || pkg.monthly_price || 0);
-    if (!baseAmount && pkg.price_in_cents) {
-      baseAmount = Number(pkg.price_in_cents) / 100;
+    let baseAmount = 0;
+    let currency = 'USD';
+
+    if (paymentMethod === 'BKASH') {
+      currency = 'BDT';
+      baseAmount = isYearly
+        ? Number(pkg.yearly_price_bdt || 0)
+        : Number(pkg.monthly_price_bdt || 0);
+    } else {
+      // Paddle (USD)
+      currency = 'USD';
+      baseAmount = isYearly 
+        ? Number(pkg.yearly_price_usd || pkg.yearly_price || 0)
+        : Number(pkg.monthly_price_usd || pkg.monthly_price || 0);
+      if (!baseAmount && pkg.price_in_cents) {
+        baseAmount = Number(pkg.price_in_cents) / 100;
+      }
     }
-    const currency = 'USD';
+
     const purchaseCode = 'ORD_' + Date.now().toString(36).toUpperCase() + '_' + Math.random().toString(36).substring(2, 6).toUpperCase();
 
     // Metadata for provisioning website upon payment

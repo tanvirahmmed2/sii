@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   BiLoaderAlt,
   BiLockAlt,
@@ -15,8 +15,12 @@ import {
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import CreatorAuthLayout from 'src/component/marketing/creator/CreatorAuthLayout';
 
-export default function CreatorLoginPage() {
+function CreatorLoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectParam = searchParams.get('redirect');
+
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -29,6 +33,37 @@ export default function CreatorLoginPage() {
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const [resending, setResending] = useState(false);
   const [resendMsg, setResendMsg] = useState('');
+
+  // Check if creator is already logged in
+  useEffect(() => {
+    let ignore = false;
+    async function checkExistingAuth() {
+      try {
+        const res = await fetch('/api/marketing/creator/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'me' }),
+        });
+        const data = await res.json();
+        if (!ignore && data.success && data.creator) {
+          const dest = redirectParam && redirectParam.startsWith('/')
+            ? redirectParam
+            : `/creator/${data.creator.id}`;
+          router.replace(dest);
+          return;
+        }
+      } catch (_) {
+        // Not logged in, show form
+      } finally {
+        if (!ignore) setCheckingAuth(false);
+      }
+    }
+
+    checkExistingAuth();
+    return () => {
+      ignore = true;
+    };
+  }, [router, redirectParam]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -51,7 +86,10 @@ export default function CreatorLoginPage() {
       const data = await res.json();
 
       if (data.success && data.creator) {
-        router.push(`/creator/${data.creator.id}`);
+        const dest = redirectParam && redirectParam.startsWith('/')
+          ? redirectParam
+          : `/creator/${data.creator.id}`;
+        router.replace(dest);
         return;
       }
 
@@ -105,6 +143,17 @@ export default function CreatorLoginPage() {
       setResending(false);
     }
   };
+
+  if (checkingAuth) {
+    return (
+      <div className="w-full min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 gap-3 text-slate-800 dark:text-slate-100">
+        <BiLoaderAlt className="animate-spin text-4xl text-secondary" />
+        <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold animate-pulse">
+          Verifying creator session...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <CreatorAuthLayout
@@ -329,3 +378,21 @@ export default function CreatorLoginPage() {
     </CreatorAuthLayout>
   );
 }
+
+export default function CreatorLoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 gap-3 text-slate-800 dark:text-slate-100">
+          <BiLoaderAlt className="animate-spin text-4xl text-secondary" />
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold animate-pulse">
+            Loading Creator Studio...
+          </p>
+        </div>
+      }
+    >
+      <CreatorLoginForm />
+    </Suspense>
+  );
+}
+

@@ -25,7 +25,6 @@ export async function POST(request) {
       message: 'Logged in successfully.',
     });
 
-    const cookieName = DEVELOPER_TOKEN || 'hiesci-dev';
     const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -34,8 +33,7 @@ export async function POST(request) {
       maxAge: 7 * 24 * 60 * 60,
     };
 
-    response.cookies.set(cookieName, result.token, cookieOptions);
-    response.cookies.set('dev_admin_token', result.token, cookieOptions);
+    response.cookies.set(DEVELOPER_TOKEN, result.token, cookieOptions);
 
     return response;
   } catch (error) {

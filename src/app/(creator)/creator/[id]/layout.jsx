@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import { useParams, useRouter } from 'next/navigation';
 import CreatorNavbar from 'src/component/marketing/creator/Navbar';
 import CreatorSidebar from 'src/component/marketing/creator/Sidebar';
-import { BiLoaderAlt, BiPlus, BiX, BiDesktop, BiCheckCircle } from 'react-icons/bi';
+import { BiLoaderAlt, BiPlus, BiX, BiDesktop, BiCheckCircle, BiErrorCircle } from 'react-icons/bi';
 
 export const CreatorContext = createContext(null);
 
@@ -36,6 +36,7 @@ export default function CreatorLayout({ children, params }) {
     stats: {},
   });
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
   // New website form state inside modal
@@ -47,56 +48,44 @@ export default function CreatorLayout({ children, params }) {
   const [createSuccess, setCreateSuccess] = useState('');
 
   const fetchData = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const res = await fetch(`/api/marketing/creator?creatorId=${creatorId}`);
+      if (res.status === 401) {
+        const redirectPath = typeof window !== 'undefined' ? window.location.pathname : `/creator/${creatorId}`;
+        router.replace(`/creator/login?redirect=${encodeURIComponent(redirectPath)}`);
+        return;
+      }
+
       const json = await res.json();
-      if (json.success && json.creator) {
-        if (Number(creatorId) !== json.creator.id) {
-          router.push(`/creator/${json.creator.id}`);
-          return;
+
+      if (!res.ok || !json.success) {
+        setLoadError(json?.error || 'Failed to load creator workspace data.');
+        return;
+      }
+
+      if (json.creator) {
+        const loggedInId = Number(json.creator.id);
+        if (Number(creatorId) !== loggedInId || json.redirectUrl) {
+          router.replace(json.redirectUrl || `/creator/${loggedInId}`);
         }
         setData(json);
       } else {
-        router.push('/creator/login');
+        const redirectPath = typeof window !== 'undefined' ? window.location.pathname : `/creator/${creatorId}`;
+        router.replace(`/creator/login?redirect=${encodeURIComponent(redirectPath)}`);
       }
     } catch (err) {
       console.error('Error fetching creator data:', err);
-      router.push('/creator/login');
+      setLoadError('Network connection issue. Please check your internet connection.');
     } finally {
       setLoading(false);
     }
   }, [creatorId, router]);
 
   useEffect(() => {
-    let ignore = false;
-    fetch(`/api/marketing/creator?creatorId=${creatorId}`)
-      .then((res) => res.json())
-      .then((json) => {
-        if (!ignore) {
-          if (json.success && json.creator) {
-            if (Number(creatorId) !== json.creator.id) {
-              router.push(`/creator/${json.creator.id}`);
-              return;
-            }
-            setData(json);
-          } else {
-            router.push('/creator/login');
-          }
-          setLoading(false);
-        }
-      })
-      .catch((err) => {
-        if (!ignore) {
-          console.error('Error fetching creator data:', err);
-          router.push('/creator/login');
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [creatorId, router]);
+    fetchData();
+  }, [fetchData]);
 
   const handleCreateWebsite = async (e) => {
     e.preventDefault();
@@ -137,6 +126,36 @@ export default function CreatorLayout({ children, params }) {
       setCreatingSite(false);
     }
   };
+
+  if (loadError) {
+    return (
+      <div className="w-full min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4 text-slate-800 p-6 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center text-3xl border border-rose-200 shadow-xs">
+          <BiErrorCircle />
+        </div>
+        <div className="space-y-1.5 max-w-md">
+          <h2 className="text-lg font-bold text-slate-900">Workspace Unavailable</h2>
+          <p className="text-xs text-slate-600 leading-relaxed">{loadError}</p>
+        </div>
+        <div className="flex items-center gap-3 pt-2">
+          <button
+            type="button"
+            onClick={() => fetchData()}
+            className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            Retry Connection
+          </button>
+          <button
+            type="button"
+            onClick={() => router.replace(`/creator/login?redirect=/creator/${creatorId}`)}
+            className="px-4 py-2 rounded-xl bg-white border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
+          >
+            Sign In Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

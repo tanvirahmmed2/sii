@@ -11,6 +11,9 @@ import {
   BiCloud,
   BiTime,
   BiRightArrowAlt,
+  BiHeart,
+  BiSolidHeart,
+  BiLoaderAlt,
 } from 'react-icons/bi';
 
 export default function Package({
@@ -18,6 +21,9 @@ export default function Package({
   price,
   billingCycle = 'MONTHLY',
   currency = 'USD',
+  isWishlisted = false,
+  onToggleWishlist,
+  wishlistLoading = false,
 }) {
   if (!pkg) return null;
 
@@ -71,10 +77,34 @@ export default function Package({
         </div>
       )}
 
+      {/* Wishlist Button (Heart) */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          if (onToggleWishlist) onToggleWishlist(pkg.id);
+        }}
+        disabled={wishlistLoading}
+        title={isWishlisted ? 'Remove from your saved wishlist' : 'Save package to wishlist'}
+        className={`absolute top-6 right-6 p-2 rounded-2xl border transition-all cursor-pointer z-20 ${
+          isWishlisted
+            ? 'bg-rose-50 dark:bg-rose-950/60 border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 shadow-xs'
+            : 'bg-white/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-400 hover:text-rose-500 hover:border-rose-300 hover:bg-rose-50/50'
+        }`}
+      >
+        {wishlistLoading ? (
+          <BiLoaderAlt className="animate-spin text-base" />
+        ) : isWishlisted ? (
+          <BiSolidHeart className="text-base text-rose-500 animate-scale-up" />
+        ) : (
+          <BiHeart className="text-base" />
+        )}
+      </button>
+
       <div className="space-y-6">
         {/* Header info */}
-        <div>
-          <div className="flex items-center justify-between gap-2">
+        <div className="pr-10">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <h3 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
               {pkg.name}
             </h3>

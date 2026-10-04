@@ -330,7 +330,7 @@ function SubscriptionContent() {
 
             <div className="flex flex-col gap-2">
               <Link
-                href={`/creator/${creatorId}/webites`}
+                href={`/creator/${creatorId}/workspace`}
                 className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30 transition-all text-center flex items-center justify-center gap-1.5"
               >
                 <BiDesktop />
@@ -373,7 +373,7 @@ function SubscriptionContent() {
             </p>
           </div>
           <Link
-            href={`/creator/${creatorId}/webites?setup=true`}
+            href={`/creator/${creatorId}/workspace?setup=true`}
             className="inline-flex items-center gap-1.5 py-2 px-3.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-bold transition-all shrink-0"
           >
             <BiPlus className="text-base" />
@@ -386,7 +386,7 @@ function SubscriptionContent() {
             <BiDesktop className="text-4xl mx-auto text-slate-300" />
             <p>No websites provisioned under this subscription yet.</p>
             <Link
-              href={`/creator/${creatorId}/webites?setup=true`}
+              href={`/creator/${creatorId}/workspace?setup=true`}
               className="inline-block py-2 px-4 rounded-xl bg-slate-900 text-white font-bold text-xs"
             >
               Setup First Website Now

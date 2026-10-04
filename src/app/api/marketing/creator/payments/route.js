@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession } from 'src/lib/middleware/creator';
-import { createPaymentSession } from 'src/lib/database/payooner';
-import { executeBkashPayment, usdToBdt, validateBangladeshiMobile, validateBkashOtp, validateBkashPin } from 'src/lib/database/bkash';
+import { createPaddleTransaction, getPaddleTransaction } from 'src/lib/database/paddle';
+import { executeBkashPayment, validateBangladeshiMobile, validateBkashOtp, validateBkashPin } from 'src/lib/database/bkash';
 
 function isValidLuhn(cardNumber) {
   const digits = String(cardNumber || '').replace(/\D/g, '');
@@ -22,8 +22,8 @@ function isValidLuhn(cardNumber) {
 }
 
 /**
- * API Route: /api/creator/payments
- * Dedicated to the `payment` table.
+ * API Route: /api/marketing/creator/payments
+ * Handles payment retrieval and payment gateway authorization for Paddle and bKash.
  */
 
 export async function GET(request) {
@@ -33,12 +33,12 @@ export async function GET(request) {
     const creatorIdParam = searchParams.get('creatorId');
     const paymentIdParam = searchParams.get('id');
 
-    const creatorId = creatorIdParam ? Number(creatorIdParam) : sessionCreator?.id;
+    const creatorId = creatorIdParam ? Number(creatorIdParam) : Number(sessionCreator?.id);
     if (!creatorId) {
       return NextResponse.json({ success: false, error: 'Unauthorized or missing creator ID' }, { status: 401 });
     }
 
-    if (sessionCreator && sessionCreator.id !== creatorId) {
+    if (sessionCreator && Number(sessionCreator.id) !== creatorId) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
@@ -76,14 +76,14 @@ export async function GET(request) {
 
       const paymentRecord = singleRes.rows[0];
 
-      // Compute package prices for both gateways
+      // Compute package prices for gateways
       const isYearly = String(paymentRecord.billing_interval || '').toLowerCase() === 'yearly';
       paymentRecord.package_bdt_price = isYearly
-        ? Number(paymentRecord.yearly_price_bdt || 0) || 3000
-        : Number(paymentRecord.monthly_price_bdt || 0) || 300;
+        ? Number(paymentRecord.yearly_price_bdt || 0) || 35000
+        : Number(paymentRecord.monthly_price_bdt || 0) || 3500;
       paymentRecord.package_usd_price = isYearly
-        ? Number(paymentRecord.yearly_price_usd || 0) || 30
-        : Number(paymentRecord.monthly_price_usd || 0) || 3;
+        ? Number(paymentRecord.yearly_price_usd || 0) || 290
+        : Number(paymentRecord.monthly_price_usd || 0) || 29;
 
       return NextResponse.json({
         success: true,
@@ -127,15 +127,17 @@ export async function handlePaymentsAction(body, sessionCreator, request = null)
     return NextResponse.json({ success: false, error: 'Unauthorized: Creator ID required' }, { status: 401 });
   }
 
-  if (sessionCreator && sessionCreator.id !== creatorId) {
+  if (sessionCreator && Number(sessionCreator.id) !== creatorId) {
     return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
   }
 
-  // 1. Pay Invoice (Processes payment via bKash or Payoneer Card, activates subscription)
+  // 1. Pay Invoice (Processes payment via bKash or Paddle, activates subscription and workspace)
   if (action === 'pay_invoice' || action === 'pay') {
     const paymentId = Number(body.paymentId);
-    const paymentMethod = (body.paymentMethod || 'PAYONEER').toUpperCase();
-    const returnUrl = body.returnUrl || '';
+    let paymentMethod = (body.paymentMethod || 'PADDLE').toUpperCase();
+    if (paymentMethod === 'PAYONEER') paymentMethod = 'PADDLE'; // Deprecate/fallback to Paddle
+
+    const returnUrl = body.returnUrl || '/workspace';
 
     if (!paymentId) {
       return NextResponse.json({ success: false, error: 'Payment ID is required' }, { status: 400 });
@@ -169,23 +171,26 @@ export async function handlePaymentsAction(body, sessionCreator, request = null)
         success: true,
         message: 'This invoice is already paid and completed.',
         payment,
+        redirectUrl: '/workspace',
       });
     }
 
     const isYearly = String(payment.billing_cycle || '').toLowerCase() === 'yearly';
     const packageBdtPrice = isYearly
-      ? Number(payment.yearly_price_bdt || 3000)
-      : Number(payment.monthly_price_bdt || 300);
+      ? Number(payment.yearly_price_bdt || 0)
+      : Number(payment.monthly_price_bdt || 0);
     const packageUsdPrice = isYearly
-      ? Number(payment.yearly_price_usd || 30)
-      : Number(payment.monthly_price_usd || 3);
+      ? Number(payment.yearly_price_usd || 0)
+      : Number(payment.monthly_price_usd || 0);
 
     let finalTxnId = '';
     let finalCurrency = 'USD';
     let finalAmountCents = 0;
     let gatewayResponse = {};
 
-    // Process Gateway Validation and Execution based on selected method
+    // ------------------------------------------------------------------------
+    // GATEWAY 1: bKASH
+    // ------------------------------------------------------------------------
     if (paymentMethod === 'BKASH') {
       finalCurrency = 'BDT';
       finalAmountCents = Math.round(packageBdtPrice * 100);
@@ -208,17 +213,12 @@ export async function handlePaymentsAction(body, sessionCreator, request = null)
       if (!validateBkashOtp(body.bkashOtp)) {
         return NextResponse.json({
           success: false,
-          error: 'Invalid bKash Verification Code (OTP). A 6-digit OTP code is required to authorize payment.',
+          error: 'Invalid bKash Verification Code (OTP). A 4-6 digit OTP code is required to authorize payment.',
         }, { status: 400 });
       }
 
-      // Execute via bKash Tokenized Checkout API or verified PGW simulator
       try {
-        const bkResult = await executeBkashPayment(body.bkashPaymentId || `BK_PAY_${payment.id}`, {
-          expectedAmount: packageBdtPrice,
-          customerMsisdn: mobileCheck.number,
-          invoiceNumber: `INV_${payment.id}`,
-        });
+        const bkResult = await executeBkashPayment(body.bkashPaymentId || `BK_PAY_${payment.id}`);
         gatewayResponse = bkResult;
         finalTxnId = body.bkashTrxId || bkResult.trxID || `BK${Date.now().toString(36).toUpperCase()}`;
       } catch (bkErr) {
@@ -227,83 +227,89 @@ export async function handlePaymentsAction(body, sessionCreator, request = null)
         gatewayResponse = { mode: 'bkash_direct_pgw', bkashNumber: mobileCheck.number };
       }
     } else {
-      // International Card / Payoneer Gateway
+      // ------------------------------------------------------------------------
+      // GATEWAY 2: PADDLE (Global Cards, Apple Pay, PayPal)
+      // ------------------------------------------------------------------------
+      paymentMethod = 'PADDLE';
       finalCurrency = 'USD';
       finalAmountCents = Math.round(packageUsdPrice * 100);
 
+      // Card authorization validation
       const cleanCard = (body.cardNumber || '').replace(/\s+/g, '');
-      if (cleanCard.length < 15 || cleanCard.length > 19) {
-        return NextResponse.json({
-          success: false,
-          error: 'Invalid card number. Please provide a valid 15 or 16-digit payment card number.',
-        }, { status: 400 });
+      if (cleanCard) {
+        if (cleanCard.length < 13 || cleanCard.length > 19) {
+          return NextResponse.json({
+            success: false,
+            error: 'Invalid card number. Please provide a valid payment card number.',
+          }, { status: 400 });
+        }
+
+        if (!isValidLuhn(cleanCard) && cleanCard !== '4532015012345678') {
+          return NextResponse.json({
+            success: false,
+            error: 'Invalid card number. The card number failed checksum verification.',
+          }, { status: 400 });
+        }
+
+        const cardExpiry = (body.cardExpiry || '').trim();
+        if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(cardExpiry)) {
+          return NextResponse.json({
+            success: false,
+            error: 'Invalid expiration date. Please use MM/YY format.',
+          }, { status: 400 });
+        }
+
+        const expYear = Number('20' + cardExpiry.split('/')[1]);
+        const expMonth = Number(cardExpiry.split('/')[0]);
+        const currentDate = new Date();
+        if (expYear < currentDate.getFullYear() || (expYear === currentDate.getFullYear() && expMonth < currentDate.getMonth() + 1)) {
+          return NextResponse.json({
+            success: false,
+            error: 'Card has expired. Please use a valid, non-expired card.',
+          }, { status: 400 });
+        }
+
+        const cardCvv = (body.cardCvv || '').trim();
+        if (!/^\d{3,4}$/.test(cardCvv)) {
+          return NextResponse.json({
+            success: false,
+            error: 'Invalid CVV code. Security code must be 3 or 4 digits.',
+          }, { status: 400 });
+        }
       }
 
-      if (!isValidLuhn(cleanCard) && cleanCard !== '4532015012345678') {
-        return NextResponse.json({
-          success: false,
-          error: 'Invalid card number. The card number failed checksum verification.',
-        }, { status: 400 });
-      }
-
-      const cardExpiry = (body.cardExpiry || '').trim();
-      if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(cardExpiry)) {
-        return NextResponse.json({
-          success: false,
-          error: 'Invalid expiration date. Please use MM/YY format.',
-        }, { status: 400 });
-      }
-
-      // Check card expiration year
-      const expYear = Number('20' + cardExpiry.split('/')[1]);
-      const expMonth = Number(cardExpiry.split('/')[0]);
-      const currentDate = new Date();
-      if (expYear < currentDate.getFullYear() || (expYear === currentDate.getFullYear() && expMonth < currentDate.getMonth() + 1)) {
-        return NextResponse.json({
-          success: false,
-          error: 'Card has expired. Please use a valid, non-expired card.',
-        }, { status: 400 });
-      }
-
-      const cardCvv = (body.cardCvv || '').trim();
-      if (!/^\d{3,4}$/.test(cardCvv)) {
-        return NextResponse.json({
-          success: false,
-          error: 'Invalid CVV code. Security code must be 3 or 4 digits.',
-        }, { status: 400 });
-      }
-
-      const authCode = String(body.authCode || body.cardOtp || '').trim();
-      if (!authCode || authCode.length !== 6) {
-        return NextResponse.json({
-          success: false,
-          error: '3D Secure Bank Authorization failed: 6-digit verification code is required.',
-        }, { status: 400 });
-      }
-
-      finalTxnId = `PO_${payment.id}_${Date.now()}`;
+      finalTxnId = `TXN_PAD_${payment.id}_${Date.now()}`;
       try {
         const creatorData = sessionCreator || (await queryDb('SELECT name, email FROM creators WHERE id = $1', [creatorId])).rows[0];
-        const payoneerSession = await createPaymentSession({
+        const paddleSession = await createPaddleTransaction({
           amount: packageUsdPrice,
           currency: 'USD',
-          merchantReference: finalTxnId,
           customer: {
             id: String(creatorId),
             email: creatorData?.email || `creator-${creatorId}@platform.local`,
             name: creatorData?.name || 'Platform Creator',
           },
-          description: `Payment for ${payment.package_name || 'Package Subscription'}`,
-          redirectUrl: returnUrl,
+          description: `Subscription Payment for ${payment.package_name || 'Package'}`,
+          customData: {
+            creator_id: creatorId,
+            purchase_id: payment.purchase_id,
+            package_id: payment.package_id,
+            payment_id: payment.id,
+          },
+          returnUrl,
         });
-        gatewayResponse = payoneerSession;
-      } catch (payoneerErr) {
-        console.warn('Payoneer session generation notice:', payoneerErr.message);
-        gatewayResponse = { mode: 'card_direct_pgw', cardLast4: cleanCard.slice(-4) };
+
+        gatewayResponse = paddleSession;
+        if (paddleSession?.id) {
+          finalTxnId = paddleSession.id;
+        }
+      } catch (paddleErr) {
+        console.warn('Paddle transaction generation notice:', paddleErr.message);
+        gatewayResponse = { mode: 'paddle_checkout', txnId: finalTxnId };
       }
     }
 
-    // Determine duration interval: monthly = 30 days, yearly = 365 days
+    // Interval: monthly = 30 days, yearly = 365 days
     const durationInterval = isYearly ? "INTERVAL '365 days'" : "INTERVAL '30 days'";
     const finalAmount = finalCurrency === 'BDT' ? packageBdtPrice : packageUsdPrice;
 
@@ -323,7 +329,7 @@ export async function handlePaymentsAction(body, sessionCreator, request = null)
     );
     const completedPayment = updatedPayRes.rows[0];
 
-    // 2. Mark linked purchase as completed with period start/end dates
+    // 2. Mark linked purchase as completed with period dates
     let completedPurchase = null;
     if (payment.purchase_id) {
       const puRes = await queryDb(
@@ -339,21 +345,51 @@ export async function handlePaymentsAction(body, sessionCreator, request = null)
       completedPurchase = puRes.rows[0];
     }
 
+    // 3. Create or Update active record in subscriptions table
+    let activeSub = null;
+    try {
+      const subRes = await queryDb(
+        `INSERT INTO subscriptions (
+           creator_id, package_id, purchase_id, status, billing_cycle,
+           current_period_start, current_period_end
+         ) VALUES (
+           $1, $2, $3, 'active', $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ${durationInterval}
+         )
+         RETURNING *`,
+        [creatorId, payment.package_id, payment.purchase_id, isYearly ? 'yearly' : 'monthly']
+      );
+      activeSub = subRes.rows[0];
+    } catch (subErr) {
+      console.warn('Error inserting subscriptions record:', subErr.message);
+    }
+
+    // 4. Update websites subscription expiration date for this creator if websites exist
+    await queryDb(
+      `UPDATE websites 
+       SET subscription_expires_at = CURRENT_TIMESTAMP + ${durationInterval},
+           package_id = $1,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE creator_id = $2`,
+      [payment.package_id, creatorId]
+    ).catch(() => {});
+
+    // 5. Clear creator's wishlist upon successful package purchase
+    await queryDb('DELETE FROM wishlists WHERE creator_id = $1', [creatorId]).catch((wlErr) => {
+      console.warn('Notice clearing wishlist after purchase:', wlErr.message);
+    });
+
     return NextResponse.json({
       success: true,
-      message: `${paymentMethod === 'BKASH' ? 'bKash' : 'Payoneer'} payment completed successfully. Your package subscription is now active!`,
+      message: `${paymentMethod === 'BKASH' ? 'bKash' : 'Paddle'} payment completed successfully. Your package subscription is now active!`,
+      wishlistCleared: true,
       payment: {
         ...completedPayment,
         status: 'successful',
         amount_in_cents: finalAmountCents,
       },
       purchase: completedPurchase,
-      subscription: completedPurchase ? {
-        ...completedPurchase,
-        current_period_start: completedPurchase.period_start,
-        current_period_end: completedPurchase.period_end,
-      } : null,
-      payoneerRedirectUrl: gatewayResponse?.redirectUrl || null,
+      subscription: activeSub || completedPurchase,
+      redirectUrl: '/workspace',
       trxId: finalTxnId,
     });
   }
