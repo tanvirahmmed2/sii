@@ -1,41 +1,21 @@
-import { NextResponse } from 'next/server.js';
-import { queryDb } from '../database/db.js';
-import { BASE_DOMAIN, BASE_URL } from '../database/secret.js';
-import {
-  resolveWebsiteFromRequest,
-  getWebsiteUserSession,
-  getUserRolesAndPermissions,
-  generateWebsiteToken,
-  verifyWebsiteToken,
-  WEBSITE_AUTH_COOKIE,
-} from './creator.js';
-
-export {
-  resolveWebsiteFromRequest,
-  getWebsiteUserSession,
-  getUserRolesAndPermissions,
-  generateWebsiteToken,
-  verifyWebsiteToken,
-  WEBSITE_AUTH_COOKIE,
-};
+import { NextResponse } from 'next/server';
+import { BASE_URL, BASE_DOMAIN, extractBaseDomain } from './lib/database/secret.js';
 
 /**
  * Extracts the base host configured for the SaaS platform.
+ * Edge runtime safe: dynamically fetched from secret.js.
  */
-export function getBaseDomain(request = null) {
-  if (BASE_DOMAIN && BASE_DOMAIN.trim() !== '') {
-    return BASE_DOMAIN.trim().toLowerCase();
+function getPlatformBaseDomain(request) {
+  const configuredBase = (BASE_DOMAIN || extractBaseDomain(BASE_URL) || '').trim();
+  if (configuredBase) {
+    return configuredBase.toLowerCase();
   }
-  if (typeof window !== 'undefined' && window.location?.host) {
-    const h = window.location.host.toLowerCase();
-    if (h.includes('localhost') || h.includes('127.0.0.1')) {
-      return h;
-    }
-  }
+
   if (request) {
-    const forwardedHost = request.headers?.get?.('x-forwarded-host');
-    const host = request.headers?.get?.('host');
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const host = request.headers.get('host');
     const incoming = (forwardedHost ? forwardedHost.split(',')[0] : host || '').trim().toLowerCase();
+
     if (incoming.includes('.localhost')) {
       const port = incoming.split(':')[1];
       return port ? `localhost:${port}` : 'localhost';
@@ -48,18 +28,18 @@ export function getBaseDomain(request = null) {
 }
 
 /**
- * Extracts the tenant website domain/subdomain from request host or pathname.
+ * Extracts tenant identifier (subdomain or custom domain) from request host.
  * Returns null if the request is on the main SaaS platform.
  */
-export function getWebsiteDomain(request) {
+function getWebsiteDomain(request) {
   if (!request) return null;
 
   const url = request.nextUrl || (request.url ? new URL(request.url) : null);
-  const rawHost = request.headers?.get?.('x-forwarded-host') || request.headers?.get?.('host') || url?.host || '';
+  const rawHost = request.headers.get('x-forwarded-host') || request.headers.get('host') || url?.host || '';
   const cleanHostWithPort = rawHost.split(',')[0].trim().toLowerCase();
   const cleanHost = cleanHostWithPort.split(':')[0]; // strip port
 
-  const baseHostWithPort = getBaseDomain(request);
+  const baseHostWithPort = getPlatformBaseDomain(request);
   const baseHost = baseHostWithPort.split(':')[0]; // strip port
 
   // 1. If host matches the main platform host => this is the main SaaS website
@@ -72,7 +52,7 @@ export function getWebsiteDomain(request) {
     return null;
   }
 
-  // 2. Subdomain of production base domain (e.g. oxford.educraft.io)
+  // 2. Subdomain of configured base domain (e.g. oxford.baseurl.com)
   if (baseHost !== 'localhost' && baseHost !== '127.0.0.1' && cleanHost.endsWith(`.${baseHost}`)) {
     const sub = cleanHost.slice(0, -(baseHost.length + 1)).trim();
     if (sub && sub !== 'www') {
@@ -93,44 +73,13 @@ export function getWebsiteDomain(request) {
 }
 
 /**
- * Fetches website record strictly from database.
+ * Next.js Proxy (Next.js 16+ convention replacing middleware):
+ * 1. Base URL request (baseurl.com or localhost:3000) -> serves main SaaS platform.
+ * 2. Tenant request (subdomain.baseurl.com or customdomain.com):
+ *    - Frontend paths -> rewrites to app/[domain] frontend folder.
+ *    - API paths -> rewrites to /api/[domain] routes.
  */
-export async function fetchWebsiteByDomain(domain) {
-  if (!domain) return null;
-  const clean = String(domain).trim().toLowerCase();
-
-  try {
-    const res = await queryDb(
-      `SELECT id, creator_id, name, slug, subdomain, subdomain AS domain, custom_domain,
-              custom_domain_verified, institution_type, eiin_number, contact_email, contact_phone, address,
-              primary_color, theme, status, is_maintenance_mode,
-              (status = 'active') AS is_active,
-              (status = 'active' AND is_maintenance_mode = false) AS is_published
-       FROM websites 
-       WHERE LOWER(slug) = LOWER($1) 
-          OR LOWER(subdomain) = LOWER($1) 
-          OR LOWER(custom_domain) = LOWER($1)
-          OR LOWER(subdomain) LIKE LOWER($2)
-       LIMIT 1`,
-      [clean, `${clean}.%`]
-    );
-
-    if (res.rows.length === 0) return null;
-    return res.rows[0];
-  } catch (err) {
-    console.error('fetchWebsiteByDomain error:', err);
-    return null;
-  }
-}
-
-/**
- * Middleware handler:
- * - If request is for baseurl.com: passes through to main SaaS platform.
- * - If request is for subdomain.baseurl.com or customdomain.com:
- *     - Rewrites frontend paths to app/[domain] folder.
- *     - Rewrites API requests to /api/[domain] routes.
- */
-export function handleWebsiteMiddleware(request) {
+export function proxy(request) {
   const url = request.nextUrl.clone();
   const pathname = url.pathname;
 
@@ -143,23 +92,80 @@ export function handleWebsiteMiddleware(request) {
     pathname.startsWith('/sitemap.xml') ||
     pathname.match(/\.(png|jpe?g|gif|svg|ico|webp|woff2?|ttf|css|js|map)$/i)
   ) {
-    return null;
+    return NextResponse.next();
   }
 
-  const tenantDomain = getWebsiteDomain(request);
+  let tenantDomain = getWebsiteDomain(request);
 
   // CASE 1: Main SaaS Platform request (baseurl.com or localhost)
   if (!tenantDomain) {
-    // If user accesses preview /websites/[domain] or /website/[domain] on base domain, rewrite to /[domain]
+    // 1A: If user accesses preview /websites/[domain] or /website/[domain] on base domain, rewrite to /[domain]
     const legacyMatch = pathname.match(/^\/(?:websites|website|webite)\/([^/?#]+)(.*)$/i);
     if (legacyMatch) {
       const domain = legacyMatch[1];
       const rest = legacyMatch[2] || '';
       url.pathname = `/${domain}${rest}`;
-      return NextResponse.rewrite(url);
+      const response = NextResponse.rewrite(url);
+      response.cookies.set('x-website-domain', domain, { path: '/' });
+      return response;
     }
+
+    // 1B: If an API request comes from a preview page on localhost/base domain
+    if (pathname.startsWith('/api')) {
+      if (!pathname.startsWith('/api/marketing') && !pathname.startsWith('/api/auth')) {
+        let previewTenant = request.headers.get('x-website-domain') || request.headers.get('x-domain');
+        if (!previewTenant) {
+          previewTenant = request.cookies.get('x-website-domain')?.value || request.cookies.get('x-domain')?.value;
+        }
+        if (!previewTenant) {
+          const referer = request.headers.get('referer');
+          if (referer) {
+            try {
+              const refUrl = new URL(referer);
+              const pathParts = refUrl.pathname.split('/').filter(Boolean);
+              if (pathParts.length > 0) {
+                const first = pathParts[0].toLowerCase();
+                if ((first === 'websites' || first === 'website' || first === 'webite') && pathParts[1]) {
+                  previewTenant = pathParts[1];
+                } else if (!['creator', 'api', '_next', 'marketing', 'auth', 'admin'].includes(first)) {
+                  previewTenant = first;
+                }
+              }
+            } catch {}
+          }
+        }
+
+        if (previewTenant && !pathname.startsWith(`/api/${previewTenant}`)) {
+          const requestHeaders = new Headers(request.headers);
+          requestHeaders.set('x-website-domain', previewTenant);
+          requestHeaders.set('x-domain', previewTenant);
+          const apiRest = pathname === '/api' ? '' : pathname.slice(4);
+          url.pathname = `/api/${previewTenant}${apiRest}`;
+          return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+        }
+      }
+    }
+
+    // 1C: If direct preview path /[domain]/... is visited on base domain, track tenant cookie
+    const PLATFORM_RESERVED = new Set([
+      'creator', 'developer', 'developer-auth', 'developers', 'api', '_next',
+      'marketing', 'auth', 'admin', 'icon.png', 'favicon.ico', 'robots.txt',
+      'sitemap.xml', 'about', 'blogs', 'careers', 'contact', 'faqs', 'packages',
+      'policies', 'reviews', 'tutorials', 'updates', 'help', 'terms', 'privacy',
+      'login', 'register'
+    ]);
+    const pathParts = pathname.split('/').filter(Boolean);
+    if (pathParts.length > 0) {
+      const first = pathParts[0].toLowerCase();
+      if (!PLATFORM_RESERVED.has(first)) {
+        const response = NextResponse.next();
+        response.cookies.set('x-website-domain', first, { path: '/' });
+        return response;
+      }
+    }
+
     // Otherwise allow normal main SaaS website routing
-    return null;
+    return NextResponse.next();
   }
 
   // CASE 2: Tenant Website request (subdomain.baseurl.com or customdomain.com)
@@ -204,12 +210,10 @@ export function handleWebsiteMiddleware(request) {
   return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
 }
 
-export default {
-  getBaseDomain,
-  getWebsiteDomain,
-  fetchWebsiteByDomain,
-  handleWebsiteMiddleware,
-  resolveWebsiteFromRequest,
-  getWebsiteUserSession,
-  getUserRolesAndPermissions,
+export default proxy;
+
+export const config = {
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|icon.png|robots.txt|sitemap.xml).*)',
+  ],
 };

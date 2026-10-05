@@ -437,21 +437,15 @@ function WorkspaceContent() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => {
-              setShowCreateModal(true);
-              setCreateError('');
-              setCreateSuccess('');
-            }}
-            disabled={websites.length >= maxWebsites && hasActivePackage}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          <Link
+            href={`/creator/${creatorId}/workspace/new`}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-all cursor-pointer"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
             </svg>
             Create Website
-          </button>
+          </Link>
           <Link
             href={`/creator/${creatorId}/subscription`}
             className="px-3.5 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium transition-colors"
@@ -494,6 +488,12 @@ function WorkspaceContent() {
               Direct access links, live institutional subdomains, and management portals.
             </p>
           </div>
+          <Link
+            href={`/creator/${creatorId}/workspace/new`}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800"
+          >
+            + New Website
+          </Link>
         </div>
 
         {websites.length === 0 ? (
@@ -510,17 +510,12 @@ function WorkspaceContent() {
               </p>
             </div>
             <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCreateModal(true);
-                  setCreateError('');
-                  setCreateSuccess('');
-                }}
-                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-colors cursor-pointer"
+              <Link
+                href={`/creator/${creatorId}/workspace/new`}
+                className="inline-block px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-colors cursor-pointer"
               >
                 Create First Website
-              </button>
+              </Link>
             </div>
           </div>
         ) : (
@@ -541,20 +536,24 @@ function WorkspaceContent() {
                 {websites.map((w) => {
                   const rawSub = (w.subdomain || w.slug || '').toLowerCase();
                   const cleanSub = rawSub.includes('.') ? rawSub.split('.')[0] : rawSub;
-                  const livePath = `/websites/${cleanSub}`;
-                  const fullDomainDisplay = w.subdomain?.includes('.') ? w.subdomain : `${cleanSub}.${baseDomain}`;
+                  const livePath = `/${cleanSub}`;
+                  const fullDomainDisplay = `${cleanSub}.${baseDomain}`;
+                  const manageUrl = `/creator/${creatorId}/workspace/${cleanSub}`;
+                  const liveUrl = w.custom_domain && w.custom_domain_verified
+                    ? `https://${w.custom_domain}`
+                    : `https://${fullDomainDisplay}`;
 
                   return (
                     <tr key={w.id} className="hover:bg-slate-50/80 transition-colors">
                       {/* Name & Tagline */}
                       <td className="py-3 px-2">
-                        <div className="font-semibold text-slate-900 text-xs flex items-center gap-1.5">
+                        <Link href={manageUrl} className="font-semibold text-slate-900 text-xs flex items-center gap-1.5 hover:text-blue-600">
                           <span
                             className="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0"
                             style={{ backgroundColor: w.primary_color || '#1e40af' }}
                           />
                           {w.name}
-                        </div>
+                        </Link>
                         {w.tagline && (
                           <div className="text-[11px] text-slate-400 truncate max-w-xs mt-0.5">
                             {w.tagline}
@@ -574,11 +573,11 @@ function WorkspaceContent() {
                         {w.eiin_number || <span className="text-slate-300">—</span>}
                       </td>
 
-                      {/* Custom Domain */}
+                      {/* Subdomain & Custom Domain */}
                       <td className="py-3 px-2 font-mono text-[11px]">
                         <div className="flex items-center gap-1.5">
                           <a
-                            href={livePath}
+                            href={liveUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
@@ -588,8 +587,8 @@ function WorkspaceContent() {
                           <button
                             type="button"
                             title="Copy Domain URL"
-                            onClick={() => handleCopyUrl(`https://${fullDomainDisplay}`, w.id)}
-                            className="text-slate-400 hover:text-slate-700 p-0.5 rounded hover:bg-slate-100"
+                            onClick={() => handleCopyUrl(liveUrl, w.id)}
+                            className="text-slate-400 hover:text-slate-700 p-0.5 rounded hover:bg-slate-100 cursor-pointer"
                           >
                             {copiedSubdomain === w.id ? (
                               <span className="text-[9px] text-emerald-600 font-sans font-bold">Copied</span>
@@ -600,6 +599,31 @@ function WorkspaceContent() {
                             )}
                           </button>
                         </div>
+
+                        {/* Custom Domain indicator */}
+                        {w.custom_domain ? (
+                          <div className="mt-1 flex items-center gap-1.5">
+                            <span className="text-slate-900 font-semibold text-[10px]">
+                              {w.custom_domain}
+                            </span>
+                            <span
+                              className={`text-[9px] px-1.5 py-0.2 rounded font-sans font-bold ${
+                                w.custom_domain_verified
+                                  ? 'text-emerald-700 bg-emerald-50 border border-emerald-200'
+                                  : 'text-amber-700 bg-amber-50 border border-amber-200'
+                              }`}
+                            >
+                              {w.custom_domain_verified ? 'Verified' : 'Pending DNS'}
+                            </span>
+                          </div>
+                        ) : (
+                          <Link
+                            href={manageUrl}
+                            className="text-[10px] text-slate-400 hover:text-blue-600 hover:underline inline-block mt-0.5"
+                          >
+                            + Custom Domain
+                          </Link>
+                        )}
                       </td>
 
                       {/* Contact & Address */}
@@ -632,26 +656,32 @@ function WorkspaceContent() {
 
                       {/* Actions */}
                       <td className="py-3 px-2 text-right space-x-2 whitespace-nowrap">
+                        <Link
+                          href={manageUrl}
+                          className="px-2.5 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold inline-block transition-colors border border-blue-200"
+                        >
+                          Manage
+                        </Link>
                         <a
-                          href={livePath}
+                          href={liveUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium inline-block transition-colors"
+                          className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium inline-block transition-colors"
                         >
                           Live Site
                         </a>
                         <button
                           type="button"
                           onClick={() => handleOpenEdit(w)}
-                          className="px-2.5 py-1 rounded border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium cursor-pointer transition-colors"
+                          className="px-2 py-1 rounded border border-slate-200 hover:bg-slate-50 text-slate-600 font-medium cursor-pointer transition-colors"
                         >
-                          Edit
+                          Quick Edit
                         </button>
                         <button
                           type="button"
                           disabled={deletingId === w.id}
                           onClick={() => handleDeleteWebsite(w.id, w.name)}
-                          className="px-2.5 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 font-medium cursor-pointer transition-colors disabled:opacity-50"
+                          className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 font-medium cursor-pointer transition-colors disabled:opacity-50"
                         >
                           {deletingId === w.id ? 'Deleting...' : 'Delete'}
                         </button>
@@ -661,7 +691,6 @@ function WorkspaceContent() {
                 })}
               </tbody>
             </table>
-          </div>
         )}
       </div>
 

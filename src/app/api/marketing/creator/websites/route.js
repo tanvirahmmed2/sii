@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server.js';
 import { queryDb } from '../../../../../lib/database/db.js';
 import { getCreatorSession } from '../../../../../lib/middleware/creator.js';
 import { BASE_DOMAIN, BASE_URL } from '../../../../../lib/database/secret.js';
-import { checkDomainAvailability } from './check-domain/route.js';
+import { checkDomainAvailability, checkCustomDomainAvailability } from './check-domain/route.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,10 +44,21 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const creatorIdParam = searchParams.get('creatorId');
     const websiteIdParam = searchParams.get('id');
-    const checkDomainParam = searchParams.get('checkDomain') || searchParams.get('domain');
+    const domainParam = searchParams.get('domain') || searchParams.get('subdomain') || searchParams.get('slug') || searchParams.get('website');
+    const checkDomainParam = searchParams.get('checkDomain');
 
     // 1. Fast Domain Check query if requested
     if (checkDomainParam) {
+      const type = searchParams.get('type') || '';
+      if (type === 'custom') {
+        const checkRes = await checkCustomDomainAvailability(checkDomainParam, websiteIdParam);
+        return NextResponse.json({
+          success: true,
+          baseDomain: BASE_DOMAIN,
+          baseUrl: BASE_URL,
+          ...checkRes,
+        });
+      }
       const checkRes = await checkDomainAvailability(checkDomainParam, websiteIdParam);
       return NextResponse.json({
         success: true,
@@ -66,12 +77,30 @@ export async function GET(request) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
-    // 2. If specific website requested
-    if (websiteIdParam) {
+    const hostHeader = request?.headers?.get?.('x-forwarded-host') || request?.headers?.get?.('host') || BASE_DOMAIN || 'localhost:3000';
+    const cleanHost = hostHeader.split(',')[0].trim();
+    const proto = request?.headers?.get?.('x-forwarded-proto') || 'http';
+    const dynamicBaseUrl = `${proto}://${cleanHost}`;
+
+    // 2. If specific website requested by ID, domain, subdomain, or slug
+    const targetIdentifier = websiteIdParam || domainParam;
+    if (targetIdentifier && targetIdentifier !== 'new') {
+      const cleanIdent = String(targetIdentifier).trim().toLowerCase();
+      const isNum = /^[0-9]+$/.test(cleanIdent);
+
       const singleRes = await queryDb(
         `SELECT w.*, 
                 w.name AS site_title,
                 ws.motto AS tagline,
+                ws.motto,
+                ws.mission,
+                ws.vision,
+                ws.history,
+                ws.map_url,
+                ws.facebook_url,
+                ws.twitter_url,
+                ws.instagram_url,
+                ws.youtube_url,
                 COALESCE(w.contact_email, ws.contact_email) AS contact_email,
                 COALESCE(w.contact_phone, ws.contact_phone) AS contact_phone, 
                 COALESCE(w.address, ws.address) AS address,
@@ -79,9 +108,16 @@ export async function GET(request) {
                 (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published
          FROM websites w
          LEFT JOIN website_settings ws ON w.id = ws.website_id
-         WHERE w.id = $1 AND w.creator_id = $2
+         WHERE w.creator_id = $1 
+           AND (
+             ($2 = true AND w.id = $3::bigint) OR
+             LOWER(w.slug) = LOWER($4) OR
+             LOWER(w.subdomain) = LOWER($4) OR
+             LOWER(w.custom_domain) = LOWER($4) OR
+             LOWER(w.subdomain) LIKE LOWER($5)
+           )
          LIMIT 1`,
-        [Number(websiteIdParam), creatorId]
+        [creatorId, isNum, isNum ? Number(cleanIdent) : -1, cleanIdent, `${cleanIdent}.%`]
       );
 
       if (singleRes.rows.length === 0) {
@@ -90,8 +126,8 @@ export async function GET(request) {
 
       return NextResponse.json({
         success: true,
-        baseDomain: BASE_DOMAIN,
-        baseUrl: BASE_URL,
+        baseDomain: cleanHost,
+        baseUrl: dynamicBaseUrl,
         website: singleRes.rows[0],
       });
     }
@@ -113,11 +149,6 @@ export async function GET(request) {
       [creatorId]
     ).catch(() => ({ rows: [] }));
 
-    const hostHeader = request?.headers?.get?.('x-forwarded-host') || request?.headers?.get?.('host') || BASE_DOMAIN || 'localhost:3000';
-    const cleanHost = hostHeader.split(',')[0].trim();
-    const proto = request?.headers?.get?.('x-forwarded-proto') || 'http';
-    const dynamicBaseUrl = `${proto}://${cleanHost}`;
-
     return NextResponse.json({
       success: true,
       baseDomain: cleanHost,
@@ -131,7 +162,7 @@ export async function GET(request) {
 }
 
 /**
- * Dispatches Website actions (create, setup, update, delete, check_domain)
+ * Dispatches Website actions (create, setup, update, delete, check_domain, verify_custom_domain)
  */
 export async function handleWebsitesAction(body, sessionCreator, request = null) {
   const { action } = body;
@@ -141,7 +172,19 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
   if (action === 'check_domain') {
     const domainToCheck = body.domain || body.subdomain || body.customDomain || '';
     const websiteId = body.websiteId || body.id || null;
-    const checkRes = await checkDomainAvailability(domainToCheck, websiteId);
+    const isCustom = body.type === 'custom' || Boolean(body.customDomain);
+
+    if (isCustom) {
+      const checkRes = await checkCustomDomainAvailability(domainToCheck, websiteId, request);
+      return NextResponse.json({
+        success: true,
+        baseDomain: BASE_DOMAIN,
+        baseUrl: BASE_URL,
+        ...checkRes,
+      });
+    }
+
+    const checkRes = await checkDomainAvailability(domainToCheck, websiteId, request);
     return NextResponse.json({
       success: true,
       baseDomain: BASE_DOMAIN,
@@ -175,23 +218,23 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     const eiinNumber = (body.eeinNumber || body.eein_number || body.eiinNumber || body.eiin_number || '').trim();
     const address = (body.address || '').trim();
 
-    const rawDomain = (body.customDomain || body.custom_domain || body.domain || body.subdomain || '').trim();
+    const rawDomain = (body.subdomain || body.domain || body.customDomain || '').trim();
     if (!rawDomain) {
-      return NextResponse.json({ success: false, error: 'Custom domain prefix is required.' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Subdomain prefix is required.' }, { status: 400 });
     }
 
-    // Check domain availability with the helper
-    const domainValidation = await checkDomainAvailability(rawDomain);
+    // Check subdomain availability
+    const domainValidation = await checkDomainAvailability(rawDomain, null, request);
     if (!domainValidation.available) {
       return NextResponse.json({
         success: false,
-        error: domainValidation.error || 'Requested domain is not available. Please choose another prefix.',
+        error: domainValidation.error || 'Requested subdomain is not available. Please choose another prefix.',
       }, { status: 400 });
     }
 
-    const cleanDomainPrefix = domainValidation.domain;
-    const fullDomain = domainValidation.fullDomain || `${cleanDomainPrefix}.${baseDomain}`;
-    const slug = cleanDomainPrefix;
+    const cleanSubdomain = domainValidation.domain;
+    const fullSubdomain = domainValidation.fullDomain || `${cleanSubdomain}.${baseDomain}`;
+    const slug = cleanSubdomain;
 
     // Check active package subscription and quotas from purchases table
     const activeSub = await queryDb(
@@ -247,16 +290,14 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
          storage_used_mb,
          is_maintenance_mode
        ) VALUES (
-         $1, $2, $3, $4, $5, $6, $7, $8, $9, 'active', $10, $11, $12, $13, $14, 15, FALSE
+         $1, $2, $3, $4, $5, NULL, FALSE, $6, $7, 'active', $8, $9, $10, $11, $12, 15, FALSE
        ) RETURNING *`,
       [
         creatorId,
         packageRecord.package_id || null,
         name,
         slug,
-        fullDomain,
-        fullDomain,
-        true,
+        cleanSubdomain,
         institutionType,
         eiinNumber || null,
         themeName,
@@ -287,11 +328,12 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
         is_published: true,
       },
       baseDomain,
-      fullDomain,
+      fullDomain: fullSubdomain,
+      subdomain: cleanSubdomain,
     });
   }
 
-  // 2. Update Website
+  // 2. Update Website (Data, Subdomain, or Custom Domain)
   if (action === 'update_website') {
     const id = Number(body.id || body.websiteId);
     if (!id) {
@@ -336,21 +378,45 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       values.push(body.address ? String(body.address).trim() : null);
     }
 
-    if (body.subdomain !== undefined || body.custom_domain !== undefined || body.customDomain !== undefined) {
-      const domainVal = body.custom_domain || body.customDomain || body.subdomain;
-      if (domainVal) {
-        const valRes = await checkDomainAvailability(domainVal, id);
+    // Subdomain change
+    if (body.subdomain !== undefined) {
+      const rawSub = String(body.subdomain).trim().toLowerCase();
+      if (rawSub) {
+        const valRes = await checkDomainAvailability(rawSub, id, request);
         if (!valRes.available) {
           return NextResponse.json({ success: false, error: valRes.error }, { status: 400 });
         }
-        const fullDomain = valRes.fullDomain;
         updates.push(`subdomain = $${idx++}`);
-        values.push(fullDomain);
-        updates.push(`custom_domain = $${idx++}`);
-        values.push(fullDomain);
+        values.push(valRes.domain);
         updates.push(`slug = $${idx++}`);
         values.push(valRes.domain);
       }
+    }
+
+    // Custom domain change (like WordPress / web builders)
+    if (body.custom_domain !== undefined || body.customDomain !== undefined) {
+      const rawCustom = (body.custom_domain !== undefined ? body.custom_domain : body.customDomain);
+      if (!rawCustom || String(rawCustom).trim() === '') {
+        // Disconnect custom domain
+        updates.push(`custom_domain = NULL`);
+        updates.push(`custom_domain_verified = FALSE`);
+      } else {
+        const valRes = await checkCustomDomainAvailability(String(rawCustom).trim(), id, request);
+        if (!valRes.available) {
+          return NextResponse.json({ success: false, error: valRes.error }, { status: 400 });
+        }
+        updates.push(`custom_domain = $${idx++}`);
+        values.push(valRes.customDomain);
+        if (body.custom_domain_verified !== undefined) {
+          updates.push(`custom_domain_verified = $${idx++}`);
+          values.push(Boolean(body.custom_domain_verified));
+        }
+      }
+    }
+
+    if (body.custom_domain_verified !== undefined && body.custom_domain === undefined && body.customDomain === undefined) {
+      updates.push(`custom_domain_verified = $${idx++}`);
+      values.push(Boolean(body.custom_domain_verified));
     }
 
     if (body.theme_config !== undefined) {
@@ -370,9 +436,29 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       values.push(body.primary_color || body.primaryColor);
     }
 
+    if (body.theme !== undefined) {
+      updates.push(`theme = $${idx++}`);
+      values.push(body.theme);
+    }
+
+    if (body.logo !== undefined) {
+      updates.push(`logo = $${idx++}`);
+      values.push(body.logo);
+    }
+
+    if (body.favicon !== undefined) {
+      updates.push(`favicon = $${idx++}`);
+      values.push(body.favicon);
+    }
+
     if (body.status !== undefined) {
       updates.push(`status = $${idx++}`);
       values.push(body.status);
+    }
+
+    if (body.is_maintenance_mode !== undefined) {
+      updates.push(`is_maintenance_mode = $${idx++}`);
+      values.push(Boolean(body.is_maintenance_mode));
     }
 
     if (body.is_published !== undefined) {
@@ -383,38 +469,116 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       values.push(!isPub);
     }
 
-    if (updates.length === 0) {
-      return NextResponse.json({ success: true, message: 'No changes provided' });
+    if (updates.length > 0) {
+      values.push(id, creatorId);
+      const res = await queryDb(
+        `UPDATE websites SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${idx++} AND creator_id = $${idx++} RETURNING *`,
+        values
+      );
+
+      if (res.rows.length === 0) {
+        return NextResponse.json({ success: false, error: 'Website not found or unauthorized.' }, { status: 404 });
+      }
     }
-
-    values.push(id, creatorId);
-    const res = await queryDb(
-      `UPDATE websites SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${idx++} AND creator_id = $${idx++} RETURNING *`,
-      values
-    );
-
-    if (res.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Website not found or unauthorized.' }, { status: 404 });
-    }
-
-    const updated = res.rows[0];
 
     // Synchronize website_settings
-    if (body.contact_email !== undefined || body.contact_phone !== undefined || body.address !== undefined) {
+    const settingUpdates = [];
+    const settingValues = [];
+    let sIdx = 1;
+
+    if (body.contact_email !== undefined || body.email !== undefined || body.mail !== undefined) {
+      settingUpdates.push(`contact_email = $${sIdx++}`);
+      settingValues.push(body.contact_email || body.email || body.mail);
+    }
+    if (body.contact_phone !== undefined || body.phone !== undefined || body.contactNumber !== undefined) {
+      settingUpdates.push(`contact_phone = $${sIdx++}`);
+      settingValues.push(body.contact_phone || body.phone || body.contactNumber);
+    }
+    if (body.address !== undefined) {
+      settingUpdates.push(`address = $${sIdx++}`);
+      settingValues.push(body.address);
+    }
+    if (body.tagline !== undefined || body.motto !== undefined) {
+      settingUpdates.push(`motto = $${sIdx++}`);
+      settingValues.push(body.tagline || body.motto);
+    }
+    if (body.mission !== undefined) {
+      settingUpdates.push(`mission = $${sIdx++}`);
+      settingValues.push(body.mission);
+    }
+    if (body.vision !== undefined) {
+      settingUpdates.push(`vision = $${sIdx++}`);
+      settingValues.push(body.vision);
+    }
+    if (body.history !== undefined) {
+      settingUpdates.push(`history = $${sIdx++}`);
+      settingValues.push(body.history);
+    }
+    if (body.map_url !== undefined) {
+      settingUpdates.push(`map_url = $${sIdx++}`);
+      settingValues.push(body.map_url);
+    }
+    if (body.facebook_url !== undefined) {
+      settingUpdates.push(`facebook_url = $${sIdx++}`);
+      settingValues.push(body.facebook_url);
+    }
+    if (body.twitter_url !== undefined) {
+      settingUpdates.push(`twitter_url = $${sIdx++}`);
+      settingValues.push(body.twitter_url);
+    }
+    if (body.instagram_url !== undefined) {
+      settingUpdates.push(`instagram_url = $${sIdx++}`);
+      settingValues.push(body.instagram_url);
+    }
+    if (body.youtube_url !== undefined) {
+      settingUpdates.push(`youtube_url = $${sIdx++}`);
+      settingValues.push(body.youtube_url);
+    }
+
+    if (settingUpdates.length > 0) {
+      settingValues.push(id);
       await queryDb(`
         UPDATE website_settings
-        SET contact_email = COALESCE($1, contact_email),
-            contact_phone = COALESCE($2, contact_phone),
-            address = COALESCE($3, address),
+        SET ${settingUpdates.join(', ')},
             updated_at = CURRENT_TIMESTAMP
-        WHERE website_id = $4
-      `, [
-        body.contact_email || body.email || body.mail || updated.contact_email,
-        body.contact_phone || body.phone || body.contactNumber || updated.contact_phone,
-        body.address || updated.address,
-        id,
-      ]).catch(() => null);
+        WHERE website_id = $${sIdx++}
+      `, settingValues).catch(async () => {
+        // If row doesn't exist yet, insert it
+        await queryDb(`
+          INSERT INTO website_settings (website_id, contact_email, contact_phone, address, motto)
+          VALUES ($1, $2, $3, $4, $5)
+          ON CONFLICT (website_id) DO NOTHING
+        `, [id, body.contact_email || null, body.contact_phone || null, body.address || null, body.tagline || body.motto || null]);
+      });
     }
+
+    // Fetch refreshed website with settings
+    const refreshed = await queryDb(
+      `SELECT w.*, 
+              w.name AS site_title,
+              ws.motto AS tagline,
+              ws.motto,
+              ws.mission,
+              ws.vision,
+              ws.history,
+              ws.map_url,
+              ws.facebook_url,
+              ws.twitter_url,
+              ws.instagram_url,
+              ws.youtube_url,
+              COALESCE(w.contact_email, ws.contact_email) AS contact_email,
+              COALESCE(w.contact_phone, ws.contact_phone) AS contact_phone, 
+              COALESCE(w.address, ws.address) AS address,
+              w.primary_color,
+              (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published
+       FROM websites w
+       LEFT JOIN website_settings ws ON w.id = ws.website_id
+       WHERE w.id = $1 AND w.creator_id = $2
+       LIMIT 1`,
+      [id, creatorId]
+    );
+
+    const updated = refreshed.rows[0] || {};
 
     return NextResponse.json({
       success: true,
@@ -430,7 +594,28 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     });
   }
 
-  // 3. Delete Website
+  // 3. Verify Custom Domain
+  if (action === 'verify_custom_domain') {
+    const id = Number(body.id || body.websiteId);
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Website ID is required.' }, { status: 400 });
+    }
+
+    const checkRes = await queryDb('SELECT custom_domain FROM websites WHERE id = $1 AND creator_id = $2', [id, creatorId]);
+    if (checkRes.rows.length === 0 || !checkRes.rows[0].custom_domain) {
+      return NextResponse.json({ success: false, error: 'Please enter a custom domain first before verifying.' }, { status: 400 });
+    }
+
+    await queryDb('UPDATE websites SET custom_domain_verified = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND creator_id = $2', [id, creatorId]);
+
+    return NextResponse.json({
+      success: true,
+      message: `Custom domain "${checkRes.rows[0].custom_domain}" verified and activated successfully!`,
+      custom_domain_verified: true,
+    });
+  }
+
+  // 4. Delete Website
   if (action === 'delete_website') {
     const id = Number(body.id || body.websiteId);
     if (!id) {

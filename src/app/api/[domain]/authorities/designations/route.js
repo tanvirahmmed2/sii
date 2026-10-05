@@ -1,0 +1,106 @@
+import { NextResponse } from 'next/server';
+import { query } from 'src/lib/database/db';
+import { isAdmin } from 'src/lib/middleware/auth';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+
+function slugify(text) {
+  return String(text || '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]+/g, '')
+    .replace(/\-\-+/g, '-');
+}
+
+// GET all designations
+export async function GET(request, context) {
+  try {
+    const website = await resolveWebsiteFromRequest(request, context);
+    if (!website) {
+      return NextResponse.json({ success: false, message: 'Tenant website not found', paylod: { designations: [] } }, { status: 404 });
+    }
+
+    const result = await query(
+      'SELECT * FROM website_authority_designations WHERE website_id = $1 ORDER BY id ASC',
+      [website.id]
+    );
+    const res_data = { designations: result.rows };
+    return NextResponse.json({
+      success: true,
+      message: 'Successfully fetched designations',
+      payload: res_data,
+      paylod: res_data
+    }, { status: 200 });
+  } catch (error) {
+    console.error('Error fetching designations:', error);
+    return NextResponse.json({
+      success: false,
+      message: 'Failed to retrieve designations. Internal server error.',
+      error: 'Internal Server Error',
+      paylod: null
+    }, { status: 500 });
+  }
+}
+
+// POST create designation (Admin only)
+export async function POST(request, context) {
+  try {
+    const website = await resolveWebsiteFromRequest(request, context);
+    if (!website) {
+      return NextResponse.json({ success: false, message: 'Tenant website not found', paylod: null }, { status: 404 });
+    }
+
+    const authenticated = await isAdmin();
+    if (!authenticated) {
+      return NextResponse.json({
+        success: false,
+        message: 'Unauthorized. Admins only.',
+        error: 'Unauthorized',
+        paylod: null
+      }, { status: 403 });
+    }
+
+    const { title, slug, description, is_head = false } = await request.json();
+
+    if (!title || !title.trim()) {
+      return NextResponse.json({
+        success: false,
+        message: 'Title is required.',
+        error: 'Bad Request',
+        paylod: null
+      }, { status: 400 });
+    }
+
+    const finalSlug = slug ? slugify(slug) : slugify(title);
+
+    const result = await query(
+      `INSERT INTO website_authority_designations (website_id, title, slug, description, is_head) 
+       VALUES ($1, $2, $3, $4, $5) 
+       RETURNING *`,
+      [website.id, title.trim(), finalSlug, description ? description.trim() : null, Boolean(is_head)]
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: 'Designation created successfully.',
+      payload: { designation: result.rows[0] },
+      paylod: { designation: result.rows[0] }
+    }, { status: 201 });
+  } catch (error) {
+    console.error('Error creating designation:', error);
+    if (error.code === '23505') {
+      return NextResponse.json({
+        success: false,
+        message: 'Designation title or slug already exists for this website.',
+        error: 'Conflict',
+        paylod: null
+      }, { status: 400 });
+    }
+    return NextResponse.json({
+      success: false,
+      message: 'Failed to create designation. Internal server error.',
+      error: 'Internal Server Error',
+      paylod: null
+    }, { status: 500 });
+  }
+}

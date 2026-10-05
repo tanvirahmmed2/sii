@@ -12,7 +12,7 @@ const AnnouncementPopup = () => {
     const fetchActiveAnnouncement = async () => {
       try {
         const response = await axios.get('/api/announcements');
-        const active = response.data.paylod.announcement;
+        const active = response.data?.payload?.announcement || response.data?.paylod?.announcement || response.data?.announcement;
         
         if (active && (!active.expires_at || new Date(active.expires_at) > new Date())) {
           setAnnouncement(active);

@@ -5,13 +5,23 @@ import Link from 'next/link';
 import { FiArrowRight, FiBookOpen, FiUsers, FiLayers, FiShield } from 'react-icons/fi';
 import { SCHOOL_NAME } from 'src/lib/database/secret';
 
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
+
 const Hero = () => {
-  const [schoolName, setSchoolName] = useState(SCHOOL_NAME);
+  const tenantCtx = React.useContext(TenantWebsiteContext);
+  const website = tenantCtx?.website;
+  const [schoolName, setSchoolName] = useState(website?.name || SCHOOL_NAME);
   const [stats, setStats] = useState({
     totalStudents: 0,
     totalTeachers: 0,
     totalClasses: 0
   });
+
+  useEffect(() => {
+    if (website?.name) {
+      setSchoolName(website.name);
+    }
+  }, [website?.name]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -33,12 +43,12 @@ const Hero = () => {
       }
 
       try {
-        const settingsRes = await fetch('/api/admin/website-settings');
+        const settingsRes = await fetch('/api/website-settings');
         if (settingsRes.ok) {
           const settingsData = await settingsRes.json();
-          const settings = settingsData.paylod?.settings || settingsData.payload?.settings;
-          if (settingsData.success && settings?.school_name) {
-            setSchoolName(settings.school_name);
+          const settings = settingsData.payload?.settings || settingsData.paylod?.settings || settingsData.settings;
+          if (settingsData.success && (settings?.school_name || settings?.name)) {
+            setSchoolName(settings.school_name || settings.name);
           }
         }
       } catch (err) {

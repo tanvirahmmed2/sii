@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
-import { JWT_SECRET, CREATOR_TOKEN } from '../database/secret.js';
+import { JWT_SECRET, CREATOR_TOKEN, BASE_URL, BASE_DOMAIN, extractBaseDomain } from '../database/secret.js';
 import { query, queryDb } from '../database/db.js';
 
 const DEFAULT_JWT_SECRET = JWT_SECRET || 'creator_studio_jwt_secret_key_2026';
@@ -273,15 +273,28 @@ export async function resolveWebsiteFromRequest(request, context) {
         url?.searchParams?.get('slug') ||
         url?.searchParams?.get('subdomain') ||
         request.headers?.get?.('x-website-domain') ||
-        request.headers?.get?.('x-domain');
+        request.headers?.get?.('x-domain') ||
+        request.cookies?.get?.('x-website-domain')?.value ||
+        request.cookies?.get?.('x-domain')?.value;
 
-      // Also check referer if called from client fetch on /websites/[domain] or /website/[domain]
+      // Also check referer if called from client fetch on /websites/[domain] or /[domain]/...
       if (!identifier) {
         const referer = request.headers?.get?.('referer');
         if (referer) {
           const refMatch = referer.match(/\/(?:websites|website|webite)\/([^/?#]+)/i);
           if (refMatch && refMatch[1]) {
             identifier = decodeURIComponent(refMatch[1]).toLowerCase();
+          } else {
+            try {
+              const refUrl = new URL(referer);
+              const pathParts = refUrl.pathname.split('/').filter(Boolean);
+              if (pathParts.length > 0) {
+                const first = pathParts[0].toLowerCase();
+                if (!['creator', 'api', '_next', 'marketing', 'auth', 'admin'].includes(first)) {
+                  identifier = first;
+                }
+              }
+            } catch {}
           }
         }
       }
@@ -291,7 +304,7 @@ export async function resolveWebsiteFromRequest(request, context) {
         const host = request.headers?.get?.('x-forwarded-host') || request.headers?.get?.('host') || url?.host || '';
         const cleanHost = host.split(':')[0].toLowerCase();
         if (cleanHost && cleanHost !== 'localhost' && cleanHost !== '127.0.0.1') {
-          const base = (process.env.BASE_URL || '').replace(/^https?:\/\//, '').split(':')[0].toLowerCase();
+          const base = (BASE_DOMAIN || extractBaseDomain(BASE_URL) || '').toLowerCase();
           if (base && cleanHost.endsWith(`.${base}`)) {
             identifier = cleanHost.replace(`.${base}`, '');
           } else {
@@ -303,22 +316,45 @@ export async function resolveWebsiteFromRequest(request, context) {
 
     if (!identifier) return null;
 
+    const cleanId = String(identifier).trim().toLowerCase().split(':')[0];
+    const isNum = /^[0-9]+$/.test(cleanId);
+    const noWww = cleanId.replace(/^www\./, '');
+
     const res = await query(
       `SELECT id, creator_id, name, slug, subdomain, subdomain AS domain, custom_domain,
-              institution_type, eiin_number, contact_email, contact_phone, address,
+              custom_domain_verified, institution_type, eiin_number, contact_email, contact_phone, address,
               primary_color, theme, status, is_maintenance_mode,
               (status = 'active') AS is_active,
               (status = 'active' AND is_maintenance_mode = false) AS is_published
        FROM websites 
-       WHERE LOWER(slug) = LOWER($1) 
-          OR LOWER(subdomain) = LOWER($1) 
-          OR LOWER(custom_domain) = LOWER($1)
-          OR LOWER(subdomain) LIKE LOWER($2)
+       WHERE LOWER(slug) = $1 
+          OR LOWER(slug) = $2
+          OR LOWER(subdomain) = $1 
+          OR LOWER(subdomain) = $2
+          OR SPLIT_PART(LOWER(subdomain), '.', 1) = $1
+          OR SPLIT_PART(LOWER(subdomain), '.', 1) = $2
+          OR LOWER(custom_domain) = $1 
+          OR LOWER(custom_domain) = $2
+          OR LOWER(custom_domain) = 'www.' || $2
+          OR LOWER(REPLACE(custom_domain, 'www.', '')) = $2
+          OR LOWER(subdomain) LIKE $3
+          OR ($4 = true AND id = $5::bigint)
        LIMIT 1`,
-      [identifier, `${identifier}.%`]
+      [cleanId, noWww, `${cleanId}.%`, isNum, isNum ? Number(cleanId) : -1]
     );
     if (res.rows.length === 0) return null;
-    return res.rows[0];
+    const website = res.rows[0];
+
+    // Load merged settings from website_settings if available
+    try {
+      const setRes = await query(`SELECT * FROM website_settings WHERE website_id = $1 LIMIT 1`, [website.id]);
+      if (setRes.rows.length > 0) {
+        website.settings = setRes.rows[0];
+        website.website_settings = setRes.rows[0];
+      }
+    } catch {}
+
+    return website;
   } catch (error) {
     console.error('resolveWebsiteFromRequest error:', error);
     return null;

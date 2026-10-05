@@ -161,10 +161,122 @@ export async function checkDomainAvailability(rawInput, websiteIdToExclude = nul
   }
 }
 
+/**
+ * Checks availability and validity of external custom domains (e.g. schoolname.edu)
+ */
+export async function checkCustomDomainAvailability(rawInput, websiteIdToExclude = null, request = null) {
+  const reqHost = extractRequestHost(request);
+  const baseDomain = reqHost || BASE_DOMAIN || 'localhost:3000';
+  const cleanBase = baseDomain.split(':')[0].toLowerCase();
+
+  if (!rawInput || typeof rawInput !== 'string') {
+    return {
+      available: false,
+      error: 'Please enter a custom domain (e.g., myschool.edu).',
+      code: 'EMPTY',
+    };
+  }
+
+  let clean = rawInput.trim().toLowerCase();
+  clean = clean.replace(/^https?:\/\//, '').replace(/\/.*$/, '').trim();
+  clean = clean.split(':')[0]; // strip port
+
+  if (!clean) {
+    return {
+      available: false,
+      error: 'Please enter a valid domain.',
+      code: 'EMPTY',
+    };
+  }
+
+  // Must contain at least one dot
+  if (!clean.includes('.')) {
+    return {
+      available: false,
+      customDomain: clean,
+      error: 'Custom domain must include a top-level domain (e.g., .edu, .org, .com).',
+      code: 'INVALID_FORMAT',
+    };
+  }
+
+  // Hostname validation regex
+  const domainRegex = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/;
+  if (!domainRegex.test(clean) || clean.length < 4 || clean.length > 253) {
+    return {
+      available: false,
+      customDomain: clean,
+      error: 'Invalid custom domain format. Example: school.edu or academy.org',
+      code: 'INVALID_FORMAT',
+    };
+  }
+
+  // Prevent connecting the SaaS root domain as a tenant custom domain
+  if (clean === cleanBase || clean === `www.${cleanBase}` || clean.endsWith(`.${cleanBase}`) || clean.endsWith('.localhost')) {
+    return {
+      available: false,
+      customDomain: clean,
+      error: 'Cannot use platform host as custom domain. Use subdomain configuration instead.',
+      code: 'PLATFORM_DOMAIN',
+    };
+  }
+
+  try {
+    let queryText = 'SELECT id, name, custom_domain FROM websites WHERE LOWER(custom_domain) = LOWER($1)';
+    const params = [clean];
+
+    if (websiteIdToExclude && !isNaN(Number(websiteIdToExclude))) {
+      queryText += ' AND id != $2';
+      params.push(Number(websiteIdToExclude));
+    }
+
+    queryText += ' LIMIT 1';
+
+    const checkRes = await queryDb(queryText, params);
+
+    if (checkRes.rows.length > 0) {
+      return {
+        available: false,
+        customDomain: clean,
+        error: `Custom domain "${clean}" is already connected to another website.`,
+        code: 'TAKEN',
+      };
+    }
+
+    return {
+      available: true,
+      customDomain: clean,
+      message: `Custom domain "${clean}" is available to connect!`,
+      code: 'AVAILABLE',
+      dnsInstructions: {
+        type: 'CNAME',
+        host: '@',
+        value: cleanBase || 'cname.educraft.io',
+      },
+    };
+  } catch (error) {
+    console.error('Custom domain check error:', error);
+    return {
+      available: false,
+      customDomain: clean,
+      error: 'Failed to verify custom domain availability.',
+      code: 'SERVER_ERROR',
+    };
+  }
+}
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
-  const domain = searchParams.get('domain') || searchParams.get('subdomain') || searchParams.get('q') || '';
+  const type = searchParams.get('type') || '';
+  const domain = searchParams.get('domain') || searchParams.get('subdomain') || searchParams.get('customDomain') || searchParams.get('q') || '';
   const websiteId = searchParams.get('websiteId') || searchParams.get('id') || null;
+
+  if (type === 'custom' || searchParams.get('customDomain')) {
+    const customResult = await checkCustomDomainAvailability(domain, websiteId, request);
+    return NextResponse.json({
+      success: true,
+      ...customResult,
+    });
+  }
 
   const result = await checkDomainAvailability(domain, websiteId, request);
   return NextResponse.json({
@@ -176,8 +288,17 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json().catch(() => ({}));
+    const type = body.type || (body.customDomain ? 'custom' : 'subdomain');
     const domain = body.domain || body.subdomain || body.customDomain || '';
     const websiteId = body.websiteId || body.id || null;
+
+    if (type === 'custom') {
+      const customResult = await checkCustomDomainAvailability(domain, websiteId, request);
+      return NextResponse.json({
+        success: true,
+        ...customResult,
+      });
+    }
 
     const result = await checkDomainAvailability(domain, websiteId, request);
     return NextResponse.json({
