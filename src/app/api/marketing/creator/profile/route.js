@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
-import { getCreatorSession, hashPassword } from 'src/lib/middleware/creator';
+import { getCreatorSession, hashPassword, comparePassword } from 'src/lib/middleware/creator';
 
 /**
  * API Route: /api/creator/profile
@@ -102,8 +102,9 @@ export async function handleProfileAction(body, sessionCreator) {
       return NextResponse.json({ success: false, error: 'Creator not found.' }, { status: 404 });
     }
 
-    const valid = (await hashPassword(currentPassword)) === c.rows[0].password || c.rows[0].password === currentPassword;
-    if (!valid) {
+    const isBcryptMatch = await comparePassword(currentPassword, c.rows[0].password).catch(() => false);
+    const isPlainMatch = c.rows[0].password === currentPassword;
+    if (!isBcryptMatch && !isPlainMatch) {
       return NextResponse.json({ success: false, error: 'Current password is incorrect.' }, { status: 401 });
     }
 

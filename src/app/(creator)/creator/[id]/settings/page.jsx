@@ -67,14 +67,21 @@ export default function CreatorSettingsPage() {
   const fetchSessions = useCallback(async () => {
     try {
       setLoadingSessions(true);
+      setSessionErr('');
       const res = await fetch(`/api/marketing/creator/sessions?creatorId=${creatorId}`);
       if (res.status === 401) {
         router.replace('/creator/login');
         return;
       }
       const data = await res.json();
-      if (data.success && Array.isArray(data.sessions)) {
-        setSessionsList(data.sessions);
+      const list = data.sessions || data.sessionsList;
+      if (data.success && Array.isArray(list)) {
+        setSessionsList(
+          list.map((s) => ({
+            ...s,
+            isCurrent: Boolean(s.isCurrent || s.is_current),
+          }))
+        );
       } else {
         setSessionErr(data.error || 'Failed to load logged-in devices.');
       }
@@ -234,7 +241,7 @@ export default function CreatorSettingsPage() {
     }
   };
 
-  const otherSessionsCount = sessionsList.filter((s) => !s.isCurrent).length;
+  const otherSessionsCount = sessionsList.filter((s) => !s.isCurrent && !s.is_current).length;
 
   return (
     <div className="w-full space-y-4 text-xs text-slate-800">
@@ -299,12 +306,13 @@ export default function CreatorSettingsPage() {
                 {sessionsList.map((s) => {
                   const ua = parseUserAgent(s.user_agent);
                   const isRevokingThis = revokingSessionId === s.id;
+                  const isCurrent = Boolean(s.isCurrent || s.is_current);
 
                   return (
                     <tr key={s.id} className="hover:bg-slate-50">
                       <td className="py-2.5 font-medium text-slate-900">
                         {ua.label}
-                        {s.isCurrent && (
+                        {isCurrent && (
                           <span className="ml-2 text-[9px] font-medium px-1.5 py-0.2 rounded border bg-emerald-50 text-emerald-700 border-emerald-200">
                             Current Device
                           </span>
@@ -323,10 +331,10 @@ export default function CreatorSettingsPage() {
                         <button
                           type="button"
                           disabled={isRevokingThis}
-                          onClick={() => handleRevokeSession(s.id, s.isCurrent)}
+                          onClick={() => handleRevokeSession(s.id, isCurrent)}
                           className="text-rose-600 hover:underline font-medium cursor-pointer disabled:opacity-50"
                         >
-                          {isRevokingThis ? 'Revoking...' : s.isCurrent ? 'Sign Out' : 'Revoke'}
+                          {isRevokingThis ? 'Revoking...' : isCurrent ? 'Sign Out' : 'Revoke'}
                         </button>
                       </td>
                     </tr>

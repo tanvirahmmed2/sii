@@ -70,7 +70,7 @@ export default function HomeNavbar() {
                 href={`/creator/${creator.id}`}
                 className="inline-flex items-center justify-center gap-1.5 px-4.5 py-2 rounded-full bg-secondary hover:bg-secondary-dark text-white font-bold text-xs sm:text-sm shadow-md shadow-secondary/25 hover:shadow-secondary/35 transition-all duration-200"
               >
-                <span>Panel</span>
+                <BiGridAlt className="text-sm" />
               </Link>
             ) : (
               <>
@@ -92,16 +92,7 @@ export default function HomeNavbar() {
             )}
           </div>
 
-          {/* Quick Panel Link on Mobile Header if logged in */}
-          {creator?.id && (
-            <Link
-              href={`/creator/${creator.id}`}
-              className="md:hidden inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-full bg-secondary hover:bg-secondary-dark text-white font-bold text-xs shadow-xs transition-all"
-            >
-              <BiGridAlt className="text-sm" />
-              <span>Panel</span>
-            </Link>
-          )}
+          
 
           {/* Menubar Toggle Button on the Right for Mobile */}
           <button

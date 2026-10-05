@@ -691,6 +691,7 @@ function WorkspaceContent() {
                 })}
               </tbody>
             </table>
+          </div>
         )}
       </div>
 
