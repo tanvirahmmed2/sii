@@ -29,7 +29,21 @@ export const SITE_MAIL ='support@hiesci.io';
 export const SITE_CONTACT ='+1 (800) 555-0199';
 export const SITE_ADDRESS ='Tech Innovation District, 100 Enterprise Way, Suite 400';
 export const COMPANY_NAME ='EduCraft Technologies Inc.';
-export const COMPANY_URL = 'https://educraft.io';
+export const COMPANY_URL = process.env.COMPANY_URL || process.env.BASE_URL || '';
+export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL || COMPANY_URL || '';
+
+export const extractBaseDomain = (url = BASE_URL) => {
+  if (!url) return '';
+  try {
+    const raw = String(url).trim();
+    const parsed = new URL(raw.startsWith('http://') || raw.startsWith('https://') ? raw : `https://${raw}`);
+    return parsed.host || parsed.hostname || '';
+  } catch {
+    return String(url).replace(/^https?:\/\//, '').split('/')[0] || '';
+  }
+};
+
+export const BASE_DOMAIN = extractBaseDomain(BASE_URL);
 
 export const DEVELOPER_TOKEN='hiesci-dev'
 export const CREATOR_TOKEN='hiesci-creator'

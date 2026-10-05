@@ -16,7 +16,7 @@ export function useTenantWebsite() {
 export function TenantWebsiteProvider({ children, initialWebsite = null, slug: propSlug }) {
   const params = useParams();
   const router = useRouter();
-  const activeSlug = propSlug || params?.slug || '';
+  const activeSlug = propSlug || params?.domain || params?.slug || '';
 
   // Tenant website metadata
   const [website, setWebsite] = useState(initialWebsite);
@@ -45,20 +45,13 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(`/api/marketing/websites/${encodeURIComponent(activeSlug)}`);
+      const res = await fetch(`/api/website?domain=${encodeURIComponent(activeSlug)}`);
       const data = await res.json();
       if (data.success && data.website) {
         setWebsite(data.website);
       } else {
-        // Fallback / default template if not yet provisioned in database
-        setWebsite((prev) => prev || {
-          name: activeSlug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-          subdomain: activeSlug,
-          primary_color: '#1e3a8a',
-          secondary_color: '#0284c7',
-          font_family: 'Inter',
-          is_published: true,
-        });
+        setWebsite(null);
+        setError(data.error || 'Website not found');
       }
     } catch (err) {
       console.warn('Failed to fetch tenant website metadata:', err);
@@ -70,7 +63,7 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
 
   const fetchWebsiteSettings = useCallback(async () => {
     try {
-      const res = await fetch('/api/website-settings');
+      const res = await fetch('/api/website/website-settings');
       if (res.ok) {
         const data = await res.json();
         const settings = data.payload?.settings || data.paylod?.settings || data.settings;
@@ -85,7 +78,7 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
 
   const fetchDesignations = useCallback(async () => {
     try {
-      const designationsRes = await fetch('/api/authorities/designations');
+      const designationsRes = await fetch('/api/website/authorities/designations');
       if (designationsRes.ok) {
         const data = await designationsRes.json();
         setDesignations(data.payload?.designations || data.paylod?.designations || []);
@@ -97,7 +90,7 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
 
   const fetchClasses = useCallback(async () => {
     try {
-      const classesRes = await fetch('/api/classes');
+      const classesRes = await fetch('/api/website/classes');
       if (classesRes.ok) {
         const data = await classesRes.json();
         setClasses(data.payload?.classes || data.paylod?.classes || []);
@@ -109,7 +102,7 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
 
   const fetchClubs = useCallback(async () => {
     try {
-      const clubsRes = await fetch('/api/clubs');
+      const clubsRes = await fetch('/api/website/clubs');
       if (clubsRes.ok) {
         const data = await clubsRes.json();
         setClubs(data.payload?.clubs || data.paylod?.clubs || []);

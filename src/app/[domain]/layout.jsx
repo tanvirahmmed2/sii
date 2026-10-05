@@ -3,7 +3,7 @@ import { TenantWebsiteProvider } from 'src/component/helper/WebsiteContext';
 
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
-  const slug = resolvedParams?.slug || 'institution';
+  const slug = resolvedParams?.domain || resolvedParams?.slug || 'institution';
   const cleanName = slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
   return {
@@ -14,7 +14,7 @@ export async function generateMetadata({ params }) {
 
 export default async function TenantWebsiteMasterLayout({ children, params }) {
   const resolvedParams = await params;
-  const slug = resolvedParams?.slug || '';
+  const slug = resolvedParams?.domain || resolvedParams?.slug || '';
 
   return (
     <TenantWebsiteProvider slug={slug}>

@@ -244,6 +244,133 @@ export async function authenticateCreator(email, password, { ip = '127.0.0.1', u
   };
 }
 
+export const WEBSITE_AUTH_COOKIE = 'website_user_token';
+
+export function generateWebsiteToken(payload, expiresIn = '7d') {
+  return jwt.sign(payload, DEFAULT_JWT_SECRET, { expiresIn });
+}
+
+export function verifyWebsiteToken(token) {
+  try {
+    return jwt.verify(token, DEFAULT_JWT_SECRET);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolve which website this request is for, based on the [slug] or [domain] param.
+ */
+export async function resolveWebsiteFromRequest(request, context) {
+  try {
+    const params = await context?.params;
+    let identifier = typeof context === 'string' ? context : (params?.domain || params?.slug);
+
+    if (!identifier && request) {
+      const url = request.nextUrl || (request.url ? new URL(request.url) : null);
+      identifier =
+        url?.searchParams?.get('domain') ||
+        url?.searchParams?.get('slug') ||
+        url?.searchParams?.get('subdomain') ||
+        request.headers?.get?.('x-website-domain') ||
+        request.headers?.get?.('x-domain');
+
+      // Also check referer if called from client fetch on /websites/[domain] or /website/[domain]
+      if (!identifier) {
+        const referer = request.headers?.get?.('referer');
+        if (referer) {
+          const refMatch = referer.match(/\/(?:websites|website|webite)\/([^/?#]+)/i);
+          if (refMatch && refMatch[1]) {
+            identifier = decodeURIComponent(refMatch[1]).toLowerCase();
+          }
+        }
+      }
+
+      // Check Host header
+      if (!identifier) {
+        const host = request.headers?.get?.('x-forwarded-host') || request.headers?.get?.('host') || url?.host || '';
+        const cleanHost = host.split(':')[0].toLowerCase();
+        if (cleanHost && cleanHost !== 'localhost' && cleanHost !== '127.0.0.1') {
+          const base = (process.env.BASE_URL || '').replace(/^https?:\/\//, '').split(':')[0].toLowerCase();
+          if (base && cleanHost.endsWith(`.${base}`)) {
+            identifier = cleanHost.replace(`.${base}`, '');
+          } else {
+            identifier = cleanHost;
+          }
+        }
+      }
+    }
+
+    if (!identifier) return null;
+
+    const res = await query(
+      `SELECT id, creator_id, name, slug, subdomain, subdomain AS domain, custom_domain,
+              institution_type, eiin_number, contact_email, contact_phone, address,
+              primary_color, theme, status, is_maintenance_mode,
+              (status = 'active') AS is_active,
+              (status = 'active' AND is_maintenance_mode = false) AS is_published
+       FROM websites 
+       WHERE LOWER(slug) = LOWER($1) 
+          OR LOWER(subdomain) = LOWER($1) 
+          OR LOWER(custom_domain) = LOWER($1)
+          OR LOWER(subdomain) LIKE LOWER($2)
+       LIMIT 1`,
+      [identifier, `${identifier}.%`]
+    );
+    if (res.rows.length === 0) return null;
+    return res.rows[0];
+  } catch (error) {
+    console.error('resolveWebsiteFromRequest error:', error);
+    return null;
+  }
+}
+
+/**
+ * Get the currently authenticated website user from request cookie/header.
+ */
+export async function getWebsiteUserSession(request) {
+  try {
+    let token = null;
+    const authHeader = request?.headers?.get?.('authorization') || request?.headers?.get?.('Authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else if (request?.cookies?.get) {
+      token = request.cookies.get(WEBSITE_AUTH_COOKIE)?.value;
+    }
+    if (!token) {
+      try {
+        const cookieStore = await cookies();
+        token = cookieStore.get(WEBSITE_AUTH_COOKIE)?.value;
+      } catch {}
+    }
+    if (!token) return null;
+
+    const decoded = verifyWebsiteToken(token);
+    if (!decoded?.id) return null;
+    return decoded;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get user roles and permissions for a given website.
+ */
+export async function getUserRolesAndPermissions(userId, websiteId) {
+  try {
+    const res = await query(
+      `SELECT r.name as role, r.permissions
+       FROM website_user_roles ur
+       JOIN website_roles r ON r.id = ur.role_id
+       WHERE ur.user_id = $1 AND ur.website_id = $2`,
+      [userId, websiteId]
+    );
+    return res.rows;
+  } catch {
+    return [];
+  }
+}
+
 export default {
   hashPassword,
   comparePassword,
@@ -254,4 +381,7 @@ export default {
   clearCreatorSessionCookie,
   getCreatorSession,
   authenticateCreator,
+  resolveWebsiteFromRequest,
+  getWebsiteUserSession,
+  getUserRolesAndPermissions,
 };

@@ -167,9 +167,7 @@ export default function CreatorLayout({ children, params }) {
     creatorId,
     refetch: fetchData,
     openCreateWebsiteModal: () => {
-      setCreateError('');
-      setCreateSuccess('');
-      setCreateModalOpen(true);
+      router.push(`/creator/${creatorId}/workspace?setup=true`);
     },
   };
 
@@ -194,9 +192,7 @@ export default function CreatorLayout({ children, params }) {
             activeSubscription={data.activeSubscription}
             onToggleSidebar={() => setSidebarOpen((p) => !p)}
             onOpenCreateWebsite={() => {
-              setCreateError('');
-              setCreateSuccess('');
-              setCreateModalOpen(true);
+              router.push(`/creator/${creatorId}/workspace?setup=true`);
             }}
           />
 

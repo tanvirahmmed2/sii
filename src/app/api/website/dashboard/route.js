@@ -1,13 +1,10 @@
 import { NextResponse } from 'next/server';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/user';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { queryDb } from 'src/lib/database/db';
 
 export async function GET(request, context) {
   try {
-    const params = await context.params;
-    const slug = params.slug;
-
-    const website = await resolveWebsiteFromRequest(request, slug);
+    const website = await resolveWebsiteFromRequest(request, context);
     if (!website) {
       return NextResponse.json({ success: false, error: 'Website not found' }, { status: 404 });
     }
@@ -46,7 +43,6 @@ export async function GET(request, context) {
     const products = productsRes.rows;
     const blogs = blogsRes.rows;
 
-    // Calculate KPIs
     const totalRevenueCents = orders
       .filter((o) => o.payment_status === 'PAID')
       .reduce((acc, o) => acc + Number(o.total_amount_in_cents || 0), 0);

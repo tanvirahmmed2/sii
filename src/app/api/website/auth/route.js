@@ -10,14 +10,11 @@ import {
   getWebsiteUserSession,
   getUserRolesAndPermissions,
   WEBSITE_AUTH_COOKIE,
-} from 'src/lib/middleware/user';
+} from 'src/lib/middleware/creator';
 
 export async function GET(request, context) {
   try {
-    const params = await context.params;
-    const slug = params.slug;
-
-    const website = await resolveWebsiteFromRequest(request, slug);
+    const website = await resolveWebsiteFromRequest(request, context);
     if (!website) {
       return NextResponse.json({ success: false, error: 'Website not found' }, { status: 404 });
     }
@@ -50,10 +47,7 @@ export async function GET(request, context) {
 
 export async function POST(request, context) {
   try {
-    const params = await context.params;
-    const slug = params.slug;
-
-    const website = await resolveWebsiteFromRequest(request, slug);
+    const website = await resolveWebsiteFromRequest(request, context);
     if (!website) {
       return NextResponse.json({ success: false, error: 'Website not found' }, { status: 404 });
     }
@@ -71,7 +65,7 @@ export async function POST(request, context) {
       'http://localhost:3000';
 
     const siteTitle = website.settings?.site_title || website.name || 'Tenant Website';
-    const siteSlug = website.subdomain || slug;
+    const siteSlug = website.custom_domain || website.subdomain || website.slug || '';
 
     // ------------------------------------------------------------------------
     // 1. REGISTER
@@ -148,7 +142,7 @@ export async function POST(request, context) {
       }
 
       // Send verification email
-      const verifyUrl = `${origin}/website/${siteSlug}/verify?email=${encodeURIComponent(cleanEmail)}&code=${verificationCode}`;
+      const verifyUrl = `${origin}/website/${encodeURIComponent(siteSlug)}/verify?email=${encodeURIComponent(cleanEmail)}&code=${verificationCode}`;
 
       try {
         await sendEmail({
@@ -293,7 +287,7 @@ export async function POST(request, context) {
         [newCode, user.id]
       );
 
-      const verifyUrl = `${origin}/website/${siteSlug}/verify?email=${encodeURIComponent(cleanEmail)}&code=${newCode}`;
+      const verifyUrl = `${origin}/website/${encodeURIComponent(siteSlug)}/verify?email=${encodeURIComponent(cleanEmail)}&code=${newCode}`;
 
       try {
         await sendEmail({
@@ -360,7 +354,7 @@ export async function POST(request, context) {
         [`${resetCode}:${resetToken}`, user.id]
       );
 
-      const resetUrl = `${origin}/website/${siteSlug}/recover?email=${encodeURIComponent(cleanEmail)}&token=${resetCode}`;
+      const resetUrl = `${origin}/website/${encodeURIComponent(siteSlug)}/recover?email=${encodeURIComponent(cleanEmail)}&token=${resetCode}`;
 
       try {
         await sendEmail({
@@ -381,7 +375,7 @@ export async function POST(request, context) {
                   Reset Password Now
                 </a>
               </div>
-              <p style="font-size: 12px; color: #64748b; line-height: 1.5;">
+              <p style="font-size: 12px; color: #64748b; line-line: 1.5;">
                 This recovery code expires in 1 hour. If you did not request this, you can safely ignore this email.
               </p>
             </div>

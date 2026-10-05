@@ -1,20 +1,17 @@
 import { NextResponse } from 'next/server';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/user';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { queryDb } from 'src/lib/database/db';
 
 export async function GET(request, context) {
   try {
-    const params = await context.params;
-    const slug = params.slug;
-
-    const website = await resolveWebsiteFromRequest(request, slug);
+    const website = await resolveWebsiteFromRequest(request, context);
     if (!website) {
       return NextResponse.json({ success: false, error: 'Website not found' }, { status: 404 });
     }
 
     const websiteId = website.id;
 
-    // Fetch public content across all active modules in parallel
+    // Fetch public content across active modules strictly from database
     const [
       servicesRes,
       productsRes,
@@ -46,16 +43,7 @@ export async function GET(request, context) {
       ).catch(() => ({ rows: [] })),
     ]);
 
-    let allowedModules = (allowedModsRes.rows || []).map((r) => r.module_title);
-    if (allowedModules.length === 0) {
-      const defaultModRes = await queryDb(
-        `SELECT DISTINCT tm.name AS module_title
-         FROM tenant_modules tm
-         WHERE tm.is_active = TRUE
-         ORDER BY tm.name ASC`
-      ).catch(() => ({ rows: [] }));
-      allowedModules = defaultModRes.rows.map((r) => r.module_title);
-    }
+    const allowedModules = (allowedModsRes.rows || []).map((r) => r.module_title);
 
     return NextResponse.json({
       success: true,
@@ -64,6 +52,11 @@ export async function GET(request, context) {
         name: website.name,
         subdomain: website.subdomain,
         custom_domain: website.custom_domain,
+        institution_type: website.institution_type,
+        eiin_number: website.eiin_number,
+        contact_email: website.contact_email,
+        contact_phone: website.contact_phone,
+        address: website.address,
         theme_config: website.theme_config,
         status: website.status,
         is_published: website.is_published,
@@ -81,17 +74,14 @@ export async function GET(request, context) {
       offers: offersRes.rows,
     });
   } catch (error) {
-    console.error('Website public website API error:', error);
+    console.error('Website public API error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
 export async function PUT(request, context) {
   try {
-    const params = await context.params;
-    const slug = params.slug;
-
-    const website = await resolveWebsiteFromRequest(request, slug);
+    const website = await resolveWebsiteFromRequest(request, context);
     if (!website) {
       return NextResponse.json({ success: false, error: 'Website not found' }, { status: 404 });
     }
@@ -128,7 +118,7 @@ export async function PUT(request, context) {
       ]);
     }
 
-    // 2. Update website record (custom_domain, name, theme_config)
+    // 2. Update website record
     if (body.custom_domain !== undefined || body.name !== undefined || body.theme_config !== undefined) {
       await queryDb(`
         UPDATE websites
@@ -144,10 +134,10 @@ export async function PUT(request, context) {
       ]);
     }
 
-    const updatedWebsite = await resolveWebsiteFromRequest(request, slug);
+    const updatedWebsite = await resolveWebsiteFromRequest(request, context);
     return NextResponse.json({ success: true, website: updatedWebsite });
   } catch (error) {
-    console.error('Update website website API error:', error);
+    console.error('Update website API error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

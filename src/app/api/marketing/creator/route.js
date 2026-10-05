@@ -298,7 +298,7 @@ export async function POST(request) {
     const sessionCreator = await getCreatorSession(request);
 
     // 2. Website Actions (websites table)
-    const websiteActions = ['create_website', 'setup_website', 'update_website', 'delete_website'];
+    const websiteActions = ['create_website', 'setup_website', 'update_website', 'delete_website', 'check_domain'];
     if (websiteActions.includes(action)) {
       return await handleWebsitesAction(body, sessionCreator, request);
     }

@@ -1,13 +1,10 @@
 import { NextResponse } from 'next/server';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/user';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { queryDb } from 'src/lib/database/db';
 
 export async function POST(request, context) {
   try {
-    const params = await context.params;
-    const slug = params.slug;
-
-    const website = await resolveWebsiteFromRequest(request, slug);
+    const website = await resolveWebsiteFromRequest(request, context);
     if (!website) {
       return NextResponse.json({ success: false, error: 'Website not found' }, { status: 404 });
     }

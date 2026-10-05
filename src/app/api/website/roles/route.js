@@ -1,13 +1,10 @@
 import { NextResponse } from 'next/server';
-import { resolveWebsiteFromRequest, hashPassword } from 'src/lib/middleware/user';
+import { resolveWebsiteFromRequest, hashPassword } from 'src/lib/middleware/creator';
 import { queryDb } from 'src/lib/database/db';
 
 export async function GET(request, context) {
   try {
-    const params = await context.params;
-    const slug = params.slug;
-
-    const website = await resolveWebsiteFromRequest(request, slug);
+    const website = await resolveWebsiteFromRequest(request, context);
     if (!website) {
       return NextResponse.json({ success: false, error: 'Website not found' }, { status: 404 });
     }
@@ -23,9 +20,9 @@ export async function GET(request, context) {
         WHERE r.website_id = $1
         GROUP BY r.id
         ORDER BY r.is_system DESC, r.id ASC
-      `, [websiteId]),
-      queryDb('SELECT * FROM website_modules WHERE website_id = $1 ORDER BY id ASC', [websiteId]),
-      queryDb('SELECT * FROM website_permissions WHERE website_id = $1 ORDER BY module_id ASC, id ASC', [websiteId]),
+      `, [websiteId]).catch(() => ({ rows: [] })),
+      queryDb('SELECT * FROM website_modules WHERE website_id = $1 ORDER BY id ASC', [websiteId]).catch(() => ({ rows: [] })),
+      queryDb('SELECT * FROM website_permissions WHERE website_id = $1 ORDER BY module_id ASC, id ASC', [websiteId]).catch(() => ({ rows: [] })),
       queryDb(`
         SELECT u.id, u.name, u.email, u.phone, u.avatar_url, u.is_active, u.created_at,
                COALESCE(
@@ -39,7 +36,7 @@ export async function GET(request, context) {
         WHERE u.website_id = $1
         GROUP BY u.id
         ORDER BY u.id DESC
-      `, [websiteId]),
+      `, [websiteId]).catch(() => ({ rows: [] })),
     ]);
 
     return NextResponse.json({
@@ -57,10 +54,7 @@ export async function GET(request, context) {
 
 export async function POST(request, context) {
   try {
-    const params = await context.params;
-    const slug = params.slug;
-
-    const website = await resolveWebsiteFromRequest(request, slug);
+    const website = await resolveWebsiteFromRequest(request, context);
     if (!website) {
       return NextResponse.json({ success: false, error: 'Website not found' }, { status: 404 });
     }
@@ -80,7 +74,6 @@ export async function POST(request, context) {
         return NextResponse.json({ success: false, error: 'Role name and slug are required.' }, { status: 400 });
       }
 
-      // Insert role
       const rRes = await queryDb(`
         INSERT INTO website_roles (website_id, name, slug, description, is_system)
         VALUES ($1, $2, $3, $4, FALSE)
@@ -91,7 +84,6 @@ export async function POST(request, context) {
 
       const role = rRes.rows[0];
 
-      // Assign selected permissions
       if (permissionIds.length > 0) {
         for (const pId of permissionIds) {
           await queryDb(`
@@ -112,7 +104,6 @@ export async function POST(request, context) {
         return NextResponse.json({ success: false, error: 'Role ID is required.' }, { status: 400 });
       }
 
-      // Do not allow deleting system roles
       const roleCheck = await queryDb('SELECT is_system FROM website_roles WHERE id = $1 AND website_id = $2', [roleId, websiteId]);
       if (roleCheck.rows.length === 0) {
         return NextResponse.json({ success: false, error: 'Role not found.' }, { status: 404 });
@@ -148,7 +139,6 @@ export async function POST(request, context) {
 
       const user = uRes.rows[0];
 
-      // Assign multiple roles
       if (roleIds.length > 0) {
         for (const rId of roleIds) {
           await queryDb(`
