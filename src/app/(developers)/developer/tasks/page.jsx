@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect, useContext } from 'react';
-
-
 import { Context } from 'src/component/helper/Context';
 
 export default function DeveloperTasksPage() {
@@ -171,47 +169,47 @@ export default function DeveloperTasksPage() {
       case 'HIGH':
         return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'MEDIUM':
-        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+        return 'bg-slate-100 text-slate-700 border-slate-300';
       case 'LOW':
-        return 'bg-slate-100 text-slate-600 border-slate-200';
+        return 'bg-slate-50 text-slate-600 border-slate-200';
       default:
         return 'bg-slate-100 text-slate-600 border-slate-200';
     }
   };
 
   const COLUMNS = [
-    { key: 'TODO', label: 'To Do', color: 'border-slate-300' },
-    { key: 'IN_PROGRESS', label: 'In Progress', color: 'border-blue-400' },
-    { key: 'IN_REVIEW', label: 'In Review', color: 'border-purple-400' },
-    { key: 'COMPLETED', label: 'Completed', color: 'border-emerald-400' },
+    { key: 'TODO', label: 'To Do' },
+    { key: 'IN_PROGRESS', label: 'In Progress' },
+    { key: 'IN_REVIEW', label: 'In Review' },
+    { key: 'COMPLETED', label: 'Completed' },
   ];
 
   return (
-    <div className="space-y-6 p-4 md:p-8 max-w-7xl mx-auto">
+    <div className="w-full space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded p-4">
         <div>
-          <h1 className="text-2xl font-medium text-slate-900 tracking-tight flex items-center gap-2">
-             Team Sprints & Task Board
+          <h1 className="text-base font-semibold text-slate-900">
+            Team Sprints &amp; Task Board
           </h1>
-          <p className="text-xs md:text-sm text-slate-500">
+          <p className="text-xs text-slate-500 mt-0.5">
             Sprint tracking, task delegation, and cross-team comments for all platform developers.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex bg-slate-100 p-1 rounded text-xs font-medium">
+          <div className="flex bg-slate-100 p-0.5 rounded text-xs font-medium">
             <button
               onClick={() => setViewMode('board')}
-              className={`px-3 py-1.5 rounded transition-colors ${
-                viewMode === 'board' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
+              className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
+                viewMode === 'board' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Kanban
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`px-3 py-1.5 rounded transition-colors ${
-                viewMode === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
+              className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
+                viewMode === 'list' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               List
@@ -220,26 +218,26 @@ export default function DeveloperTasksPage() {
           {canManage && (
             <button
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded bg-secondary hover:bg-secondary/90 text-white text-xs font-medium shadow-sm transition-all"
+              className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors cursor-pointer"
             >
-               New Task
+              New Task
             </button>
           )}
         </div>
       </div>
 
       {/* Filters Bar */}
-      <div className="bg-white border border-slate-200 rounded p-4 shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div className="bg-white border border-slate-200 rounded p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-medium text-slate-500 flex items-center gap-1">
-             Filter:
+          <span className="font-semibold text-slate-600">
+            Filter:
           </span>
           <button
             onClick={() => setAssigneeFilter(assigneeFilter === 'me' ? 'ALL' : 'me')}
-            className={`px-3 py-1.5 rounded font-medium transition-colors ${
+            className={`px-2.5 py-1 rounded font-medium transition-colors cursor-pointer ${
               assigneeFilter === 'me'
-                ? 'bg-secondary text-white'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                ? 'bg-slate-900 text-white'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
             My Assigned Tasks
@@ -248,7 +246,7 @@ export default function DeveloperTasksPage() {
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded px-3 py-1.5 focus:outline-none focus:border-secondary text-slate-700"
+            className="bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
           >
             <option value="ALL">All Priorities</option>
             <option value="URGENT">Urgent</option>
@@ -260,7 +258,7 @@ export default function DeveloperTasksPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded px-3 py-1.5 focus:outline-none focus:border-secondary text-slate-700"
+            className="bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
           >
             <option value="ALL">All Statuses</option>
             <option value="TODO">To Do</option>
@@ -272,55 +270,54 @@ export default function DeveloperTasksPage() {
 
         <button
           onClick={fetchTasks}
-          className="p-1.5 rounded border border-slate-200 text-slate-500 hover:bg-slate-50"
-          title="Refresh tasks"
-        >Refresh</button>
+          className="px-2.5 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs transition-colors cursor-pointer"
+        >
+          Refresh
+        </button>
       </div>
 
       {/* Main View: Kanban Board */}
       {viewMode === 'board' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {COLUMNS.map((col) => {
             const columnTasks = tasks.filter((t) => t.status === col.key);
             return (
               <div
                 key={col.key}
-                className="bg-slate-50/60 rounded p-4 border border-slate-200 flex flex-col min-h-[500px]"
+                className="bg-slate-50 rounded p-3 border border-slate-200 flex flex-col min-h-[460px]"
               >
-                <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-slate-800 text-xs tracking-wider uppercase">
-                      {col.label}
-                    </span>
-                    <span className="w-5 h-5 rounded bg-slate-200 text-slate-700 text-[10px] font-medium flex items-center justify-center">
-                      {columnTasks.length}
-                    </span>
-                  </div>
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200 mb-3">
+                  <span className="font-semibold text-slate-800 text-xs uppercase">
+                    {col.label}
+                  </span>
+                  <span className="px-1.5 py-0.2 rounded bg-slate-200 text-slate-700 text-[10px] font-mono font-medium">
+                    {columnTasks.length}
+                  </span>
                 </div>
 
-                <div className="flex-1 space-y-3 overflow-y-auto">
+                <div className="flex-1 space-y-2.5 overflow-y-auto">
                   {columnTasks.map((t) => (
                     <div
                       key={t.id}
                       onClick={() => openTaskDetail(t)}
-                      className="p-4 rounded bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer space-y-3 group"
+                      className="p-3 rounded bg-white border border-slate-200 hover:border-slate-400 transition-colors cursor-pointer space-y-2"
                     >
                       <div className="flex items-center justify-between">
                         <span
-                          className={`text-[10px] font-medium px-2 py-0.5 rounded border ${getPriorityStyle(
+                          className={`text-[9px] font-medium px-1.5 py-0.2 rounded border ${getPriorityStyle(
                             t.priority
                           )}`}
                         >
                           {t.priority}
                         </span>
                         {t.due_date && (
-                          <span className="text-[10px] text-slate-400 flex items-center gap-0.5">
-                             {new Date(t.due_date).toLocaleDateString()}
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {new Date(t.due_date).toLocaleDateString()}
                           </span>
                         )}
                       </div>
 
-                      <h4 className="font-medium text-slate-900 text-xs group-hover:text-secondary transition-colors line-clamp-2">
+                      <h4 className="font-semibold text-slate-900 text-xs line-clamp-2">
                         {t.title}
                       </h4>
 
@@ -329,14 +326,11 @@ export default function DeveloperTasksPage() {
                       )}
 
                       <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-                        <div className="flex items-center gap-1.5 text-slate-600 font-medium">
-                          
-                          <span className="truncate max-w-[100px] text-[11px]">
-                            {t.assignee_name || 'Unassigned'}
-                          </span>
-                        </div>
-                        <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                           {t.comments_count || 0}
+                        <span className="truncate max-w-[120px] text-[11px] text-slate-600 font-normal">
+                          {t.assignee_name || 'Unassigned'}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {t.comments_count || 0} comments
                         </span>
                       </div>
                     </div>
@@ -348,59 +342,61 @@ export default function DeveloperTasksPage() {
         </div>
       ) : (
         /* List View */
-        <div className="bg-white border border-slate-200 rounded overflow-hidden shadow-sm">
-          <table className="w-full text-left text-sm text-slate-700">
-            <thead className="bg-slate-50 text-xs font-medium text-slate-500 uppercase border-b border-slate-100">
-              <tr>
-                <th className="px-6 py-3.5">Task Title</th>
-                <th className="px-6 py-3.5">Status</th>
-                <th className="px-6 py-3.5">Priority</th>
-                <th className="px-6 py-3.5">Assignee</th>
-                <th className="px-6 py-3.5">Due Date</th>
-                <th className="px-6 py-3.5 text-right">Comments</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {tasks.map((t) => (
-                <tr
-                  key={t.id}
-                  onClick={() => openTaskDetail(t)}
-                  className="hover:bg-slate-50 cursor-pointer transition-colors"
-                >
-                  <td className="px-6 py-4 font-medium text-slate-900">{t.title}</td>
-                  <td className="px-6 py-4">
-                    <span className="px-2.5 py-1 rounded text-xs font-medium bg-slate-100 text-slate-700">
-                      {t.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-0.5 rounded text-xs font-medium border ${getPriorityStyle(t.priority)}`}>
-                      {t.priority}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-xs font-normal text-slate-600">
-                    {t.assignee_name || <span className="text-slate-400">Unassigned</span>}
-                  </td>
-                  <td className="px-6 py-4 text-xs text-slate-400">
-                    {t.due_date ? new Date(t.due_date).toLocaleDateString() : '—'}
-                  </td>
-                  <td className="px-6 py-4 text-right text-xs text-slate-400 font-medium">
-                    💬 {t.comments_count || 0}
-                  </td>
+        <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500 text-[10px] uppercase font-semibold">
+                  <th className="pb-2">Task Title</th>
+                  <th className="pb-2">Status</th>
+                  <th className="pb-2">Priority</th>
+                  <th className="pb-2">Assignee</th>
+                  <th className="pb-2">Due Date</th>
+                  <th className="pb-2 text-right">Comments</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-normal text-slate-700">
+                {tasks.map((t) => (
+                  <tr
+                    key={t.id}
+                    onClick={() => openTaskDetail(t)}
+                    className="hover:bg-slate-50 cursor-pointer transition-colors"
+                  >
+                    <td className="py-2.5 font-semibold text-slate-900">{t.title}</td>
+                    <td className="py-2.5">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                        {t.status}
+                      </span>
+                    </td>
+                    <td className="py-2.5">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${getPriorityStyle(t.priority)}`}>
+                        {t.priority}
+                      </span>
+                    </td>
+                    <td className="py-2.5 text-xs text-slate-600">
+                      {t.assignee_name || <span className="text-slate-400">Unassigned</span>}
+                    </td>
+                    <td className="py-2.5 text-xs text-slate-400 font-mono">
+                      {t.due_date ? new Date(t.due_date).toLocaleDateString() : '—'}
+                    </td>
+                    <td className="py-2.5 text-right text-xs text-slate-400 font-mono">
+                      {t.comments_count || 0}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {/* Task Detail Modal & Discussion */}
       {selectedTask && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded shadow-2xl max-w-2xl w-full p-6 md:p-8 space-y-6 max-h-[90vh] overflow-y-auto border border-slate-100">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded border border-slate-200 shadow-lg max-w-2xl w-full p-4 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <span className={`text-xs font-medium px-2.5 py-0.5 rounded border ${getPriorityStyle(selectedTask.priority)}`}>
+                <span className={`text-[10px] font-medium px-2 py-0.5 rounded border ${getPriorityStyle(selectedTask.priority)}`}>
                   {selectedTask.priority}
                 </span>
                 <span className="text-xs text-slate-400">
@@ -411,15 +407,14 @@ export default function DeveloperTasksPage() {
                 {canManage && (
                   <button
                     onClick={() => handleDeleteTask(selectedTask.id)}
-                    className="p-1.5 rounded hover:bg-rose-50 text-rose-600 transition-colors"
-                    title="Delete Task"
+                    className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium cursor-pointer"
                   >
-                    
+                    Delete
                   </button>
                 )}
                 <button
                   onClick={() => setSelectedTask(null)}
-                  className="text-slate-400 hover:text-slate-600 text-xl"
+                  className="text-slate-400 hover:text-slate-600 text-sm cursor-pointer"
                 >
                   ✕
                 </button>
@@ -427,7 +422,7 @@ export default function DeveloperTasksPage() {
             </div>
 
             <div className="space-y-3">
-              <h2 className="text-xl font-medium text-slate-900">{selectedTask.title}</h2>
+              <h2 className="text-sm font-semibold text-slate-900">{selectedTask.title}</h2>
               {selectedTask.description && (
                 <p className="text-xs text-slate-600 whitespace-pre-wrap leading-relaxed">
                   {selectedTask.description}
@@ -436,11 +431,11 @@ export default function DeveloperTasksPage() {
 
               <div className="flex flex-wrap items-center gap-4 pt-2 text-xs">
                 <div>
-                  <span className="block text-[10px] text-slate-400 uppercase font-medium">Status</span>
+                  <span className="block text-[10px] text-slate-400 uppercase font-semibold">Status</span>
                   <select
                     value={selectedTask.status}
                     onChange={(e) => handleUpdateStatus(selectedTask.id, e.target.value)}
-                    className="mt-1 bg-slate-50 border border-slate-200 rounded px-2.5 py-1 font-medium text-slate-800"
+                    className="mt-1 bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-800 focus:outline-none focus:border-slate-800"
                   >
                     <option value="TODO">To Do</option>
                     <option value="IN_PROGRESS">In Progress</option>
@@ -450,17 +445,17 @@ export default function DeveloperTasksPage() {
                 </div>
 
                 <div>
-                  <span className="block text-[10px] text-slate-400 uppercase font-medium">Assignee</span>
-                  <div className="mt-1 text-slate-800 font-normal flex items-center gap-1">
-                     {selectedTask.assignee_name || 'Unassigned'}
+                  <span className="block text-[10px] text-slate-400 uppercase font-semibold">Assignee</span>
+                  <div className="mt-1 text-slate-800 font-normal">
+                    {selectedTask.assignee_name || 'Unassigned'}
                   </div>
                 </div>
 
                 {selectedTask.due_date && (
                   <div>
-                    <span className="block text-[10px] text-slate-400 uppercase font-medium">Due Date</span>
-                    <div className="mt-1 text-slate-800 font-normal flex items-center gap-1">
-                       {new Date(selectedTask.due_date).toLocaleDateString()}
+                    <span className="block text-[10px] text-slate-400 uppercase font-semibold">Due Date</span>
+                    <div className="mt-1 text-slate-800 font-mono">
+                      {new Date(selectedTask.due_date).toLocaleDateString()}
                     </div>
                   </div>
                 )}
@@ -468,20 +463,20 @@ export default function DeveloperTasksPage() {
             </div>
 
             {/* Comments Stream */}
-            <div className="pt-4 border-t border-slate-100 space-y-4">
-              <h3 className="text-sm font-medium text-slate-900 flex items-center gap-2">
-                 Discussion & Activity ({taskComments.length})
+            <div className="pt-3 border-t border-slate-100 space-y-3">
+              <h3 className="text-xs font-semibold text-slate-900">
+                Discussion &amp; Activity ({taskComments.length})
               </h3>
 
-              <div className="space-y-3 max-h-52 overflow-y-auto">
+              <div className="space-y-2 max-h-48 overflow-y-auto">
                 {taskComments.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic">No comments yet. Be the first to reply!</p>
+                  <p className="text-xs text-slate-400 italic">No comments yet.</p>
                 ) : (
                   taskComments.map((c) => (
-                    <div key={c.id} className="p-3 bg-slate-50 rounded space-y-1 text-xs">
+                    <div key={c.id} className="p-2.5 bg-slate-50 border border-slate-100 rounded space-y-1 text-xs">
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-medium text-slate-800">{c.author_name} ({c.author_role})</span>
-                        <span className="text-slate-400">
+                        <span className="font-semibold text-slate-800">{c.author_name} ({c.author_role})</span>
+                        <span className="text-slate-400 font-mono">
                           {new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
@@ -498,12 +493,12 @@ export default function DeveloperTasksPage() {
                   value={commentInput}
                   onChange={(e) => setCommentInput(e.target.value)}
                   placeholder="Add a comment or status update..."
-                  className="flex-1 bg-slate-50 border border-slate-200 rounded px-4 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
+                  className="flex-1 bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
                 <button
                   type="submit"
                   disabled={postingComment || !commentInput.trim()}
-                  className="px-4 py-2 rounded bg-secondary hover:bg-secondary/90 text-white text-xs font-medium shadow-sm transition-all disabled:opacity-50"
+                  className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium disabled:opacity-50 cursor-pointer"
                 >
                   Post
                 </button>
@@ -515,49 +510,49 @@ export default function DeveloperTasksPage() {
 
       {/* Create Task Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded shadow-2xl max-w-lg w-full p-6 md:p-8 space-y-5 border border-slate-100">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-lg font-medium text-slate-900">Create New Team Task</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded border border-slate-200 shadow-lg max-w-lg w-full p-4 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="text-sm font-semibold text-slate-900">Create New Team Task</h3>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-xl"
+                className="text-slate-400 hover:text-slate-600 text-sm cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleCreateTask} className="space-y-4">
+            <form onSubmit={handleCreateTask} className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Task Title</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Task Title <span className="text-rose-600">*</span></label>
                 <input
                   type="text"
                   required
                   value={createForm.title}
                   onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
                   placeholder="e.g. Optimize website database index latency"
-                  className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Description</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Description</label>
                 <textarea
                   rows={3}
                   value={createForm.description}
                   onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
                   placeholder="Task scope, acceptance criteria, or repro steps..."
-                  className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
+                  className="w-full bg-white border border-slate-300 rounded p-3 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Priority</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Priority</label>
                   <select
                     value={createForm.priority}
                     onChange={(e) => setCreateForm({ ...createForm, priority: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
+                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                   >
                     <option value="LOW">Low</option>
                     <option value="MEDIUM">Medium</option>
@@ -566,22 +561,22 @@ export default function DeveloperTasksPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Due Date</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Due Date</label>
                   <input
                     type="date"
                     value={createForm.due_date}
                     onChange={(e) => setCreateForm({ ...createForm, due_date: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
+                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Assign Developer</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Assign Developer</label>
                 <select
                   value={createForm.assigned_to_developer_id}
                   onChange={(e) => setCreateForm({ ...createForm, assigned_to_developer_id: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 >
                   <option value="">Unassigned</option>
                   {developers.map((dev) => (
@@ -592,18 +587,18 @@ export default function DeveloperTasksPage() {
                 </select>
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded border border-slate-200 text-slate-600 text-xs font-normal hover:bg-slate-50"
+                  className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingTask}
-                  className="px-5 py-2 rounded bg-secondary hover:bg-secondary/90 text-white text-xs font-medium shadow-md transition-all disabled:opacity-50"
+                  className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium disabled:opacity-50 cursor-pointer"
                 >
                   {savingTask ? 'Creating...' : 'Create Task'}
                 </button>

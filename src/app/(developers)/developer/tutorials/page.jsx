@@ -3,20 +3,6 @@
 import { useState, useEffect, useContext, useRef } from 'react';
 import Image from 'next/image';
 import { Context } from 'src/component/helper/Context';
-import {
-  BiVideo,
-  BiPlayCircle,
-  BiPlus,
-  BiEditAlt,
-  BiTrash,
-  BiRefresh,
-  BiSearch,
-  BiX,
-  BiCheckCircle,
-  BiInfoCircle,
-  BiLoaderAlt,
-  BiLinkExternal,
-} from 'react-icons/bi';
 
 function extractYoutubeId(url) {
   if (!url) return null;
@@ -33,7 +19,7 @@ export default function DeveloperTutorialsPage() {
   const [deletingId, setDeletingId] = useState(null);
   const [togglingId, setTogglingId] = useState(null);
 
-  // In-page creation / edit form state (NO POPUP MODAL)
+  // In-page creation / edit form state
   const [showForm, setShowForm] = useState(false);
   const [editingTut, setEditingTut] = useState(null);
   const [form, setForm] = useState({
@@ -245,111 +231,90 @@ export default function DeveloperTutorialsPage() {
   const previewId = extractYoutubeId(form.youtube_link);
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-hidden">
+    <div className="w-full space-y-4">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded p-5 sm:p-6 shadow-xs w-full max-w-full overflow-hidden">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight truncate">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded p-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-base font-semibold text-slate-900">
               Video Tutorials Management
             </h1>
-            <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-secondary/10 text-secondary border border-secondary/20 shrink-0">
+            <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-slate-100 text-slate-700 border-slate-200">
               Learning Center
             </span>
             {!canManage && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
-                <BiInfoCircle />
-                <span>Read-Only</span>
+              <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200">
+                Read-Only
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-500 line-clamp-2">
+          <p className="text-xs text-slate-500 mt-0.5">
             Add YouTube video URLs to publish step-by-step guides on the public /tutorials portal.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={fetchTutorials}
-            className="flex items-center gap-1 px-3 py-2 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium transition-colors cursor-pointer"
-            title="Refresh tutorials"
+            className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs transition-colors cursor-pointer"
           >
-            <BiRefresh className={`text-base ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Refresh</span>
+            Refresh
           </button>
           {canManage && (
             <button
               type="button"
               onClick={showForm && !editingTut ? closeForm : openCreateForm}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded text-xs font-semibold transition-all shadow-xs bg-secondary hover:bg-secondary-dark text-white cursor-pointer shrink-0"
+              className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-colors cursor-pointer"
             >
-              {showForm && !editingTut ? (
-                <>
-                  <BiX className="text-base" />
-                  <span>Close Form</span>
-                </>
-              ) : (
-                <>
-                  <BiPlus className="text-base" />
-                  <span>New Tutorial</span>
-                </>
-              )}
+              {showForm && !editingTut ? 'Close Form' : 'New Tutorial'}
             </button>
           )}
         </div>
       </div>
 
-      {/* Permission Warning if read-only */}
       {!canManage && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded p-3.5 flex items-center gap-2.5 text-xs">
-          <BiInfoCircle className="text-base shrink-0" />
-          <span>
-            You are currently viewing video tutorials in read-only mode. Only <strong>Admin</strong>, <strong>Manager</strong>, or users with <strong>tutorials</strong> permissions can publish or edit.
-          </span>
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded p-3 text-xs">
+          You are currently viewing video tutorials in read-only mode.
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* Integrated In-Page Creation & Edit Form (NO POPUP MODAL) */}
-      {/* ========================================================================= */}
+      {/* Integrated In-Page Creation & Edit Form */}
       {showForm && (
         <div
           ref={formRef}
-          className="bg-white border-2 border-secondary/30 rounded p-5 sm:p-6 shadow-sm space-y-4 animate-fade-in"
+          className="bg-white border border-slate-200 rounded p-4 space-y-3"
         >
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-              <BiVideo className="text-secondary text-lg" />
-              <span>{editingTut ? `Edit Tutorial #${editingTut.id}` : 'Add Video Tutorial'}</span>
-            </h3>
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <h2 className="text-sm font-semibold text-slate-900">
+              {editingTut ? `Edit Tutorial #${editingTut.id}` : 'Add Video Tutorial'}
+            </h2>
             <button
               type="button"
               onClick={closeForm}
-              className="text-xs font-medium text-slate-400 hover:text-slate-600 flex items-center gap-1 cursor-pointer"
+              className="text-slate-400 hover:text-slate-600 text-sm cursor-pointer"
             >
-              <BiX className="text-sm" /> Cancel
+              ✕
             </button>
           </div>
 
           {feedback.message && (
             <div
-              className={`p-3 rounded text-xs font-medium flex items-center gap-2 ${
+              className={`p-3 rounded text-xs font-normal ${
                 feedback.type === 'error'
                   ? 'bg-rose-50 text-rose-700 border border-rose-200'
                   : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
               }`}
             >
-              {feedback.type === 'error' ? <BiInfoCircle className="text-sm shrink-0" /> : <BiCheckCircle className="text-sm shrink-0" />}
               <span>{feedback.message}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Tutorial Title <span className="text-rose-500">*</span>
+                  Tutorial Title <span className="text-rose-600">*</span>
                 </label>
                 <input
                   type="text"
@@ -357,13 +322,13 @@ export default function DeveloperTutorialsPage() {
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   placeholder="e.g. Connecting Custom Domains & DNS Routing"
-                  className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  YouTube Video URL <span className="text-rose-500">*</span>
+                  YouTube Video URL <span className="text-rose-600">*</span>
                 </label>
                 <input
                   type="url"
@@ -371,31 +336,27 @@ export default function DeveloperTutorialsPage() {
                   value={form.youtube_link}
                   onChange={(e) => setForm({ ...form, youtube_link: e.target.value })}
                   placeholder="https://www.youtube.com/watch?v=..."
-                  className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
             </div>
 
-            {/* Live Video Preview if valid YouTube URL is typed */}
             {previewId && (
-              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <div className="w-20 h-12 rounded-lg overflow-hidden relative shrink-0 border border-slate-300 bg-black">
+              <div className="flex items-center gap-3 p-2.5 bg-slate-50 rounded border border-slate-200">
+                <div className="w-16 h-10 rounded overflow-hidden relative shrink-0 border border-slate-200 bg-black">
                   <Image
                     src={`https://img.youtube.com/vi/${previewId}/hqdefault.jpg`}
-                    alt="Video thumbnail preview"
+                    alt="Preview"
                     fill
                     unoptimized
                     className="object-cover"
                   />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                    <BiPlayCircle className="text-white text-xl" />
-                  </div>
                 </div>
                 <div className="min-w-0 text-xs text-slate-600">
-                  <span className="font-semibold text-emerald-600 flex items-center gap-1">
-                    <BiCheckCircle className="text-sm" /> YouTube Video Detected
+                  <span className="font-medium text-emerald-700">
+                    YouTube Video Detected
                   </span>
-                  <span className="text-[11px] text-slate-400 font-mono">Video ID: {previewId}</span>
+                  <div className="text-[10px] text-slate-400 font-mono">ID: {previewId}</div>
                 </div>
               </div>
             )}
@@ -408,48 +369,38 @@ export default function DeveloperTutorialsPage() {
                 rows={3}
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Brief summary of what creators and users will learn in this video guide..."
-                className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+                placeholder="Brief summary of what creators and users will learn..."
+                className="w-full bg-white border border-slate-300 rounded p-3 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
               />
             </div>
 
-            <div className="flex items-center justify-between gap-4 pt-2 border-t border-slate-100 flex-wrap">
-              <label className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded cursor-pointer hover:bg-slate-100 transition-colors">
+            <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100 flex-wrap">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={form.is_published}
                   onChange={(e) => setForm({ ...form, is_published: e.target.checked })}
-                  className="accent-secondary h-4 w-4"
+                  className="rounded border-slate-300 text-slate-900 focus:ring-slate-900 w-4 h-4 cursor-pointer"
                 />
-                <span className="text-xs font-semibold text-slate-700">
+                <span className="text-xs text-slate-700 font-normal">
                   Publish Immediately
                 </span>
               </label>
 
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={closeForm}
-                  className="px-4 py-2 rounded border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50 cursor-pointer"
+                  className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex items-center gap-1.5 px-5 py-2 rounded bg-secondary hover:bg-secondary-dark text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                  className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium disabled:opacity-50 cursor-pointer"
                 >
-                  {saving ? (
-                    <>
-                      <BiLoaderAlt className="animate-spin text-sm" />
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <>
-                      <BiCheckCircle className="text-sm" />
-                      <span>{editingTut ? 'Update Tutorial' : 'Publish Tutorial'}</span>
-                    </>
-                  )}
+                  {saving ? 'Saving...' : editingTut ? 'Update Tutorial' : 'Publish Tutorial'}
                 </button>
               </div>
             </div>
@@ -458,26 +409,23 @@ export default function DeveloperTutorialsPage() {
       )}
 
       {/* Main List Card */}
-      <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden w-full max-w-full">
-        {/* Search Bar */}
-        <div className="p-3.5 sm:p-4 border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/50 w-full">
-          <div className="relative w-full sm:w-80">
-            <BiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+      <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-sm">
             <input
               type="text"
               placeholder="Search tutorials by title, description, or URL..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white border border-slate-300 rounded pl-8 pr-8 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-secondary transition-all"
+              className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
-                title="Clear search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
               >
-                <BiX className="text-xs" />
+                ✕
               </button>
             )}
           </div>
@@ -487,207 +435,166 @@ export default function DeveloperTutorialsPage() {
           </div>
         </div>
 
-        {/* Responsive View List */}
-        <div className="w-full max-w-full overflow-hidden">
-          {/* Header Row */}
-          <div className="hidden md:flex items-center gap-3 px-4 py-2.5 bg-slate-50/80 border-b border-slate-100 text-[10px] font-semibold uppercase tracking-wider text-slate-400 select-none">
-            <span className="w-8 shrink-0">#</span>
-            <span className="w-20 shrink-0">Preview</span>
-            <span className="flex-1 min-w-0">Tutorial Title &amp; Details</span>
-            <span className="w-24 shrink-0 text-center hidden sm:block">Status</span>
-            <span className="w-24 shrink-0 text-center hidden sm:block">Date</span>
-            <span className="w-28 shrink-0 text-right">Actions</span>
-          </div>
+        {/* Table View */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-slate-200 text-slate-500 text-[10px] uppercase font-semibold">
+                <th className="pb-2 w-12">#</th>
+                <th className="pb-2 w-20">Preview</th>
+                <th className="pb-2">Tutorial Title &amp; Details</th>
+                <th className="pb-2 text-center w-24 hidden sm:table-cell">Status</th>
+                <th className="pb-2 text-center w-24 hidden sm:table-cell">Date</th>
+                <th className="pb-2 text-right w-28">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-normal text-slate-700">
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-slate-400">
+                    Loading video guides...
+                  </td>
+                </tr>
+              ) : filteredTutorials.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-slate-400">
+                    No tutorials found.
+                  </td>
+                </tr>
+              ) : (
+                filteredTutorials.map((tut) => {
+                  const videoId = extractYoutubeId(tut.youtube_link);
+                  const thumbUrl = videoId
+                    ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+                    : null;
+                  const formattedDate = tut.created_at
+                    ? new Date(tut.created_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })
+                    : '—';
 
-          {/* List Content */}
-          {loading ? (
-            <div className="py-20 text-center flex flex-col items-center justify-center gap-2 text-slate-400">
-              <BiLoaderAlt className="animate-spin text-2xl text-secondary" />
-              <span className="text-xs font-normal">Loading video guides...</span>
-            </div>
-          ) : filteredTutorials.length === 0 ? (
-            <div className="py-16 px-4 text-center space-y-2">
-              <div className="w-12 h-12 rounded bg-slate-100 text-slate-400 flex items-center justify-center text-2xl mx-auto">
-                <BiVideo />
-              </div>
-              <h3 className="text-sm font-semibold text-slate-800">No Tutorials Found</h3>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                {searchTerm
-                  ? `No tutorials matched "${searchTerm}". Try a different search term.`
-                  : 'Start publishing YouTube video guides for platform creators.'}
-              </p>
-              {canManage && !searchTerm && (
-                <button
-                  type="button"
-                  onClick={openCreateForm}
-                  className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded bg-secondary text-white text-xs font-semibold hover:bg-secondary-dark transition-colors cursor-pointer mt-2"
-                >
-                  <BiPlus className="text-sm" />
-                  <span>Publish First Tutorial</span>
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100 w-full">
-              {filteredTutorials.map((tut) => {
-                const videoId = extractYoutubeId(tut.youtube_link);
-                const thumbUrl = videoId
-                  ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
-                  : null;
-                const formattedDate = tut.created_at
-                  ? new Date(tut.created_at).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })
-                  : '—';
+                  return (
+                    <tr key={tut.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-2.5 font-mono text-[11px] text-slate-400">
+                        #{tut.id}
+                      </td>
 
-                return (
-                  <div
-                    key={tut.id}
-                    className="p-3 sm:p-4 hover:bg-slate-50/70 transition-colors flex items-center gap-2.5 sm:gap-3 w-full min-w-0 overflow-hidden"
-                  >
-                    {/* ID */}
-                    <span className="w-8 shrink-0 font-mono font-medium text-[11px] text-slate-400 hidden md:block">
-                      #{tut.id}
-                    </span>
+                      <td className="py-2.5">
+                        <div className="w-14 h-9 rounded overflow-hidden border border-slate-200 bg-slate-900 flex items-center justify-center relative">
+                          {thumbUrl ? (
+                            <Image
+                              src={thumbUrl}
+                              alt=""
+                              width={56}
+                              height={36}
+                              unoptimized
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-[9px] text-slate-400 font-mono">Video</span>
+                          )}
+                        </div>
+                      </td>
 
-                    {/* Video Thumbnail */}
-                    <div className="w-16 h-11 sm:w-20 sm:h-12 rounded-lg overflow-hidden border border-slate-200 bg-slate-900 shrink-0 relative flex items-center justify-center group shadow-2xs">
-                      {thumbUrl ? (
-                        <Image
-                          src={thumbUrl}
-                          alt={tut.title || 'Video preview'}
-                          width={96}
-                          height={66}
-                          unoptimized
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                        />
-                      ) : null}
-                      <div className="absolute inset-0 bg-black/25 flex items-center justify-center">
-                        <BiPlayCircle className="text-white text-xl drop-shadow-md group-hover:scale-110 transition-transform" />
-                      </div>
-                    </div>
+                      <td className="py-2.5">
+                        <div className="space-y-0.5">
+                          {canManage ? (
+                            <button
+                              type="button"
+                              onClick={() => openEditForm(tut)}
+                              className="text-xs font-semibold text-slate-900 hover:underline text-left cursor-pointer"
+                            >
+                              {tut.title}
+                            </button>
+                          ) : (
+                            <span className="text-xs font-semibold text-slate-900">
+                              {tut.title}
+                            </span>
+                          )}
 
-                    {/* Title & Details */}
-                    <div className="flex-1 min-w-0 pr-1 space-y-1">
-                      <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                          {tut.description ? (
+                            <p className="text-[11px] text-slate-500 line-clamp-1 max-w-md">
+                              {tut.description}
+                            </p>
+                          ) : (
+                            <span className="text-[11px] text-slate-400 italic">No description provided</span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="py-2.5 text-center hidden sm:table-cell">
                         {canManage ? (
                           <button
                             type="button"
-                            onClick={() => openEditForm(tut)}
-                            className="text-xs sm:text-sm font-semibold text-slate-900 hover:text-secondary truncate block tracking-tight text-left cursor-pointer"
-                            title={tut.title}
+                            disabled={togglingId === tut.id}
+                            onClick={() => handleTogglePublish(tut)}
+                            className={`text-[9px] font-medium px-1.5 py-0.5 rounded border cursor-pointer transition-colors ${
+                              tut.is_published
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                            }`}
                           >
-                            {tut.title}
+                            {tut.is_published ? 'Published' : 'Draft'}
                           </button>
                         ) : (
                           <span
-                            className="text-xs sm:text-sm font-semibold text-slate-900 truncate block tracking-tight"
-                            title={tut.title}
+                            className={`text-[9px] font-medium px-1.5 py-0.5 rounded border ${
+                              tut.is_published
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : 'bg-slate-100 text-slate-600 border-slate-200'
+                            }`}
                           >
-                            {tut.title}
+                            {tut.is_published ? 'Published' : 'Draft'}
                           </span>
                         )}
-                      </div>
+                      </td>
 
-                      {tut.description ? (
-                        <p className="text-[11px] text-slate-500 truncate block leading-normal">
-                          {tut.description}
-                        </p>
-                      ) : (
-                        <span className="text-[11px] text-slate-400 italic block">No description provided</span>
-                      )}
-
-                      {/* Small screen date */}
-                      <div className="text-[10px] text-slate-400 sm:hidden pt-0.5">
+                      <td className="py-2.5 text-center text-xs text-slate-500 hidden sm:table-cell font-mono">
                         {formattedDate}
-                      </div>
-                    </div>
+                      </td>
 
-                    {/* Publish Status Toggle */}
-                    <div className="w-24 shrink-0 text-center hidden sm:block">
-                      {canManage ? (
-                        <button
-                          type="button"
-                          disabled={togglingId === tut.id}
-                          onClick={() => handleTogglePublish(tut)}
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border cursor-pointer transition-colors ${
-                            tut.is_published
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                              : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
-                          }`}
-                          title="Click to toggle publish status"
-                        >
-                          {togglingId === tut.id ? (
-                            <BiLoaderAlt className="animate-spin text-xs" />
-                          ) : (
-                            <span className={`w-1.5 h-1.5 rounded-full ${tut.is_published ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                      <td className="py-2.5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {tut.youtube_link && (
+                            <a
+                              href={tut.youtube_link}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-2 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium"
+                            >
+                              Watch
+                            </a>
                           )}
-                          <span>{tut.is_published ? 'Published' : 'Draft'}</span>
-                        </button>
-                      ) : (
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
-                            tut.is_published
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : 'bg-slate-100 text-slate-600 border-slate-200'
-                          }`}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full ${tut.is_published ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                          <span>{tut.is_published ? 'Published' : 'Draft'}</span>
-                        </span>
-                      )}
-                    </div>
 
-                    {/* Date column (Tablet/Desktop) */}
-                    <div className="w-24 shrink-0 text-center hidden sm:block">
-                      <span className="text-[11px] text-slate-400 whitespace-nowrap">
-                        {formattedDate}
-                      </span>
-                    </div>
-
-                    {/* Actions column */}
-                    <div className="w-28 shrink-0 flex items-center justify-end gap-1.5">
-                      {tut.youtube_link && (
-                        <a
-                          href={tut.youtube_link}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-secondary hover:bg-slate-50 transition-colors"
-                          title="Watch video on YouTube"
-                        >
-                          <BiLinkExternal className="text-sm" />
-                        </a>
-                      )}
-
-                      {canManage && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => openEditForm(tut)}
-                            className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-secondary hover:bg-slate-50 transition-colors cursor-pointer"
-                            title="Edit tutorial in form"
-                          >
-                            <BiEditAlt className="text-sm" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={deletingId === tut.id}
-                            onClick={() => handleDelete(tut.id, tut.title)}
-                            className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50"
-                            title="Delete tutorial"
-                          >
-                            <BiTrash className="text-sm" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                          {canManage && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => openEditForm(tut)}
+                                className="px-2 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium cursor-pointer"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                disabled={deletingId === tut.id}
+                                onClick={() => handleDelete(tut.id, tut.title)}
+                                className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium cursor-pointer disabled:opacity-50"
+                              >
+                                Delete
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

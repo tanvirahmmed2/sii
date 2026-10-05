@@ -335,8 +335,12 @@ export async function handlePaymentsAction(body, sessionCreator, request = null)
       const puRes = await queryDb(
         `UPDATE purchases 
          SET status = 'completed', 
-             period_start = CURRENT_TIMESTAMP,
-             period_end = CURRENT_TIMESTAMP + ${durationInterval},
+             period_start = COALESCE(period_start, CURRENT_TIMESTAMP),
+             period_end = CASE 
+               WHEN period_end IS NOT NULL AND period_end > CURRENT_TIMESTAMP 
+               THEN period_end + ${durationInterval} 
+               ELSE CURRENT_TIMESTAMP + ${durationInterval} 
+             END,
              updated_at = CURRENT_TIMESTAMP 
          WHERE id = $1 
          RETURNING *`,
@@ -348,27 +352,59 @@ export async function handlePaymentsAction(body, sessionCreator, request = null)
     // 3. Create or Update active record in subscriptions table
     let activeSub = null;
     try {
-      const subRes = await queryDb(
-        `INSERT INTO subscriptions (
-           creator_id, package_id, purchase_id, status, billing_cycle,
-           current_period_start, current_period_end
-         ) VALUES (
-           $1, $2, $3, 'active', $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ${durationInterval}
-         )
-         RETURNING *`,
-        [creatorId, payment.package_id, payment.purchase_id, isYearly ? 'yearly' : 'monthly']
+      const existingSubRes = await queryDb(
+        `SELECT id, current_period_end FROM subscriptions 
+         WHERE creator_id = $1 AND status = 'active'
+         ORDER BY id DESC LIMIT 1`,
+        [creatorId]
       );
-      activeSub = subRes.rows[0];
+
+      if (existingSubRes.rows.length > 0) {
+        const currentSub = existingSubRes.rows[0];
+        const subRes = await queryDb(
+          `UPDATE subscriptions
+           SET package_id = $1,
+               purchase_id = $2,
+               billing_cycle = $3,
+               status = 'active',
+               current_period_end = CASE 
+                 WHEN current_period_end IS NOT NULL AND current_period_end > CURRENT_TIMESTAMP 
+                 THEN current_period_end + ${durationInterval}
+                 ELSE CURRENT_TIMESTAMP + ${durationInterval}
+               END,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $4
+           RETURNING *`,
+          [payment.package_id, payment.purchase_id, isYearly ? 'yearly' : 'monthly', currentSub.id]
+        );
+        activeSub = subRes.rows[0];
+      } else {
+        const subRes = await queryDb(
+          `INSERT INTO subscriptions (
+             creator_id, package_id, purchase_id, status, billing_cycle,
+             current_period_start, current_period_end
+           ) VALUES (
+             $1, $2, $3, 'active', $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ${durationInterval}
+           )
+           RETURNING *`,
+          [creatorId, payment.package_id, payment.purchase_id, isYearly ? 'yearly' : 'monthly']
+        );
+        activeSub = subRes.rows[0];
+      }
     } catch (subErr) {
-      console.warn('Error inserting subscriptions record:', subErr.message);
+      console.warn('Error inserting/updating subscriptions record:', subErr.message);
     }
 
     // 4. Update websites subscription expiration date for this creator if websites exist
     await queryDb(
       `UPDATE websites 
-       SET subscription_expires_at = CURRENT_TIMESTAMP + ${durationInterval},
-           package_id = $1,
-           updated_at = CURRENT_TIMESTAMP
+       SET subscription_expires_at = CASE 
+         WHEN subscription_expires_at IS NOT NULL AND subscription_expires_at > CURRENT_TIMESTAMP 
+         THEN subscription_expires_at + ${durationInterval}
+         ELSE CURRENT_TIMESTAMP + ${durationInterval}
+       END,
+       package_id = $1,
+       updated_at = CURRENT_TIMESTAMP
        WHERE creator_id = $2`,
       [payment.package_id, creatorId]
     ).catch(() => {});

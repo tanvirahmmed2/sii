@@ -61,26 +61,31 @@ export default function AdminWebsitesPage() {
   });
 
   return (
-    <div className="space-y-4">
+    <div className="w-full space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div>
-          <h1 className="text-base font-medium text-slate-900 dark:text-white">Hosted Websites</h1>
-          <p className="text-xs text-slate-500 font-normal">Containers, custom domains, storage allocation, and published status.</p>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-base font-semibold text-slate-900 dark:text-white">Hosted Websites</h1>
+            <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+              Websites
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Containers, custom domains, storage allocation, and published status.</p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={fetchWebsites}
-            className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-xs font-normal text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+            className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
           >
             Refresh
           </button>
           <button
             type="button"
             onClick={() => setShowForm(!showForm)}
-            className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium cursor-pointer"
+            className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium cursor-pointer transition-colors"
           >
             {showForm ? 'Hide Form' : 'Add Website'}
           </button>
@@ -98,16 +103,18 @@ export default function AdminWebsitesPage() {
       )}
 
       {/* Table Card */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden">
-        <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-800/30">
-          <input
-            type="text"
-            placeholder="Search websites by name, subdomain, or domain..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full sm:w-72 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-slate-500 font-normal"
-          />
-          <div className="text-xs text-slate-500 font-normal">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div className="w-full sm:w-72">
+            <input
+              type="text"
+              placeholder="Search websites by name, subdomain, or domain..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-slate-800 font-normal"
+            />
+          </div>
+          <div className="text-xs text-slate-500 font-medium">
             Showing {filtered.length} of {websites.length} records
           </div>
         </div>
@@ -115,50 +122,54 @@ export default function AdminWebsitesPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-normal text-[11px]">
-                <th className="px-3.5 py-2.5 whitespace-nowrap">ID</th>
-                <th className="px-3.5 py-2.5 whitespace-nowrap">Website Name</th>
-                <th className="px-3.5 py-2.5 whitespace-nowrap">Subdomain</th>
-                <th className="px-3.5 py-2.5 whitespace-nowrap">Custom Domain</th>
-                <th className="px-3.5 py-2.5 whitespace-nowrap">Storage</th>
-                <th className="px-3.5 py-2.5 whitespace-nowrap">Status</th>
-                <th className="px-3.5 py-2.5 whitespace-nowrap">Published</th>
-                <th className="px-3.5 py-2.5 text-right whitespace-nowrap">Actions</th>
+              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 text-[10px] uppercase font-semibold">
+                <th className="pb-2 whitespace-nowrap">ID</th>
+                <th className="pb-2 whitespace-nowrap">Website Name</th>
+                <th className="pb-2 whitespace-nowrap">Subdomain</th>
+                <th className="pb-2 whitespace-nowrap">Custom Domain</th>
+                <th className="pb-2 whitespace-nowrap">Storage</th>
+                <th className="pb-2 whitespace-nowrap">Status</th>
+                <th className="pb-2 whitespace-nowrap">Published</th>
+                <th className="pb-2 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400 font-normal">Loading websites...</td>
+                  <td colSpan={8} className="py-12 text-center text-slate-400 text-xs font-normal">Loading websites...</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400 font-normal">No websites found.</td>
+                  <td colSpan={8} className="py-12 text-center text-slate-400 text-xs font-normal">No websites found.</td>
                 </tr>
               ) : (
                 filtered.map((w) => (
-                  <tr key={w.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="px-3.5 py-2.5 font-mono text-slate-500 font-normal">#{w.id}</td>
-                    <td className="px-3.5 py-2.5 font-medium text-slate-900 dark:text-white">{w.name}</td>
-                    <td className="px-3.5 py-2.5 font-mono text-slate-600 dark:text-slate-400 font-normal">{w.subdomain || '—'}</td>
-                    <td className="px-3.5 py-2.5 font-mono text-slate-600 dark:text-slate-400 font-normal">{w.custom_domain || '—'}</td>
-                    <td className="px-3.5 py-2.5 font-normal text-slate-600 dark:text-slate-400">{w.storage_used_mb ?? 0} MB</td>
-                    <td className="px-3.5 py-2.5">
-                      <span className="px-2 py-0.5 rounded text-[11px] font-normal border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
+                  <tr key={w.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="py-2.5 font-mono text-slate-400 font-medium">#{w.id}</td>
+                    <td className="py-2.5 font-medium text-slate-900 dark:text-white">{w.name}</td>
+                    <td className="py-2.5 font-mono text-slate-600 dark:text-slate-400">{w.subdomain || '—'}</td>
+                    <td className="py-2.5 font-mono text-slate-600 dark:text-slate-400">{w.custom_domain || '—'}</td>
+                    <td className="py-2.5 text-slate-600 dark:text-slate-400 font-mono">{w.storage_used_mb ?? 0} MB</td>
+                    <td className="py-2.5">
+                      <span className="px-1.5 py-0.2 rounded border text-[9px] font-medium border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                         {w.status || 'ACTIVE'}
                       </span>
                     </td>
-                    <td className="px-3.5 py-2.5 font-normal">
-                      <span className={w.is_published ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-400'}>
+                    <td className="py-2.5">
+                      <span className={`px-1.5 py-0.2 rounded border text-[9px] font-medium ${
+                        w.is_published
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-slate-100 text-slate-500 border-slate-200'
+                      }`}>
                         {w.is_published ? 'Online' : 'Draft'}
                       </span>
                     </td>
-                    <td className="px-3.5 py-2.5 text-right whitespace-nowrap">
+                    <td className="py-2.5 text-right whitespace-nowrap">
                       <button
                         type="button"
                         disabled={deletingId === w.id}
                         onClick={() => handleDelete(w.id)}
-                        className="text-xs font-normal text-rose-600 dark:text-rose-400 hover:underline disabled:opacity-50 cursor-pointer"
+                        className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer"
                       >
                         {deletingId === w.id ? 'Deleting...' : 'Delete'}
                       </button>

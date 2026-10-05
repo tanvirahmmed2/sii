@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { UsersIcon, StarIcon, MessageSquareIcon, CheckCircleIcon } from 'src/component/website/ui/Icons';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState([]);
@@ -53,111 +52,112 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="w-full space-y-4">
       {/* Header */}
-      <div>
-        <div className="flex items-center gap-2 text-xs text-rose-400">
-          <Link href="/developer" className="hover:underline">← Developer Overview</Link>
-          <span>/</span>
-          <span>End-Users</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
+        <div>
+          <div className="flex items-center gap-1.5 mb-1 text-xs text-slate-500">
+            <Link href="/developer" className="hover:underline">Developer Overview</Link>
+            <span>/</span>
+            <span className="text-slate-800 dark:text-slate-200 font-medium">End-Users</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-base font-semibold text-slate-900 dark:text-white">Registered End-Users Directory</h1>
+            <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+              Audience
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Visitors who leave verified reviews on portfolio websites and participate in blog discussions.
+          </p>
         </div>
-        <h1 className="text-2xl font-medium text-white mt-1 flex items-center gap-2">
-          <UsersIcon className="w-6 h-6 text-rose-500" />
-          <span>Registered End-Users Directory</span>
-        </h1>
-        <p className="text-xs text-slate-400">
-          Visitors who leave verified reviews on portfolio websites and participate in blog discussions.
-        </p>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={fetchUsers}
+            className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium cursor-pointer"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Users Table */}
-      <div className="rounded bg-slate-900/60 border border-white/10 overflow-hidden shadow-2xl">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950/80 uppercase text-[10px] text-slate-400 border-b border-white/10">
-              <tr>
-                <th className="py-3.5 px-4 font-normal">User</th>
-                <th className="py-3.5 px-4 font-normal">Activity Metrics</th>
-                <th className="py-3.5 px-4 font-normal">Account Status</th>
-                <th className="py-3.5 px-4 font-normal">Registered</th>
-                <th className="py-3.5 px-4 font-normal text-right">Moderation Actions</th>
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 text-[10px] uppercase font-semibold">
+                <th className="pb-2 whitespace-nowrap">User</th>
+                <th className="pb-2 whitespace-nowrap">Activity Metrics</th>
+                <th className="pb-2 whitespace-nowrap">Account Status</th>
+                <th className="pb-2 whitespace-nowrap">Registered</th>
+                <th className="pb-2 text-right whitespace-nowrap">Moderation Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="py-10 text-center text-slate-500">
+                  <td colSpan={5} className="py-12 text-center text-slate-400 text-xs font-normal">
                     Loading users...
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-10 text-center text-slate-500">
+                  <td colSpan={5} className="py-12 text-center text-slate-400 text-xs font-normal">
                     No registered user accounts found.
                   </td>
                 </tr>
               ) : (
                 users.map((u) => (
-                  <tr key={u.id} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={u.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
-                          alt={u.name}
-                          className="w-8 h-8 rounded object-cover border border-white/20"
-                        />
-                        <div>
-                          <span className="font-medium text-white block">{u.name}</span>
-                          <span className="text-[11px] text-slate-400 font-mono">{u.email}</span>
-                        </div>
+                  <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="py-2.5">
+                      <div className="font-medium text-slate-900 dark:text-white">{u.name}</div>
+                      <div className="text-[11px] text-slate-400 font-mono">{u.email}</div>
+                    </td>
+
+                    <td className="py-2.5">
+                      <div className="flex items-center gap-2 text-[11px]">
+                        <span className="font-medium text-slate-700 dark:text-slate-300">{u.reviewsCount || 0} Reviews</span>
+                        <span className="text-slate-300 dark:text-slate-600">&bull;</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-300">{u.commentsCount || 0} Comments</span>
                       </div>
                     </td>
 
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-3 text-[11px]">
-                        <span className="flex items-center gap-1 text-amber-400">
-                          <StarIcon filled className="w-3 h-3" />
-                          <span>{u.reviewsCount || 0} Reviews</span>
-                        </span>
-                        <span className="flex items-center gap-1 text-indigo-400">
-                          <MessageSquareIcon className="w-3 h-3" />
-                          <span>{u.commentsCount || 0} Comments</span>
-                        </span>
-                      </div>
-                    </td>
-
-                    <td className="py-3.5 px-4">
+                    <td className="py-2.5">
                       {u.isBanned ? (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                          BANNED
+                        <span className="px-1.5 py-0.2 rounded border text-[9px] font-medium uppercase bg-rose-50 text-rose-700 border-rose-200">
+                          Banned
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 w-fit">
-                          <CheckCircleIcon className="w-3 h-3" />
-                          ACTIVE
+                        <span className="px-1.5 py-0.2 rounded border text-[9px] font-medium uppercase bg-emerald-50 text-emerald-700 border-emerald-200">
+                          Active
                         </span>
                       )}
                     </td>
 
-                    <td className="py-3.5 px-4 text-slate-500">
+                    <td className="py-2.5 text-slate-500 text-[11px] font-mono whitespace-nowrap">
                       {new Date(u.createdAt || Date.now()).toLocaleDateString()}
                     </td>
 
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="py-2.5 text-right whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1.5">
                         <button
+                          type="button"
                           onClick={() => handleBanToggle(u.id, u.isBanned)}
-                          className={`px-3 py-1 rounded text-xs font-normal transition-all ${
+                          className={`px-2 py-1 rounded text-xs font-medium border transition-colors cursor-pointer ${
                             u.isBanned
-                              ? 'bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30'
-                              : 'bg-amber-600/20 text-amber-300 hover:bg-amber-600/30'
+                              ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                              : 'border-amber-200 text-amber-700 hover:bg-amber-50'
                           }`}
                         >
-                          {u.isBanned ? 'Unban User' : 'Ban User'}
+                          {u.isBanned ? 'Unban' : 'Ban'}
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleDelete(u.id)}
-                          className="px-2.5 py-1 rounded text-xs font-normal text-rose-400 hover:bg-rose-500/10 transition-colors"
+                          className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium transition-colors cursor-pointer"
                         >
                           Delete
                         </button>

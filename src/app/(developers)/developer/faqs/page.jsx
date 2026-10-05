@@ -2,18 +2,6 @@
 
 import { useState, useEffect, useContext, useRef } from 'react';
 import { Context } from 'src/component/helper/Context';
-import {
-  BiHelpCircle,
-  BiPlus,
-  BiEditAlt,
-  BiTrash,
-  BiRefresh,
-  BiSearch,
-  BiX,
-  BiCheckCircle,
-  BiInfoCircle,
-  BiLoaderAlt,
-} from 'react-icons/bi';
 
 export default function DeveloperFaqsPage() {
   const { user } = useContext(Context);
@@ -21,7 +9,7 @@ export default function DeveloperFaqsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // In-page form state (NO POPUP MODAL)
+  // In-page form state
   const [showForm, setShowForm] = useState(false);
   const [editingFaq, setEditingFaq] = useState(null);
   const [formData, setFormData] = useState({ question: '', answer: '' });
@@ -186,110 +174,89 @@ export default function DeveloperFaqsPage() {
   });
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-hidden">
+    <div className="w-full space-y-4">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded p-5 sm:p-6 shadow-xs w-full max-w-full overflow-hidden">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-medium text-slate-900 tracking-tight truncate">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded p-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-base font-semibold text-slate-900">
               Platform FAQs Management
             </h1>
-            <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded bg-secondary/10 text-secondary border border-secondary/20 shrink-0">
+            <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-slate-100 text-slate-700 border-slate-200">
               Support
             </span>
             {!canManage && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
-                <BiInfoCircle />
-                <span>Read-Only</span>
+              <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200">
+                Read-Only
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-500 line-clamp-2">
+          <p className="text-xs text-slate-500 mt-0.5">
             Create, update, and manage frequently asked questions displayed on the public /faqs portal.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={fetchFaqs}
-            className="flex items-center gap-1 px-3 py-2 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium transition-colors cursor-pointer"
-            title="Refresh FAQs"
+            className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs transition-colors cursor-pointer"
           >
-            <BiRefresh className={`text-base ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Refresh</span>
+            Refresh
           </button>
           {canManage && (
             <button
               type="button"
               onClick={showForm && !editingFaq ? closeForm : openCreateForm}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded text-xs font-medium transition-all shadow-xs bg-secondary hover:bg-secondary-dark text-white cursor-pointer shrink-0"
+              className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-colors cursor-pointer"
             >
-              {showForm && !editingFaq ? (
-                <>
-                  <BiX className="text-base" />
-                  <span>Close Form</span>
-                </>
-              ) : (
-                <>
-                  <BiPlus className="text-base" />
-                  <span>Add FAQ</span>
-                </>
-              )}
+              {showForm && !editingFaq ? 'Close Form' : 'Add FAQ'}
             </button>
           )}
         </div>
       </div>
 
-      {/* Permission Warning if not authorized */}
       {!canManage && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded p-3.5 flex items-center gap-2.5 text-xs">
-          <BiInfoCircle className="text-base shrink-0" />
-          <span>
-            You are currently viewing FAQs in read-only mode. Only <strong>Admin</strong> and <strong>Manager</strong> accounts can create, edit, or delete items.
-          </span>
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded p-3 text-xs">
+          You are currently viewing FAQs in read-only mode. Only administrators and managers can make changes.
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* Integrated In-Page Creation & Edit Form (NO POPUP MODAL) */}
-      {/* ========================================================================= */}
+      {/* Integrated In-Page Creation & Edit Form */}
       {showForm && (
         <div
           ref={formRef}
-          className="bg-white border-2 border-secondary/30 rounded p-5 sm:p-6 shadow-sm space-y-4 animate-fade-in"
+          className="bg-white border border-slate-200 rounded p-4 space-y-3"
         >
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-              <BiHelpCircle className="text-secondary text-base" />
-              <span>{editingFaq ? `Edit FAQ #${editingFaq.id}` : 'Create New FAQ Item'}</span>
-            </h3>
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <h2 className="text-sm font-semibold text-slate-900">
+              {editingFaq ? `Edit FAQ #${editingFaq.id}` : 'Create New FAQ Item'}
+            </h2>
             <button
               type="button"
               onClick={closeForm}
-              className="text-xs font-medium text-slate-400 hover:text-slate-600 flex items-center gap-1 cursor-pointer"
+              className="text-slate-400 hover:text-slate-600 text-sm cursor-pointer"
             >
-              <BiX className="text-sm" /> Cancel
+              ✕
             </button>
           </div>
 
           {feedback.message && (
             <div
-              className={`p-3 rounded text-xs font-medium flex items-center gap-2 ${
+              className={`p-3 rounded text-xs font-normal ${
                 feedback.type === 'error'
                   ? 'bg-rose-50 text-rose-700 border border-rose-200'
                   : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
               }`}
             >
-              {feedback.type === 'error' ? <BiInfoCircle className="text-sm shrink-0" /> : <BiCheckCircle className="text-sm shrink-0" />}
               <span>{feedback.message}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Question <span className="text-rose-500">*</span>
+                Question <span className="text-rose-600">*</span>
               </label>
               <input
                 type="text"
@@ -297,13 +264,13 @@ export default function DeveloperFaqsPage() {
                 value={formData.question}
                 onChange={(e) => setFormData({ ...formData, question: e.target.value })}
                 placeholder="e.g. How do I point my custom domain to the platform?"
-                className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+                className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Answer <span className="text-rose-500">*</span>
+                Answer <span className="text-rose-600">*</span>
               </label>
               <textarea
                 rows={4}
@@ -311,34 +278,24 @@ export default function DeveloperFaqsPage() {
                 value={formData.answer}
                 onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
                 placeholder="Detailed explanation answering the question..."
-                className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+                className="w-full bg-white border border-slate-300 rounded p-3 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
               />
             </div>
 
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={closeForm}
-                className="px-4 py-2 rounded border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50 cursor-pointer"
+                className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex items-center gap-1.5 px-5 py-2 rounded bg-secondary hover:bg-secondary-dark text-white text-xs font-medium shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium disabled:opacity-50 cursor-pointer"
               >
-                {submitting ? (
-                  <>
-                    <BiLoaderAlt className="animate-spin text-sm" />
-                    <span>Saving...</span>
-                  </>
-                ) : (
-                  <>
-                    <BiCheckCircle className="text-sm" />
-                    <span>{editingFaq ? 'Update FAQ' : 'Create FAQ'}</span>
-                  </>
-                )}
+                {submitting ? 'Saving...' : editingFaq ? 'Update FAQ' : 'Create FAQ'}
               </button>
             </div>
           </form>
@@ -346,27 +303,24 @@ export default function DeveloperFaqsPage() {
       )}
 
       {/* Main List Card */}
-      <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden w-full max-w-full">
-        {/* Search & Filter Bar */}
-        <div className="p-3.5 sm:p-4 border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/50 w-full">
-          {/* Search Input */}
-          <div className="relative w-full sm:w-80">
-            <BiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+      <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
+        {/* Search Bar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-sm">
             <input
               type="text"
               placeholder="Search FAQs by question or answer keywords..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white border border-slate-300 rounded pl-8 pr-8 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-secondary transition-all"
+              className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
-                title="Clear search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
               >
-                <BiX className="text-xs" />
+                ✕
               </button>
             )}
           </div>
@@ -376,143 +330,103 @@ export default function DeveloperFaqsPage() {
           </div>
         </div>
 
-        {/* Responsive View List */}
-        <div className="w-full max-w-full overflow-hidden">
-          {/* Header Row */}
-          <div className="hidden md:flex items-center gap-3 px-4 py-2.5 bg-slate-50/80 border-b border-slate-100 text-[10px] font-semibold uppercase tracking-wider text-slate-400 select-none">
-            <span className="w-8 shrink-0">#</span>
-            <span className="w-12 shrink-0">Icon</span>
-            <span className="flex-1 min-w-0">Question &amp; Answer Summary</span>
-            <span className="w-24 shrink-0 text-center hidden sm:block">Updated</span>
-            <span className="w-24 shrink-0 text-right">Actions</span>
-          </div>
+        {/* FAQs Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-slate-200 text-slate-500 text-[10px] uppercase font-semibold">
+                <th className="pb-2 w-12">#</th>
+                <th className="pb-2">Question &amp; Answer Summary</th>
+                <th className="pb-2 text-center w-28 hidden sm:table-cell">Updated</th>
+                <th className="pb-2 text-right w-24">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-normal text-slate-700">
+              {loading ? (
+                <tr>
+                  <td colSpan={4} className="py-8 text-center text-slate-400">
+                    Loading FAQs...
+                  </td>
+                </tr>
+              ) : filteredFaqs.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-8 text-center text-slate-400">
+                    No FAQs found.
+                  </td>
+                </tr>
+              ) : (
+                filteredFaqs.map((faq) => {
+                  const formattedDate = faq.updated_at || faq.created_at
+                    ? new Date(faq.updated_at || faq.created_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })
+                    : '—';
 
-          {/* List Content */}
-          {loading ? (
-            <div className="py-20 text-center flex flex-col items-center justify-center gap-2 text-slate-400">
-              <BiLoaderAlt className="animate-spin text-2xl text-secondary" />
-              <span className="text-xs font-normal">Loading FAQs from database...</span>
-            </div>
-          ) : filteredFaqs.length === 0 ? (
-            <div className="py-16 px-4 text-center space-y-2">
-              <div className="w-12 h-12 rounded bg-slate-100 text-slate-400 flex items-center justify-center text-2xl mx-auto">
-                <BiHelpCircle />
-              </div>
-              <h3 className="text-sm font-semibold text-slate-800">No FAQs Found</h3>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                {searchTerm
-                  ? `No FAQ matching "${searchTerm}". Try a different search term.`
-                  : 'Start adding questions and answers for platform users.'}
-              </p>
-              {canManage && !searchTerm && (
-                <button
-                  type="button"
-                  onClick={openCreateForm}
-                  className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded bg-secondary text-white text-xs font-semibold hover:bg-secondary-dark transition-colors cursor-pointer mt-2"
-                >
-                  <BiPlus className="text-sm" />
-                  <span>Create First FAQ</span>
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100 w-full">
-              {filteredFaqs.map((faq) => {
-                const formattedDate = faq.updated_at || faq.created_at
-                  ? new Date(faq.updated_at || faq.created_at).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })
-                  : '—';
+                  return (
+                    <tr key={faq.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-2.5 font-mono text-[11px] text-slate-400">
+                        #{faq.id}
+                      </td>
 
-                return (
-                  <div
-                    key={faq.id}
-                    className="p-3 sm:p-4 hover:bg-slate-50/70 transition-colors flex items-center gap-2.5 sm:gap-3 w-full min-w-0 overflow-hidden"
-                  >
-                    {/* ID */}
-                    <span className="w-8 shrink-0 font-mono font-medium text-[11px] text-slate-400 hidden md:block">
-                      #{faq.id}
-                    </span>
+                      <td className="py-2.5">
+                        <div className="space-y-0.5">
+                          {canManage ? (
+                            <button
+                              type="button"
+                              onClick={() => openEditForm(faq)}
+                              className="text-xs font-semibold text-slate-900 hover:underline text-left cursor-pointer"
+                            >
+                              {faq.question}
+                            </button>
+                          ) : (
+                            <span className="text-xs font-semibold text-slate-900">
+                              {faq.question}
+                            </span>
+                          )}
 
-                    {/* Icon Box */}
-                    <div className="w-9 h-9 rounded-xl border border-secondary/20 bg-secondary/10 text-secondary shrink-0 flex items-center justify-center text-lg">
-                      <BiHelpCircle />
-                    </div>
+                          {faq.answer ? (
+                            <p className="text-[11px] text-slate-500 line-clamp-2 max-w-xl">
+                              {faq.answer}
+                            </p>
+                          ) : (
+                            <span className="text-[11px] text-slate-400 italic">No answer provided</span>
+                          )}
+                        </div>
+                      </td>
 
-                    {/* Question & Answer Details */}
-                    <div className="flex-1 min-w-0 pr-1 space-y-0.5">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        {canManage ? (
-                          <button
-                            type="button"
-                            onClick={() => openEditForm(faq)}
-                            className="text-xs sm:text-sm font-semibold text-slate-900 hover:text-secondary truncate block tracking-tight text-left cursor-pointer"
-                            title={faq.question}
-                          >
-                            {faq.question}
-                          </button>
-                        ) : (
-                          <span
-                            className="text-xs sm:text-sm font-semibold text-slate-900 truncate block tracking-tight"
-                            title={faq.question}
-                          >
-                            {faq.question}
-                          </span>
-                        )}
-                      </div>
-
-                      {faq.answer ? (
-                        <p className="text-[11px] text-slate-500 truncate block leading-normal">
-                          {faq.answer}
-                        </p>
-                      ) : (
-                        <span className="text-[11px] text-slate-400 italic block">No answer provided</span>
-                      )}
-
-                      {/* Small screen date */}
-                      <div className="text-[10px] text-slate-400 sm:hidden pt-0.5">
-                        Updated {formattedDate}
-                      </div>
-                    </div>
-
-                    {/* Updated Date Column (Tablet/Desktop) */}
-                    <div className="w-24 shrink-0 text-center hidden sm:block">
-                      <span className="text-[11px] text-slate-400 whitespace-nowrap">
+                      <td className="py-2.5 text-center text-xs text-slate-500 hidden sm:table-cell font-mono">
                         {formattedDate}
-                      </span>
-                    </div>
+                      </td>
 
-                    {/* Actions Column */}
-                    <div className="w-24 shrink-0 flex items-center justify-end gap-1.5">
-                      {canManage && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => openEditForm(faq)}
-                            className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-secondary hover:bg-slate-50 transition-colors cursor-pointer"
-                            title="Edit FAQ in form"
-                          >
-                            <BiEditAlt className="text-sm" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={deletingId === faq.id}
-                            onClick={() => handleDelete(faq.id, faq.question)}
-                            className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50"
-                            title="Delete FAQ"
-                          >
-                            <BiTrash className="text-sm" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                      <td className="py-2.5 text-right">
+                        {canManage && (
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => openEditForm(faq)}
+                              className="px-2 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium cursor-pointer"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              disabled={deletingId === faq.id}
+                              onClick={() => handleDelete(faq.id, faq.question)}
+                              className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium cursor-pointer disabled:opacity-50"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

@@ -82,13 +82,13 @@ export default function DeveloperLayout({ children }) {
 
   if (!isAllowed) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex">
+      <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex">
         <Sidebar
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
           currentUser={user}
         />
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 w-full">
           <Navbar
             onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
             currentUser={user}
@@ -115,7 +115,7 @@ export default function DeveloperLayout({ children }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex">
+    <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex">
       {/* Sidebar: persistent on desktop, drawer on mobile */}
       <Sidebar
         isOpen={sidebarOpen}
@@ -124,12 +124,12 @@ export default function DeveloperLayout({ children }) {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 w-full">
         <Navbar
           onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
           currentUser={user}
         />
-        <main className="flex-1 p-4 sm:p-6 w-full max-w-7xl mx-auto">
+        <main className="flex-1 p-4 sm:p-5 w-full space-y-4">
           {children}
         </main>
       </div>

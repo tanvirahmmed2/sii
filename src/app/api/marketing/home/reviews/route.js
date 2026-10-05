@@ -1,1 +1,2 @@
-export { GET, dynamic } from 'src/app/api/marketing/reviews/home/route';
+export const dynamic = 'force-dynamic';
+export { GET } from 'src/app/api/marketing/reviews/home/route';

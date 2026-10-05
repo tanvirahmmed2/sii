@@ -11,7 +11,6 @@ export default function DeveloperProfilePage() {
   const [sessionsList, setSessionsList] = useState([]);
   const [recentLogins, setRecentLogins] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [copiedField, setCopiedField] = useState('');
   const [revokingSessionId, setRevokingSessionId] = useState(null);
   const [feedback, setFeedback] = useState({ type: '', message: '' });
 
@@ -59,13 +58,6 @@ export default function DeveloperProfilePage() {
   const showNotification = (message, type = 'success') => {
     setFeedback({ type, message });
     setTimeout(() => setFeedback({ type: '', message: '' }), 5000);
-  };
-
-  const handleCopy = (text, fieldName) => {
-    if (!text) return;
-    navigator.clipboard.writeText(text);
-    setCopiedField(fieldName);
-    setTimeout(() => setCopiedField(''), 2000);
   };
 
   const handleRevokeSession = async (sessionId = null, revokeOthers = false) => {
@@ -214,7 +206,7 @@ export default function DeveloperProfilePage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="w-full space-y-4">
       {/* Toast Notification */}
       {feedback.message && (
         <div
@@ -236,16 +228,16 @@ export default function DeveloperProfilePage() {
       )}
 
       {/* Header Banner Card */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           {profile?.avatar_url ? (
             <img
               src={profile.avatar_url}
               alt={profile.name}
-              className="w-16 h-16 rounded object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+              className="w-14 h-14 rounded object-cover border border-slate-200 dark:border-slate-700 shrink-0"
             />
           ) : (
-            <div className="w-16 h-16 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 flex items-center justify-center text-sm font-medium border border-slate-200 dark:border-slate-700 shrink-0">
+            <div className="w-14 h-14 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 flex items-center justify-center text-sm font-medium border border-slate-200 dark:border-slate-700 shrink-0">
               {profile?.name ? profile.name.slice(0, 2).toUpperCase() : 'DV'}
             </div>
           )}
@@ -313,7 +305,7 @@ export default function DeveloperProfilePage() {
       {/* Main Grid: Details + Sessions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Profile Details */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 space-y-4">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-4">
           <h2 className="text-sm font-medium text-slate-900 dark:text-white pb-2 border-b border-slate-100 dark:border-slate-800">
             Account Information
           </h2>
@@ -373,7 +365,7 @@ export default function DeveloperProfilePage() {
         </div>
 
         {/* Sessions & Audit */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 space-y-4">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
             <h2 className="text-sm font-medium text-slate-900 dark:text-white">
               Active Sessions ({sessionsList.length})
@@ -405,7 +397,7 @@ export default function DeveloperProfilePage() {
                         {sess.ip_address || '127.0.0.1'}
                       </span>
                       {sess.is_current && (
-                        <span className="text-[10px] font-normal px-1.5 py-0.2 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+                        <span className="text-[10px] font-normal px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
                           Current
                         </span>
                       )}
@@ -473,7 +465,7 @@ export default function DeveloperProfilePage() {
       {/* Edit Profile Modal */}
       {editModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 max-w-lg w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 max-w-lg w-full p-4 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-sm font-medium text-slate-900 dark:text-white">Edit Profile Details</h3>
               <button

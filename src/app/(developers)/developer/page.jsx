@@ -50,17 +50,23 @@ export default function AdminOverviewPage() {
         const completedPayments = payments.filter((p) =>
           ['successful', 'completed'].includes(String(p.status || '').toLowerCase())
         );
-        const totalRevenue = completedPayments.reduce((acc, p) => {
-          const valInCents =
-            p.amount_in_cents !== undefined
-              ? Number(p.amount_in_cents)
-              : p.amountInCents !== undefined
-              ? Number(p.amountInCents)
-              : p.amount !== undefined
-              ? Math.round(Number(p.amount) * 100)
-              : 0;
-          return acc + (isNaN(valInCents) ? 0 : valInCents);
-        }, 0) / 100;
+        let revUsd = 0;
+        let revBdt = 0;
+        completedPayments.forEach((p) => {
+          const curr = String(p.currency || (p.gateway === 'bkash' ? 'BDT' : 'USD')).toUpperCase();
+          const amount = Number(p.amount || 0);
+          if (curr === 'BDT') revBdt += amount;
+          else revUsd += amount;
+        });
+
+        let revenueDisplay = '$0.00 USD';
+        if (revUsd > 0 && revBdt > 0) {
+          revenueDisplay = `$${revUsd.toFixed(2)} USD / ৳${revBdt.toLocaleString()} BDT`;
+        } else if (revBdt > 0) {
+          revenueDisplay = `৳${revBdt.toLocaleString()} BDT`;
+        } else if (revUsd > 0) {
+          revenueDisplay = `$${revUsd.toFixed(2)} USD`;
+        }
 
         setCounts({
           developers: devs.status === 'fulfilled' && devs.value?.records ? devs.value.records.length : 0,
@@ -70,7 +76,7 @@ export default function AdminOverviewPage() {
           support: supp.status === 'fulfilled' && supp.value?.records
             ? supp.value.records.filter((s) => String(s.status || '').toLowerCase() === 'open').length
             : 0,
-          revenue: totalRevenue,
+          revenue: revenueDisplay,
           leads: leads.status === 'fulfilled' && leads.value?.records ? leads.value.records.length : 0,
           subscribers: subs.status === 'fulfilled' && subs.value?.records ? subs.value.records.length : 0,
         });
@@ -112,7 +118,7 @@ export default function AdminOverviewPage() {
     },
     {
       title: 'Total Revenue',
-      value: `$${counts.revenue.toFixed(2)}`,
+      value: counts.revenue,
       href: '/developer/payments',
     },
     {
@@ -178,17 +184,17 @@ export default function AdminOverviewPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-4">
       {/* Banner */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-normal uppercase tracking-wider px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+            <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
               {developer?.role || 'Developer'}
             </span>
             <span className="text-xs text-slate-500 font-normal">{SITE_NAME} Operations</span>
           </div>
-          <h1 className="text-lg font-medium text-slate-900 dark:text-white">
+          <h1 className="text-base font-semibold text-slate-900 dark:text-white">
             {developer?.name ? `Welcome, ${developer.name}` : `Welcome to ${SITE_NAME} Operations`}
           </h1>
           <p className="text-xs text-slate-500 max-w-xl font-normal">
@@ -199,13 +205,13 @@ export default function AdminOverviewPage() {
         <div className="flex items-center gap-2">
           <Link
             href="/developer/profile"
-            className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-normal"
+            className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium cursor-pointer"
           >
             My Profile
           </Link>
           <Link
             href="/developer/settings"
-            className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-normal"
+            className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium cursor-pointer"
           >
             Settings
           </Link>
@@ -218,10 +224,10 @@ export default function AdminOverviewPage() {
           <Link
             key={idx}
             href={stat.href}
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 hover:border-slate-400 dark:hover:border-slate-600 transition-colors"
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 hover:border-slate-400 dark:hover:border-slate-600 transition-colors"
           >
-            <div className="text-xs font-normal text-slate-500 dark:text-slate-400">{stat.title}</div>
-            <div className="text-xl font-medium text-slate-900 dark:text-white mt-1">
+            <div className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">{stat.title}</div>
+            <div className="text-base font-semibold text-slate-900 dark:text-white mt-1">
               {loading ? '—' : stat.value}
             </div>
           </Link>
@@ -229,15 +235,15 @@ export default function AdminOverviewPage() {
       </div>
 
       {/* Modules Categorized Navigation */}
-      <div className="space-y-4">
-        <h2 className="text-sm font-medium text-slate-900 dark:text-white">Operations Directory</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="space-y-3">
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Operations Directory</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {moduleCategories.map((cat, idx) => (
             <div
               key={idx}
               className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3"
             >
-              <h3 className="text-xs font-medium text-slate-700 dark:text-slate-300 pb-2 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-xs font-semibold text-slate-700 dark:text-slate-300 pb-2 border-b border-slate-100 dark:border-slate-800">
                 {cat.category}
               </h3>
               <div className="space-y-2">

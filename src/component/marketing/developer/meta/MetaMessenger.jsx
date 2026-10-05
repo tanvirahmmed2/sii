@@ -6,25 +6,11 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Context } from 'src/component/helper/Context';
 import ChatUsersSwipeBar from '../ChatUsersSwipeBar';
-import {
-  BiSend,
-  BiCheck,
-  BiCheckDouble,
-  BiTrash,
-  BiInfoCircle,
-  BiPhone,
-  BiShieldQuarter,
-} from 'react-icons/bi';
-import { FiRefreshCw, FiArrowRight, FiMessageSquare } from 'react-icons/fi';
 
 export default function MetaMessenger({
   platform = 'facebook',
   title = 'Facebook Messenger',
   subtitle = 'Manage Facebook Page customer conversations and direct replies via Meta Graph API',
-  IconComponent,
-  brandColor = 'text-blue-600 dark:text-blue-400',
-  brandBg = 'bg-blue-600',
-  brandBadge = 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
 }) {
   const searchParams = useSearchParams();
   const queryConvId = searchParams.get('convId') || searchParams.get('id');
@@ -116,19 +102,16 @@ export default function MetaMessenger({
     }
   }, []);
 
-  // Initial load
   useEffect(() => {
     fetchConversations();
   }, [fetchConversations]);
 
-  // Load messages when conversation changes
   useEffect(() => {
     if (selectedConv?.id) {
       fetchMessages(selectedConv.id);
     }
   }, [selectedConv?.id, fetchMessages]);
 
-  // Background polling every 4 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       fetchConversations(true);
@@ -217,12 +200,9 @@ export default function MetaMessenger({
 
   if (!canManage) {
     return (
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 text-center max-w-md mx-auto my-12 shadow-xs">
-        <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center text-3xl">
-          <BiShieldQuarter />
-        </div>
-        <h2 className="text-lg font-medium text-slate-900 dark:text-white mb-2">Access Restricted</h2>
-        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-8 text-center max-w-md mx-auto my-12">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-2">Access Restricted</h2>
+        <p className="text-xs text-slate-600 dark:text-slate-400">
           Your account role (<span className="font-medium capitalize">{role}</span>) does not have permission to manage {title}.
         </p>
       </div>
@@ -230,8 +210,8 @@ export default function MetaMessenger({
   }
 
   return (
-    <div className="space-y-3 max-w-6xl mx-auto">
-      {/* Top Touch-Swipeable Users Bar (icon and name only, latest on left) */}
+    <div className="w-full space-y-4">
+      {/* Top Touch-Swipeable Users Bar */}
       <ChatUsersSwipeBar
         users={conversations.map((c) => ({
           id: c.id,
@@ -245,39 +225,32 @@ export default function MetaMessenger({
         activeId={selectedConv?.id}
       />
 
-      {/* Main Content Area: No extra bar or data box */}
+      {/* Main Content Area */}
       {loadingConvs && conversations.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-16 text-center text-slate-400 shadow-xs flex flex-col items-center justify-center gap-2">
-          <FiRefreshCw className="w-6 h-6 animate-spin text-slate-400" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 text-center text-slate-400">
           <span className="text-xs font-normal">Loading {title} conversations...</span>
         </div>
       ) : conversations.length === 0 ? (
-        /* Empty State: No chats are available */
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-16 text-center shadow-xs">
-          <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-3">
-            {IconComponent ? <IconComponent className="text-2xl" /> : <FiMessageSquare className="w-6 h-6" />}
-          </div>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 text-center">
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">
             No chats are available
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mb-4">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
             There are currently no active {title} customer conversations.
           </p>
           <Link
             href={`/developer/${platform}-messages/details`}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-medium hover:bg-slate-800 transition-colors"
+            className="inline-block px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-colors cursor-pointer"
           >
-            <span>Workspace Details</span>
-            <FiArrowRight className="w-3.5 h-3.5" />
+            Workspace Details
           </Link>
         </div>
       ) : selectedConv ? (
-        /* Active Chat Workspace: Simple and Minimal without extra bars or data boxes */
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden flex flex-col h-[650px]">
-          {/* Minimal Chat Header */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden flex flex-col h-[650px]">
+          {/* Header */}
           <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center justify-center font-bold text-xs shrink-0">
+              <div className="w-8 h-8 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-semibold text-xs shrink-0">
                 {(selectedConv.recipient_name?.[0] || 'C').toUpperCase()}
               </div>
               <div className="min-w-0">
@@ -286,10 +259,10 @@ export default function MetaMessenger({
                     {selectedConv.recipient_name || 'Customer'}
                   </h2>
                   <span
-                    className={`text-[9px] font-semibold uppercase px-2 py-0.5 rounded ${
+                    className={`text-[9px] font-medium uppercase px-1.5 py-0.5 rounded border ${
                       selectedConv.status === 'OPEN'
-                        ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800'
+                        : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
                     }`}
                   >
                     {selectedConv.status || 'OPEN'}
@@ -299,9 +272,8 @@ export default function MetaMessenger({
                   <span>ID: {selectedConv.recipient_id}</span>
                   {selectedConv.recipient_phone && (
                     <>
-                      <span>&bull;</span>
-                      <span className="flex items-center gap-1 font-mono">
-                        <BiPhone className="text-xs" />
+                      <span>•</span>
+                      <span className="font-mono">
                         {selectedConv.recipient_phone}
                       </span>
                     </>
@@ -311,38 +283,33 @@ export default function MetaMessenger({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              {/* Quick status toggle */}
               <button
                 type="button"
                 onClick={handleToggleStatus}
                 disabled={statusUpdating}
-                className={`px-2.5 py-1 text-[11px] font-medium rounded-lg transition-colors cursor-pointer ${
+                className={`px-2.5 py-1 text-xs font-medium rounded border transition-colors cursor-pointer ${
                   selectedConv.status === 'OPEN'
-                    ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100'
-                    : 'text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200'
+                    ? 'text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800'
+                    : 'text-slate-700 border-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
                 }`}
               >
                 {selectedConv.status === 'OPEN' ? 'Resolve' : 'Re-open'}
               </button>
 
-              {/* Link to /details */}
               <Link
                 href={`/developer/${platform}-messages/details`}
-                className="inline-flex items-center gap-1 px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-medium transition-colors"
-                title="View full workspace details and metrics"
+                className="px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium transition-colors"
               >
-                <span>Details</span>
-                <FiArrowRight className="w-3 h-3" />
+                Details
               </Link>
 
               {canDelete && (
                 <button
                   type="button"
                   onClick={handleDeleteConversation}
-                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition-colors cursor-pointer"
-                  title="Delete conversation"
+                  className="px-2 py-1 text-xs font-medium rounded border border-rose-200 dark:border-rose-900 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                 >
-                  <BiTrash className="text-base" />
+                  Delete
                 </button>
               )}
             </div>
@@ -350,31 +317,26 @@ export default function MetaMessenger({
 
           {/* API notice */}
           {apiNotice && (
-            <div className="mx-4 mt-2.5 p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-800 dark:text-amber-200 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5">
-                <BiInfoCircle className="text-base shrink-0 text-amber-600" />
-                <span>{apiNotice}</span>
-              </div>
+            <div className="mx-4 mt-2.5 p-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded text-xs text-amber-800 dark:text-amber-200 flex items-center justify-between gap-2">
+              <span>{apiNotice}</span>
               <button
                 type="button"
                 onClick={() => setApiNotice(null)}
-                className="text-amber-600 font-bold hover:text-amber-900 cursor-pointer"
+                className="text-amber-700 font-semibold cursor-pointer"
               >
-                ✕
+                Dismiss
               </button>
             </div>
           )}
 
           {/* Messages Stream */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3 bg-slate-50/30 dark:bg-slate-900/30">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/30 dark:bg-slate-900/30">
             {loadingMsgs && messages.length === 0 ? (
               <div className="h-full flex items-center justify-center text-slate-400 text-xs">
-                <FiRefreshCw className="w-4 h-4 animate-spin mr-2" />
                 Loading messages...
               </div>
             ) : messages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs gap-1">
-                <FiMessageSquare className="w-6 h-6 stroke-1 text-slate-300 dark:text-slate-600" />
+              <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs">
                 <p>No messages in this conversation yet.</p>
               </div>
             ) : (
@@ -386,15 +348,15 @@ export default function MetaMessenger({
                     className={`flex items-end gap-2 ${isOutbound ? 'justify-end' : 'justify-start'}`}
                   >
                     {!isOutbound && (
-                      <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-bold text-[10px] shrink-0 mb-1">
+                      <div className="w-7 h-7 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-semibold text-[10px] shrink-0 mb-1">
                         {(m.sender_name?.[0] || 'C').toUpperCase()}
                       </div>
                     )}
                     <div
-                      className={`max-w-[75%] sm:max-w-md rounded-2xl px-4 py-2.5 text-xs shadow-xs leading-relaxed ${
+                      className={`max-w-[75%] sm:max-w-md rounded p-3 text-xs leading-relaxed ${
                         isOutbound
-                          ? 'bg-blue-600 text-white rounded-br-xs'
-                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-bl-xs'
+                          ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100'
                       }`}
                     >
                       <p className="whitespace-pre-wrap break-words">{m.message_text}</p>
@@ -408,12 +370,8 @@ export default function MetaMessenger({
                             : ''}
                         </span>
                         {isOutbound && (
-                          <span>
-                            {m.status === 'read' ? (
-                              <BiCheckDouble className="text-sm" />
-                            ) : (
-                              <BiCheck className="text-sm" />
-                            )}
+                          <span className="text-[9px] uppercase font-mono">
+                            {m.status === 'read' ? 'Read' : 'Sent'}
                           </span>
                         )}
                       </div>
@@ -436,15 +394,14 @@ export default function MetaMessenger({
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               disabled={sending}
-              className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-600 transition-colors"
+              className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-slate-800"
             />
             <button
               type="submit"
               disabled={!inputText.trim() || sending}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-medium shadow-xs transition-colors cursor-pointer shrink-0"
+              className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-xs font-medium transition-colors cursor-pointer shrink-0"
             >
-              <span>Send</span>
-              <BiSend className="text-base" />
+              Send
             </button>
           </form>
         </div>

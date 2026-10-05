@@ -1,8 +1,7 @@
 'use client';
+
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-
-
 
 export default function PurchasesPage() {
   const [purchases, setPurchases] = useState([]);
@@ -120,7 +119,10 @@ export default function PurchasesPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const totalAmount = purchases.reduce((acc, pu) => {
+  let totalUsd = 0;
+  let totalBdt = 0;
+  purchases.forEach((pu) => {
+    const curr = String(pu.currency || 'USD').toUpperCase();
     const amountVal =
       pu.amount_in_cents !== undefined
         ? Number(pu.amount_in_cents) / 100
@@ -129,32 +131,34 @@ export default function PurchasesPage() {
         : pu.price !== undefined
         ? Number(pu.price)
         : 0;
-    return acc + (isNaN(amountVal) ? 0 : amountVal);
-  }, 0);
+    if (curr === 'BDT') totalBdt += amountVal;
+    else totalUsd += amountVal;
+  });
+
   const completedCount = purchases.filter((pu) => ['completed', 'active'].includes(String(pu.status || '').toLowerCase())).length;
   const unpaidCount = purchases.filter((pu) => ['unpaid', 'pending'].includes(String(pu.status || '').toLowerCase())).length;
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-4">
       {toastMessage && (
-        <div className="p-4 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-normal flex items-center justify-between shadow-xs">
+        <div className="p-3 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-normal flex items-center justify-between">
           <span>{toastMessage}</span>
-          <button type="button" onClick={() => setToastMessage('')} className="text-emerald-500 hover:text-emerald-800">
-            
+          <button type="button" onClick={() => setToastMessage('')} className="text-emerald-700 hover:underline text-xs font-medium cursor-pointer">
+            Dismiss
           </button>
         </div>
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded p-6 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-medium text-slate-900 tracking-tight">Platform Purchases</h1>
-            <span className="text-[11px] font-medium uppercase tracking-wider px-2.5 py-0.5 rounded bg-secondary/10 text-secondary border border-secondary/20">
+            <h1 className="text-base font-semibold text-slate-900 dark:text-white">Platform Purchases</h1>
+            <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
               Purchases
             </span>
           </div>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             All package orders placed by creators, tracking payment link status and subscription activation.
           </p>
         </div>
@@ -163,63 +167,64 @@ export default function PurchasesPage() {
           <button
             type="button"
             onClick={fetchPurchases}
-            className="p-2 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
-            title="Refresh purchases"
-          >Refresh</button>
+            className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium cursor-pointer"
+          >
+            Refresh
+          </button>
           <Link
             href="/developer/payments"
-            className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white transition-all shadow-xs"
+            className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium transition-colors"
           >
-            
-            <span>Manage Payments</span>
+            Manage Payments
           </Link>
         </div>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-5 rounded bg-white border border-slate-200 shadow-xs space-y-1">
-          <span className="text-[11px] font-normal text-slate-500 uppercase tracking-wider">Total Orders</span>
-          <div className="text-2xl font-medium text-slate-900">{purchases.length}</div>
-          <p className="text-[11px] text-slate-400">Total volume: ${totalAmount.toFixed(2)} USD</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="p-3.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+          <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Total Orders</span>
+          <div className="text-base font-semibold text-slate-900 dark:text-white">{purchases.length}</div>
+          <p className="text-[11px] text-slate-500">
+            Total volume: {totalUsd > 0 && totalBdt > 0 ? `$${totalUsd.toFixed(2)} USD / ৳${totalBdt.toLocaleString()} BDT` : totalBdt > 0 ? `৳${totalBdt.toLocaleString()} BDT` : `$${totalUsd.toFixed(2)} USD`}
+          </p>
         </div>
-        <div className="p-5 rounded bg-white border border-slate-200 shadow-xs space-y-1">
-          <span className="text-[11px] font-normal text-emerald-600 uppercase tracking-wider">Completed Purchases</span>
-          <div className="text-2xl font-medium text-emerald-700">{completedCount}</div>
+        <div className="p-3.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+          <span className="text-[10px] uppercase font-semibold text-emerald-600 dark:text-emerald-400">Completed Purchases</span>
+          <div className="text-base font-semibold text-emerald-700 dark:text-emerald-400">{completedCount}</div>
           <p className="text-[11px] text-slate-400">Active and delivered orders</p>
         </div>
-        <div className="p-5 rounded bg-white border border-slate-200 shadow-xs space-y-1">
-          <span className="text-[11px] font-normal text-amber-600 uppercase tracking-wider">Awaiting Payment</span>
-          <div className="text-2xl font-medium text-amber-700">{unpaidCount}</div>
+        <div className="p-3.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+          <span className="text-[10px] uppercase font-semibold text-amber-600 dark:text-amber-400">Awaiting Payment</span>
+          <div className="text-base font-semibold text-amber-700 dark:text-amber-400">{unpaidCount}</div>
           <p className="text-[11px] text-slate-400">Unpaid invoices pending settlement</p>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50">
-          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-            <div className="relative w-full sm:w-72">
-              
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <div className="w-full sm:w-72">
               <input
                 type="text"
                 placeholder="Search orders, creator, package..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded pl-3 pr-3.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-slate-800"
               />
             </div>
 
-            <div className="inline-flex rounded border border-slate-200 bg-white p-1 text-xs">
+            <div className="inline-flex rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-0.5 text-xs">
               {['ALL', 'UNPAID', 'COMPLETED', 'CANCELLED'].map((st) => (
                 <button
                   key={st}
                   type="button"
                   onClick={() => setStatusFilter(st)}
-                  className={`px-3 py-1 rounded font-normal transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded text-xs transition-colors cursor-pointer ${
                     statusFilter === st
-                      ? 'bg-secondary text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-medium'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-normal'
                   }`}
                 >
                   {st}
@@ -229,7 +234,7 @@ export default function PurchasesPage() {
           </div>
 
           <div className="text-xs text-slate-500 font-medium">
-            Showing <span className="font-medium text-slate-800">{filtered.length}</span> of {purchases.length} orders
+            Showing {filtered.length} of {purchases.length} orders
           </div>
         </div>
 
@@ -237,91 +242,85 @@ export default function PurchasesPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/80 text-slate-500 font-normal uppercase tracking-wider text-[10px]">
-                <th className="px-4 py-3 whitespace-nowrap">Order ID</th>
-                <th className="px-4 py-3 whitespace-nowrap">Creator</th>
-                <th className="px-4 py-3 whitespace-nowrap">Package Plan</th>
-                <th className="px-4 py-3 whitespace-nowrap">Amount</th>
-                <th className="px-4 py-3 whitespace-nowrap">Status</th>
-                <th className="px-4 py-3 whitespace-nowrap">Linked Payment</th>
-                <th className="px-4 py-3 whitespace-nowrap">Created Date</th>
-                <th className="px-4 py-3 text-right whitespace-nowrap">Actions</th>
+              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 text-[10px] uppercase font-semibold">
+                <th className="pb-2 whitespace-nowrap">Order ID</th>
+                <th className="pb-2 whitespace-nowrap">Creator</th>
+                <th className="pb-2 whitespace-nowrap">Package Plan</th>
+                <th className="pb-2 whitespace-nowrap">Amount</th>
+                <th className="pb-2 whitespace-nowrap">Status</th>
+                <th className="pb-2 whitespace-nowrap">Linked Payment</th>
+                <th className="pb-2 whitespace-nowrap">Created Date</th>
+                <th className="pb-2 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
-                    
-                    <span>Loading platform purchases...</span>
+                  <td colSpan={8} className="py-12 text-center text-slate-400 text-xs font-normal">
+                    Loading platform purchases...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                  <td colSpan={8} className="py-12 text-center text-slate-400 text-xs font-normal">
                     No purchase orders found matching current filter.
                   </td>
                 </tr>
               ) : (
                 filtered.map((pu) => {
                   const amount = (Number(pu.amount_in_cents || pu.price * 100 || 0) / 100).toFixed(2);
-                  return (
-                    <tr key={pu.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="px-4 py-3 font-mono font-medium text-slate-800">#{pu.id}</td>
+                  const curr = String(pu.currency || 'USD').toUpperCase();
+                  const sym = curr === 'BDT' ? '৳' : '$';
 
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-slate-900">{pu.creator_name || `Creator #${pu.creator_id}`}</div>
-                        <div className="text-[11px] text-slate-400">{pu.creator_email || `ID: ${pu.creator_id}`}</div>
+                  const s = String(pu.status || '').toLowerCase();
+                  const isComp = s === 'completed' || s === 'active';
+                  const isPend = s === 'pending' || s === 'unpaid';
+
+                  return (
+                    <tr key={pu.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-2.5 font-mono font-medium text-slate-400">#{pu.id}</td>
+
+                      <td className="py-2.5">
+                        <div className="font-medium text-slate-800 dark:text-slate-200">{pu.creator_name || `Creator #${pu.creator_id}`}</div>
+                        <div className="text-[11px] text-slate-400 font-mono">{pu.creator_email || `ID: ${pu.creator_id}`}</div>
                       </td>
 
-                      <td className="px-4 py-3">
-                        <div className="font-normal text-slate-800 flex items-center gap-1.5">
-                          
-                          <span>{pu.package_name || `Package #${pu.package_id}`}</span>
+                      <td className="py-2.5">
+                        <div className="font-normal text-slate-800 dark:text-slate-200">
+                          {pu.package_name || `Package #${pu.package_id}`}
                         </div>
                         <span className="text-[10px] text-slate-400 uppercase font-medium">
                           {pu.billing_interval || 'Monthly'}
                         </span>
                       </td>
 
-                      <td className="px-4 py-3 font-medium text-slate-900 font-mono">
-                        ${amount} <span className="text-[10px] font-normal text-slate-400">{pu.currency || 'USD'}</span>
+                      <td className="py-2.5 font-mono font-medium text-slate-900 dark:text-white">
+                        {sym}{amount} {curr}
                       </td>
 
-                      <td className="px-4 py-3">
-                        {(() => {
-                          const s = String(pu.status || '').toLowerCase();
-                          const isComp = s === 'completed' || s === 'active';
-                          const isPend = s === 'pending' || s === 'unpaid';
-                          return (
-                            <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-medium uppercase ${
-                                isComp
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                  : isPend
-                                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                  : 'bg-rose-50 text-rose-700 border border-rose-200'
-                              }`}
-                            >
-                              
-                              
-                              
-                              <span>{pu.status}</span>
-                            </span>
-                          );
-                        })()}
+                      <td className="py-2.5">
+                        <span
+                          className={`inline-flex items-center px-1.5 py-0.2 rounded border text-[9px] font-medium uppercase ${
+                            isComp
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : isPend
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : 'bg-rose-50 text-rose-700 border-rose-200'
+                          }`}
+                        >
+                          {pu.status}
+                        </span>
                       </td>
 
-                      <td className="px-4 py-3">
+                      <td className="py-2.5">
                         {pu.payment_id ? (
                           <Link
-                            href={`/developer/payments`}
-                            className="inline-flex items-center gap-1 text-[11px] font-normal text-secondary hover:underline"
+                            href="/developer/payments"
+                            className="inline-flex items-center gap-1 text-xs text-slate-700 dark:text-slate-300 hover:underline"
                           >
-                            
                             <span>Payment #{pu.payment_id}</span>
                             {pu.payment_status && (
-                              <span className="text-[9px] px-1.5 rounded-md bg-slate-100 text-slate-600">
+                              <span className="text-[9px] px-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                                 {pu.payment_status}
                               </span>
                             )}
@@ -331,31 +330,31 @@ export default function PurchasesPage() {
                         )}
                       </td>
 
-                      <td className="px-4 py-3 text-slate-500 text-[11px]">
+                      <td className="py-2.5 text-slate-500 text-[11px] font-mono whitespace-nowrap">
                         {pu.created_at ? new Date(pu.created_at).toLocaleDateString() : '—'}
                       </td>
 
-                      <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <td className="py-2.5 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1.5">
                           <button
                             type="button"
                             onClick={() => {
                               setEditingPurchase(pu);
                               setEditStatus(pu.status || 'UNPAID');
                             }}
-                            className="p-1.5 rounded text-slate-500 hover:text-secondary hover:bg-slate-100 transition-colors cursor-pointer"
+                            className="px-2 py-1 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium transition-colors cursor-pointer"
                             title="Edit order status"
                           >
-                            
+                            Status
                           </button>
                           <button
                             type="button"
                             disabled={deletingId === pu.id}
                             onClick={() => handleDelete(pu.id)}
-                            className="p-1.5 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium transition-colors cursor-pointer"
                             title="Delete order"
                           >
-                            
+                            Delete
                           </button>
                         </div>
                       </td>
@@ -370,29 +369,29 @@ export default function PurchasesPage() {
 
       {/* Edit Purchase Status Modal */}
       {editingPurchase && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded p-6 max-w-md w-full shadow-2xl space-y-5 border border-slate-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <div className="bg-white dark:bg-slate-900 rounded p-4 max-w-md w-full shadow-lg space-y-4 border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <div>
-                <h3 className="text-base font-medium text-slate-900">Update Purchase Status</h3>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Update Purchase Status</h3>
                 <p className="text-xs text-slate-500">Order #{editingPurchase.id} • Creator #{editingPurchase.creator_id}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setEditingPurchase(null)}
-                className="p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                className="px-2 py-1 text-xs text-slate-400 hover:text-slate-600 rounded border border-slate-200 cursor-pointer"
               >
-                
+                Close
               </button>
             </div>
 
             <form onSubmit={handleUpdateStatus} className="space-y-4">
               <div>
-                <label className="block text-xs font-normal text-slate-700 mb-1">Status</label>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Status</label>
                 <select
                   value={editStatus}
                   onChange={(e) => setEditStatus(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-secondary"
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
                 >
                   <option value="UNPAID">UNPAID</option>
                   <option value="PENDING">PENDING</option>
@@ -402,18 +401,18 @@ export default function PurchasesPage() {
                 </select>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setEditingPurchase(null)}
-                  className="px-4 py-2 rounded text-xs font-normal text-slate-600 hover:bg-slate-100 transition-colors"
+                  className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={updating}
-                  className="px-4 py-2 rounded text-xs font-medium bg-secondary hover:bg-secondary-dark text-white transition-all shadow-xs disabled:opacity-50"
+                  className="px-3 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 transition-colors disabled:opacity-50"
                 >
                   {updating ? 'Updating...' : 'Save Status'}
                 </button>

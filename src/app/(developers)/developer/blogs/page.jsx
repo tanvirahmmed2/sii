@@ -2,21 +2,7 @@
 
 import { useState, useEffect, useContext } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Context } from 'src/component/helper/Context';
-import {
-  BiPlus,
-  BiRefresh,
-  BiSearch,
-  BiTrash,
-  BiEdit,
-  BiGlobe,
-  BiCheckCircle,
-  BiTime,
-  BiBookContent,
-  BiTag,
-  BiCategory,
-} from 'react-icons/bi';
 
 export default function AdminBlogsPage() {
   const { user } = useContext(Context);
@@ -102,7 +88,6 @@ export default function AdminBlogsPage() {
     }
   };
 
-  // Categories list
   const categories = Array.from(
     new Set(blogs.map((b) => b.category).filter(Boolean))
   );
@@ -123,79 +108,72 @@ export default function AdminBlogsPage() {
   });
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-hidden">
+    <div className="w-full space-y-4">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 sm:p-6 shadow-xs w-full max-w-full">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-medium text-slate-900 dark:text-white tracking-tight truncate">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded p-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-base font-semibold text-slate-900">
               Platform Blog Articles
             </h1>
-            <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shrink-0">
-              Content &amp; CMS
+            <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-slate-100 text-slate-700 border-slate-200">
+              CMS Content
             </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-slate-500 mt-0.5">
             Publish educational articles, marketing insights, and product release guides.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={fetchBlogs}
-            className="p-2 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-            title="Refresh list data"
-            aria-label="Refresh"
+            className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs transition-colors cursor-pointer"
           >
-            <BiRefresh className="text-base" />
+            Refresh
           </button>
 
           {canManage && (
             <Link
               href="/developer/blogs/create"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded text-xs font-medium transition-all shadow-xs bg-blue-600 hover:bg-blue-700 text-white cursor-pointer shrink-0"
-              title="Create New Blog Article"
+              className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-colors cursor-pointer"
             >
-              <BiPlus className="text-base" />
-              <span>Create Article</span>
+              Create Article
             </Link>
           )}
         </div>
       </div>
 
       {actionError && (
-        <div className="p-4 rounded bg-rose-50 border border-rose-200 dark:bg-rose-950/30 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs font-normal flex items-center justify-between gap-2 w-full">
-          <span className="truncate">{actionError}</span>
+        <div className="p-3 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs font-normal flex items-center justify-between gap-2">
+          <span>{actionError}</span>
           <button
             type="button"
             onClick={() => setActionError('')}
-            className="text-rose-500 hover:text-rose-800 dark:hover:text-rose-200 shrink-0 font-medium cursor-pointer"
+            className="text-rose-600 hover:underline font-medium cursor-pointer"
           >
             Dismiss
           </button>
         </div>
       )}
 
-      {/* Search & Filter Bar */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-xs overflow-hidden w-full max-w-full">
-        <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50 w-full">
-          {/* Search Field */}
-          <div className="relative w-full md:w-80">
-            <BiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+      {/* Filter and Search Bar */}
+      <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-sm">
             <input
               type="text"
               placeholder="Search by title, category, or author..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded pl-8.5 pr-8 py-2 text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-600 transition-all"
+              className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
-                title="Clear search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
               >
                 ✕
               </button>
@@ -203,12 +181,11 @@ export default function AdminBlogsPage() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            {/* Category Filter */}
             {categories.length > 0 && (
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 focus:outline-hidden focus:ring-1 focus:ring-blue-600"
+                className="bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
               >
                 <option value="ALL">All Categories</option>
                 {categories.map((c) => (
@@ -219,8 +196,7 @@ export default function AdminBlogsPage() {
               </select>
             )}
 
-            {/* Filter Tabs */}
-            <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded w-full sm:w-auto shrink-0">
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded">
               {[
                 { key: 'ALL', label: `All (${blogs.length})` },
                 { key: 'PUBLISHED', label: `Published (${blogs.filter((b) => b.is_published).length})` },
@@ -230,10 +206,10 @@ export default function AdminBlogsPage() {
                   key={tab.key}
                   type="button"
                   onClick={() => setFilterTab(tab.key)}
-                  className={`flex-1 sm:flex-initial px-3 py-1.5 rounded text-xs font-normal transition-all cursor-pointer text-center whitespace-nowrap ${
+                  className={`px-2.5 py-1 rounded text-xs transition-colors cursor-pointer ${
                     filterTab === tab.key
-                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-medium'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-white text-slate-900 font-medium shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   {tab.label}
@@ -243,202 +219,152 @@ export default function AdminBlogsPage() {
           </div>
         </div>
 
-        {/* Responsive Table List */}
-        <div className="w-full max-w-full overflow-hidden">
-          {/* Header Row */}
-          <div className="hidden md:flex items-center gap-3 px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 text-[10px] font-medium uppercase tracking-wider text-slate-400 select-none">
-            <span className="w-8 shrink-0">#</span>
-            <span className="w-14 shrink-0">Cover</span>
-            <span className="flex-1 min-w-0">Article Title &amp; Category</span>
-            <span className="w-28 shrink-0 hidden lg:block">Author</span>
-            <span className="w-24 shrink-0 text-center">Status</span>
-            <span className="w-24 shrink-0 text-center hidden sm:block">Date</span>
-            <span className="w-24 shrink-0 text-right">Actions</span>
-          </div>
+        {/* Table View */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-slate-200 text-slate-500 text-[10px] uppercase font-semibold">
+                <th className="pb-2 w-12">#</th>
+                <th className="pb-2 w-14">Image</th>
+                <th className="pb-2">Title &amp; Category</th>
+                <th className="pb-2 hidden lg:table-cell">Author</th>
+                <th className="pb-2 text-center">Status</th>
+                <th className="pb-2 text-center hidden sm:table-cell">Date</th>
+                <th className="pb-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-normal text-slate-700">
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-slate-400">
+                    Loading articles...
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-slate-400">
+                    No articles found.
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((blog) => {
+                  const isBeingToggled = togglingId === blog.id;
+                  const formattedDate = blog.published_at
+                    ? new Date(blog.published_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })
+                    : '—';
 
-          {/* List Content */}
-          {loading ? (
-            <div className="py-20 text-center flex flex-col items-center justify-center gap-2 text-slate-400">
-              <BiRefresh className="text-2xl animate-spin text-blue-600" />
-              <span className="text-xs font-normal">Loading blog articles...</span>
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="py-16 px-4 text-center space-y-3">
-              <div className="w-12 h-12 rounded bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center text-2xl mx-auto">
-                <BiBookContent />
-              </div>
-              <h3 className="text-sm font-medium text-slate-800 dark:text-slate-200">No Articles Found</h3>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                {searchTerm
-                  ? `No articles matched "${searchTerm}". Try a different keyword.`
-                  : filterTab !== 'ALL'
-                  ? `No articles found in the ${filterTab.toLowerCase()} filter.`
-                  : 'Start publishing guides and news for the creator network.'}
-              </p>
-              {canManage && !searchTerm && (
-                <Link
-                  href="/developer/blogs/create"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors cursor-pointer mt-2"
-                >
-                  <BiPlus className="text-base" />
-                  <span>Create First Article</span>
-                </Link>
-              )}
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800/60 w-full">
-              {filtered.map((blog) => {
-                const isBeingToggled = togglingId === blog.id;
-                const formattedDate = blog.published_at
-                  ? new Date(blog.published_at).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })
-                  : '—';
+                  return (
+                    <tr key={blog.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-2.5 font-mono text-[11px] text-slate-400">
+                        #{blog.id}
+                      </td>
 
-                return (
-                  <div
-                    key={blog.id}
-                    className="p-3 sm:p-4 hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors flex items-center gap-2.5 sm:gap-3 w-full min-w-0 overflow-hidden"
-                  >
-                    {/* ID */}
-                    <span className="w-8 shrink-0 font-mono font-medium text-[11px] text-slate-400 hidden md:block">
-                      #{blog.id}
-                    </span>
+                      <td className="py-2.5">
+                        <div className="w-10 h-7 rounded overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center">
+                          {blog.image ? (
+                            <img
+                              src={blog.image}
+                              alt=""
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <span className="text-[9px] text-slate-400 font-mono">N/A</span>
+                          )}
+                        </div>
+                      </td>
 
-                    {/* Cover Thumbnail */}
-                    <div className="w-12 h-9 sm:w-14 sm:h-10 rounded overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 shrink-0 relative flex items-center justify-center">
-                      {blog.image ? (
-                        <img
-                          src={blog.image}
-                          alt={blog.title || 'Thumbnail'}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        <BiBookContent className="text-slate-400 text-base" />
-                      )}
-                      {Array.isArray(blog.images) && blog.images.length > 1 && (
-                        <span className="absolute bottom-0.5 right-0.5 px-1 py-0.2 rounded bg-black/70 text-white text-[9px] font-mono leading-none" title={`${blog.images.length} images`}>
-                          {blog.images.length}
-                        </span>
-                      )}
-                    </div>
+                      <td className="py-2.5">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <Link
+                              href={`/developer/blogs/${blog.id}`}
+                              className="text-xs font-semibold text-slate-900 hover:underline"
+                            >
+                              {blog.title}
+                            </Link>
+                            {blog.category && (
+                              <span className="text-[9px] font-medium px-1.5 py-0.2 rounded border bg-slate-50 text-slate-600 border-slate-200">
+                                {blog.category}
+                              </span>
+                            )}
+                          </div>
+                          {blog.excerpt && (
+                            <p className="text-[11px] text-slate-500 line-clamp-1 max-w-md">
+                              {blog.excerpt}
+                            </p>
+                          )}
+                        </div>
+                      </td>
 
-                    {/* Title & Details */}
-                    <div className="flex-1 min-w-0 pr-1 space-y-0.5">
-                      <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                        <Link
-                          href={`/developer/blogs/${blog.id}`}
-                          className="text-xs sm:text-sm font-medium text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 truncate tracking-tight"
-                          title={blog.title}
-                        >
-                          {blog.title}
-                        </Link>
-                        {blog.category && (
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-normal bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shrink-0">
-                            {blog.category}
-                          </span>
-                        )}
-                      </div>
+                      <td className="py-2.5 hidden lg:table-cell">
+                        <div className="text-xs text-slate-700">{blog.author_name || 'Staff'}</div>
+                        <div className="text-[10px] text-slate-400 capitalize">{blog.author_role || 'Developer'}</div>
+                      </td>
 
-                      <div className="flex items-center gap-2 text-[11px] text-slate-400 min-w-0">
-                        {blog.excerpt ? (
-                          <span className="truncate max-w-sm">{blog.excerpt}</span>
-                        ) : (
-                          <span className="text-slate-400">ID #{blog.id}</span>
-                        )}
-                        {blog.views_count > 0 && (
-                          <>
-                            <span>•</span>
-                            <span>{blog.views_count} views</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Author (Desktop) */}
-                    <div className="w-28 shrink-0 hidden lg:block text-left">
-                      <div className="text-xs font-normal text-slate-700 dark:text-slate-300 truncate">
-                        {blog.author_name || 'Staff'}
-                      </div>
-                      <div className="text-[10px] text-slate-400 capitalize truncate">
-                        {blog.author_role || 'Developer'}
-                      </div>
-                    </div>
-
-                    {/* Status Badge & Toggle */}
-                    <div className="w-24 shrink-0 text-center">
-                      <button
-                        type="button"
-                        disabled={isBeingToggled || !canManage}
-                        onClick={() => handleTogglePublish(blog)}
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider border transition-colors cursor-pointer disabled:opacity-50 ${
-                          blog.is_published
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                            : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
-                        }`}
-                        title="Click to toggle publication status"
-                      >
-                        {blog.is_published ? (
-                          <>
-                            <BiCheckCircle className="text-xs" /> Published
-                          </>
-                        ) : (
-                          <>
-                            <BiTime className="text-xs" /> Draft
-                          </>
-                        )}
-                      </button>
-                    </div>
-
-                    {/* Date */}
-                    <div className="w-24 shrink-0 text-center text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
-                      {formattedDate}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="w-24 shrink-0 flex items-center justify-end gap-1">
-                      {blog.is_published && (
-                        <a
-                          href={`/blogs/${blog.slug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded transition-colors"
-                          title="View live article"
-                        >
-                          <BiGlobe className="text-sm" />
-                        </a>
-                      )}
-
-                      <Link
-                        href={`/developer/blogs/${blog.id}`}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors"
-                        title="Edit article"
-                      >
-                        <BiEdit className="text-sm" />
-                      </Link>
-
-                      {canManage && (
+                      <td className="py-2.5 text-center">
                         <button
                           type="button"
-                          disabled={deletingId === blog.id}
-                          onClick={() => handleDelete(blog.id, blog.title)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded transition-colors cursor-pointer disabled:opacity-50"
-                          title="Delete article"
+                          disabled={isBeingToggled || !canManage}
+                          onClick={() => handleTogglePublish(blog)}
+                          className={`text-[9px] font-medium px-1.5 py-0.5 rounded border transition-colors cursor-pointer disabled:opacity-50 ${
+                            blog.is_published
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                              : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                          }`}
                         >
-                          <BiTrash className="text-sm" />
+                          {blog.is_published ? 'Published' : 'Draft'}
                         </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                      </td>
+
+                      <td className="py-2.5 text-center text-xs text-slate-500 hidden sm:table-cell font-mono">
+                        {formattedDate}
+                      </td>
+
+                      <td className="py-2.5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {blog.is_published && (
+                            <a
+                              href={`/blogs/${blog.slug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium"
+                            >
+                              View
+                            </a>
+                          )}
+
+                          <Link
+                            href={`/developer/blogs/${blog.id}`}
+                            className="px-2 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium"
+                          >
+                            Edit
+                          </Link>
+
+                          {canManage && (
+                            <button
+                              type="button"
+                              disabled={deletingId === blog.id}
+                              onClick={() => handleDelete(blog.id, blog.title)}
+                              className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium cursor-pointer disabled:opacity-50"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

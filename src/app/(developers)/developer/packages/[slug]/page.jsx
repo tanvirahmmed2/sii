@@ -3,15 +3,6 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import {
-  BiArrowBack,
-  BiTrash,
-  BiLoaderAlt,
-  BiErrorCircle,
-  BiCube,
-  BiLayer,
-  BiCheckCircle,
-} from 'react-icons/bi';
 import PackageForm from 'src/component/marketing/developer/forms/PackageForm';
 
 export default function PackageDetailPage({ params }) {
@@ -102,80 +93,67 @@ export default function PackageDetailPage({ params }) {
 
   if (loading) {
     return (
-      <div className="py-24 text-center text-slate-400 flex flex-col items-center justify-center gap-3">
-        <BiLoaderAlt className="animate-spin text-3xl text-secondary" />
-        <span className="text-xs font-medium">Loading subscription tier...</span>
+      <div className="py-20 text-center text-slate-400 text-xs font-normal">
+        Loading subscription tier...
       </div>
     );
   }
 
   if (error || !pkg) {
     return (
-      <div className="max-w-2xl mx-auto my-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 text-center space-y-4 shadow-xs">
-        <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 mx-auto flex items-center justify-center text-2xl">
-          <BiErrorCircle />
-        </div>
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white">Package Not Found</h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+      <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 text-center space-y-3">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white">Package Not Found</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           {error || `No subscription package matching slug "${slug}" exists.`}
         </p>
         <Link
           href="/developer/packages"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold transition-all"
+          className="inline-block px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium transition-colors"
         >
-          <BiArrowBack />
-          <span>Return to Packages</span>
+          Return to Packages
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="w-full space-y-4">
       {/* Header and Breadcrumbs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div>
-          <div className="flex items-center gap-2 mb-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-            <Link href="/developer" className="hover:text-secondary">Dashboard</Link>
+          <div className="flex items-center gap-1.5 mb-1 text-xs text-slate-500">
+            <Link href="/developer" className="hover:underline">Dashboard</Link>
             <span>/</span>
-            <Link href="/developer/packages" className="hover:text-secondary">Packages</Link>
+            <Link href="/developer/packages" className="hover:underline">Packages</Link>
             <span>/</span>
-            <span className="text-slate-800 dark:text-slate-200 truncate max-w-50 font-semibold">{pkg.name || 'Package'}</span>
+            <span className="text-slate-800 dark:text-slate-200 font-medium">{pkg.name || 'Package'}</span>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-secondary/10 text-secondary flex items-center justify-center text-xl shrink-0">
-              <BiCube />
-            </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-                Edit Package: {pkg.name}
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 truncate max-w-lg">
-                Manage quotas, pricing models, and module entitlements for &quot;{pkg.name}&quot;
-              </p>
-            </div>
+          <div>
+            <h1 className="text-base font-semibold text-slate-900 dark:text-white">
+              Edit Package: {pkg.name}
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Manage quotas, pricing models, and module entitlements for &quot;{pkg.name}&quot;
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
           <Link
             href="/developer/packages"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold transition-all"
+            className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium transition-colors"
           >
-            <BiArrowBack className="text-sm" />
-            <span>All Packages</span>
+            All Packages
           </Link>
 
           <button
             type="button"
             disabled={deleting}
             onClick={handleDelete}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900/40 dark:hover:bg-rose-950/30 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
-            title="Delete package permanently"
+            className="px-3 py-1.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
           >
-            <BiTrash className="text-base" />
-            <span>Delete</span>
+            {deleting ? 'Deleting...' : 'Delete'}
           </button>
         </div>
       </div>

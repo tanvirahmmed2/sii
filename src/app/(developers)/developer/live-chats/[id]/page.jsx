@@ -3,20 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import {
-  FiArrowLeft,
-  FiRefreshCw,
-  FiTrash2,
-  FiSend,
-  FiUser,
-  FiShield,
-  FiAlertCircle,
-  FiLoader,
-  FiCheckCircle,
-  FiClock,
-  FiMessageSquare,
-  FiX,
-} from 'react-icons/fi';
 import ChatUsersSwipeBar from 'src/component/marketing/developer/ChatUsersSwipeBar';
 
 export default function SingleLiveChatPage() {
@@ -97,7 +83,7 @@ export default function SingleLiveChatPage() {
     fetchAllChats();
   }, [fetchChatDetails, fetchAllChats]);
 
-  // Real-time live polling every 3-4 seconds for visitor replies and chat list updates
+  // Real-time live polling every 4 seconds
   useEffect(() => {
     if (!chatId) return;
     const interval = setInterval(() => {
@@ -114,7 +100,7 @@ export default function SingleLiveChatPage() {
     setRefreshing(false);
   };
 
-  // Permitted developer sends reply
+  // Developer sends reply
   const handleSendReply = async (e) => {
     if (e) e.preventDefault();
     if (!replyMessage.trim() || !chatId || sendingReply) return;
@@ -248,8 +234,7 @@ export default function SingleLiveChatPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[500px] flex flex-col items-center justify-center gap-3 text-slate-500">
-        <FiRefreshCw className="w-8 h-8 animate-spin text-indigo-600" />
+      <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 text-center text-slate-500">
         <p className="text-xs font-normal">Connecting to live chat stream #{chatId}...</p>
       </div>
     );
@@ -257,23 +242,17 @@ export default function SingleLiveChatPage() {
 
   if (error || !chat) {
     return (
-      <div className="max-w-xl mx-auto py-12 px-4 text-center">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 shadow-xs space-y-4">
-          <div className="w-14 h-14 bg-rose-50 dark:bg-rose-950/60 text-rose-600 rounded-xl flex items-center justify-center text-3xl mx-auto">
-            <FiAlertCircle className="w-8 h-8" />
-          </div>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Chat Session Not Found</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            {error || `The chat session with ID #${chatId} does not exist or has been deleted.`}
-          </p>
-          <Link
-            href="/developer/live-chats"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 text-white dark:text-slate-900 text-xs font-medium transition-colors cursor-pointer"
-          >
-            <FiArrowLeft className="w-4 h-4" />
-            <span>Back to Live Chat Workspace</span>
-          </Link>
-        </div>
+      <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 text-center space-y-4">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Chat Session Not Found</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+          {error || `The chat session with ID #${chatId} does not exist or has been deleted.`}
+        </p>
+        <Link
+          href="/developer/live-chats"
+          className="inline-block px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-colors cursor-pointer"
+        >
+          Back to Live Chat Workspace
+        </Link>
       </div>
     );
   }
@@ -282,7 +261,7 @@ export default function SingleLiveChatPage() {
   const isAssignedToMe = currentUser && Number(chat.assigned_developer_id) === Number(currentUser.id);
 
   return (
-    <div className="space-y-4 max-w-6xl mx-auto">
+    <div className="w-full space-y-4">
       {/* Top Touch-Swipeable Visitors Bar */}
       <ChatUsersSwipeBar
         users={allChats.map((c) => ({
@@ -299,64 +278,59 @@ export default function SingleLiveChatPage() {
       {/* Toast Alert */}
       {actionNotice.text && (
         <div
-          className={`p-4 rounded-xl flex items-center justify-between text-xs font-medium shadow-sm transition-all ${
+          className={`p-3 rounded flex items-center justify-between text-xs font-medium transition-all ${
             actionNotice.type === 'error'
-              ? 'bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300'
-              : 'bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-300'
+              ? 'bg-rose-50 border border-rose-200 text-rose-800 dark:bg-rose-950 dark:border-rose-900 dark:text-rose-300'
+              : 'bg-emerald-50 border border-emerald-200 text-emerald-800 dark:bg-emerald-950 dark:border-emerald-900 dark:text-emerald-300'
           }`}
         >
-          <div className="flex items-center gap-2">
-            {actionNotice.type === 'error' ? <FiAlertCircle className="w-4 h-4 shrink-0" /> : <FiCheckCircle className="w-4 h-4 shrink-0" />}
-            <span>{actionNotice.text}</span>
-          </div>
+          <span>{actionNotice.text}</span>
           <button
             onClick={() => setActionNotice({ text: '', type: '' })}
-            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+            className="text-xs text-slate-500 hover:text-slate-700 cursor-pointer"
           >
-            <FiX className="w-4 h-4" />
+            Dismiss
           </button>
         </div>
       )}
+
       {/* Top Action & Session Management Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div className="flex items-center gap-3">
           <Link
             href="/developer/live-chats"
-            className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
-            title="Back to All Live Chats"
+            className="px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium transition-colors"
           >
-            <FiArrowLeft className="w-4 h-4" />
+            Back
           </Link>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-tight">
+              <h1 className="text-base font-semibold text-slate-900 dark:text-slate-100">
                 {chat.visitor_name}
               </h1>
-              <span className="font-mono text-xs text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+              <span className="font-mono text-xs text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
                 #{chat.id}
               </span>
               <span
-                className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md ${
+                className={`text-[9px] font-medium uppercase px-1.5 py-0.5 rounded border ${
                   status === 'ACTIVE'
-                    ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800'
                     : status === 'OPEN'
-                    ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400'
+                    ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800'
                     : status === 'RESOLVED'
-                    ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400'
-                    : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                    ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800'
+                    : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
                 }`}
               >
                 {status}
               </span>
 
-              {/* Assigned Developer Chip */}
               {chat.assigned_developer_name ? (
-                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded-md">
-                  <FiShield className="w-3 h-3" />
-                  <span>Assigned: {chat.assigned_developer_name}</span>
+                <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                  Assigned: {chat.assigned_developer_name}
                 </span>
               ) : (
-                <span className="text-[10px] font-normal text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                <span className="text-[10px] font-normal text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
                   Unassigned
                 </span>
               )}
@@ -364,9 +338,9 @@ export default function SingleLiveChatPage() {
 
             <p className="text-xs text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
               <span>{chat.visitor_email || 'No email provided'}</span>
-              {chat.ip_address && <span>&bull; IP: {chat.ip_address}</span>}
+              {chat.ip_address && <span>• IP: {chat.ip_address}</span>}
               <span>
-                &bull; Started{' '}
+                • Started{' '}
                 {new Date(chat.created_at).toLocaleDateString([], {
                   month: 'short',
                   day: 'numeric',
@@ -380,27 +354,22 @@ export default function SingleLiveChatPage() {
 
         {/* Developer Action Toolbar */}
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-          {/* Quick "Assign to Me" button */}
           {currentUser && !isAssignedToMe && (
             <button
               type="button"
               disabled={assignLoading}
               onClick={() => handleAssignDeveloper(currentUser.id)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 text-xs font-medium border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer"
-              title="Assign this live chat to me"
+              className="px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition-colors cursor-pointer"
             >
-              <FiShield className="w-3.5 h-3.5" />
-              <span>Assign to Me</span>
+              Assign to Me
             </button>
           )}
 
-          {/* Re-assign Developer Selector */}
           <select
             value={chat.assigned_developer_id || ''}
             disabled={assignLoading}
             onChange={(e) => handleAssignDeveloper(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 dark:text-slate-200 font-normal focus:outline-none focus:border-indigo-600 cursor-pointer disabled:opacity-50 transition-colors"
-            title="Reassign developer"
+            className="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs text-slate-700 dark:text-slate-200 font-normal focus:outline-none focus:border-slate-800 cursor-pointer disabled:opacity-50"
           >
             <option value="">Assign Developer...</option>
             {developers.map((dev) => (
@@ -410,12 +379,11 @@ export default function SingleLiveChatPage() {
             ))}
           </select>
 
-          {/* Status selector */}
           <select
             value={status}
             disabled={statusLoading}
             onChange={(e) => handleStatusChange(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 font-medium focus:outline-none focus:border-indigo-600 cursor-pointer disabled:opacity-50 transition-colors"
+            className="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 font-medium focus:outline-none focus:border-slate-800 cursor-pointer disabled:opacity-50"
           >
             <option value="OPEN">Status: OPEN</option>
             <option value="ACTIVE">Status: ACTIVE</option>
@@ -423,37 +391,32 @@ export default function SingleLiveChatPage() {
             <option value="CLOSED">Status: CLOSED</option>
           </select>
 
-          {/* Refresh */}
           <button
             type="button"
             disabled={refreshing}
             onClick={handleManualRefresh}
-            className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer disabled:opacity-50"
-            title="Refresh stream"
+            className="px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
           >
-            <FiRefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Syncing...' : 'Refresh'}
           </button>
 
-          {/* Delete */}
           <button
             type="button"
             disabled={deleting}
             onClick={handleDeleteChat}
-            className="p-2 rounded-lg border border-rose-200 dark:border-rose-900 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors cursor-pointer disabled:opacity-50"
-            title="Delete chat session"
+            className="px-2.5 py-1 rounded border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
           >
-            <FiTrash2 className="w-3.5 h-3.5" />
+            {deleting ? 'Deleting...' : 'Delete'}
           </button>
         </div>
       </div>
 
       {/* Main Chat Box Container */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden flex flex-col h-[600px] sm:h-[660px]">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden flex flex-col h-[600px]">
         {/* Messages Stream */}
-        <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 bg-slate-50/40 dark:bg-slate-950/30">
+        <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/40 dark:bg-slate-950/30">
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center text-slate-400 gap-2">
-              <FiMessageSquare className="w-8 h-8 stroke-1 text-slate-300 dark:text-slate-600" />
+            <div className="flex flex-col items-center justify-center h-full text-center text-slate-400">
               <p className="text-xs font-normal">No messages in this chat session yet.</p>
             </div>
           ) : (
@@ -465,7 +428,7 @@ export default function SingleLiveChatPage() {
                   className={`flex flex-col ${isStaff ? 'items-end' : 'items-start'}`}
                 >
                   <div className="flex items-center gap-1.5 mb-1 px-1">
-                    <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                    <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
                       {isStaff
                         ? msg.sender_name || 'Support Specialist'
                         : `${msg.sender_name || chat.visitor_name} (Visitor)`}
@@ -481,10 +444,10 @@ export default function SingleLiveChatPage() {
                   </div>
 
                   <div
-                    className={`max-w-[85%] sm:max-w-[70%] px-4 py-3 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-xs whitespace-pre-wrap ${
+                    className={`max-w-[85%] sm:max-w-[70%] p-3 rounded text-xs leading-relaxed whitespace-pre-wrap ${
                       isStaff
-                        ? 'bg-indigo-600 text-white rounded-tr-none'
-                        : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-tl-none'
+                        ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                        : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700'
                     }`}
                   >
                     {msg.message}
@@ -499,7 +462,7 @@ export default function SingleLiveChatPage() {
         {/* Reply Box Footer */}
         <form
           onSubmit={handleSendReply}
-          className="p-3 sm:p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2 sm:gap-3"
+          className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2"
         >
           <input
             type="text"
@@ -507,25 +470,15 @@ export default function SingleLiveChatPage() {
             placeholder={`Reply to ${chat.visitor_name} as ${currentUser?.name || 'Support'} (Press Enter to send)...`}
             value={replyMessage}
             onChange={(e) => setReplyMessage(e.target.value)}
-            className="flex-1 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition-colors"
+            className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-slate-800"
           />
 
           <button
             type="submit"
             disabled={!replyMessage.trim() || sendingReply}
-            className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-xs sm:text-sm font-medium shadow-xs transition-colors flex items-center gap-2 cursor-pointer shrink-0"
+            className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-xs font-medium transition-colors cursor-pointer shrink-0"
           >
-            {sendingReply ? (
-              <>
-                <FiLoader className="w-4 h-4 animate-spin" />
-                <span className="hidden sm:inline">Sending...</span>
-              </>
-            ) : (
-              <>
-                <span className="hidden sm:inline">Send Reply</span>
-                <FiSend className="w-4 h-4" />
-              </>
-            )}
+            {sendingReply ? 'Sending...' : 'Send Reply'}
           </button>
         </form>
       </div>

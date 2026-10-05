@@ -3,18 +3,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { SITE_NAME } from 'src/lib/database/secret';
-import {
-  BiMenu,
-  BiPlus,
-  BiChevronDown,
-  BiLogOut,
-  BiCheckShield,
-  BiDesktop,
-  BiBell,
-  BiLinkExternal,
-  BiUser,
-} from 'react-icons/bi';
 
 export default function CreatorNavbar({
   creator,
@@ -29,7 +17,7 @@ export default function CreatorNavbar({
 
   const creatorId = creator?.id || 1;
   const primaryWebsite = websites[0] || null;
-  const hasActiveSub = Boolean(activeSubscription && activeSubscription.status === 'ACTIVE');
+  const hasActiveSub = Boolean(activeSubscription && (activeSubscription.status === 'active' || activeSubscription.status === 'ACTIVE'));
 
   const handleLogout = async () => {
     try {
@@ -43,24 +31,24 @@ export default function CreatorNavbar({
   };
 
   return (
-    <nav className="w-full flex flex-row items-center justify-between bg-white px-4 shadow-xs lg:px-8 h-14 sticky top-0 z-30 border-b border-slate-200">
+    <nav className="w-full flex flex-row items-center justify-between bg-white px-4 h-12 sticky top-0 z-30 border-b border-slate-200 text-xs">
       {/* Left: Mobile Toggle & Brand / Website Switcher */}
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={onToggleSidebar}
-          className="text-2xl md:hidden flex items-center justify-center p-1 text-slate-700 hover:text-slate-900 transition-colors cursor-pointer"
-          aria-label="Toggle creator navigation menu"
+          className="md:hidden px-2 py-1 text-slate-700 hover:text-slate-900 border border-slate-200 rounded cursor-pointer"
+          aria-label="Toggle navigation menu"
         >
-          <BiMenu />
+          Menu
         </button>
 
         <div className="flex items-center gap-3">
           <Link
             href={`/creator/${creatorId}`}
-            className="text-lg font-bold text-slate-900 flex items-center gap-2 group"
+            className="text-sm font-semibold text-slate-900"
           >
-            <span className="hidden sm:inline font-bold tracking-tight">Creator Studio</span>
+            Studio
           </Link>
 
           {websites.length > 0 && (
@@ -68,13 +56,12 @@ export default function CreatorNavbar({
               <button
                 type="button"
                 onClick={() => setWebsiteDropdownOpen((p) => !p)}
-                className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 px-3 py-1 rounded-full text-xs text-slate-700 font-medium transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded text-xs text-slate-700 font-medium transition-colors cursor-pointer"
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="font-semibold text-slate-800 truncate max-w-[150px]">
-                  {primaryWebsite?.subdomain}.saas
+                <span className="font-medium text-slate-800 truncate max-w-[140px]">
+                  {primaryWebsite?.subdomain}
                 </span>
-                <BiChevronDown className="text-slate-500 text-xs" />
+                <span className="text-slate-400 text-[10px]">▼</span>
               </button>
 
               {websiteDropdownOpen && (
@@ -83,27 +70,27 @@ export default function CreatorNavbar({
                     className="fixed inset-0 z-40"
                     onClick={() => setWebsiteDropdownOpen(false)}
                   />
-                  <div className="absolute left-0 mt-2 w-64 rounded-2xl bg-white border border-slate-200 shadow-xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                    <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
-                      Your Hosted Websites ({websites.length})
+                  <div className="absolute left-0 mt-1 w-60 rounded bg-white border border-slate-200 shadow-md p-2 z-50">
+                    <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                      Websites ({websites.length})
                     </div>
                     <div className="max-h-56 overflow-y-auto space-y-1 py-1">
                       {websites.map((w) => (
                         <div
                           key={w.id}
-                          className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 group transition-colors"
+                          className="flex items-center justify-between p-1.5 rounded hover:bg-slate-50 transition-colors"
                         >
                           <div className="min-w-0 pr-2">
-                            <p className="text-xs font-semibold text-slate-900 truncate">{w.name}</p>
-                            <p className="text-[11px] font-mono text-slate-500 truncate">
-                              {w.subdomain}.saasplatform.com
+                            <p className="text-xs font-medium text-slate-900 truncate">{w.name}</p>
+                            <p className="text-[10px] font-mono text-slate-500 truncate">
+                              {w.subdomain}
                             </p>
                           </div>
                           <span
-                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                            className={`text-[9px] font-medium px-1.5 py-0.2 rounded border ${
                               w.is_published
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : 'bg-slate-100 text-slate-600 border-slate-200'
                             }`}
                           >
                             {w.is_published ? 'Live' : 'Draft'}
@@ -111,14 +98,13 @@ export default function CreatorNavbar({
                         </div>
                       ))}
                     </div>
-                    <div className="pt-2 border-t border-slate-100">
+                    <div className="pt-1.5 border-t border-slate-100">
                       <Link
                         href={`/creator/${creatorId}/workspace`}
                         onClick={() => setWebsiteDropdownOpen(false)}
-                        className="flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 transition-colors"
+                        className="block text-center w-full py-1 rounded bg-slate-50 hover:bg-slate-100 text-xs font-medium text-slate-700 transition-colors"
                       >
-                        <BiDesktop />
-                        <span>Manage All Websites</span>
+                        Manage All Websites
                       </Link>
                     </div>
                   </div>
@@ -129,24 +115,22 @@ export default function CreatorNavbar({
         </div>
       </div>
 
-      {/* Right: Quick Action Buttons & Profile */}
-      <div className="flex items-center gap-2 sm:gap-2.5">
+      {/* Right: Actions & Profile */}
+      <div className="flex items-center gap-2">
         {hasActiveSub ? (
           <button
             type="button"
             onClick={onOpenCreateWebsite}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            className="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors cursor-pointer"
           >
-            <BiPlus className="text-base" />
-            <span className="hidden sm:inline">New Website</span>
+            New Website
           </button>
         ) : (
           <Link
             href={`/creator/${creatorId}/purchases`}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-secondary hover:bg-secondary-dark text-white text-xs font-semibold shadow-xs transition-colors"
+            className="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors"
           >
-            <BiPlus className="text-base" />
-            <span>Select Package</span>
+            Select Plan
           </Link>
         )}
 
@@ -155,36 +139,31 @@ export default function CreatorNavbar({
             href={`/sites/${primaryWebsite.subdomain}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-medium transition-colors"
+            className="hidden lg:inline-block px-2.5 py-1 rounded border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-medium transition-colors"
           >
-            <span>Live Site</span>
-            <BiLinkExternal className="text-xs text-secondary" />
+            Live Site
           </a>
         )}
 
         <Link
           href={`/creator/${creatorId}/updates`}
-          className="p-1.5 rounded-full border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors relative"
+          className="px-2 py-1 rounded border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors"
           title="Product Updates"
         >
-          <BiBell className="text-lg" />
-          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-secondary"></span>
+          Updates
         </Link>
 
-        {/* Profile Pill & Menu */}
+        {/* Profile Menu */}
         <div className="relative">
           <button
             type="button"
             onClick={() => setProfileDropdownOpen((p) => !p)}
-            className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 px-3 py-1 rounded-full text-xs text-slate-700 font-medium transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded text-xs text-slate-700 font-medium transition-colors cursor-pointer"
           >
-            <div className="w-5 h-5 rounded-full bg-secondary/15 text-secondary flex items-center justify-center font-bold text-[10px] border border-secondary/20">
-              {creator?.name ? creator.name.charAt(0).toUpperCase() : <BiUser className="text-xs" />}
-            </div>
-            <span className="font-semibold text-slate-800 hidden md:inline max-w-[110px] truncate">
-              {creator?.name || 'Creator'}
+            <span className="font-medium text-slate-800 max-w-[100px] truncate">
+              {creator?.name || 'Account'}
             </span>
-            <BiChevronDown className="text-slate-500 text-xs" />
+            <span className="text-slate-400 text-[10px]">▼</span>
           </button>
 
           {profileDropdownOpen && (
@@ -193,37 +172,36 @@ export default function CreatorNavbar({
                 className="fixed inset-0 z-40"
                 onClick={() => setProfileDropdownOpen(false)}
               />
-              <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white border border-slate-200 shadow-xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                <div className="px-3 py-2 border-b border-slate-100 space-y-0.5">
-                  <p className="text-xs font-bold text-slate-900 truncate">{creator?.name}</p>
-                  <p className="text-[11px] text-slate-500 font-mono truncate">{creator?.email}</p>
-                  <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                    <BiCheckShield className="text-xs text-secondary" />
-                    <span>{activeSubscription?.package_name || 'Creator Tier'}</span>
-                  </div>
+              <div className="absolute right-0 mt-1 w-52 rounded bg-white border border-slate-200 shadow-md p-2 z-50">
+                <div className="px-2 py-1.5 border-b border-slate-100">
+                  <p className="text-xs font-semibold text-slate-900 truncate">{creator?.name}</p>
+                  <p className="text-[10px] text-slate-500 font-mono truncate">{creator?.email}</p>
+                  <span className="mt-1 inline-block text-[9px] font-medium px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                    {activeSubscription?.package_name || 'Creator Tier'}
+                  </span>
                 </div>
 
-                <div className="space-y-0.5 py-1 text-xs">
+                <div className="py-1 text-xs space-y-0.5">
                   <Link
                     href={`/creator/${creatorId}/profile`}
                     onClick={() => setProfileDropdownOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-50 font-medium transition-colors"
+                    className="block px-2 py-1 rounded text-slate-700 hover:bg-slate-50 font-normal transition-colors"
                   >
-                    <span>Creator Profile</span>
+                    Profile
                   </Link>
                   <Link
                     href={`/creator/${creatorId}/purchases`}
                     onClick={() => setProfileDropdownOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-50 font-medium transition-colors"
+                    className="block px-2 py-1 rounded text-slate-700 hover:bg-slate-50 font-normal transition-colors"
                   >
-                    <span>My Subscriptions</span>
+                    Purchases & Plan
                   </Link>
                   <Link
                     href={`/creator/${creatorId}/settings`}
                     onClick={() => setProfileDropdownOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-50 font-medium transition-colors"
+                    className="block px-2 py-1 rounded text-slate-700 hover:bg-slate-50 font-normal transition-colors"
                   >
-                    <span>Account Settings</span>
+                    Security & Sessions
                   </Link>
                 </div>
 
@@ -231,25 +209,15 @@ export default function CreatorNavbar({
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-secondary hover:bg-secondary/10 transition-colors"
+                    className="w-full text-left px-2 py-1 rounded text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                   >
-                    <BiLogOut className="text-sm" />
-                    <span>Sign Out</span>
+                    Sign Out
                   </button>
                 </div>
               </div>
             </>
           )}
         </div>
-
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="hidden sm:inline-flex items-center justify-center border border-secondary text-secondary hover:bg-secondary hover:text-white px-3 py-1 rounded-full font-semibold transition-colors duration-200 text-xs cursor-pointer gap-1"
-        >
-          <BiLogOut className="text-sm" />
-          <span>Log Out</span>
-        </button>
       </div>
     </nav>
   );

@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 
-
-
 export default function LiveChatMessageForm({ chats = [], onSuccess, onCancel }) {
   const [formData, setFormData] = useState({
     chat_id: chats[0]?.id || 1,
@@ -52,52 +50,49 @@ export default function LiveChatMessageForm({ chats = [], onSuccess, onCancel })
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded p-6 shadow-xs mb-6">
-      <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded bg-primary/10 text-primary">
-            
-          </div>
-          <div>
-            <h3 className="text-base font-medium text-slate-800">Dispatch Live Chat Message</h3>
-            <p className="text-xs text-slate-500">Post a response or log an entry to an active live chat stream.</p>
-          </div>
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 mb-4">
+      <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Dispatch Live Chat Message</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Post a response or log an entry to an active live chat stream.</p>
         </div>
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="p-1 text-slate-400 hover:text-slate-600 rounded-md transition-colors"
-          >Close</button>
+            className="px-2 py-1 text-slate-500 hover:text-slate-700 text-xs font-medium cursor-pointer"
+          >
+            Cancel
+          </button>
         )}
       </div>
 
       {error && (
-        <div className="p-3 mb-4 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs font-normal">
+        <div className="p-3 mb-3 rounded bg-rose-50 border border-rose-200 text-rose-700 dark:bg-rose-950 dark:border-rose-900 dark:text-rose-300 text-xs">
           {error}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Live Chat ID</label>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Live Chat ID</label>
             <input
               type="number"
               required
               placeholder="e.g. 1"
               value={formData.chat_id}
               onChange={(e) => setFormData({ ...formData, chat_id: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-800"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Sender Type</label>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Sender Type</label>
             <select
               value={formData.sender_type}
               onChange={(e) => setFormData({ ...formData, sender_type: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-800"
             >
               <option value="ADMIN">Support Staff</option>
               <option value="VISITOR">Visitor</option>
@@ -105,36 +100,36 @@ export default function LiveChatMessageForm({ chats = [], onSuccess, onCancel })
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Sender Name</label>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Sender Name</label>
             <input
               type="text"
               required
               placeholder="e.g. Support"
               value={formData.sender_name}
               onChange={(e) => setFormData({ ...formData, sender_name: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-800"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-700 mb-1">Message Body</label>
+          <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Message Body</label>
           <textarea
             rows={3}
             required
             placeholder="Type your reply message..."
             value={formData.message}
             onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-            className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-800"
           />
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
           {onCancel && (
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2 rounded border border-slate-300 text-slate-700 text-xs font-normal hover:bg-slate-50 transition-colors"
+              className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
               Cancel
             </button>
@@ -142,10 +137,9 @@ export default function LiveChatMessageForm({ chats = [], onSuccess, onCancel })
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center gap-1.5 px-5 py-2 rounded bg-primary hover:bg-primary-dark text-slate-900 text-xs font-medium shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
+            className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
           >
-            
-            <span>{loading ? 'Sending...' : 'Post Message'}</span>
+            {loading ? 'Sending...' : 'Post Message'}
           </button>
         </div>
       </form>

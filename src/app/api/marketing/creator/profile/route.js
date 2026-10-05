@@ -130,6 +130,47 @@ export async function handleProfileAction(body, sessionCreator) {
     });
   }
 
+  // 4. List Active Sessions
+  if (action === 'list_sessions') {
+    const currentToken = sessionCreator?.token || '';
+    const sessionRes = await queryDb(
+      `SELECT id, ip_address, user_agent, expires_at, last_active_at, created_at,
+              CASE WHEN token = $2 THEN true ELSE false END AS is_current
+       FROM creator_login_sessions
+       WHERE creator_id = $1 AND is_active = TRUE AND expires_at > CURRENT_TIMESTAMP
+       ORDER BY CASE WHEN token = $2 THEN 0 ELSE 1 END, last_active_at DESC`,
+      [creatorId, currentToken]
+    );
+    return NextResponse.json({ success: true, sessionsList: sessionRes.rows || [] });
+  }
+
+  // 5. Revoke Single Session
+  if (action === 'revoke_session') {
+    const { sessionId } = body;
+    if (!sessionId) {
+      return NextResponse.json({ success: false, error: 'Session ID required.' }, { status: 400 });
+    }
+    await queryDb(
+      `UPDATE creator_login_sessions
+       SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
+       WHERE creator_id = $1 AND id = $2`,
+      [creatorId, sessionId]
+    );
+    return NextResponse.json({ success: true, message: 'Device session logged out successfully.' });
+  }
+
+  // 6. Revoke Other Sessions
+  if (action === 'revoke_other_sessions') {
+    const currentToken = sessionCreator?.token || '';
+    await queryDb(
+      `UPDATE creator_login_sessions
+       SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
+       WHERE creator_id = $1 AND token != $2`,
+      [creatorId, currentToken]
+    );
+    return NextResponse.json({ success: true, message: 'All other active creator devices logged out successfully.' });
+  }
+
   return NextResponse.json({ success: false, error: `Unknown profile action: ${action}` }, { status: 400 });
 }
 

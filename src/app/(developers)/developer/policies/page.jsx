@@ -3,22 +3,6 @@
 import { useState, useEffect, useContext, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
-import {
-  BiPlus,
-  BiEditAlt,
-  BiTrash,
-  BiCheck,
-  BiX,
-  BiRefresh,
-  BiShieldQuarter,
-  BiFile,
-  BiSearch,
-  BiCheckCircle,
-  BiInfoCircle,
-  BiChevronDown,
-  BiChevronUp,
-  BiWorld,
-} from 'react-icons/bi';
 
 export default function DeveloperPoliciesPage() {
   const { user } = useContext(Context);
@@ -27,7 +11,7 @@ export default function DeveloperPoliciesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
-  // In-page Editor states (no modal!)
+  // In-page Editor states
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingPolicy, setEditingPolicy] = useState(null);
   const [formData, setFormData] = useState({
@@ -234,32 +218,30 @@ export default function DeveloperPoliciesPage() {
   const draftCount = totalCount - publishedCount;
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-hidden">
+    <div className="w-full space-y-4">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 sm:p-6 shadow-xs w-full max-w-full overflow-hidden">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-medium text-slate-900 dark:text-white tracking-tight truncate">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded p-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-base font-semibold text-slate-900">
               Company Policies &amp; Compliance
             </h1>
-            <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-secondary/10 text-secondary border border-secondary/20 shrink-0">
+            <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-slate-100 text-slate-700 border-slate-200">
               Governance
             </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
-            Manage public legal standards, terms of service, privacy disclosures, and compliance guidelines. All edits are applied in-page without popups.
+          <p className="text-xs text-slate-500 mt-0.5">
+            Manage public legal standards, terms of service, privacy disclosures, and compliance guidelines.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={fetchPolicies}
-            className="p-2 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-            title="Refresh policies"
-            aria-label="Refresh"
+            className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs transition-colors cursor-pointer"
           >
-            <BiRefresh className="text-base" />
+            Refresh
           </button>
 
           {canManage && (
@@ -272,76 +254,57 @@ export default function DeveloperPoliciesPage() {
                   openCreateInPage();
                 }
               }}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded text-xs font-medium transition-all shadow-xs bg-secondary hover:bg-secondary-dark text-white cursor-pointer shrink-0"
-              title="Create Policy"
+              className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-colors cursor-pointer"
             >
-              <BiPlus className="text-base" />
-              <span>{isEditorOpen && !editingPolicy ? 'Close Form' : 'New Policy'}</span>
+              {isEditorOpen && !editingPolicy ? 'Close Form' : 'New Policy'}
             </button>
           )}
         </div>
       </div>
 
-      {/* Toast Feedback */}
+      {/* Feedback Alert */}
       {feedback.message && (
         <div
-          className={`p-3.5 rounded flex items-center justify-between text-xs font-normal shadow-xs ${
+          className={`p-3 rounded flex items-center justify-between text-xs font-normal ${
             feedback.type === 'error'
-              ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
-              : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+              ? 'bg-rose-50 text-rose-700 border border-rose-200'
+              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
           }`}
         >
-          <div className="flex items-center gap-2 truncate">
-            {feedback.type === 'error' ? (
-              <BiInfoCircle className="text-base shrink-0" />
-            ) : (
-              <BiCheckCircle className="text-base shrink-0" />
-            )}
-            <span className="truncate">{feedback.message}</span>
-          </div>
+          <span>{feedback.message}</span>
           <button
             type="button"
             onClick={() => setFeedback({ type: '', message: '' })}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 shrink-0 p-0.5 cursor-pointer"
+            className="text-slate-500 hover:text-slate-800 font-medium cursor-pointer"
           >
-            <BiX className="text-base" />
+            ✕
           </button>
         </div>
       )}
 
-      {/* In-Page Create / Edit Panel (NO POPUP!) */}
+      {/* In-Page Create / Edit Panel */}
       {isEditorOpen && (
         <div
           ref={editorRef}
-          className="bg-white dark:bg-slate-900 border-2 border-secondary/40 dark:border-secondary/60 rounded shadow-md p-5 sm:p-6 transition-all space-y-4"
+          className="bg-white border border-slate-200 rounded p-4 space-y-3"
         >
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-secondary animate-pulse" />
-              <h2 className="text-sm sm:text-base font-medium text-slate-900 dark:text-white">
-                {editingPolicy ? `Edit Policy: "${editingPolicy.title}"` : 'Create New Policy Document'}
-              </h2>
-              {editingPolicy && (
-                <span className="text-[10px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded">
-                  #{editingPolicy.id}
-                </span>
-              )}
-            </div>
-
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <h2 className="text-sm font-semibold text-slate-900">
+              {editingPolicy ? `Edit Policy: "${editingPolicy.title}"` : 'Create New Policy Document'}
+            </h2>
             <button
               type="button"
               onClick={closeEditor}
-              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-              title="Close in-page editor"
+              className="text-slate-400 hover:text-slate-600 text-sm cursor-pointer"
             >
-              <BiX className="text-xl" />
+              ✕
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
-                Policy Document Title <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Policy Document Title <span className="text-rose-600">*</span>
               </label>
               <input
                 type="text"
@@ -349,17 +312,14 @@ export default function DeveloperPoliciesPage() {
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="e.g. Terms of Service, Privacy Policy, Cookie Compliance"
-                className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900 transition-colors"
+                className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
               />
-              <p className="text-[10px] text-slate-400 mt-1">
-                Web slugs are securely and uniquely auto-generated by the system.
-              </p>
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                  Policy Content / Text <span className="text-rose-500">*</span>
+                <label className="block text-xs font-semibold text-slate-700">
+                  Policy Content / Text <span className="text-rose-600">*</span>
                 </label>
                 <span className="text-[10px] text-slate-400 font-mono">
                   {formData.description?.length || 0} characters
@@ -371,38 +331,37 @@ export default function DeveloperPoliciesPage() {
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Write full terms, legal guidelines, or privacy clauses..."
-                className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900 leading-relaxed font-sans transition-colors"
+                className="w-full bg-white border border-slate-300 rounded p-3 text-xs text-slate-900 focus:outline-none focus:border-slate-800 leading-relaxed font-sans"
               />
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <label className="inline-flex items-center gap-2.5 cursor-pointer select-none">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100">
+              <label className="inline-flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={formData.is_published}
                   onChange={(e) => setFormData({ ...formData, is_published: e.target.checked })}
-                  className="rounded border-slate-300 dark:border-slate-700 text-secondary focus:ring-secondary w-4 h-4 cursor-pointer"
+                  className="rounded border-slate-300 text-slate-900 focus:ring-slate-900 w-4 h-4 cursor-pointer"
                 />
-                <span className="text-xs text-slate-700 dark:text-slate-300 font-normal">
+                <span className="text-xs text-slate-700 font-normal">
                   Publish publicly on platform website
                 </span>
               </label>
 
-              <div className="flex items-center justify-end gap-2.5">
+              <div className="flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={closeEditor}
-                  className="px-4 py-2 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-normal hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2 rounded bg-secondary hover:bg-secondary-dark text-white text-xs font-medium shadow-sm transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium disabled:opacity-50 cursor-pointer"
                 >
-                  <BiCheck className="text-base" />
-                  <span>{submitting ? 'Saving...' : editingPolicy ? 'Update Policy' : 'Create Policy'}</span>
+                  {submitting ? 'Saving...' : editingPolicy ? 'Update Policy' : 'Create Policy'}
                 </button>
               </div>
             </div>
@@ -411,33 +370,29 @@ export default function DeveloperPoliciesPage() {
       )}
 
       {/* Main List Card */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-xs overflow-hidden w-full max-w-full">
+      <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
         {/* Search & Filter Bar */}
-        <div className="p-3.5 sm:p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50 w-full">
-          {/* Search Input */}
-          <div className="relative w-full sm:w-80">
-            <BiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-sm">
             <input
               type="text"
               placeholder="Search policies by title or keywords..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded pl-8.5 pr-8 py-2 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
+              className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
-                title="Clear search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
               >
-                <BiX className="text-sm" />
+                ✕
               </button>
             )}
           </div>
 
-          {/* Filter Tabs */}
-          <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded w-full sm:w-auto shrink-0 overflow-x-auto">
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded">
             {[
               { key: 'ALL', label: `All (${totalCount})` },
               { key: 'PUBLISHED', label: `Published (${publishedCount})` },
@@ -447,10 +402,10 @@ export default function DeveloperPoliciesPage() {
                 key={tab.key}
                 type="button"
                 onClick={() => setStatusFilter(tab.key)}
-                className={`flex-1 sm:flex-initial px-3 py-1.5 rounded text-xs font-normal transition-all cursor-pointer text-center whitespace-nowrap ${
+                className={`px-2.5 py-1 rounded text-xs transition-colors cursor-pointer ${
                   statusFilter === tab.key
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-medium'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-white text-slate-900 font-medium shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 {tab.label}
@@ -459,192 +414,144 @@ export default function DeveloperPoliciesPage() {
           </div>
         </div>
 
-        {/* Responsive View List (Strictly zero horizontal overflow) */}
-        <div className="w-full max-w-full overflow-hidden">
-          {/* Header Row */}
-          <div className="hidden md:flex items-center gap-3 px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 text-[10px] font-mono uppercase tracking-wider text-slate-400 select-none">
-            <span className="w-8 shrink-0">#</span>
-            <span className="w-10 shrink-0">Icon</span>
-            <span className="flex-1 min-w-0">Policy Title &amp; Details</span>
-            <span className="w-24 shrink-0 text-center">Status</span>
-            <span className="w-24 shrink-0 text-center hidden sm:block">Updated</span>
-            <span className="w-28 shrink-0 text-right">Actions</span>
-          </div>
+        {/* Policies Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-slate-200 text-slate-500 text-[10px] uppercase font-semibold">
+                <th className="pb-2 w-12">#</th>
+                <th className="pb-2">Policy Title &amp; Description</th>
+                <th className="pb-2 text-center w-24">Status</th>
+                <th className="pb-2 text-center w-24 hidden sm:table-cell">Updated</th>
+                <th className="pb-2 text-right w-28">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-normal text-slate-700">
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-slate-400">
+                    Loading policies...
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-slate-400">
+                    No policy documents found.
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((policy) => {
+                  const isCurrentlyEditing = editingPolicy?.id === policy.id && isEditorOpen;
+                  const formattedDate = policy.updated_at || policy.created_at
+                    ? new Date(policy.updated_at || policy.created_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })
+                    : '—';
 
-          {/* List Content */}
-          {loading ? (
-            <div className="py-20 text-center flex flex-col items-center justify-center gap-2 text-slate-400">
-              <div className="w-6 h-6 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-              <span className="text-xs font-normal">Loading policy documents...</span>
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="py-16 px-4 text-center space-y-2">
-              <div className="w-12 h-12 rounded bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center text-2xl mx-auto">
-                <BiFile />
-              </div>
-              <h3 className="text-sm font-medium text-slate-800 dark:text-slate-200">No Policies Found</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
-                {searchTerm
-                  ? `No policies matched "${searchTerm}". Try a different keyword.`
-                  : statusFilter !== 'ALL'
-                  ? `No policies found in the ${statusFilter.toLowerCase()} filter.`
-                  : 'Start adding legal policies, terms, and compliance documentation.'}
-              </p>
-              {canManage && !searchTerm && statusFilter === 'ALL' && (
-                <button
-                  type="button"
-                  onClick={openCreateInPage}
-                  className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded bg-secondary text-white text-xs font-medium hover:bg-secondary-dark transition-colors cursor-pointer mt-2"
-                >
-                  <BiPlus className="text-base" />
-                  <span>Create First Policy</span>
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800 w-full">
-              {filtered.map((policy) => {
-                const isCurrentlyEditing = editingPolicy?.id === policy.id && isEditorOpen;
-                const formattedDate = policy.updated_at || policy.created_at
-                  ? new Date(policy.updated_at || policy.created_at).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })
-                  : '—';
+                  return (
+                    <tr
+                      key={policy.id}
+                      className={`hover:bg-slate-50 transition-colors ${
+                        isCurrentlyEditing ? 'bg-slate-50 font-medium' : ''
+                      }`}
+                    >
+                      <td className="py-2.5 font-mono text-[11px] text-slate-400">
+                        #{policy.id}
+                      </td>
 
-                return (
-                  <div
-                    key={policy.id}
-                    className={`p-3 sm:p-4 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors flex items-center gap-2.5 sm:gap-3 w-full min-w-0 overflow-hidden ${
-                      isCurrentlyEditing
-                        ? 'bg-secondary/5 dark:bg-secondary/10 border-l-4 border-l-secondary'
-                        : ''
-                    }`}
-                  >
-                    {/* ID */}
-                    <span className="w-8 shrink-0 font-mono font-medium text-[11px] text-slate-400 hidden md:block">
-                      #{policy.id}
-                    </span>
+                      <td className="py-2.5">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            {canManage ? (
+                              <button
+                                type="button"
+                                onClick={() => openEditInPage(policy)}
+                                className="text-xs font-semibold text-slate-900 hover:underline text-left cursor-pointer"
+                              >
+                                {policy.title}
+                              </button>
+                            ) : (
+                              <span className="text-xs font-semibold text-slate-900">
+                                {policy.title}
+                              </span>
+                            )}
+                            {isCurrentlyEditing && (
+                              <span className="text-[9px] font-medium px-1.5 py-0.2 rounded border bg-slate-100 text-slate-700 border-slate-200">
+                                Editing
+                              </span>
+                            )}
+                          </div>
+                          {policy.description && (
+                            <p className="text-[11px] text-slate-500 line-clamp-1 max-w-md">
+                              {policy.description}
+                            </p>
+                          )}
+                        </div>
+                      </td>
 
-                    {/* Icon Box */}
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded border border-secondary/20 bg-secondary/10 text-secondary shrink-0 relative flex items-center justify-center">
-                      <BiShieldQuarter className="text-lg" />
-                    </div>
-
-                    {/* Title & Details */}
-                    <div className="flex-1 min-w-0 pr-1 space-y-0.5">
-                      <div className="flex items-center gap-2 min-w-0">
-                        {canManage ? (
-                          <button
-                            type="button"
-                            onClick={() => openEditInPage(policy)}
-                            className="text-xs sm:text-sm font-medium text-slate-900 dark:text-white hover:text-secondary truncate block tracking-tight text-left cursor-pointer"
-                            title={policy.title}
-                          >
-                            {policy.title}
-                          </button>
-                        ) : (
-                          <span
-                            className="text-xs sm:text-sm font-medium text-slate-900 dark:text-white truncate block tracking-tight"
-                            title={policy.title}
-                          >
-                            {policy.title}
-                          </span>
-                        )}
-                        {isCurrentlyEditing && (
-                          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-secondary text-white shrink-0">
-                            Editing In-Page
-                          </span>
-                        )}
-                      </div>
-
-                      {policy.description ? (
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate block leading-normal">
-                          {policy.description}
-                        </p>
-                      ) : (
-                        <span className="text-[11px] text-slate-400 italic block">No description added</span>
-                      )}
-
-                      {/* Small screen date */}
-                      <div className="text-[10px] text-slate-400 sm:hidden pt-0.5">
-                        Updated {formattedDate}
-                      </div>
-                    </div>
-
-                    {/* Status Column */}
-                    <div className="w-24 shrink-0 text-center">
-                      <button
-                        type="button"
-                        onClick={() => canManage && handleToggleStatus(policy)}
-                        disabled={!canManage}
-                        className={`inline-flex items-center justify-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-medium transition-colors ${
-                          canManage ? 'cursor-pointer hover:opacity-85' : 'cursor-default'
-                        } ${
-                          policy.is_published !== false
-                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
-                        }`}
-                        title={canManage ? 'Click to toggle status' : 'Status'}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            policy.is_published !== false ? 'bg-emerald-500' : 'bg-slate-400'
+                      <td className="py-2.5 text-center">
+                        <button
+                          type="button"
+                          onClick={() => canManage && handleToggleStatus(policy)}
+                          disabled={!canManage}
+                          className={`text-[9px] font-medium px-1.5 py-0.5 rounded border transition-colors ${
+                            canManage ? 'cursor-pointer' : 'cursor-default'
+                          } ${
+                            policy.is_published !== false
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                              : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
                           }`}
-                        />
-                        <span>{policy.is_published !== false ? 'Published' : 'Draft'}</span>
-                      </button>
-                    </div>
-
-                    {/* Updated Date Column (Tablet/Desktop) */}
-                    <div className="w-24 shrink-0 text-center hidden sm:block">
-                      <span className="text-[11px] text-slate-400 font-mono whitespace-nowrap">
-                        {formattedDate}
-                      </span>
-                    </div>
-
-                    {/* Actions Column */}
-                    <div className="w-28 shrink-0 flex items-center justify-end gap-1.5">
-                      {policy.slug && (
-                        <Link
-                          href={`/policies?slug=${policy.slug}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="p-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-secondary hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                          title="View live policy document"
                         >
-                          <BiWorld className="text-base" />
-                        </Link>
-                      )}
+                          {policy.is_published !== false ? 'Published' : 'Draft'}
+                        </button>
+                      </td>
 
-                      {canManage && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => openEditInPage(policy)}
-                            className="p-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-secondary hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                            title="Edit policy in-page"
-                          >
-                            <BiEditAlt className="text-base" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={deletingId === policy.id}
-                            onClick={() => handleDelete(policy.id, policy.title)}
-                            className="p-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer disabled:opacity-50"
-                            title="Delete policy"
-                          >
-                            <BiTrash className="text-base" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                      <td className="py-2.5 text-center text-xs text-slate-500 hidden sm:table-cell font-mono">
+                        {formattedDate}
+                      </td>
+
+                      <td className="py-2.5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {policy.slug && (
+                            <Link
+                              href={`/policies?slug=${policy.slug}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-2 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium"
+                            >
+                              View
+                            </Link>
+                          )}
+
+                          {canManage && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => openEditInPage(policy)}
+                                className="px-2 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium cursor-pointer"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                disabled={deletingId === policy.id}
+                                onClick={() => handleDelete(policy.id, policy.title)}
+                                className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium cursor-pointer disabled:opacity-50"
+                              >
+                                Delete
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

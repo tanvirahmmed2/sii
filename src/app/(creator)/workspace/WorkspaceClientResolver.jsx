@@ -1,12 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { BiLoaderAlt, BiDesktop } from 'react-icons/bi';
 
 export default function WorkspaceClientResolver() {
   const router = useRouter();
-  const [error, setError] = useState('');
 
   useEffect(() => {
     let isMounted = true;
@@ -25,7 +23,6 @@ export default function WorkspaceClientResolver() {
         }
       } catch (err) {
         if (!isMounted) return;
-        console.error('Failed to resolve creator workspace session:', err);
         router.replace('/creator/login?redirect=/workspace');
       }
     }
@@ -38,15 +35,8 @@ export default function WorkspaceClientResolver() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 space-y-4">
-      <div className="w-14 h-14 rounded-2xl bg-secondary/10 text-secondary flex items-center justify-center text-3xl shadow-xs">
-        <BiDesktop className="animate-pulse" />
-      </div>
-      <div className="text-center space-y-1">
-        <h2 className="text-base font-bold text-slate-900 dark:text-white">Connecting to Workspace...</h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400">Verifying your creator credentials and provisioning websites</p>
-      </div>
-      <BiLoaderAlt className="animate-spin text-2xl text-secondary" />
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 text-xs text-slate-500 font-medium">
+      Connecting to workspace...
     </div>
   );
 }

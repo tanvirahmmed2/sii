@@ -4,30 +4,12 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useCreator } from '../layout';
 import Link from 'next/link';
-import {
-  BiCheckShield,
-  BiDesktop,
-  BiCube,
-  BiCog,
-  BiGroup,
-  BiCheckCircle,
-  BiCalendar,
-  BiTimeFive,
-  BiPlus,
-  BiTrash,
-  BiLinkExternal,
-  BiLoaderAlt,
-  BiX,
-  BiGlobe,
-  BiSave,
-} from 'react-icons/bi';
 
 function SubscriptionContent() {
   const {
     creatorId,
     creator,
     activeSubscription,
-    subscriptions = [],
     websites = [],
     stats = {},
     refetch,
@@ -60,7 +42,6 @@ function SubscriptionContent() {
   const [newUserPhone, setNewUserPhone] = useState('');
   const [selectedPermIds, setSelectedPermIds] = useState([]);
 
-  // Auto-open settings if websiteId query param is provided
   useEffect(() => {
     if (targetWebsiteId && websites.length > 0) {
       const matched = websites.find((w) => String(w.id) === String(targetWebsiteId));
@@ -79,8 +60,8 @@ function SubscriptionContent() {
                   tagline: matched.tagline || '',
                   contact_email: matched.contact_email || creator?.email || '',
                   contact_phone: matched.contact_phone || creator?.phone || '',
-                  primary_color: matched.primary_color || '#6366f1',
-                  secondary_color: matched.secondary_color || '#4f46e5',
+                  primary_color: matched.primary_color || '#2563eb',
+                  secondary_color: matched.secondary_color || '#1e40af',
                   font_family: matched.font_family || 'Inter',
                   currency: matched.setting_currency || 'USD',
                 });
@@ -97,7 +78,6 @@ function SubscriptionContent() {
   const maxWebsites = stats?.maxWebsites || activeSubscription?.max_websites || activeSubscription?.max_portfolios || 1;
   const isSubActive = Boolean(activeSubscription && stats?.hasActivePackage);
 
-  // Open & Fetch Website Settings
   const handleOpenSettings = async (website) => {
     setSelectedWebsiteForSettings(website);
     setLoadingSettings(true);
@@ -110,14 +90,13 @@ function SubscriptionContent() {
       if (data.success && data.settings) {
         setSiteSettings(data.settings);
       } else {
-        // Default template
         setSiteSettings({
           site_title: website.name || '',
           tagline: website.tagline || '',
           contact_email: website.contact_email || creator?.email || '',
           contact_phone: website.contact_phone || creator?.phone || '',
-          primary_color: website.primary_color || '#6366f1',
-          secondary_color: website.secondary_color || '#4f46e5',
+          primary_color: website.primary_color || '#2563eb',
+          secondary_color: website.secondary_color || '#1e40af',
           font_family: website.font_family || 'Inter',
           currency: website.setting_currency || 'USD',
         });
@@ -147,12 +126,12 @@ function SubscriptionContent() {
       });
       const data = await res.json();
       if (data.success) {
-        setSettingsMsg('Website settings saved successfully!');
+        setSettingsMsg('Website settings saved successfully.');
         if (refetch) await refetch();
         setTimeout(() => {
           setSelectedWebsiteForSettings(null);
           setSettingsMsg('');
-        }, 1200);
+        }, 1000);
       } else {
         setSettingsErr(data.error || 'Failed to save settings.');
       }
@@ -163,7 +142,6 @@ function SubscriptionContent() {
     }
   };
 
-  // Open & Fetch Website Team
   const handleOpenTeam = async (website) => {
     setSelectedWebsiteForTeam(website);
     setLoadingTeam(true);
@@ -212,19 +190,18 @@ function SubscriptionContent() {
       });
       const data = await res.json();
       if (data.success) {
-        setTeamMsg('Team user created and role assigned successfully!');
+        setTeamMsg('User created and role assigned successfully.');
         setNewUserName('');
         setNewUserEmail('');
         setNewUserPassword('');
         setNewUserPhone('');
         setSelectedPermIds([]);
-        // Refresh team list
         await handleOpenTeam(selectedWebsiteForTeam);
       } else {
         setTeamErr(data.error || 'Failed to create user.');
       }
     } catch {
-      setTeamErr('Network error creating team user.');
+      setTeamErr('Network error creating user.');
     } finally {
       setAddingUser(false);
     }
@@ -260,205 +237,174 @@ function SubscriptionContent() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-4 text-xs text-slate-800">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
+      <div className="bg-white border border-slate-200 rounded p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Subscription & Website Ecosystem</h1>
-            <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-              Active Plan
+          <div className="flex items-center gap-2 mb-0.5">
+            <h1 className="text-base font-semibold text-slate-900">
+              Subscription & Website Ecosystem
+            </h1>
+            <span
+              className={`text-[9px] font-medium px-1.5 py-0.2 rounded border ${
+                isSubActive
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-slate-100 text-slate-600 border-slate-200'
+              }`}
+            >
+              {isSubActive ? 'Active Plan' : 'Inactive'}
             </span>
           </div>
-          <p className="text-xs text-slate-500">
-            Review your active package tier, website quotas, manage branding settings, and configure website users and role permissions.
+          <p className="text-slate-500 text-xs">
+            Review active tier terms, website limits, branding settings, and user role permissions.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <Link
-            href="/creator/checkout"
-            className="py-2 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5"
+            href={`/creator/${creatorId}/purchases`}
+            className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium transition-colors"
           >
-            <BiCube className="text-base" />
-            <span>Upgrade / Switch Plan</span>
+            Upgrade / Renew Plan
           </Link>
         </div>
       </div>
 
       {/* Subscription KPI Card */}
       {isSubActive ? (
-        <div className="bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-950 text-white rounded-3xl p-6 shadow-xl border border-indigo-800/40 relative overflow-hidden">
-          <div className="absolute right-0 top-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 grid grid-cols-1 md:grid-cols-4 gap-6 items-center">
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-300">Current Plan</span>
-              <h2 className="text-2xl font-black text-white">{activeSubscription.package_name}</h2>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider">
-                  Active Subscription
-                </span>
-                <span className="text-xs text-slate-400 font-mono">
-                  ${(Number(activeSubscription.price_in_cents || 0) / 100).toFixed(2)} / {activeSubscription.billing_interval}
-                </span>
-              </div>
+        <div className="bg-white border border-slate-200 rounded p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-center">
+            <div className="space-y-0.5">
+              <span className="text-[10px] uppercase font-semibold text-slate-400">Current Plan</span>
+              <h2 className="text-sm font-semibold text-slate-900">{activeSubscription.package_name}</h2>
+              <span className="text-[11px] text-slate-500 font-mono">
+                ${(Number(activeSubscription.price_in_cents || 0) / 100).toFixed(2)} / {activeSubscription.billing_interval || 'monthly'}
+              </span>
             </div>
 
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Allowed Websites</span>
-              <div className="text-2xl font-bold text-white font-mono">
-                {websites.length} <span className="text-xs text-slate-400 font-normal">of {maxWebsites} used</span>
+            <div className="space-y-0.5">
+              <span className="text-[10px] uppercase font-semibold text-slate-400">Websites Allowed</span>
+              <div className="text-sm font-semibold text-slate-900 font-mono">
+                {websites.length} / {maxWebsites}
               </div>
-              <p className="text-[11px] text-slate-400">
-                {maxWebsites - websites.length > 0
-                  ? `${maxWebsites - websites.length} slot(s) available for new sites`
-                  : 'Full quota utilized'}
-              </p>
+              <span className="text-[11px] text-slate-500">
+                {maxWebsites - websites.length} slot(s) free
+              </span>
             </div>
 
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Days Remaining</span>
-              <div className="text-2xl font-bold text-white font-mono flex items-center gap-2">
-                <BiTimeFive className="text-indigo-400" />
-                <span>{daysRemaining} Days</span>
+            <div className="space-y-0.5">
+              <span className="text-[10px] uppercase font-semibold text-slate-400">Days Remaining</span>
+              <div className="text-sm font-semibold text-slate-900 font-mono">
+                {daysRemaining} Days
               </div>
-              <p className="text-[11px] text-slate-400">
-                Renews on {activeSubscription.current_period_end ? new Date(activeSubscription.current_period_end).toLocaleDateString() : '—'}
-              </p>
+              <span className="text-[11px] text-slate-500">
+                Ends: {activeSubscription.current_period_end ? new Date(activeSubscription.current_period_end).toLocaleDateString() : '—'}
+              </span>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Link
                 href={`/creator/${creatorId}/workspace`}
-                className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30 transition-all text-center flex items-center justify-center gap-1.5"
+                className="w-full text-center py-1.5 px-3 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium"
               >
-                <BiDesktop />
-                <span>Manage All Websites</span>
+                Manage Websites
               </Link>
               <Link
                 href={`/creator/${creatorId}/payments`}
-                className="w-full py-2 px-4 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-semibold transition-all text-center"
+                className="w-full text-center py-1.5 px-3 rounded border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium"
               >
-                View Invoices & Receipts
+                Billing Invoices
               </Link>
             </div>
           </div>
         </div>
       ) : (
-        <div className="p-8 rounded-3xl bg-amber-50 border border-amber-200 text-center space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto text-2xl">
-            <BiCube />
-          </div>
-          <h3 className="text-base font-bold text-amber-900">No Active Subscription Found</h3>
-          <p className="text-xs text-amber-700 max-w-md mx-auto">
-            You do not have an active package subscription. Select a package and complete your payment to activate unlimited site capabilities.
+        <div className="bg-white border border-slate-200 rounded p-5 text-center space-y-2">
+          <h3 className="text-sm font-semibold text-slate-900">No Active Subscription Found</h3>
+          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            You do not currently have an active plan. Purchase a package to activate website hosting capabilities.
           </p>
-          <Link
-            href="/creator/checkout"
-            className="inline-flex items-center gap-1.5 py-2.5 px-5 rounded-xl bg-slate-900 text-white font-bold text-xs shadow-xs"
-          >
-            <span>Explore Packages & Subscribe Now →</span>
-          </Link>
+          <div className="pt-2">
+            <Link
+              href="/packages"
+              className="px-3 py-1.5 rounded bg-slate-900 text-white font-medium inline-block"
+            >
+              Explore Packages &rarr;
+            </Link>
+          </div>
         </div>
       )}
 
-      {/* Websites Under This Subscription */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+      {/* Provisioned Websites Section */}
+      <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
           <div>
-            <h2 className="text-base font-bold text-slate-900 tracking-tight">Provisioned Subscription Websites</h2>
-            <p className="text-xs text-slate-500">
-              Configure branding settings and assign team user roles for each website under your account.
+            <h2 className="text-sm font-semibold text-slate-900">Provisioned Websites ({websites.length})</h2>
+            <p className="text-[11px] text-slate-500">
+              Configure branding and assign team roles for websites in your subscription.
             </p>
           </div>
           <Link
             href={`/creator/${creatorId}/workspace?setup=true`}
-            className="inline-flex items-center gap-1.5 py-2 px-3.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-bold transition-all shrink-0"
+            className="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 font-medium text-xs"
           >
-            <BiPlus className="text-base" />
-            <span>Setup New Website</span>
+            New Website
           </Link>
         </div>
 
         {websites.length === 0 ? (
-          <div className="py-12 text-center text-slate-400 text-xs space-y-3">
-            <BiDesktop className="text-4xl mx-auto text-slate-300" />
-            <p>No websites provisioned under this subscription yet.</p>
-            <Link
-              href={`/creator/${creatorId}/workspace?setup=true`}
-              className="inline-block py-2 px-4 rounded-xl bg-slate-900 text-white font-bold text-xs"
-            >
-              Setup First Website Now
-            </Link>
+          <div className="py-6 text-center text-slate-400 text-xs">
+            No websites provisioned under this subscription yet.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="divide-y divide-slate-100">
             {websites.map((w) => {
               const rawSub = (w.subdomain || '').toLowerCase();
               const cleanSub = rawSub.includes('.') ? rawSub.split('.')[0] : rawSub;
 
               return (
-                <div
-                  key={w.id}
-                  className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-all space-y-4 flex flex-col justify-between"
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900">{w.name}</h4>
-                        <div className="flex items-center gap-1 text-xs text-indigo-600 font-mono mt-0.5">
-                          <BiGlobe className="text-slate-400" />
-                          <span>{w.subdomain}</span>
-                        </div>
-                      </div>
+                <div key={w.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-slate-900 text-xs">{w.name}</span>
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        className={`text-[9px] font-medium px-1.5 py-0.2 rounded border ${
                           w.is_published
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-slate-100 text-slate-600 border border-slate-200'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-slate-100 text-slate-600 border-slate-200'
                         }`}
                       >
                         {w.is_published ? 'Live' : 'Draft'}
                       </span>
                     </div>
-
-                    {w.tagline && <p className="text-xs text-slate-500 italic line-clamp-1">&ldquo;{w.tagline}&rdquo;</p>}
+                    <span className="text-[11px] text-slate-500 font-mono">
+                      {w.subdomain}.platform.com
+                    </span>
                   </div>
 
-                  <div className="pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
-                    {/* Management Links */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenSettings(w)}
-                        className="py-1.5 px-3 rounded-xl bg-white border border-slate-200 hover:border-slate-300 text-slate-800 text-xs font-semibold shadow-xs flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <BiCog className="text-slate-500 text-sm" />
-                        <span>Website Settings</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleOpenTeam(w)}
-                        className="py-1.5 px-3 rounded-xl bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 text-xs font-bold shadow-xs flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <BiGroup className="text-indigo-600 text-sm" />
-                        <span>Team & Roles</span>
-                      </button>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      <a
-                        href={`/website/${cleanSub}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white transition-colors"
-                        title="View Live Website"
-                      >
-                        <BiLinkExternal className="text-base" />
-                      </a>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenSettings(w)}
+                      className="px-2.5 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium cursor-pointer"
+                    >
+                      Website Settings
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenTeam(w)}
+                      className="px-2.5 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium cursor-pointer"
+                    >
+                      Team & Roles
+                    </button>
+                    <a
+                      href={`/website/${cleanSub}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-1 rounded bg-slate-100 text-slate-700 hover:bg-slate-200 font-medium"
+                    >
+                      Live
+                    </a>
                   </div>
                 </div>
               );
@@ -469,119 +415,98 @@ function SubscriptionContent() {
 
       {/* Website Settings Modal */}
       {selectedWebsiteForSettings && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full overflow-hidden p-6 space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center text-base">
-                  <BiCog />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">Manage Website Settings</h3>
-                  <p className="text-[11px] text-slate-500">Website: {selectedWebsiteForSettings.name}</p>
-                </div>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <div className="bg-white rounded border border-slate-200 max-w-lg w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto text-xs">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h3 className="text-sm font-semibold text-slate-900">
+                Website Settings: {selectedWebsiteForSettings.name}
+              </h3>
               <button
                 type="button"
                 onClick={() => setSelectedWebsiteForSettings(null)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 font-medium"
               >
-                <BiX className="text-xl" />
+                Close
               </button>
             </div>
 
             {settingsErr && (
-              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+              <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 font-medium">
                 {settingsErr}
               </div>
             )}
             {settingsMsg && (
-              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
+              <div className="p-2.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium">
                 {settingsMsg}
               </div>
             )}
 
             {loadingSettings ? (
-              <div className="py-12 flex justify-center">
-                <BiLoaderAlt className="animate-spin text-2xl text-indigo-600" />
-              </div>
+              <div className="py-6 text-center text-slate-500">Loading settings...</div>
             ) : (
-              <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
-                <div className="space-y-1.5">
-                  <label className="font-bold text-slate-800">Site Title</label>
+              <form onSubmit={handleSaveSettings} className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Site Title</label>
                   <input
                     type="text"
                     required
                     value={siteSettings?.site_title || ''}
                     onChange={(e) => setSiteSettings({ ...siteSettings, site_title: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 focus:outline-none focus:border-indigo-600"
+                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="font-bold text-slate-800">Tagline / Mission</label>
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Tagline</label>
                   <input
                     type="text"
                     value={siteSettings?.tagline || ''}
                     onChange={(e) => setSiteSettings({ ...siteSettings, tagline: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 focus:outline-none focus:border-indigo-600"
+                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="font-bold text-slate-800">Contact Email</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1">Contact Email</label>
                     <input
                       type="email"
                       value={siteSettings?.contact_email || ''}
                       onChange={(e) => setSiteSettings({ ...siteSettings, contact_email: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 focus:outline-none focus:border-indigo-600"
+                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="font-bold text-slate-800">Contact Phone</label>
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1">Contact Phone</label>
                     <input
                       type="text"
                       value={siteSettings?.contact_phone || ''}
                       onChange={(e) => setSiteSettings({ ...siteSettings, contact_phone: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 focus:outline-none focus:border-indigo-600"
+                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="font-bold text-slate-800">Primary Color</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1">Primary Color</label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
-                        value={siteSettings?.primary_color || '#6366f1'}
+                        value={siteSettings?.primary_color || '#2563eb'}
                         onChange={(e) => setSiteSettings({ ...siteSettings, primary_color: e.target.value })}
-                        className="w-8 h-8 rounded-lg border border-slate-300 p-0.5 cursor-pointer"
+                        className="w-8 h-8 rounded border border-slate-300 p-0.5 cursor-pointer"
                       />
                       <span className="font-mono text-[11px]">{siteSettings?.primary_color}</span>
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="font-bold text-slate-800">Secondary Color</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={siteSettings?.secondary_color || '#4f46e5'}
-                        onChange={(e) => setSiteSettings({ ...siteSettings, secondary_color: e.target.value })}
-                        className="w-8 h-8 rounded-lg border border-slate-300 p-0.5 cursor-pointer"
-                      />
-                      <span className="font-mono text-[11px]">{siteSettings?.secondary_color}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="font-bold text-slate-800">Font Family</label>
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1">Font Family</label>
                     <select
                       value={siteSettings?.font_family || 'Inter'}
                       onChange={(e) => setSiteSettings({ ...siteSettings, font_family: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600"
+                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                     >
                       <option value="Inter">Inter</option>
                       <option value="Roboto">Roboto</option>
@@ -591,21 +516,20 @@ function SubscriptionContent() {
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 flex gap-3">
+                <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
                   <button
                     type="button"
                     onClick={() => setSelectedWebsiteForSettings(null)}
-                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 cursor-pointer"
+                    className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={savingSettings}
-                    className="flex-1 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50"
                   >
-                    {savingSettings ? <BiLoaderAlt className="animate-spin text-base" /> : <BiSave className="text-base" />}
-                    <span>Save Settings</span>
+                    {savingSettings ? 'Saving...' : 'Save Settings'}
                   </button>
                 </div>
               </form>
@@ -614,74 +538,65 @@ function SubscriptionContent() {
         </div>
       )}
 
-      {/* Website Team & Permissions Modal */}
+      {/* Website Team Modal */}
       {selectedWebsiteForTeam && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full overflow-hidden p-6 space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-base">
-                  <BiGroup />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">Website Team & Module Permissions</h3>
-                  <p className="text-[11px] text-slate-500">Website: {selectedWebsiteForTeam.name}</p>
-                </div>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <div className="bg-white rounded border border-slate-200 max-w-lg w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto text-xs">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h3 className="text-sm font-semibold text-slate-900">
+                Team & Roles: {selectedWebsiteForTeam.name}
+              </h3>
               <button
                 type="button"
                 onClick={() => setSelectedWebsiteForTeam(null)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 font-medium"
               >
-                <BiX className="text-xl" />
+                Close
               </button>
             </div>
 
             {teamErr && (
-              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+              <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 font-medium">
                 {teamErr}
               </div>
             )}
             {teamMsg && (
-              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
+              <div className="p-2.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium">
                 {teamMsg}
               </div>
             )}
 
             {loadingTeam ? (
-              <div className="py-12 flex justify-center">
-                <BiLoaderAlt className="animate-spin text-2xl text-indigo-600" />
-              </div>
+              <div className="py-6 text-center text-slate-500">Loading team...</div>
             ) : (
-              <div className="space-y-6 text-xs">
-                {/* Current Team Users List */}
-                <div className="space-y-2.5">
-                  <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">
+              <div className="space-y-4">
+                {/* Team Members List */}
+                <div className="space-y-1.5">
+                  <h4 className="font-semibold text-slate-900 text-xs">
                     Current Team Members ({teamData.users?.length || 0})
                   </h4>
                   {teamData.users?.length === 0 ? (
-                    <p className="text-slate-400 italic">No additional team members assigned to this website yet.</p>
+                    <p className="text-slate-400 italic">No additional team members assigned.</p>
                   ) : (
-                    <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden bg-slate-50/50">
+                    <div className="divide-y divide-slate-100 border border-slate-200 rounded">
                       {teamData.users.map((u) => (
-                        <div key={u.id} className="p-3 flex items-center justify-between">
+                        <div key={u.id} className="p-2.5 flex items-center justify-between">
                           <div>
-                            <div className="font-bold text-slate-800 flex items-center gap-2">
+                            <div className="font-medium text-slate-900 flex items-center gap-2">
                               <span>{u.name}</span>
-                              <span className="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700 text-[10px] font-extrabold uppercase">
+                              <span className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 text-[10px] font-medium border border-slate-200">
                                 {u.role_name || 'Member'}
                               </span>
                             </div>
-                            <div className="text-[11px] text-slate-500 font-mono mt-0.5">{u.email}</div>
+                            <div className="text-[11px] text-slate-500 font-mono">{u.email}</div>
                           </div>
 
                           <button
                             type="button"
                             onClick={() => handleDeleteUser(u.id)}
-                            className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                            title="Remove user"
+                            className="text-rose-600 hover:underline font-medium cursor-pointer"
                           >
-                            <BiTrash className="text-base" />
+                            Remove
                           </button>
                         </div>
                       ))}
@@ -689,99 +604,73 @@ function SubscriptionContent() {
                   )}
                 </div>
 
-                {/* Add New User Form */}
-                <form onSubmit={handleAddUser} className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-4">
-                  <h4 className="font-bold text-slate-900 flex items-center gap-1.5 text-xs">
-                    <BiPlus className="text-indigo-600 text-base" />
-                    <span>Invite & Create New Website User</span>
+                {/* Add User Form */}
+                <form onSubmit={handleAddUser} className="p-3 border border-slate-200 rounded space-y-3 bg-slate-50">
+                  <h4 className="font-semibold text-slate-900 text-xs">
+                    Add New Team Member
                   </h4>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Full Name</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-700 mb-1">Name</label>
                       <input
                         type="text"
                         required
                         value={newUserName}
                         onChange={(e) => setNewUserName(e.target.value)}
-                        placeholder="Sarah Jenkins"
-                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600"
+                        placeholder="Sarah"
+                        className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                       />
                     </div>
-                    <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Email Address</label>
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-700 mb-1">Email</label>
                       <input
                         type="email"
                         required
                         value={newUserEmail}
                         onChange={(e) => setNewUserEmail(e.target.value)}
-                        placeholder="sarah@studio.com"
-                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600"
+                        placeholder="sarah@example.com"
+                        className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Initial Password</label>
-                      <input
-                        type="password"
-                        value={newUserPassword}
-                        onChange={(e) => setNewUserPassword(e.target.value)}
-                        placeholder="Leave blank for auto-generated"
-                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="font-bold text-slate-700">Assign Role</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-700 mb-1">Role</label>
                       <select
                         value={newUserRole}
                         onChange={(e) => setNewUserRole(e.target.value)}
-                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600"
+                        className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                       >
                         {teamData.roles?.map((r) => (
                           <option key={r.id} value={r.id}>
-                            {r.name} ({r.slug})
+                            {r.name}
                           </option>
                         ))}
                       </select>
                     </div>
-                  </div>
-
-                  {/* Module Permissions Checkboxes */}
-                  <div className="space-y-1.5 pt-1">
-                    <label className="font-bold text-slate-700">Grant Module Permissions (Optional)</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-2.5 bg-white border border-slate-200 rounded-xl">
-                      {teamData.permissions?.map((p) => {
-                        const checked = selectedPermIds.includes(p.id);
-                        return (
-                          <label
-                            key={p.id}
-                            className={`flex items-center gap-2 p-1.5 rounded-lg border text-[11px] cursor-pointer transition-all ${
-                              checked ? 'bg-indigo-50 border-indigo-200 text-indigo-900' : 'border-slate-100 text-slate-600 hover:bg-slate-50'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => togglePermission(p.id)}
-                              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
-                            />
-                            <span className="truncate">{p.name || p.slug}</span>
-                          </label>
-                        );
-                      })}
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-700 mb-1">Password</label>
+                      <input
+                        type="password"
+                        value={newUserPassword}
+                        onChange={(e) => setNewUserPassword(e.target.value)}
+                        placeholder="Leave blank for auto"
+                        className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                      />
                     </div>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={addingUser}
-                    className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    {addingUser ? <BiLoaderAlt className="animate-spin text-base" /> : <BiPlus className="text-base" />}
-                    <span>Create User & Assign Role</span>
-                  </button>
+                  <div className="flex items-center justify-end pt-1">
+                    <button
+                      type="submit"
+                      disabled={addingUser}
+                      className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50"
+                    >
+                      {addingUser ? 'Adding...' : 'Add Team Member'}
+                    </button>
+                  </div>
                 </form>
               </div>
             )}
@@ -796,8 +685,8 @@ export default function CreatorSubscriptionPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-[40vh] flex items-center justify-center">
-          <BiLoaderAlt className="animate-spin text-3xl text-indigo-600" />
+        <div className="py-8 text-center text-xs text-slate-500 font-medium">
+          Loading subscription details...
         </div>
       }
     >

@@ -107,26 +107,27 @@ export async function getCreatorSession(request) {
     if (!c.is_active) return null;
 
     // Check creator_login_sessions for revocation and activity
-    if (token) {
-      try {
-        const sessRes = await query(
-          `SELECT is_active, expires_at FROM creator_login_sessions WHERE token = $1 LIMIT 1`,
-          [token]
-        );
-        if (sessRes.rows.length > 0) {
-          const s = sessRes.rows[0];
-          if (s.is_active === false) return null;
-          if (s.expires_at && new Date(s.expires_at) < new Date()) return null;
-
-          // Touch last_active_at asynchronously
-          query(
-            `UPDATE creator_login_sessions SET last_active_at = CURRENT_TIMESTAMP WHERE token = $1`,
-            [token]
-          ).catch(() => {});
-        }
-      } catch (e) {
-        // Fallback if session table isn't accessible
+    if (!token) return null;
+    try {
+      const sessRes = await query(
+        `SELECT is_active, expires_at FROM creator_login_sessions WHERE token = $1 AND creator_id = $2 LIMIT 1`,
+        [token, c.id]
+      );
+      if (sessRes.rows.length === 0) {
+        return null; // Session record does not exist in database
       }
+      const s = sessRes.rows[0];
+      if (s.is_active === false) return null;
+      if (s.expires_at && new Date(s.expires_at) < new Date()) return null;
+
+      // Touch last_active_at asynchronously
+      query(
+        `UPDATE creator_login_sessions SET last_active_at = CURRENT_TIMESTAMP WHERE token = $1`,
+        [token]
+      ).catch(() => {});
+    } catch (e) {
+      console.error('Error verifying creator session against database:', e);
+      return null;
     }
 
     return {
@@ -140,6 +141,7 @@ export async function getCreatorSession(request) {
       isActive: c.is_active,
       isVerified: c.is_verified || c.email_verified || false,
       createdAt: c.created_at,
+      token,
     };
   } catch (error) {
     console.error('Error getting creator session:', error);

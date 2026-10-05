@@ -2,31 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import {
-  BiStar,
-  BiCheckCircle,
-  BiCube,
-  BiMessageSquareDetail,
-  BiLoaderAlt,
-  BiPlus,
-  BiX,
-  BiCheck,
-  BiTimeFive,
-  BiCheckShield,
-  BiErrorCircle,
-  BiEdit,
-  BiTrash,
-  BiGlobe,
-} from 'react-icons/bi';
 
 export default function CreatorReviewsPage() {
-  const params = useParams();
-  const creatorId = params?.id;
-
   const [review, setReview] = useState(null);
   const [websites, setWebsites] = useState([]);
-  const [creatorInfo, setCreatorInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -34,7 +13,6 @@ export default function CreatorReviewsPage() {
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [rating, setRating] = useState(5);
   const [title, setTitle] = useState('');
   const [reviewText, setReviewText] = useState('');
@@ -51,12 +29,18 @@ export default function CreatorReviewsPage() {
       if (data.success) {
         setReview(data.review || null);
         setWebsites(data.websites || []);
-        if (data.creator) setCreatorInfo(data.creator);
+        if (data.review) {
+          setTitle(data.review.title || '');
+          setReviewText(data.review.content || '');
+          setRating(data.review.rating || 5);
+          setReviewerName(data.review.reviewer_name || '');
+          setInstitutionName(data.review.institution_name || '');
+          setSelectedWebsiteId(data.review.website_id || '');
+        }
       } else {
-        setErrorMsg(data.error || 'Failed to load review data.');
+        setErrorMsg(data.error || 'Failed to load review.');
       }
-    } catch (err) {
-      console.error('Failed to fetch creator review:', err);
+    } catch {
       setErrorMsg('Network error while loading review.');
     } finally {
       setLoading(false);
@@ -64,531 +48,298 @@ export default function CreatorReviewsPage() {
   }, []);
 
   useEffect(() => {
-    let ignore = false;
-    fetch('/api/marketing/creator/reviews')
-      .then((res) => res.json())
-      .then((data) => {
-        if (!ignore && data.success) {
-          setReview(data.review || null);
-          setWebsites(data.websites || []);
-          if (data.creator) setCreatorInfo(data.creator);
-        } else if (!ignore && !data.success) {
-          setErrorMsg(data.error || 'Failed to load review.');
-        }
-      })
-      .catch((err) => {
-        if (!ignore) {
-          console.error('Failed to fetch creator review:', err);
-          setErrorMsg('Network error while loading review.');
-        }
-      })
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
-  const handleOpenCreateModal = () => {
-    setIsEditing(false);
-    setRating(5);
-    setTitle('');
-    setReviewText('');
-    setReviewerName(creatorInfo?.name || '');
-    setInstitutionName(creatorInfo?.institution || '');
-    setSelectedWebsiteId(websites.length > 0 ? String(websites[0].id) : '');
-    setModalOpen(true);
-  };
-
-  const handleOpenEditModal = () => {
-    if (!review) return;
-    setIsEditing(true);
-    setRating(Number(review.rating) || 5);
-    setTitle(review.title || '');
-    setReviewText(review.review_text || review.comment || '');
-    setReviewerName(review.reviewer_name || creatorInfo?.name || '');
-    setInstitutionName(review.institution_name || creatorInfo?.institution || '');
-    setSelectedWebsiteId(review.website_id ? String(review.website_id) : '');
-    setModalOpen(true);
-  };
+    fetchReviewsData(true);
+  }, [fetchReviewsData]);
 
   const handleSubmitReview = async (e) => {
     e.preventDefault();
-    if (!reviewText.trim() || submitting) return;
-
     setSubmitting(true);
     setErrorMsg('');
     setSuccessMsg('');
 
     try {
-      const method = isEditing ? 'PUT' : 'POST';
       const res = await fetch('/api/marketing/creator/reviews', {
-        method,
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: review ? 'update' : 'create',
+          title: title.trim(),
+          content: reviewText.trim(),
           rating: Number(rating),
-          title: title.trim() || null,
-          review_text: reviewText.trim(),
-          reviewer_name: reviewerName.trim() || creatorInfo?.name || 'Verified Creator',
-          institution_name: institutionName.trim() || null,
-          website_id: selectedWebsiteId ? Number(selectedWebsiteId) : null,
+          reviewer_name: reviewerName.trim() || undefined,
+          institution_name: institutionName.trim() || undefined,
+          website_id: selectedWebsiteId ? Number(selectedWebsiteId) : undefined,
         }),
       });
 
       const data = await res.json();
       if (data.success) {
-        setSuccessMsg(
-          data.message || (isEditing ? 'Review updated successfully!' : 'Review submitted successfully!')
-        );
-        setModalOpen(false);
-        await fetchReviewsData();
+        setSuccessMsg('Review saved successfully.');
+        await fetchReviewsData(false);
+        setTimeout(() => {
+          setModalOpen(false);
+          setSuccessMsg('');
+        }, 1000);
       } else {
         setErrorMsg(data.error || 'Failed to submit review.');
       }
-    } catch (err) {
-      console.error('Error submitting review:', err);
-      setErrorMsg('Network error while submitting review.');
+    } catch {
+      setErrorMsg('Network error submitting review.');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDeleteReview = async () => {
-    if (!review || submitting) return;
-    if (!confirm('Are you sure you want to permanently delete your review?')) return;
-
+    if (!confirm('Are you sure you want to delete your review?')) return;
     setSubmitting(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-
     try {
       const res = await fetch('/api/marketing/creator/reviews', {
-        method: 'DELETE',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete' }),
       });
       const data = await res.json();
       if (data.success) {
-        setSuccessMsg('Your review has been successfully removed.');
         setReview(null);
-        await fetchReviewsData();
+        setTitle('');
+        setReviewText('');
       } else {
-        setErrorMsg(data.error || 'Failed to delete review.');
+        alert(data.error || 'Failed to delete review.');
       }
-    } catch (err) {
-      console.error('Error deleting review:', err);
-      setErrorMsg('Network error while deleting review.');
+    } catch {
+      alert('Network error deleting review.');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-200">
+    <div className="w-full space-y-4 text-xs text-slate-800">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
+      <div className="bg-white border border-slate-200 rounded p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Platform Review</h1>
-            <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-              Creator Testimonial
-            </span>
-          </div>
-          <p className="text-xs text-slate-500">
-            Share your experience with our educational management platform. Each creator can submit one review, which is reviewed by management before publishing publicly.
+          <h1 className="text-base font-semibold text-slate-900">
+            Platform Feedback & Reviews
+          </h1>
+          <p className="text-slate-500 text-xs">
+            Share your experience with our SaaS platform and have your testimonial featured.
           </p>
         </div>
 
-        <Link
-          href={`/reviews`}
-          target="_blank"
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white transition-all shadow-xs cursor-pointer self-start sm:self-auto shrink-0"
-        >
-          <BiGlobe className="text-base" />
-          <span>View Public Reviews</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setModalOpen(true);
+              setErrorMsg('');
+              setSuccessMsg('');
+            }}
+            className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer"
+          >
+            {review ? 'Edit Review' : 'Submit Review'}
+          </button>
+        </div>
       </div>
 
-      {/* Alerts */}
       {successMsg && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <BiCheckCircle className="text-lg flex-shrink-0" />
-            <span>{successMsg}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setSuccessMsg('')}
-            className="text-emerald-700 hover:text-emerald-900 cursor-pointer"
-          >
-            <BiX className="text-lg" />
-          </button>
+        <div className="p-3 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium">
+          {successMsg}
         </div>
       )}
-
       {errorMsg && (
-        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <BiErrorCircle className="text-lg flex-shrink-0" />
-            <span>{errorMsg}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setErrorMsg('')}
-            className="text-rose-700 hover:text-rose-900 cursor-pointer"
-          >
-            <BiX className="text-lg" />
-          </button>
+        <div className="p-3 rounded bg-rose-50 border border-rose-200 text-rose-700 font-medium">
+          {errorMsg}
         </div>
       )}
 
-      {/* Content Area */}
-      {loading ? (
-        <div className="py-20 text-center bg-white border border-slate-200 rounded-3xl p-8 flex flex-col items-center justify-center gap-2 text-slate-400">
-          <BiLoaderAlt className="animate-spin text-3xl text-slate-700" />
-          <span className="text-xs font-semibold">Loading your review...</span>
+      {/* Review Content Card */}
+      <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+          <h2 className="text-sm font-semibold text-slate-900">Your Testimonial</h2>
+          {review && (
+            <span
+              className={`text-[9px] font-medium px-1.5 py-0.2 rounded border ${
+                review.is_published
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-slate-100 text-slate-600 border-slate-200'
+              }`}
+            >
+              {review.is_published ? 'Featured on Website' : 'Pending Approval'}
+            </span>
+          )}
         </div>
-      ) : !review ? (
-        /* Empty State: Creator hasn't submitted a review yet */
-        <div className="bg-white border border-slate-200 rounded-3xl p-8 sm:p-12 text-center max-w-2xl mx-auto shadow-xs space-y-6">
-          <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-500 flex items-center justify-center text-3xl mx-auto">
-            <BiStar />
-          </div>
 
-          <div className="space-y-2">
-            <h2 className="text-xl font-bold text-slate-900">
-              Submit Your Platform Experience
-            </h2>
-            <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-              We value your authentic feedback. As a verified institution owner, you can share your rating, feedback, and story. Submitted reviews are held as <strong>Pending</strong> until approved by our moderation team.
-            </p>
-          </div>
-
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 max-w-md mx-auto text-left text-xs text-slate-600 space-y-1.5">
-            <div className="flex items-center gap-2 font-semibold text-slate-800">
-              <BiCheckShield className="text-emerald-600 text-base" />
-              <span>Review Policy & Moderation:</span>
-            </div>
-            <p className="text-[11px] text-slate-500 pl-6">
-              • Strictly <strong>1 review per creator</strong>.
-            </p>
-            <p className="text-[11px] text-slate-500 pl-6">
-              • Created reviews start with <strong>Pending Approval</strong> status.
-            </p>
-            <p className="text-[11px] text-slate-500 pl-6">
-              • Once approved by management, your testimonial appears on the public site.
-            </p>
-          </div>
-
-          <div>
+        {loading ? (
+          <div className="py-8 text-center text-slate-500 font-medium">Loading review...</div>
+        ) : !review ? (
+          <div className="py-8 text-center text-slate-400 space-y-2">
+            <p>You have not submitted a testimonial yet.</p>
             <button
               type="button"
-              onClick={handleOpenCreateModal}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-md cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
+              onClick={() => setModalOpen(true)}
+              className="px-3 py-1.5 rounded bg-slate-900 text-white font-medium cursor-pointer"
             >
-              <BiStar className="text-amber-400 text-base" />
-              <span>Write Your Platform Review</span>
+              Write a Review
             </button>
           </div>
-        </div>
-      ) : (
-        /* Review Card: Creator has already submitted 1 review */
-        <div className="space-y-6 max-w-3xl mx-auto">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <BiMessageSquareDetail className="text-slate-500 text-lg" />
-              <span>Your Submitted Review (1 Allowed)</span>
-            </h2>
-            <span className="text-xs text-slate-500 font-medium">
-              Review #{review.id}
-            </span>
-          </div>
-
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
-            {/* Top row: Stars, Status Badge, and Action buttons */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-1.5 text-amber-400 text-lg">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <BiStar
-                      key={s}
-                      className={s <= Number(review.rating) ? 'fill-current' : 'opacity-25'}
-                    />
-                  ))}
-                  <span className="text-xs font-bold text-slate-700 ml-1">
-                    {review.rating} out of 5
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                  <span>Submitted on: {new Date(review.created_at).toLocaleDateString([], {
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}</span>
-                  {review.updated_at && review.updated_at !== review.created_at && (
-                    <span>• (Edited)</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Status Badge */}
-              <div className="flex items-center gap-2">
-                {review.is_approved ? (
-                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <BiCheckCircle className="text-base" />
-                    <span>Approved & Live</span>
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                    <BiTimeFive className="text-base" />
-                    <span>Pending Moderation</span>
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Review Title & Body */}
-            <div className="space-y-3">
-              {review.title && (
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
-                  {review.title}
-                </h3>
-              )}
-
-              <p className="text-xs sm:text-sm text-slate-700 leading-relaxed italic bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-100">
-                &ldquo;{review.review_text || review.comment}&rdquo;
-              </p>
-            </div>
-
-            {/* Review Details Footer */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 border-t border-slate-100 text-xs">
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Reviewer Name
-                </span>
-                <p className="font-semibold text-slate-800">
-                  {review.reviewer_name || creatorInfo?.name || 'Verified Creator'}
-                </p>
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Institution / School
-                </span>
-                <p className="font-semibold text-slate-800">
-                  {review.institution_name || review.website_name || creatorInfo?.institution || 'Educational Institution'}
-                </p>
-              </div>
-            </div>
-
-            {/* Status Information Box */}
-            <div className="rounded-2xl p-4 border text-xs">
-              {review.is_approved ? (
-                <div className="flex items-start gap-2.5 text-emerald-800 bg-emerald-50/50">
-                  <BiCheckCircle className="text-lg text-emerald-600 shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="font-semibold">Your review is published!</strong>
-                    <p className="text-[11px] text-emerald-700 mt-0.5">
-                      It is now visible on the public /reviews page and social proof widgets across the platform.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-start gap-2.5 text-amber-800 bg-amber-50/50">
-                  <BiTimeFive className="text-lg text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="font-semibold">Review Pending Management Approval</strong>
-                    <p className="text-[11px] text-amber-700 mt-0.5">
-                      Your review has been submitted to administrators for moderation. Once approved, it will be published live to the public reviews section.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Actions: Edit or Delete */}
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={handleDeleteReview}
-                disabled={submitting}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
-              >
-                <BiTrash className="text-sm" />
-                <span>Delete Review</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleOpenEditModal}
-                disabled={submitting}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-all shadow-xs cursor-pointer disabled:opacity-50"
-              >
-                <BiEdit className="text-sm" />
-                <span>Edit Review</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Write or Edit Review */}
-      {modalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-5 animate-in fade-in duration-200 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  {isEditing ? 'Edit Your Platform Review' : 'Write Platform Review'}
-                </h3>
-                <p className="text-xs text-slate-500">
-                  {isEditing
-                    ? 'Updates will be resubmitted for management approval.'
-                    : 'Share your feedback. Only 1 review per creator account is allowed.'}
-                </p>
+                <span className="text-slate-900 font-semibold text-xs">{review.title}</span>
+                <span className="block text-[11px] text-slate-500">
+                  Rating: {review.rating} / 5 stars
+                </span>
               </div>
+              <span className="text-[10px] text-slate-400 font-mono">
+                {review.created_at ? new Date(review.created_at).toLocaleDateString() : ''}
+              </span>
+            </div>
+
+            <p className="text-slate-700 text-xs leading-normal bg-slate-50 p-3 rounded border border-slate-100">
+              &ldquo;{review.content}&rdquo;
+            </p>
+
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] text-slate-500">
+              <div>
+                Reviewer: <span className="font-medium text-slate-800">{review.reviewer_name || 'Creator'}</span>
+                {review.institution_name && <span> &middot; {review.institution_name}</span>}
+              </div>
+
+              <div className="space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(true)}
+                  className="text-slate-800 hover:underline font-medium cursor-pointer"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteReview}
+                  disabled={submitting}
+                  className="text-rose-600 hover:underline font-medium cursor-pointer"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <div className="bg-white border border-slate-200 rounded max-w-md w-full p-5 space-y-4 text-xs text-slate-800 shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h3 className="text-sm font-semibold text-slate-900">
+                {review ? 'Edit Review' : 'Submit Review'}
+              </h3>
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 font-medium"
               >
-                <BiX className="text-2xl" />
+                Close
               </button>
             </div>
 
-            <form onSubmit={handleSubmitReview} className="space-y-4">
-              {/* Star Rating Picker */}
+            <form onSubmit={handleSubmitReview} className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Rating <span className="text-rose-500">*</span>
-                </label>
-                <div className="flex items-center gap-2">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setRating(s)}
-                      className={`text-2xl transition-transform hover:scale-110 cursor-pointer ${
-                        s <= rating ? 'text-amber-400' : 'text-slate-200'
-                      }`}
-                      title={`${s} Star${s > 1 ? 's' : ''}`}
-                    >
-                      ★
-                    </button>
-                  ))}
-                  <span className="text-xs font-bold text-slate-600 ml-2">
-                    {rating} out of 5 Stars
-                  </span>
-                </div>
-              </div>
-
-              {/* Reviewer Name */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Your Name / Display Name <span className="text-rose-500">*</span>
-                </label>
+                <label className="block text-[11px] font-medium text-slate-700 mb-1">Headline *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Tanvir Ahmmed"
-                  value={reviewerName}
-                  onChange={(e) => setReviewerName(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 focus:bg-white transition-colors"
+                  placeholder="e.g. Excellent platform for educational institutions"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
 
-              {/* Institution Name */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Institution / School Name (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Oxford Model School & College"
-                  value={institutionName}
-                  onChange={(e) => setInstitutionName(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 focus:bg-white transition-colors"
-                />
-              </div>
-
-              {/* Associated Website (Optional) */}
-              {websites.length > 0 && (
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Linked Website (Optional)
-                  </label>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Rating</label>
+                  <select
+                    value={rating}
+                    onChange={(e) => setRating(Number(e.target.value))}
+                    className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                  >
+                    <option value={5}>5 Stars (Exceptional)</option>
+                    <option value={4}>4 Stars (Very Good)</option>
+                    <option value={3}>3 Stars (Average)</option>
+                    <option value={2}>2 Stars (Below Average)</option>
+                    <option value={1}>1 Star (Poor)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Attach to Website</label>
                   <select
                     value={selectedWebsiteId}
                     onChange={(e) => setSelectedWebsiteId(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800 focus:bg-white transition-colors"
+                    className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                   >
-                    <option value="">None / General Platform Feedback</option>
+                    <option value="">General Platform</option>
                     {websites.map((w) => (
                       <option key={w.id} value={w.id}>
-                        {w.name} ({w.subdomain})
+                        {w.name}
                       </option>
                     ))}
                   </select>
                 </div>
-              )}
-
-              {/* Review Title */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Headline / Title (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Outstanding platform for school management and student records"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 focus:bg-white transition-colors"
-                />
               </div>
 
-              {/* Review Text */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Review Text <span className="text-rose-500">*</span>
-                </label>
+                <label className="block text-[11px] font-medium text-slate-700 mb-1">Your Review *</label>
                 <textarea
-                  rows={4}
                   required
-                  placeholder="Describe your authentic experience with the SaaS platform, fee collection, staff management, or support..."
+                  rows={4}
+                  placeholder="Tell us what you liked about the studio, website builder, or developer services..."
                   value={reviewText}
                   onChange={(e) => setReviewText(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-800 focus:bg-white transition-colors"
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Submitted reviews are set to <strong>Pending</strong> and must be approved by permitted administrators before appearing on the public reviews page.
-                </p>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Your Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Principal Ahmed"
+                    value={reviewerName}
+                    onChange={(e) => setReviewerName(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Institution</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. City Model Academy"
+                    value={institutionName}
+                    onChange={(e) => setInstitutionName(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting || !reviewText.trim()}
-                  className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  disabled={submitting}
+                  className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50"
                 >
-                  {submitting ? (
-                    <>
-                      <BiLoaderAlt className="animate-spin text-sm" />
-                      <span>{isEditing ? 'Updating...' : 'Submitting...'}</span>
-                    </>
-                  ) : (
-                    <>
-                      <BiCheck className="text-base" />
-                      <span>{isEditing ? 'Save Changes' : 'Submit Review'}</span>
-                    </>
-                  )}
+                  {submitting ? 'Saving...' : 'Save Review'}
                 </button>
               </div>
             </form>

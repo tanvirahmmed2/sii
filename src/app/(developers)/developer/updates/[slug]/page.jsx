@@ -3,15 +3,6 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import {
-  BiArrowBack,
-  BiSave,
-  BiTrash,
-  BiLoaderAlt,
-  BiWorld,
-  BiTag,
-  BiCalendar,
-} from 'react-icons/bi';
 
 export default function UpdateDetailPage({ params }) {
   const resolvedParams = use(params);
@@ -136,8 +127,7 @@ export default function UpdateDetailPage({ params }) {
 
   if (loading) {
     return (
-      <div className="py-24 text-center flex flex-col items-center justify-center gap-2 text-slate-400">
-        <BiLoaderAlt className="animate-spin text-2xl text-secondary" />
+      <div className="w-full py-16 text-center text-slate-400">
         <span className="text-xs font-normal">Loading product update...</span>
       </div>
     );
@@ -145,32 +135,32 @@ export default function UpdateDetailPage({ params }) {
 
   if (error || !update) {
     return (
-      <div className="max-w-xl mx-auto py-16 text-center space-y-4">
-        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200">Update Not Found</h2>
+      <div className="w-full bg-white border border-slate-200 rounded p-6 text-center space-y-3">
+        <h2 className="text-sm font-semibold text-slate-900">Update Not Found</h2>
         <p className="text-xs text-slate-500">{error || 'The requested release could not be loaded.'}</p>
         <Link
           href="/developer/updates"
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded bg-secondary text-white text-xs font-medium"
+          className="inline-flex items-center px-3 py-1.5 rounded bg-slate-900 text-white text-xs font-medium"
         >
-          <BiArrowBack />
-          <span>Back to Updates</span>
+          Back to Updates
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-16">
+    <div className="w-full space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 sm:p-6 shadow-xs">
-        <div className="space-y-1">
-          <Link
-            href="/developer/updates"
-            className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-medium mb-1"
-          >
-            <BiArrowBack /> Back to Updates Directory
-          </Link>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded p-4">
+        <div>
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
+            <Link href="/developer" className="hover:text-slate-800">Dashboard</Link>
+            <span>/</span>
+            <Link href="/developer/updates" className="hover:text-slate-800">Updates</Link>
+            <span>/</span>
+            <span className="text-slate-900 font-medium">{update.version}</span>
+          </div>
+          <h1 className="text-base font-semibold text-slate-900">
             Edit Release: {update.version} - &ldquo;{update.title}&rdquo;
           </h1>
         </div>
@@ -181,10 +171,9 @@ export default function UpdateDetailPage({ params }) {
               href={`/updates/${update.slug}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium"
+              className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium"
             >
-              <BiWorld />
-              <span>View Public</span>
+              View Public
             </Link>
           )}
 
@@ -192,65 +181,64 @@ export default function UpdateDetailPage({ params }) {
             type="button"
             disabled={deleting}
             onClick={handleDelete}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium disabled:opacity-50 cursor-pointer"
+            className="px-3 py-1.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium disabled:opacity-50 cursor-pointer"
           >
-            <BiTrash />
-            <span>{deleting ? 'Deleting...' : 'Delete'}</span>
+            {deleting ? 'Deleting...' : 'Delete'}
           </button>
         </div>
       </div>
 
       {successMsg && (
-        <div className="p-3.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs">
+        <div className="p-3 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs">
           {successMsg}
         </div>
       )}
 
+      {error && (
+        <div className="p-3 rounded bg-rose-50 text-rose-700 border border-rose-200 text-xs">
+          {error}
+        </div>
+      )}
+
       {/* Edit Form */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 shadow-xs">
+      <div className="bg-white border border-slate-200 rounded p-4">
         <form onSubmit={handleSaveEdit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
             <div className="sm:col-span-4">
-              <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
-                Version Tag <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Version Tag <span className="text-rose-600">*</span>
               </label>
-              <div className="relative">
-                <BiTag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  required
-                  value={editForm.version}
-                  onChange={(e) => setEditForm({ ...editForm, version: e.target.value })}
-                  placeholder="e.g. v2.4.0"
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded pl-8 pr-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900"
-                />
-              </div>
+              <input
+                type="text"
+                required
+                value={editForm.version}
+                onChange={(e) => setEditForm({ ...editForm, version: e.target.value })}
+                placeholder="e.g. v2.4.0"
+                className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
+              />
             </div>
 
             <div className="sm:col-span-4">
-              <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Release Date
               </label>
-              <div className="relative">
-                <BiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="date"
-                  value={editForm.release_date}
-                  onChange={(e) => setEditForm({ ...editForm, release_date: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded pl-8 pr-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900"
-                />
-              </div>
+              <input
+                type="date"
+                value={editForm.release_date}
+                onChange={(e) => setEditForm({ ...editForm, release_date: e.target.value })}
+                className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
+              />
             </div>
 
-            <div className="sm:col-span-4 flex items-end pb-1.5">
+            <div className="sm:col-span-4 flex items-end pb-1">
               <label className="inline-flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={editForm.is_published}
                   onChange={(e) => setEditForm({ ...editForm, is_published: e.target.checked })}
-                  className="rounded border-slate-300 dark:border-slate-700 text-secondary focus:ring-secondary w-4 h-4 cursor-pointer"
+                  className="rounded border-slate-300 text-slate-900 focus:ring-slate-900 w-4 h-4 cursor-pointer"
                 />
-                <span className="text-xs text-slate-700 dark:text-slate-300 font-normal">
+                <span className="text-xs text-slate-700 font-normal">
                   Published publicly
                 </span>
               </label>
@@ -258,56 +246,55 @@ export default function UpdateDetailPage({ params }) {
           </div>
 
           <div>
-            <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
-              Release Title <span className="text-rose-500">*</span>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Release Title <span className="text-rose-600">*</span>
             </label>
             <input
               type="text"
               required
               value={editForm.title}
               onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-              className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900"
+              className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
             />
           </div>
 
           <div>
-            <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
               Release Summary
             </label>
             <textarea
               rows={3}
               value={editForm.description}
               onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-              className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900 leading-relaxed font-sans"
+              className="w-full bg-white border border-slate-300 rounded p-3 text-xs text-slate-900 focus:outline-none focus:border-slate-800 leading-relaxed font-sans"
             />
           </div>
 
           <div>
-            <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
               Changelog / Detailed Release Notes
             </label>
             <textarea
               rows={6}
               value={editForm.changelog}
               onChange={(e) => setEditForm({ ...editForm, changelog: e.target.value })}
-              className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded px-3.5 py-2.5 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-secondary focus:bg-white dark:focus:bg-slate-900 leading-relaxed"
+              className="w-full bg-white border border-slate-300 rounded p-3 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800 leading-relaxed"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
             <Link
               href="/developer/updates"
-              className="px-4 py-2 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-normal hover:bg-slate-50 dark:hover:bg-slate-800"
+              className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium"
             >
               Cancel
             </Link>
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-1.5 px-5 py-2 rounded bg-secondary hover:bg-secondary-dark text-white text-xs font-medium shadow-xs disabled:opacity-50 cursor-pointer"
+              className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium disabled:opacity-50 cursor-pointer"
             >
-              <BiSave className="text-base" />
-              <span>{saving ? 'Saving...' : 'Save Changes'}</span>
+              {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </form>

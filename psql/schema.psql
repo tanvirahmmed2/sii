@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS developer_login_activities (
 CREATE TABLE IF NOT EXISTS developer_login_sessions (
     id BIGSERIAL PRIMARY KEY,
     developer_id BIGINT NOT NULL REFERENCES developers(id) ON DELETE CASCADE,
-    token VARCHAR(255) UNIQUE NOT NULL,
+    token TEXT UNIQUE NOT NULL,
     ip_address VARCHAR(100),
     user_agent TEXT,
     expires_at TIMESTAMPTZ NOT NULL,

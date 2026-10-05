@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useContext, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-
-
+import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
 
 export default function AdminProjectsPage() {
@@ -181,54 +180,55 @@ export default function AdminProjectsPage() {
   });
 
   const workingStatusStyles = {
-    PENDING_REVIEW: 'bg-amber-50 text-amber-700 border-amber-200',
-    ACCEPTED: 'bg-blue-50 text-blue-700 border-blue-200',
-    IN_PROGRESS: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    UNDER_REVIEW: 'bg-purple-50 text-purple-700 border-purple-200',
-    COMPLETED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    ON_HOLD: 'bg-slate-100 text-slate-700 border-slate-200',
-    CANCELLED: 'bg-rose-50 text-rose-700 border-rose-200',
+    PENDING_REVIEW: 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+    ACCEPTED: 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+    IN_PROGRESS: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+    UNDER_REVIEW: 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border-purple-200 dark:border-purple-800',
+    COMPLETED: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+    ON_HOLD: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+    CANCELLED: 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border-rose-200 dark:border-rose-800',
   };
 
   const paymentStatusStyles = {
-    PENDING_QUOTE: 'bg-amber-50 text-amber-700 border-amber-200',
-    UNPAID: 'bg-rose-50 text-rose-700 border-rose-200',
-    PARTIAL: 'bg-blue-50 text-blue-700 border-blue-200',
-    PAID: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    REFUNDED: 'bg-slate-100 text-slate-600 border-slate-200',
+    PENDING_QUOTE: 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+    UNPAID: 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+    PARTIAL: 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+    PAID: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+    REFUNDED: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700',
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-4">
       {/* Toast Alert */}
       {actionNotice.text && (
         <div
-          className={`p-4 rounded flex items-center justify-between text-xs font-normal shadow-xs transition-all ${
+          className={`p-3 rounded flex items-center justify-between text-xs font-normal shadow-xs transition-all ${
             actionNotice.type === 'error'
-              ? 'bg-rose-50 border border-rose-200 text-rose-800'
-              : 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+              ? 'bg-rose-50 border border-rose-200 text-rose-800 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-200'
+              : 'bg-emerald-50 border border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-200'
           }`}
         >
           <span>{actionNotice.text}</span>
           <button
+            type="button"
             onClick={() => setActionNotice({ text: '', type: '' })}
-            className="text-slate-400 hover:text-slate-600 cursor-pointer"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer font-medium ml-2"
           >
-            
+            ✕
           </button>
         </div>
       )}
 
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded p-6 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-medium text-slate-900 tracking-tight">Custom Projects</h1>
-            <span className="text-[11px] font-medium uppercase tracking-wider px-2.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+            <h1 className="text-xl sm:text-2xl font-medium text-slate-900 dark:text-white tracking-tight">Custom Projects</h1>
+            <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
               Module
             </span>
           </div>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Manage creator custom development requests, project quotations, milestones, payments, and client deliverables.
           </p>
         </div>
@@ -238,53 +238,52 @@ export default function AdminProjectsPage() {
             type="button"
             onClick={() => fetchProjects(true)}
             disabled={loading}
-            className="p-2 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50"
-            title="Refresh list"
+            className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-50 text-xs font-normal"
           >
-            
+            Refresh
           </button>
         </div>
       </div>
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="bg-white border border-slate-200 rounded p-4 shadow-xs">
-          <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Total Projects</p>
-          <p className="text-2xl font-medium text-slate-900 mt-1">{stats.total || 0}</p>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-xs">
+          <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Projects</p>
+          <p className="text-xl font-semibold text-slate-900 dark:text-white mt-0.5">{stats.total || 0}</p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded p-4 shadow-xs">
-          <p className="text-[11px] font-medium text-amber-600 uppercase tracking-wider">Pending Review</p>
-          <p className="text-2xl font-medium text-amber-700 mt-1">{stats.pending_review || 0}</p>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-xs">
+          <p className="text-[10px] font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wider">Pending Review</p>
+          <p className="text-xl font-semibold text-amber-700 dark:text-amber-300 mt-0.5">{stats.pending_review || 0}</p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded p-4 shadow-xs">
-          <p className="text-[11px] font-medium text-indigo-600 uppercase tracking-wider">In Progress</p>
-          <p className="text-2xl font-medium text-indigo-700 mt-1">{stats.in_progress || 0}</p>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-xs">
+          <p className="text-[10px] font-medium text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">In Progress</p>
+          <p className="text-xl font-semibold text-indigo-700 dark:text-indigo-300 mt-0.5">{stats.in_progress || 0}</p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded p-4 shadow-xs">
-          <p className="text-[11px] font-medium text-purple-600 uppercase tracking-wider">Under Review</p>
-          <p className="text-2xl font-medium text-purple-700 mt-1">{stats.under_review || 0}</p>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-xs">
+          <p className="text-[10px] font-medium text-purple-600 dark:text-purple-400 uppercase tracking-wider">Under Review</p>
+          <p className="text-xl font-semibold text-purple-700 dark:text-purple-300 mt-0.5">{stats.under_review || 0}</p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded p-4 shadow-xs">
-          <p className="text-[11px] font-medium text-emerald-600 uppercase tracking-wider">Completed</p>
-          <p className="text-2xl font-medium text-emerald-700 mt-1">{stats.completed || 0}</p>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-xs">
+          <p className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Completed</p>
+          <p className="text-xl font-semibold text-emerald-700 dark:text-emerald-300 mt-0.5">{stats.completed || 0}</p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded p-4 shadow-xs">
-          <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Total Value</p>
-          <p className="text-xl font-medium text-slate-900 mt-1">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-xs">
+          <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Value</p>
+          <p className="text-xl font-semibold text-slate-900 dark:text-white mt-0.5">
             ${((stats.total_budget_cents || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 0 })}
           </p>
         </div>
       </div>
 
       {/* Filter Tabs & Search */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Status Tabs */}
-        <div className="flex items-center gap-1 overflow-x-auto pb-1 max-w-full">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full flex-wrap">
           {[
             { id: 'ALL', label: 'All Projects' },
             { id: 'PENDING_REVIEW', label: 'Pending Review' },
@@ -295,11 +294,12 @@ export default function AdminProjectsPage() {
           ].map((tab) => (
             <button
               key={tab.id}
+              type="button"
               onClick={() => setStatusFilter(tab.id)}
-              className={`px-3 py-1.5 rounded text-xs font-normal whitespace-nowrap transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
                 statusFilter === tab.id
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-xs'
+                  : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
               {tab.label}
@@ -309,31 +309,26 @@ export default function AdminProjectsPage() {
 
         {/* Search Input */}
         <div className="relative min-w-[260px]">
-          
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search project, creator, dev..."
-            className="w-full pl-3 pr-4 py-2 bg-white border border-slate-200 rounded text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+            className="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-slate-400 transition-colors"
           />
         </div>
       </div>
 
-      {/* Projects Table / Card List */}
-      <div className="bg-white border border-slate-200 rounded overflow-hidden shadow-xs">
+      {/* Projects Table */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden shadow-xs">
         {loading ? (
-          <div className="p-12 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
-            
+          <div className="p-12 text-center text-slate-400 text-xs">
             Loading custom projects...
           </div>
         ) : filtered.length === 0 ? (
-          <div className="p-16 text-center">
-            <div className="w-12 h-12 rounded bg-slate-100 border border-slate-200 flex items-center justify-center mx-auto mb-3 text-slate-400">
-              
-            </div>
-            <p className="text-sm font-normal text-slate-700">No projects found</p>
-            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+          <div className="p-12 text-center">
+            <p className="text-xs font-medium text-slate-700 dark:text-slate-300">No projects found</p>
+            <p className="text-[11px] text-slate-400 mt-1 max-w-sm mx-auto">
               {searchTerm || statusFilter !== 'ALL'
                 ? 'No custom projects match your filter criteria.'
                 : 'Creators have not submitted any custom project requests yet.'}
@@ -341,19 +336,19 @@ export default function AdminProjectsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/75 text-[11px] font-normal text-slate-500 uppercase tracking-wider">
+                <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-[10px] font-medium text-slate-500 uppercase tracking-wider">
                   <th className="py-3 px-4">Project</th>
                   <th className="py-3 px-4">Creator</th>
                   <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Budget & Payment</th>
+                  <th className="py-3 px-4">Budget &amp; Payment</th>
                   <th className="py-3 px-4">Assigned Dev</th>
                   <th className="py-3 px-4">Deadline</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-xs">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {filtered.map((p) => {
                   const budgetDollars = (Number(p.budget_in_cents || 0) / 100).toFixed(2);
                   const paidDollars = (Number(p.paid_amount_in_cents || 0) / 100).toFixed(2);
@@ -362,18 +357,18 @@ export default function AdminProjectsPage() {
                     <tr
                       key={p.id}
                       onClick={() => router.push(`/developer/projects/${p.id}`)}
-                      className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
+                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group"
                     >
                       {/* Project info */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-normal text-slate-900 group-hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+                      <td className="py-3 px-4">
+                        <div className="font-medium text-slate-900 dark:text-white flex items-center gap-1.5">
                           <span>{p.title}</span>
                           <span className="text-[10px] text-slate-400 font-mono font-normal">
                             #{p.project_number}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500">
-                          <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[10px] font-medium text-slate-600">
+                        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                          <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px] font-medium text-slate-600 dark:text-slate-400">
                             {p.category || 'General'}
                           </span>
                           <span>•</span>
@@ -382,15 +377,15 @@ export default function AdminProjectsPage() {
                       </td>
 
                       {/* Creator */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-medium text-slate-800">
+                      <td className="py-3 px-4">
+                        <div className="font-medium text-slate-800 dark:text-slate-200">
                           {p.creator_name || `Creator #${p.creator_id}`}
                         </div>
                         <div className="text-[11px] text-slate-400">{p.creator_email}</div>
                       </td>
 
                       {/* Status */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-3 px-4">
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border uppercase tracking-wider ${
                             workingStatusStyles[p.working_status] || 'bg-slate-100 text-slate-600 border-slate-200'
@@ -401,8 +396,8 @@ export default function AdminProjectsPage() {
                       </td>
 
                       {/* Budget & Payment */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-medium text-slate-800 flex items-center gap-1">
+                      <td className="py-3 px-4">
+                        <div className="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1">
                           <span>${budgetDollars}</span>
                           <span className="text-[10px] text-slate-400 font-normal">
                             (Paid: ${paidDollars})
@@ -420,10 +415,9 @@ export default function AdminProjectsPage() {
                       </td>
 
                       {/* Assigned Dev */}
-                      <td className="py-3.5 px-4 text-slate-600">
+                      <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
                         {p.assigned_dev_name ? (
-                          <span className="inline-flex items-center gap-1 font-medium text-slate-800">
-                            
+                          <span className="font-medium text-slate-800 dark:text-slate-200">
                             {p.assigned_dev_name}
                           </span>
                         ) : (
@@ -432,37 +426,38 @@ export default function AdminProjectsPage() {
                       </td>
 
                       {/* Deadline */}
-                      <td className="py-3.5 px-4 text-slate-500 text-[11px]">
+                      <td className="py-3 px-4 text-slate-500 dark:text-slate-400 text-[11px]">
                         {p.deadline ? new Date(p.deadline).toLocaleDateString() : '—'}
                       </td>
 
                       {/* Actions */}
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <td className="py-3 px-4 text-right">
+                        <div className="inline-flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                           <button
                             type="button"
                             onClick={(e) => openQuickEdit(p, e)}
-                            className="p-1.5 rounded border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors"
+                            className="px-2 py-1 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-normal transition-colors"
                             title="Quick Edit Status & Payment"
                           >
-                            
+                            Edit
                           </button>
 
                           <Link
                             href={`/developer/projects/${p.id}`}
-                            className="p-1.5 rounded border border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
-                            title="Open Project Workspace & Messages"
-                          >Chat</Link>
+                            className="px-2 py-1 rounded bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 hover:bg-slate-800 text-xs font-normal transition-colors"
+                          >
+                            Workspace
+                          </Link>
 
                           {canManage && (
                             <button
                               type="button"
                               onClick={(e) => handleDelete(p.id, e)}
                               disabled={deletingId === p.id}
-                              className="p-1.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50"
+                              className="px-2 py-1 rounded border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-normal transition-colors disabled:opacity-50"
                               title="Delete Project"
                             >
-                              
+                              Delete
                             </button>
                           )}
                         </div>
@@ -478,35 +473,36 @@ export default function AdminProjectsPage() {
 
       {/* Quick Edit Modal */}
       {quickEditProject && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded border border-slate-200 shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-xl w-full max-w-md overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
               <div>
-                <h3 className="text-sm font-medium text-slate-900">
+                <h3 className="text-sm font-medium text-slate-900 dark:text-white">
                   Quick Update: #{quickEditProject.project_number}
                 </h3>
-                <p className="text-[11px] text-slate-500 truncate max-w-[280px]">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[280px]">
                   {quickEditProject.title}
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => setQuickEditProject(null)}
-                className="p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                className="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs"
               >
-                
+                ✕
               </button>
             </div>
 
             <form onSubmit={handleQuickSave} className="p-4 space-y-3.5 text-xs">
               {/* Working Status */}
               <div>
-                <label className="block text-[11px] font-normal text-slate-700 mb-1">
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Working Status
                 </label>
                 <select
                   value={quickWorkingStatus}
                   onChange={(e) => setQuickWorkingStatus(e.target.value)}
-                  className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-slate-400"
+                  className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-800 dark:text-white focus:outline-none"
                 >
                   <option value="PENDING_REVIEW">PENDING REVIEW</option>
                   <option value="ACCEPTED">ACCEPTED</option>
@@ -520,13 +516,13 @@ export default function AdminProjectsPage() {
 
               {/* Payment Status */}
               <div>
-                <label className="block text-[11px] font-normal text-slate-700 mb-1">
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Payment Status
                 </label>
                 <select
                   value={quickPaymentStatus}
                   onChange={(e) => setQuickPaymentStatus(e.target.value)}
-                  className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-slate-400"
+                  className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-800 dark:text-white focus:outline-none"
                 >
                   <option value="PENDING_QUOTE">PENDING QUOTE</option>
                   <option value="UNPAID">UNPAID</option>
@@ -539,7 +535,7 @@ export default function AdminProjectsPage() {
               {/* Budget & Paid */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-normal text-slate-700 mb-1">
+                  <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Quoted Budget ($)
                   </label>
                   <input
@@ -547,12 +543,12 @@ export default function AdminProjectsPage() {
                     step="0.01"
                     value={quickBudget}
                     onChange={(e) => setQuickBudget(e.target.value)}
-                    className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-slate-400"
+                    className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-800 dark:text-white focus:outline-none"
                     placeholder="0.00"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-normal text-slate-700 mb-1">
+                  <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Paid Amount ($)
                   </label>
                   <input
@@ -560,7 +556,7 @@ export default function AdminProjectsPage() {
                     step="0.01"
                     value={quickPaid}
                     onChange={(e) => setQuickPaid(e.target.value)}
-                    className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-slate-400"
+                    className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-800 dark:text-white focus:outline-none"
                     placeholder="0.00"
                   />
                 </div>
@@ -568,13 +564,13 @@ export default function AdminProjectsPage() {
 
               {/* Assign Developer */}
               <div>
-                <label className="block text-[11px] font-normal text-slate-700 mb-1">
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Assigned Developer
                 </label>
                 <select
                   value={quickDevId}
                   onChange={(e) => setQuickDevId(e.target.value)}
-                  className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-slate-400"
+                  className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-800 dark:text-white focus:outline-none"
                 >
                   <option value="">-- Unassigned --</option>
                   {developers.map((d) => (
@@ -585,18 +581,18 @@ export default function AdminProjectsPage() {
                 </select>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setQuickEditProject(null)}
-                  className="px-3.5 py-1.5 border border-slate-200 rounded text-xs font-normal text-slate-600 hover:bg-slate-50 transition-colors"
+                  className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded text-xs font-normal text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={quickSaving}
-                  className="px-4 py-1.5 bg-slate-900 text-white rounded text-xs font-normal hover:bg-slate-800 transition-colors disabled:opacity-50"
+                  className="px-4 py-1.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded text-xs font-medium hover:bg-slate-800 transition-colors disabled:opacity-50"
                 >
                   {quickSaving ? 'Saving...' : 'Save Updates'}
                 </button>

@@ -117,26 +117,27 @@ export async function getAdminSession(request) {
     if (!dev.is_active) return null;
 
     // Check developer_login_sessions for revocation and activity
-    if (token) {
-      try {
-        const sessRes = await query(
-          `SELECT is_active, expires_at FROM developer_login_sessions WHERE token = $1 LIMIT 1`,
-          [token]
-        );
-        if (sessRes.rows.length > 0) {
-          const s = sessRes.rows[0];
-          if (s.is_active === false) return null;
-          if (s.expires_at && new Date(s.expires_at) < new Date()) return null;
-
-          // Touch last_active_at asynchronously
-          query(
-            `UPDATE developer_login_sessions SET last_active_at = CURRENT_TIMESTAMP WHERE token = $1`,
-            [token]
-          ).catch(() => {});
-        }
-      } catch (e) {
-        // Fallback if session table isn't accessible
+    if (!token) return null;
+    try {
+      const sessRes = await query(
+        `SELECT is_active, expires_at FROM developer_login_sessions WHERE token = $1 AND developer_id = $2 LIMIT 1`,
+        [token, dev.id]
+      );
+      if (sessRes.rows.length === 0) {
+        return null; // Session record does not exist in database
       }
+      const s = sessRes.rows[0];
+      if (s.is_active === false) return null;
+      if (s.expires_at && new Date(s.expires_at) < new Date()) return null;
+
+      // Touch last_active_at asynchronously
+      query(
+        `UPDATE developer_login_sessions SET last_active_at = CURRENT_TIMESTAMP WHERE token = $1`,
+        [token]
+      ).catch(() => {});
+    } catch (e) {
+      console.error('Error verifying developer session against database:', e);
+      return null;
     }
 
     // Fetch granular permissions from developer_role_permissions

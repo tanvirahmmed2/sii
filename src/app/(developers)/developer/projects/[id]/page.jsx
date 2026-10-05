@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect, useContext, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-
-
+import { useRouter, useParams } from 'next/navigation';
+import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
 
 export default function DeveloperSingleProjectPage() {
@@ -98,9 +97,9 @@ export default function DeveloperSingleProjectPage() {
       } else {
         setError(data.error || 'Project not found.');
       }
-    } catch (err) {
-      console.error('Error fetching project details:', err);
-      setError('Network error while loading project.');
+    } catch (e) {
+      console.error(e);
+      setError('Network error fetching project.');
     } finally {
       setLoading(false);
     }
@@ -110,67 +109,52 @@ export default function DeveloperSingleProjectPage() {
     fetchProjectDetails(true);
   }, [fetchProjectDetails]);
 
-  // Polling every 4 seconds
-  useEffect(() => {
-    if (!projectId) return;
-    const interval = setInterval(() => {
-      fetchProjectDetails(false);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [projectId, fetchProjectDetails]);
-
   const handleManualRefresh = async () => {
-    if (!projectId || refreshing) return;
     setRefreshing(true);
     await fetchProjectDetails(false);
     setRefreshing(false);
+    notify('Project refreshed.');
   };
 
-  // 1. Send Reply Message
+  // 1. Send Message
   const handleSendMessage = async (e) => {
-    if (e) e.preventDefault();
+    e.preventDefault();
     if (!replyMessage.trim() || sendingReply || !projectId) return;
 
-    const messageText = replyMessage.trim();
-    const imageUrl = replyImageUrl.trim() || null;
     setSendingReply(true);
-
     try {
-      const res = await fetch(`/api/marketing/developer/projects/${projectId}`, {
+      const res = await fetch(`/api/marketing/developer/projects/${projectId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'send_message',
-          message: messageText,
-          sender_name: user?.name || 'Developer Support',
-          image_url: imageUrl,
+          message: replyMessage.trim(),
+          image_url: replyImageUrl.trim() || undefined,
         }),
       });
-
       const data = await res.json();
       if (data.success) {
         setReplyMessage('');
         setReplyImageUrl('');
         setShowAttachmentInput(false);
-        if (data.message) {
-          setMessages((prev) => [...prev, data.message]);
+        if (data.newMessage) {
+          setMessages((prev) => [...prev, data.newMessage]);
         }
-        if (data.image) {
-          setImages((prev) => [...prev, data.image]);
+        if (data.newImage) {
+          setImages((prev) => [...prev, data.newImage]);
         }
-        fetchProjectDetails(false);
+        await fetchProjectDetails(false);
       } else {
-        notify(data.error || 'Failed to send reply.', 'error');
+        notify(data.error || 'Failed to send message.', 'error');
       }
     } catch (err) {
-      console.error('Error sending developer message:', err);
+      console.error(err);
       notify('Network error sending message.', 'error');
     } finally {
       setSendingReply(false);
     }
   };
 
-  // 2. Save Working Status
+  // 2. Update Working Status
   const handleSaveWorkingStatus = async () => {
     if (!projectId || savingStatus) return;
     setSavingStatus(true);
@@ -186,7 +170,8 @@ export default function DeveloperSingleProjectPage() {
       const data = await res.json();
       if (data.success && data.project) {
         setProject(data.project);
-        notify(`Working status updated to ${data.project.working_status}!`);
+        notify(`Status updated to ${targetWorkingStatus}!`);
+        await fetchProjectDetails(false);
       } else {
         notify(data.error || 'Failed to update working status.', 'error');
       }
@@ -197,7 +182,7 @@ export default function DeveloperSingleProjectPage() {
     }
   };
 
-  // 3. Save Payment & Quotation
+  // 3. Update Payment & Quotation
   const handleSavePayment = async () => {
     if (!projectId || savingPayment) return;
     setSavingPayment(true);
@@ -219,9 +204,9 @@ export default function DeveloperSingleProjectPage() {
       const data = await res.json();
       if (data.success && data.project) {
         setProject(data.project);
-        notify('Project quotation and payment terms updated!');
+        notify('Project finances & terms updated successfully!');
       } else {
-        notify(data.error || 'Failed to update payment.', 'error');
+        notify(data.error || 'Failed to update payment details.', 'error');
       }
     } catch (err) {
       notify('Network error updating payment.', 'error');
@@ -310,45 +295,42 @@ export default function DeveloperSingleProjectPage() {
   };
 
   const workingStatusStyles = {
-    PENDING_REVIEW: 'bg-amber-50 text-amber-700 border-amber-200',
-    ACCEPTED: 'bg-blue-50 text-blue-700 border-blue-200',
-    IN_PROGRESS: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    UNDER_REVIEW: 'bg-purple-50 text-purple-700 border-purple-200',
-    COMPLETED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    ON_HOLD: 'bg-slate-100 text-slate-700 border-slate-200',
-    CANCELLED: 'bg-rose-50 text-rose-700 border-rose-200',
+    PENDING_REVIEW: 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+    ACCEPTED: 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+    IN_PROGRESS: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+    UNDER_REVIEW: 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border-purple-200 dark:border-purple-800',
+    COMPLETED: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+    ON_HOLD: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+    CANCELLED: 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border-rose-200 dark:border-rose-800',
   };
 
   const paymentStatusStyles = {
-    PENDING_QUOTE: 'bg-amber-50 text-amber-700 border-amber-200',
-    UNPAID: 'bg-rose-50 text-rose-700 border-rose-200',
-    PARTIAL: 'bg-blue-50 text-blue-700 border-blue-200',
-    PAID: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    REFUNDED: 'bg-slate-100 text-slate-600 border-slate-200',
+    PENDING_QUOTE: 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+    UNPAID: 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+    PARTIAL: 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+    PAID: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+    REFUNDED: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700',
   };
 
   if (loading) {
     return (
-      <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3">
-        
-        <p className="text-xs text-slate-500 font-medium">Loading project workspace...</p>
+      <div className="min-h-[50vh] flex flex-col items-center justify-center gap-2">
+        <p className="text-xs text-slate-400 font-medium">Loading project workspace...</p>
       </div>
     );
   }
 
   if (error || !project) {
     return (
-      <div className="bg-white border border-slate-200 rounded p-8 text-center max-w-lg mx-auto my-12">
-        
-        <h2 className="text-lg font-medium text-slate-900">Custom Project Not Found</h2>
-        <p className="text-xs text-slate-500 mt-1 mb-6">
+      <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-8 text-center max-w-lg mx-auto shadow-xs space-y-3">
+        <h2 className="text-base font-medium text-slate-900 dark:text-white">Custom Project Not Found</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           {error || 'The requested custom project does not exist or was deleted.'}
         </p>
         <Link
           href="/developer/projects"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded text-xs font-normal hover:bg-slate-800 transition-colors"
+          className="inline-flex items-center px-4 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded text-xs font-normal hover:bg-slate-800 transition-colors"
         >
-          
           Back to Projects
         </Link>
       </div>
@@ -356,43 +338,45 @@ export default function DeveloperSingleProjectPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-4">
       {/* Toast Alert */}
       {actionNotice.text && (
         <div
-          className={`p-4 rounded flex items-center justify-between text-xs font-normal shadow-xs transition-all ${
+          className={`p-3 rounded flex items-center justify-between text-xs font-normal shadow-xs transition-all ${
             actionNotice.type === 'error'
-              ? 'bg-rose-50 border border-rose-200 text-rose-800'
-              : 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+              ? 'bg-rose-50 border border-rose-200 text-rose-800 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-200'
+              : 'bg-emerald-50 border border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-200'
           }`}
         >
           <span>{actionNotice.text}</span>
           <button
+            type="button"
             onClick={() => setActionNotice({ text: '', type: '' })}
-            className="text-slate-400 hover:text-slate-600 cursor-pointer"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer font-medium ml-2"
           >
-            
+            ✕
           </button>
         </div>
       )}
 
       {/* Top Header Card */}
-      <div className="bg-white border border-slate-200 rounded p-6 shadow-xs">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-start gap-4">
+          <div className="flex items-start gap-3">
             <Link
               href="/developer/projects"
-              className="p-2.5 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer mt-0.5"
-              title="Back to projects"
-            >Back</Link>
+              className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-normal transition-colors cursor-pointer mt-0.5"
+            >
+              Back
+            </Link>
 
             <div>
-              <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                <span className="font-mono text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <span className="font-mono text-xs font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
                   #{project.project_number}
                 </span>
                 <span
-                  className={`px-2.5 py-0.5 rounded text-[10px] font-medium border uppercase tracking-wider ${
+                  className={`px-2 py-0.5 rounded text-[10px] font-medium border uppercase tracking-wider ${
                     workingStatusStyles[project.working_status] || 'bg-slate-100 text-slate-600 border-slate-200'
                   }`}
                 >
@@ -405,17 +389,17 @@ export default function DeveloperSingleProjectPage() {
                 >
                   {project.payment_status ? project.payment_status.replace('_', ' ') : 'PENDING QUOTE'}
                 </span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
                   {project.category || 'Custom Project'}
                 </span>
               </div>
 
-              <h1 className="text-xl font-medium text-slate-900 tracking-tight">{project.title}</h1>
+              <h1 className="text-xl font-medium text-slate-900 dark:text-white tracking-tight">{project.title}</h1>
 
-              <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-slate-500">
+              <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-500 dark:text-slate-400">
                 <span>
                   Creator:{' '}
-                  <strong className="text-slate-700">
+                  <strong className="text-slate-700 dark:text-slate-200 font-medium">
                     {project.creator_name || `Creator #${project.creator_id}`}
                   </strong>{' '}
                   ({project.creator_email})
@@ -425,7 +409,7 @@ export default function DeveloperSingleProjectPage() {
                 {project.assigned_dev_name && (
                   <>
                     <span>•</span>
-                    <span className="text-indigo-600 font-medium">
+                    <span className="text-slate-700 dark:text-slate-300 font-medium">
                       Assigned to {project.assigned_dev_name}
                     </span>
                   </>
@@ -436,47 +420,49 @@ export default function DeveloperSingleProjectPage() {
 
           <div className="flex items-center gap-2 self-start md:self-center">
             <button
+              type="button"
               onClick={handleManualRefresh}
               disabled={refreshing}
-              className="p-2.5 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50"
-              title="Refresh discussion"
-            >Refresh</button>
+              className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-normal transition-colors cursor-pointer disabled:opacity-50"
+            >
+              Refresh
+            </button>
 
             {canManage && (
               <button
+                type="button"
                 onClick={handleDelete}
                 disabled={deleting}
-                className="p-2.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50"
-                title="Delete project"
-              >Delete</button>
+                className="px-3 py-1.5 rounded border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-normal transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Delete
+              </button>
             )}
           </div>
         </div>
       </div>
 
       {/* Main 2-Column Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left Column: Discussion & Activity Thread (2 cols on lg) */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4">
           {/* Project Initial Scope / Description Card */}
-          <div className="bg-white border border-slate-200 rounded p-5 shadow-xs">
-            <h3 className="text-xs font-medium text-slate-900 uppercase tracking-wider mb-2 flex items-center gap-2">
-              
-              Project Scope & Requirements
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs">
+            <h3 className="text-xs font-medium text-slate-900 dark:text-white uppercase tracking-wider mb-2">
+              Project Scope &amp; Requirements
             </h3>
-            <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed bg-slate-50 border border-slate-100 rounded p-3.5">
+            <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 rounded p-3">
               {project.description || 'No detailed scope provided.'}
             </p>
           </div>
 
           {/* Conversation Thread */}
-          <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden flex flex-col h-[560px]">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-xs overflow-hidden flex flex-col h-[540px]">
             {/* Thread Header */}
-            <div className="p-4 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+            <div className="p-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                
-                <h3 className="text-xs font-medium text-slate-900">Custom Project Discussion</h3>
-                <span className="text-[10px] text-slate-500 font-mono bg-white px-2 py-0.5 rounded border border-slate-200">
+                <h3 className="text-xs font-medium text-slate-900 dark:text-white">Custom Project Discussion</h3>
+                <span className="text-[10px] text-slate-500 font-mono bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
                   {messages.length} messages
                 </span>
               </div>
@@ -487,7 +473,6 @@ export default function DeveloperSingleProjectPage() {
             <div className="flex-1 p-4 overflow-y-auto space-y-4">
               {messages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs">
-                  
                   No messages yet. Send a message to get started!
                 </div>
               ) : (
@@ -503,7 +488,7 @@ export default function DeveloperSingleProjectPage() {
                       <div className="flex items-center gap-2 mb-1 px-1">
                         <span
                           className={`text-[11px] font-medium ${
-                            isStaff ? 'text-indigo-600' : 'text-slate-700'
+                            isStaff ? 'text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-300'
                           }`}
                         >
                           {m.sender_name || (isStaff ? 'Developer' : 'Creator')}
@@ -511,8 +496,8 @@ export default function DeveloperSingleProjectPage() {
                         <span
                           className={`text-[9px] font-medium px-1.5 py-0.2 rounded border uppercase ${
                             isStaff
-                              ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                              : 'bg-slate-100 text-slate-700 border-slate-200'
+                              ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700'
+                              : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                           }`}
                         >
                           {m.sender_type}
@@ -526,17 +511,17 @@ export default function DeveloperSingleProjectPage() {
                       </div>
 
                       <div
-                        className={`max-w-[85%] rounded p-3.5 text-xs leading-relaxed ${
+                        className={`max-w-[85%] rounded p-3 text-xs leading-relaxed ${
                           isStaff
-                            ? 'bg-indigo-600 text-white rounded-tr-xs'
-                            : 'bg-slate-100 text-slate-800 rounded-tl-xs'
+                            ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                            : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
                         }`}
                       >
                         <p className="whitespace-pre-wrap">{m.message}</p>
 
                         {/* Attachments if any */}
                         {msgImages.length > 0 && (
-                          <div className="mt-2.5 pt-2 border-t border-white/20 flex flex-wrap gap-2">
+                          <div className="mt-2.5 pt-2 border-t border-white/20 dark:border-slate-700 flex flex-wrap gap-2">
                             {msgImages.map((img) => (
                               <button
                                 key={img.id}
@@ -547,7 +532,7 @@ export default function DeveloperSingleProjectPage() {
                                 <img
                                   src={img.image_url}
                                   alt={img.file_name || 'Attachment'}
-                                  className="w-24 h-24 object-cover"
+                                  className="w-20 h-20 object-cover"
                                 />
                                 <span className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] text-white font-medium transition-opacity">
                                   View
@@ -565,16 +550,15 @@ export default function DeveloperSingleProjectPage() {
             </div>
 
             {/* Composer Footer */}
-            <div className="p-3 border-t border-slate-200 bg-white">
+            <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
               {showAttachmentInput && (
-                <div className="mb-2 p-2 bg-slate-50 border border-slate-200 rounded flex items-center gap-2 text-xs">
-                  
+                <div className="mb-2 p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded flex items-center gap-2 text-xs">
                   <input
                     type="url"
                     value={replyImageUrl}
                     onChange={(e) => setReplyImageUrl(e.target.value)}
                     placeholder="Enter image / mockup URL (https://...)"
-                    className="flex-1 bg-transparent border-none text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden"
+                    className="flex-1 bg-transparent border-none text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none"
                   />
                   <button
                     type="button"
@@ -582,9 +566,9 @@ export default function DeveloperSingleProjectPage() {
                       setReplyImageUrl('');
                       setShowAttachmentInput(false);
                     }}
-                    className="text-slate-400 hover:text-slate-600"
+                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs"
                   >
-                    
+                    ✕
                   </button>
                 </div>
               )}
@@ -593,14 +577,13 @@ export default function DeveloperSingleProjectPage() {
                 <button
                   type="button"
                   onClick={() => setShowAttachmentInput((prev) => !prev)}
-                  className={`p-2.5 rounded border border-slate-200 transition-colors ${
+                  className={`px-3 py-2 rounded border border-slate-200 dark:border-slate-700 text-xs transition-colors cursor-pointer ${
                     showAttachmentInput || replyImageUrl
-                      ? 'bg-indigo-50 border-indigo-200 text-indigo-600'
-                      : 'text-slate-500 hover:bg-slate-50'
+                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-medium'
+                      : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
-                  title="Attach mockup or screenshot URL"
                 >
-                  
+                  Attach
                 </button>
 
                 <input
@@ -609,13 +592,13 @@ export default function DeveloperSingleProjectPage() {
                   onChange={(e) => setReplyMessage(e.target.value)}
                   placeholder="Type an update or response to the creator..."
                   disabled={sendingReply}
-                  className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-indigo-400 focus:bg-white"
+                  className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none"
                 />
 
                 <button
                   type="submit"
                   disabled={sendingReply || !replyMessage.trim()}
-                  className="px-4 py-2.5 bg-indigo-600 text-white rounded text-xs font-normal hover:bg-indigo-700 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="px-4 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded text-xs font-medium hover:bg-slate-800 dark:hover:bg-white transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {sendingReply ? 'Sending...' : 'Send'}
                 </button>
@@ -625,11 +608,11 @@ export default function DeveloperSingleProjectPage() {
         </div>
 
         {/* Right Column: Project Control Panel & Details */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* 1. Working Status Selector Card */}
-          <div className="bg-white border border-slate-200 rounded p-5 shadow-xs">
-            <h3 className="text-xs font-medium text-slate-900 uppercase tracking-wider mb-3 flex items-center justify-between">
-              <span>Working Progress Status</span>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-medium text-slate-900 dark:text-white uppercase tracking-wider">Working Progress Status</span>
               <span
                 className={`text-[9px] px-2 py-0.5 rounded font-medium border uppercase ${
                   workingStatusStyles[project.working_status] || 'bg-slate-100 text-slate-600'
@@ -637,23 +620,23 @@ export default function DeveloperSingleProjectPage() {
               >
                 {project.working_status}
               </span>
-            </h3>
+            </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-[11px] font-normal text-slate-600 mb-1">
+                <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
                   Change Project Phase
                 </label>
                 <select
                   value={targetWorkingStatus}
                   onChange={(e) => setTargetWorkingStatus(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
+                  className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-800 dark:text-white focus:outline-none"
                 >
                   <option value="PENDING_REVIEW">PENDING REVIEW (Under evaluation)</option>
-                  <option value="ACCEPTED">ACCEPTED (Approved & scheduled)</option>
+                  <option value="ACCEPTED">ACCEPTED (Approved &amp; scheduled)</option>
                   <option value="IN_PROGRESS">IN PROGRESS (Actively developing)</option>
-                  <option value="UNDER_REVIEW">UNDER REVIEW (Client QA & testing)</option>
-                  <option value="COMPLETED">COMPLETED (Delivered & closed)</option>
+                  <option value="UNDER_REVIEW">UNDER REVIEW (Client QA &amp; testing)</option>
+                  <option value="COMPLETED">COMPLETED (Delivered &amp; closed)</option>
                   <option value="ON_HOLD">ON HOLD</option>
                   <option value="CANCELLED">CANCELLED</option>
                 </select>
@@ -663,24 +646,23 @@ export default function DeveloperSingleProjectPage() {
                 type="button"
                 onClick={handleSaveWorkingStatus}
                 disabled={savingStatus || targetWorkingStatus === project.working_status}
-                className="w-full py-2 bg-slate-900 text-white rounded text-xs font-normal hover:bg-slate-800 transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full py-1.5 bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 rounded text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer"
               >
-                <span>{savingStatus ? 'Saving Working Status...' : 'Save Working Status'}</span>
+                {savingStatus ? 'Saving Working Status...' : 'Save Working Status'}
               </button>
             </div>
           </div>
 
           {/* 2. Quotation & Financials Card */}
-          <div className="bg-white border border-slate-200 rounded p-5 shadow-xs">
-            <h3 className="text-xs font-medium text-slate-900 uppercase tracking-wider mb-3 flex items-center justify-between">
-              <span>Financial Quotation & Payments</span>
-              
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs">
+            <h3 className="text-xs font-medium text-slate-900 dark:text-white uppercase tracking-wider mb-3">
+              Financial Quotation &amp; Payments
             </h3>
 
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-normal text-slate-600 mb-1">
+                  <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
                     Quoted Budget
                   </label>
                   <div className="relative">
@@ -692,13 +674,13 @@ export default function DeveloperSingleProjectPage() {
                       step="0.01"
                       value={budgetVal}
                       onChange={(e) => setBudgetVal(e.target.value)}
-                      className="w-full pl-6 pr-2 py-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
+                      className="w-full pl-6 pr-2 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-800 dark:text-white focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-normal text-slate-600 mb-1">
+                  <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
                     Amount Paid
                   </label>
                   <div className="relative">
@@ -710,20 +692,20 @@ export default function DeveloperSingleProjectPage() {
                       step="0.01"
                       value={paidVal}
                       onChange={(e) => setPaidVal(e.target.value)}
-                      className="w-full pl-6 pr-2 py-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
+                      className="w-full pl-6 pr-2 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-800 dark:text-white focus:outline-none"
                     />
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-normal text-slate-600 mb-1">
+                <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
                   Payment Status
                 </label>
                 <select
                   value={targetPaymentStatus}
                   onChange={(e) => setTargetPaymentStatus(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
+                  className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-800 dark:text-white focus:outline-none"
                 >
                   <option value="PENDING_QUOTE">PENDING QUOTE</option>
                   <option value="UNPAID">UNPAID (Quote presented)</option>
@@ -734,13 +716,13 @@ export default function DeveloperSingleProjectPage() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-normal text-slate-600 mb-1">
+                <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
                   Currency
                 </label>
                 <select
                   value={currencyVal}
                   onChange={(e) => setCurrencyVal(e.target.value)}
-                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden"
+                  className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-800 dark:text-white focus:outline-none"
                 >
                   <option value="USD">USD ($)</option>
                   <option value="EUR">EUR (€)</option>
@@ -753,17 +735,16 @@ export default function DeveloperSingleProjectPage() {
                 type="button"
                 onClick={handleSavePayment}
                 disabled={savingPayment}
-                className="w-full py-2 bg-emerald-600 text-white rounded text-xs font-normal hover:bg-emerald-700 transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer"
               >
-                <span>{savingPayment ? 'Updating...' : 'Update Quotation & Terms'}</span>
+                {savingPayment ? 'Updating...' : 'Update Quotation & Terms'}
               </button>
             </div>
           </div>
 
           {/* 3. Assign Developer Card */}
-          <div className="bg-white border border-slate-200 rounded p-5 shadow-xs">
-            <h3 className="text-xs font-medium text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-2">
-              
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs">
+            <h3 className="text-xs font-medium text-slate-900 dark:text-white uppercase tracking-wider mb-3">
               Assigned Developer
             </h3>
 
@@ -771,7 +752,7 @@ export default function DeveloperSingleProjectPage() {
               <select
                 value={assignedDevId}
                 onChange={(e) => setAssignedDevId(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
+                className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-800 dark:text-white focus:outline-none"
               >
                 <option value="">-- Unassigned --</option>
                 {developers.map((d) => (
@@ -785,23 +766,22 @@ export default function DeveloperSingleProjectPage() {
                 type="button"
                 onClick={handleAssignDev}
                 disabled={savingDev}
-                className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded text-xs font-normal transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer"
               >
-                <span>{savingDev ? 'Assigning...' : 'Save Assignment'}</span>
+                {savingDev ? 'Assigning...' : 'Save Assignment'}
               </button>
             </div>
           </div>
 
           {/* 4. Deliverables, Priority & Notes */}
-          <div className="bg-white border border-slate-200 rounded p-5 shadow-xs">
-            <h3 className="text-xs font-medium text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-2">
-              
-              Deliverables & Specs
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs">
+            <h3 className="text-xs font-medium text-slate-900 dark:text-white uppercase tracking-wider mb-3">
+              Deliverables &amp; Specs
             </h3>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-[11px] font-normal text-slate-600 mb-1">
+                <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
                   Deliverable / Preview URL
                 </label>
                 <input
@@ -809,30 +789,29 @@ export default function DeveloperSingleProjectPage() {
                   value={deliverableUrl}
                   onChange={(e) => setDeliverableUrl(e.target.value)}
                   placeholder="https://staging.domain.com or repo link"
-                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
+                  className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-800 dark:text-white focus:outline-none"
                 />
                 {deliverableUrl && (
                   <a
                     href={deliverableUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] text-indigo-600 hover:underline mt-1"
+                    className="inline-flex items-center gap-1 text-[11px] text-slate-700 dark:text-slate-300 hover:underline mt-1"
                   >
-                    <span>Test link</span>
-                    
+                    Test link →
                   </a>
                 )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-normal text-slate-600 mb-1">
+                  <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
                     Priority
                   </label>
                   <select
                     value={priorityVal}
                     onChange={(e) => setPriorityVal(e.target.value)}
-                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden"
+                    className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-800 dark:text-white focus:outline-none"
                   >
                     <option value="LOW">LOW</option>
                     <option value="MEDIUM">MEDIUM</option>
@@ -842,20 +821,20 @@ export default function DeveloperSingleProjectPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-normal text-slate-600 mb-1">
+                  <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
                     Target Deadline
                   </label>
                   <input
                     type="date"
                     value={deadlineVal}
                     onChange={(e) => setDeadlineVal(e.target.value)}
-                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden"
+                    className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-800 dark:text-white focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-normal text-slate-600 mb-1">
+                <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
                   Internal Engineering Notes
                 </label>
                 <textarea
@@ -863,7 +842,7 @@ export default function DeveloperSingleProjectPage() {
                   value={internalNotes}
                   onChange={(e) => setInternalNotes(e.target.value)}
                   placeholder="Private engineering notes, API credentials, milestones..."
-                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-hidden focus:border-indigo-400"
+                  className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-800 dark:text-white focus:outline-none"
                 />
               </div>
 
@@ -871,9 +850,9 @@ export default function DeveloperSingleProjectPage() {
                 type="button"
                 onClick={handleSaveDeliverables}
                 disabled={savingDeliverables}
-                className="w-full py-2 bg-slate-900 text-white rounded text-xs font-normal hover:bg-slate-800 transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full py-1.5 bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 rounded text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer"
               >
-                <span>{savingDeliverables ? 'Saving...' : 'Save Specifications'}</span>
+                {savingDeliverables ? 'Saving...' : 'Save Specifications'}
               </button>
             </div>
           </div>
@@ -893,10 +872,11 @@ export default function DeveloperSingleProjectPage() {
               className="max-w-full max-h-[90vh] rounded object-contain"
             />
             <button
+              type="button"
               onClick={() => setPreviewImage(null)}
-              className="absolute -top-3 -right-3 p-1.5 bg-white text-slate-800 rounded shadow-lg"
+              className="absolute -top-3 -right-3 px-2 py-1 bg-white text-slate-800 rounded shadow text-xs font-medium cursor-pointer"
             >
-              
+              ✕
             </button>
           </div>
         </div>

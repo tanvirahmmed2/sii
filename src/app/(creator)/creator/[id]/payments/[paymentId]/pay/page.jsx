@@ -2,7 +2,6 @@
 
 import { Suspense, use } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { BiLoaderAlt } from 'react-icons/bi';
 import PaymentGatewayCheckout from 'src/component/marketing/creator/PaymentGatewayCheckout';
 
 function PayContent({ params }) {
@@ -25,9 +24,8 @@ export default function CreatorPaymentPayPage({ params }) {
   return (
     <Suspense
       fallback={
-        <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-2">
-          <BiLoaderAlt className="animate-spin text-3xl text-secondary" />
-          <p className="text-xs text-slate-500">Loading payment gateway...</p>
+        <div className="py-8 text-center text-xs text-slate-500 font-medium">
+          Loading payment gateway...
         </div>
       }
     >

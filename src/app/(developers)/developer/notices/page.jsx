@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect, useContext } from 'react';
-
-
 import { Context } from 'src/component/helper/Context';
 
 export default function DeveloperNoticesPage() {
@@ -113,9 +111,9 @@ export default function DeveloperNoticesPage() {
       case 'HIGH':
         return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'NORMAL':
-        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+        return 'bg-slate-100 text-slate-700 border-slate-300';
       case 'LOW':
-        return 'bg-slate-100 text-slate-600 border-slate-200';
+        return 'bg-slate-50 text-slate-600 border-slate-200';
       default:
         return 'bg-slate-100 text-slate-600 border-slate-200';
     }
@@ -124,15 +122,15 @@ export default function DeveloperNoticesPage() {
   const getCategoryStyle = (cat) => {
     switch (cat) {
       case 'SECURITY':
-        return 'bg-red-100 text-red-800';
+        return 'bg-rose-50 text-rose-700 border-rose-200';
       case 'MAINTENANCE':
-        return 'bg-orange-100 text-orange-800';
+        return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'ANNOUNCEMENT':
-        return 'bg-purple-100 text-purple-800';
+        return 'bg-purple-50 text-purple-700 border-purple-200';
       case 'POLICY':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-50 text-blue-700 border-blue-200';
       default:
-        return 'bg-slate-100 text-slate-700';
+        return 'bg-slate-100 text-slate-700 border-slate-200';
     }
   };
 
@@ -140,96 +138,94 @@ export default function DeveloperNoticesPage() {
   const regularNotices = notices.filter((n) => !n.is_pinned);
 
   return (
-    <div className="space-y-8 p-4 md:p-8 max-w-6xl mx-auto">
+    <div className="w-full space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded p-4">
         <div>
-          <h1 className="text-2xl font-medium text-slate-900 tracking-tight flex items-center gap-2">
-             Company & Team Notices
+          <h1 className="text-base font-semibold text-slate-900">
+            Company &amp; Team Notices
           </h1>
-          <p className="text-xs md:text-sm text-slate-500">
+          <p className="text-xs text-slate-500 mt-0.5">
             Platform bulletins, release announcements, infrastructure maintenance alerts, and policy updates.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={fetchNotices}
-            className="p-2.5 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
-            title="Refresh notices"
-          >Refresh</button>
+            className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs transition-colors cursor-pointer"
+          >
+            Refresh
+          </button>
           {canManage && (
             <button
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded bg-secondary hover:bg-secondary/90 text-white text-xs font-medium shadow-sm transition-all"
+              className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-colors cursor-pointer"
             >
-               Post Notice
+              Post Notice
             </button>
           )}
         </div>
       </div>
 
       {loading ? (
-        <div className="p-12 text-center text-xs text-slate-400 animate-pulse">Loading notices bulletin...</div>
+        <div className="p-8 text-center text-xs text-slate-400">Loading notices bulletin...</div>
       ) : notices.length === 0 ? (
-        <div className="p-12 text-center bg-white border border-slate-200 rounded space-y-2 shadow-sm">
-          
+        <div className="p-8 text-center bg-white border border-slate-200 rounded space-y-2">
           <p className="text-xs text-slate-500 font-medium">No company notices have been published yet.</p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Pinned Announcements */}
           {pinnedNotices.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700 uppercase tracking-widest">
-                 Pinned Announcements
+            <div className="space-y-2">
+              <div className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider">
+                Pinned Announcements
               </div>
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 gap-3">
                 {pinnedNotices.map((n) => (
                   <div
                     key={n.id}
-                    className="p-6 rounded bg-gradient-to-br from-amber-50/70 via-white to-amber-50/30 border border-amber-200 shadow-sm space-y-3 relative group"
+                    className="p-4 rounded bg-amber-50/40 border border-amber-200 space-y-2 relative"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-medium uppercase px-2 py-0.5 rounded ${getCategoryStyle(n.category)}`}>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[9px] font-medium uppercase px-1.5 py-0.2 rounded border ${getCategoryStyle(n.category)}`}>
                           {n.category}
                         </span>
-                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded border ${getPriorityStyle(n.priority)}`}>
+                        <span className={`text-[9px] font-medium px-1.5 py-0.2 rounded border ${getPriorityStyle(n.priority)}`}>
                           {n.priority}
                         </span>
                         {n.target_role !== 'ALL' && (
-                          <span className="text-[10px] font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                          <span className="text-[9px] text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">
                             Target: {n.target_role}
                           </span>
                         )}
                       </div>
 
                       {canManage && (
-                        <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => handleTogglePin(n)}
-                            className="p-1.5 rounded hover:bg-amber-100 text-amber-800 text-xs font-normal"
-                            title="Unpin"
+                            className="px-2 py-0.5 rounded border border-amber-300 text-amber-800 hover:bg-amber-100 text-xs font-medium cursor-pointer"
                           >
-                            
+                            Unpin
                           </button>
                           <button
                             onClick={() => handleDeleteNotice(n.id)}
-                            className="p-1.5 rounded hover:bg-rose-100 text-rose-600"
-                            title="Delete Notice"
+                            className="px-2 py-0.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium cursor-pointer"
                           >
-                            
+                            Delete
                           </button>
                         </div>
                       )}
                     </div>
 
-                    <h3 className="text-base font-medium text-slate-900">{n.title}</h3>
+                    <h3 className="text-sm font-semibold text-slate-900">{n.title}</h3>
                     <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
                       {n.content}
                     </p>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-amber-100 text-[11px] text-slate-400">
+                    <div className="flex items-center justify-between pt-2 border-t border-amber-200/50 text-[10px] text-slate-500 font-mono">
                       <span>Posted by {n.creator_name || 'System Operator'}</span>
                       <span>{new Date(n.created_at).toLocaleDateString()}</span>
                     </div>
@@ -240,56 +236,54 @@ export default function DeveloperNoticesPage() {
           )}
 
           {/* Regular Notices */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             {pinnedNotices.length > 0 && (
-              <div className="text-xs font-medium text-slate-500 uppercase tracking-widest pt-2">
+              <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                 All Announcements
               </div>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {regularNotices.map((n) => (
                 <div
                   key={n.id}
-                  className="p-6 rounded bg-white border border-slate-200 shadow-sm space-y-3 hover:shadow-md transition-all flex flex-col justify-between group"
+                  className="p-4 rounded bg-white border border-slate-200 space-y-2 flex flex-col justify-between"
                 >
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-medium uppercase px-2 py-0.5 rounded ${getCategoryStyle(n.category)}`}>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[9px] font-medium uppercase px-1.5 py-0.2 rounded border ${getCategoryStyle(n.category)}`}>
                           {n.category}
                         </span>
-                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded border ${getPriorityStyle(n.priority)}`}>
+                        <span className={`text-[9px] font-medium px-1.5 py-0.2 rounded border ${getPriorityStyle(n.priority)}`}>
                           {n.priority}
                         </span>
                       </div>
 
                       {canManage && (
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => handleTogglePin(n)}
-                            className="p-1.5 rounded hover:bg-slate-100 text-slate-500"
-                            title="Pin to top"
+                            className="px-2 py-0.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium cursor-pointer"
                           >
-                            
+                            Pin
                           </button>
                           <button
                             onClick={() => handleDeleteNotice(n.id)}
-                            className="p-1.5 rounded hover:bg-rose-50 text-rose-600"
-                            title="Delete Notice"
+                            className="px-2 py-0.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium cursor-pointer"
                           >
-                            
+                            Delete
                           </button>
                         </div>
                       )}
                     </div>
 
-                    <h3 className="text-sm font-medium text-slate-900">{n.title}</h3>
+                    <h3 className="text-sm font-semibold text-slate-900">{n.title}</h3>
                     <p className="text-xs text-slate-600 whitespace-pre-wrap leading-relaxed line-clamp-4">
                       {n.content}
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-[11px] text-slate-400 mt-2">
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[10px] text-slate-500 font-mono mt-2">
                     <span>{n.creator_name || 'Staff'}</span>
                     <span>{new Date(n.created_at).toLocaleDateString()}</span>
                   </div>
@@ -302,50 +296,50 @@ export default function DeveloperNoticesPage() {
 
       {/* Post Notice Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded shadow-2xl max-w-lg w-full p-6 md:p-8 space-y-5 border border-slate-100">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-lg font-medium text-slate-900">Post Company Notice</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded border border-slate-200 shadow-lg max-w-lg w-full p-4 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="text-sm font-semibold text-slate-900">Post Company Notice</h3>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-xl"
+                className="text-slate-400 hover:text-slate-600 text-sm cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleCreateNotice} className="space-y-4">
+            <form onSubmit={handleCreateNotice} className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Notice Title</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Notice Title <span className="text-rose-600">*</span></label>
                 <input
                   type="text"
                   required
                   value={createForm.title}
                   onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
                   placeholder="e.g. Scheduled Infrastructure Maintenance Window"
-                  className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Content / Message</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Content / Message <span className="text-rose-600">*</span></label>
                 <textarea
                   rows={4}
                   required
                   value={createForm.content}
                   onChange={(e) => setCreateForm({ ...createForm, content: e.target.value })}
                   placeholder="Details, impact, steps required from the team..."
-                  className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
+                  className="w-full bg-white border border-slate-300 rounded p-3 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Category</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Category</label>
                   <select
                     value={createForm.category}
                     onChange={(e) => setCreateForm({ ...createForm, category: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
+                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                   >
                     <option value="GENERAL">General</option>
                     <option value="ANNOUNCEMENT">Announcement</option>
@@ -355,11 +349,11 @@ export default function DeveloperNoticesPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 uppercase mb-1">Priority</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Priority</label>
                   <select
                     value={createForm.priority}
                     onChange={(e) => setCreateForm({ ...createForm, priority: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-secondary focus:bg-white"
+                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                   >
                     <option value="LOW">Low</option>
                     <option value="NORMAL">Normal</option>
@@ -375,25 +369,25 @@ export default function DeveloperNoticesPage() {
                   id="pinNotice"
                   checked={createForm.is_pinned}
                   onChange={(e) => setCreateForm({ ...createForm, is_pinned: e.target.checked })}
-                  className="w-4 h-4 rounded text-secondary"
+                  className="rounded border-slate-300 text-slate-900 focus:ring-slate-900 w-4 h-4 cursor-pointer"
                 />
-                <label htmlFor="pinNotice" className="text-xs font-normal text-slate-700 cursor-pointer">
+                <label htmlFor="pinNotice" className="text-xs text-slate-700 cursor-pointer">
                   Pin this notice as an alert banner at the top
                 </label>
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded border border-slate-200 text-slate-600 text-xs font-normal hover:bg-slate-50"
+                  className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingNotice}
-                  className="px-5 py-2 rounded bg-secondary hover:bg-secondary/90 text-white text-xs font-medium shadow-md transition-all disabled:opacity-50"
+                  className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium disabled:opacity-50 cursor-pointer"
                 >
                   {savingNotice ? 'Posting...' : 'Publish Notice'}
                 </button>

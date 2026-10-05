@@ -237,10 +237,19 @@ export async function GET(request) {
       daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
     }
 
-    const totalSpentCents = payments.reduce(
-      (acc, p) => acc + (p.status === 'successful' || p.status === 'COMPLETED' ? Number(p.amount_in_cents || (Number(p.amount || 0) * 100)) : 0),
-      0
-    );
+    let totalSpentUsd = 0;
+    let totalSpentBdt = 0;
+    for (const p of payments) {
+      if (['successful', 'completed'].includes(p.status?.toLowerCase())) {
+        const amt = Number(p.amount || 0);
+        const curr = (p.currency || (p.payment_method === 'BKASH' ? 'BDT' : 'USD')).toUpperCase();
+        if (curr === 'BDT') {
+          totalSpentBdt += amt;
+        } else {
+          totalSpentUsd += amt;
+        }
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -262,7 +271,8 @@ export async function GET(request) {
         totalWebsites: websites.length,
         maxWebsites: activeSub?.max_websites ?? activeSub?.max_portfolios ?? 1,
         daysRemaining,
-        totalSpentCents,
+        totalSpentUsd,
+        totalSpentBdt,
         hasActivePackage: Boolean(activeSub && (activeSub.status === 'completed' || activeSub.status === 'active' || activeSub.status === 'ACTIVE') && daysRemaining > 0),
         hasPendingSubscription: Boolean(pendingSub),
       },
@@ -312,7 +322,7 @@ export async function POST(request) {
     }
 
     // 6. Profile & Security Actions (creators table)
-    const profileActions = ['update_profile', 'change_password', 'toggle_2fa'];
+    const profileActions = ['update_profile', 'change_password', 'toggle_2fa', 'list_sessions', 'revoke_session', 'revoke_other_sessions'];
     if (profileActions.includes(action)) {
       return await handleProfileAction(body, sessionCreator);
     }

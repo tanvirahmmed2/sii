@@ -3,16 +3,13 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 
 const AVATAR_COLORS = [
-  'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
-  'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
-  'bg-blue-100 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 border-blue-200 dark:border-blue-800',
-  'bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300 border-amber-200 dark:border-amber-800',
-  'bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300 border-rose-200 dark:border-rose-900',
-  'bg-purple-100 text-purple-700 dark:bg-purple-950/70 dark:text-purple-300 border-purple-200 dark:border-purple-800',
-  'bg-teal-100 text-teal-700 dark:bg-teal-950/70 dark:text-teal-300 border-teal-200 dark:border-teal-800',
+  'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+  'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600',
+  'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+  'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+  'bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border-rose-200 dark:border-rose-900',
 ];
 
 function getColorForName(name = '') {
@@ -55,7 +52,7 @@ export default function ChatUsersSwipeBar({
     });
   }, [users]);
 
-  // 2. Check scroll overflow for navigation chevrons
+  // 2. Check scroll overflow for navigation buttons
   const updateScrollButtons = useCallback(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
@@ -76,7 +73,7 @@ export default function ChatUsersSwipeBar({
     };
   }, [sortedUsers, updateScrollButtons]);
 
-  // 3. Swap buttons action (scroll previous / next)
+  // 3. Swap buttons action
   const handleScrollPrev = () => {
     if (!scrollContainerRef.current) return;
     scrollContainerRef.current.scrollBy({ left: -220, behavior: 'smooth' });
@@ -132,17 +129,17 @@ export default function ChatUsersSwipeBar({
 
   return (
     <div
-      className={`relative bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl p-2.5 sm:p-3 shadow-xs select-none transition-colors ${className}`}
+      className={`relative w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-2.5 select-none ${className}`}
     >
-      {/* Scroll Left Swap Button */}
+      {/* Scroll Left Button */}
       {canScrollLeft && (
         <button
           type="button"
           onClick={handleScrollPrev}
           aria-label="Previous chat users"
-          className="absolute left-1.5 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-white/95 dark:bg-slate-800/95 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:scale-105 active:scale-95 transition-all cursor-pointer backdrop-blur-xs"
+          className="absolute left-1.5 top-1/2 -translate-y-1/2 z-10 px-2 py-1 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 cursor-pointer shadow-xs"
         >
-          <FiChevronLeft className="w-4 h-4" />
+          ‹
         </button>
       )}
 
@@ -153,7 +150,7 @@ export default function ChatUsersSwipeBar({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUpOrLeave}
         onMouseLeave={handleMouseUpOrLeave}
-        className="flex items-center gap-3.5 sm:gap-4 overflow-x-auto scroll-smooth overscroll-x-contain touch-pan-x cursor-grab active:cursor-grabbing px-2 py-1 scrollbar-none"
+        className="flex items-center gap-3 overflow-x-auto scroll-smooth overscroll-x-contain touch-pan-x cursor-grab active:cursor-grabbing px-2 py-1 scrollbar-none"
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {sortedUsers.map((user) => {
@@ -165,27 +162,25 @@ export default function ChatUsersSwipeBar({
 
           const content = (
             <div
-              className={`flex flex-col items-center shrink-0 group transition-transform duration-150 ${
-                isActive ? 'scale-105' : 'hover:scale-105'
-              }`}
+              className="flex flex-col items-center shrink-0 group"
               title={name}
             >
-              {/* User Avatar Icon */}
+              {/* User Avatar */}
               <div
-                className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full relative flex items-center justify-center font-bold text-xs sm:text-sm border transition-all ${
+                className={`w-10 h-10 rounded relative flex items-center justify-center font-medium text-xs border ${
                   isActive
-                    ? 'ring-2 ring-indigo-600 dark:ring-indigo-400 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 border-indigo-400'
-                    : 'border-slate-200/80 dark:border-slate-700/80 group-hover:border-indigo-400'
+                    ? 'border-slate-900 dark:border-slate-100 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                    : 'border-slate-200 dark:border-slate-700 group-hover:border-slate-400'
                 } ${isValidAvatar(avatarUrl) ? 'bg-slate-100 dark:bg-slate-800 overflow-hidden' : colorClass}`}
               >
                 {isValidAvatar(avatarUrl) ? (
                   <Image
                     src={avatarUrl}
                     alt={name}
-                    width={48}
-                    height={48}
+                    width={40}
+                    height={40}
                     unoptimized
-                    className="w-full h-full object-cover rounded-full pointer-events-none"
+                    className="w-full h-full object-cover rounded pointer-events-none"
                   />
                 ) : (
                   <span className="pointer-events-none">{initial}</span>
@@ -194,18 +189,20 @@ export default function ChatUsersSwipeBar({
                 {/* Unread badge dot */}
                 {user.unreadCount > 0 && (
                   <span
-                    className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-rose-500 rounded-full border-2 border-white dark:border-slate-900 shadow-xs animate-pulse"
+                    className="absolute -top-1 -right-1 text-[9px] font-medium px-1 rounded bg-rose-50 text-rose-700 border border-rose-200"
                     title={`${user.unreadCount} unread`}
-                  />
+                  >
+                    {user.unreadCount}
+                  </span>
                 )}
               </div>
 
-              {/* User Name Only */}
+              {/* User Name */}
               <span
-                className={`text-[11px] font-medium truncate w-14 sm:w-16 text-center mt-1.5 pointer-events-none leading-none transition-colors ${
+                className={`text-[11px] truncate w-14 sm:w-16 text-center mt-1 pointer-events-none leading-none ${
                   isActive
-                    ? 'text-indigo-600 dark:text-indigo-400 font-semibold'
-                    : 'text-slate-700 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
+                    ? 'text-slate-900 dark:text-slate-100 font-semibold'
+                    : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-100 font-normal'
                 }`}
               >
                 {name}
@@ -239,15 +236,15 @@ export default function ChatUsersSwipeBar({
         })}
       </div>
 
-      {/* Scroll Right Swap Button */}
+      {/* Scroll Right Button */}
       {canScrollRight && (
         <button
           type="button"
           onClick={handleScrollNext}
           aria-label="Next chat users"
-          className="absolute right-1.5 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-white/95 dark:bg-slate-800/95 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:scale-105 active:scale-95 transition-all cursor-pointer backdrop-blur-xs"
+          className="absolute right-1.5 top-1/2 -translate-y-1/2 z-10 px-2 py-1 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 cursor-pointer shadow-xs"
         >
-          <FiChevronRight className="w-4 h-4" />
+          ›
         </button>
       )}
     </div>

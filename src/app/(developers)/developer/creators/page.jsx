@@ -1,9 +1,7 @@
 'use client';
+
 import Link from 'next/link';
-
 import { useState, useEffect, useContext, useMemo } from 'react';
-
-
 import { Context } from 'src/component/helper/Context';
 
 export default function AdminCreatorsPage() {
@@ -118,43 +116,42 @@ export default function AdminCreatorsPage() {
   // If user role is not authorized
   if (!isAuthorized && user) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white border border-rose-200 rounded p-8 text-center shadow-sm">
-          <div className="w-16 h-16 mx-auto mb-4 rounded bg-rose-50 text-rose-600 flex items-center justify-center text-3xl">
-            
-          </div>
-          <h2 className="text-xl font-medium text-slate-900 mb-2">Access Restricted</h2>
-          <p className="text-sm text-slate-600 mb-6">
-            Viewing the Creator Directory requires the <span className="font-normal text-slate-800 font-mono">creators</span> permission.
+      <div className="w-full min-h-[60vh] flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900 rounded p-6 text-center space-y-3">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">Access Restricted</h2>
+          <p className="text-xs text-slate-600 dark:text-slate-400">
+            Viewing the Creator Directory requires the <span className="font-mono text-slate-800 dark:text-slate-200">creators</span> permission.
           </p>
-          <Link
-            href="/developer"
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-normal transition-colors shadow-sm"
-          >
-            ← Back to Developer Overview
-          </Link>
+          <div className="pt-2">
+            <Link
+              href="/developer"
+              className="inline-block px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium transition-colors"
+            >
+              Back to Developer Overview
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header & Breadcrumb */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded p-6 shadow-xs">
+    <div className="w-full space-y-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div>
-          <div className="flex items-center gap-2 text-xs text-secondary font-medium mb-1.5">
+          <div className="flex items-center gap-1.5 mb-1 text-xs text-slate-500">
             <Link href="/developer" className="hover:underline">Developer Overview</Link>
             <span>/</span>
-            <span className="text-slate-600 font-normal">Creators Directory</span>
+            <span className="text-slate-800 dark:text-slate-200 font-medium">Creators Directory</span>
           </div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-medium text-slate-900 tracking-tight">Registered Creators</h1>
-            <span className="text-[11px] font-medium uppercase tracking-wider px-2.5 py-0.5 rounded bg-secondary/10 text-secondary border border-secondary/20">
+          <div className="flex items-center gap-2">
+            <h1 className="text-base font-semibold text-slate-900 dark:text-white">Registered Creators</h1>
+            <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
               {totalCount} Total
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Supervise registered portfolio creators, verify account statuses, inspect active packages, and audit provisioned websites.
           </p>
         </div>
@@ -164,84 +161,61 @@ export default function AdminCreatorsPage() {
             type="button"
             onClick={() => fetchCreators(true)}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 text-xs font-normal transition-colors shadow-xs cursor-pointer disabled:opacity-50"
-            title="Refresh list"
+            className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
           >
-            
-            <span>Refresh</span>
+            Refresh
           </button>
         </div>
       </div>
 
       {/* Metrics Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 rounded p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-normal text-slate-500">Total Creators</span>
-            <span className="w-8 h-8 rounded bg-slate-100 text-slate-700 flex items-center justify-center text-base">
-              
-            </span>
-          </div>
-          <div className="text-2xl font-medium text-slate-900 mt-2">{totalCount}</div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5">
+          <div className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Total Creators</div>
+          <div className="text-base font-semibold text-slate-900 dark:text-white mt-1">{totalCount}</div>
           <div className="text-[11px] text-slate-400 mt-0.5">Registered accounts</div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-normal text-slate-500">Active Creators</span>
-            <span className="w-8 h-8 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center text-base">
-              
-            </span>
-          </div>
-          <div className="text-2xl font-medium text-emerald-600 mt-2">{activeCount}</div>
-          <div className="text-[11px] text-emerald-600/80 mt-0.5">In good standing</div>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5">
+          <div className="text-[10px] uppercase font-semibold text-emerald-600 dark:text-emerald-400">Active Creators</div>
+          <div className="text-base font-semibold text-emerald-600 dark:text-emerald-400 mt-1">{activeCount}</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">In good standing</div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-normal text-slate-500">Suspended</span>
-            <span className="w-8 h-8 rounded bg-rose-50 text-rose-600 flex items-center justify-center text-base">
-              
-            </span>
-          </div>
-          <div className="text-2xl font-medium text-rose-600 mt-2">{suspendedCount}</div>
-          <div className="text-[11px] text-rose-600/80 mt-0.5">Access disabled</div>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5">
+          <div className="text-[10px] uppercase font-semibold text-rose-600 dark:text-rose-400">Suspended</div>
+          <div className="text-base font-semibold text-rose-600 dark:text-rose-400 mt-1">{suspendedCount}</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">Access disabled</div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-normal text-slate-500">Hosted Portfolios</span>
-            <span className="w-8 h-8 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center text-base">
-              
-            </span>
-          </div>
-          <div className="text-2xl font-medium text-indigo-600 mt-2">{totalWebsites}</div>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5">
+          <div className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Hosted Portfolios</div>
+          <div className="text-base font-semibold text-slate-900 dark:text-white mt-1">{totalWebsites}</div>
           <div className="text-[11px] text-slate-400 mt-0.5">Across all creators</div>
         </div>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded p-4 shadow-xs">
-        <div className="relative flex-1 max-w-md">
-          
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search creator by name, email, package or ID..."
-            className="w-full pl-3 pr-4 py-2 text-xs rounded border border-slate-200 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary/20 transition-all bg-slate-50/50"
-          />
-        </div>
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div className="w-full sm:w-80">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search creator by name, email, package or ID..."
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-slate-800 font-normal"
+            />
+          </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-slate-100 p-1 rounded border border-slate-200 text-xs font-normal">
+          <div className="inline-flex rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-0.5 text-xs">
             <button
               type="button"
               onClick={() => setStatusFilter('all')}
-              className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
+              className={`px-2.5 py-1 rounded text-xs transition-colors cursor-pointer ${
                 statusFilter === 'all'
-                  ? 'bg-white text-slate-900 shadow-xs font-medium'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-medium'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-normal'
               }`}
             >
               All ({totalCount})
@@ -249,10 +223,10 @@ export default function AdminCreatorsPage() {
             <button
               type="button"
               onClick={() => setStatusFilter('active')}
-              className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
+              className={`px-2.5 py-1 rounded text-xs transition-colors cursor-pointer ${
                 statusFilter === 'active'
-                  ? 'bg-emerald-600 text-white shadow-xs font-medium'
-                  : 'text-slate-600 hover:text-emerald-700'
+                  ? 'bg-emerald-600 text-white font-medium'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-emerald-700 font-normal'
               }`}
             >
               Active ({activeCount})
@@ -260,113 +234,69 @@ export default function AdminCreatorsPage() {
             <button
               type="button"
               onClick={() => setStatusFilter('suspended')}
-              className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
+              className={`px-2.5 py-1 rounded text-xs transition-colors cursor-pointer ${
                 statusFilter === 'suspended'
-                  ? 'bg-rose-600 text-white shadow-xs font-medium'
-                  : 'text-slate-600 hover:text-rose-700'
+                  ? 'bg-rose-600 text-white font-medium'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-rose-700 font-normal'
               }`}
             >
               Suspended ({suspendedCount})
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Creators Table */}
-      <div className="bg-white border border-slate-200 rounded overflow-hidden shadow-xs">
+        {/* Creators Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-600 font-medium uppercase text-[10px] tracking-wider border-b border-slate-200">
-              <tr>
-                <th className="py-3.5 px-4">Creator Name</th>
-                <th className="py-3.5 px-4">Email Address</th>
-                <th className="py-3.5 px-4">Status</th>
-                <th className="py-3.5 px-4">Current Package</th>
-                <th className="py-3.5 px-4 text-center">Websites</th>
-                <th className="py-3.5 px-4">Registered Date</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 text-[10px] uppercase font-semibold">
+                <th className="pb-2 whitespace-nowrap">Creator Name</th>
+                <th className="pb-2 whitespace-nowrap">Email Address</th>
+                <th className="pb-2 whitespace-nowrap">Status</th>
+                <th className="pb-2 whitespace-nowrap">Current Package</th>
+                <th className="pb-2 text-center whitespace-nowrap">Websites</th>
+                <th className="pb-2 whitespace-nowrap">Registered Date</th>
+                <th className="pb-2 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-16 text-center text-slate-400">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="w-8 h-8 border-2 border-slate-300 border-t-secondary rounded animate-spin" />
-                      <span className="text-xs font-medium">Loading registered creators...</span>
-                    </div>
+                  <td colSpan={7} className="py-12 text-center text-slate-400 text-xs font-normal">
+                    Loading registered creators...
                   </td>
                 </tr>
               ) : filteredCreators.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-16 text-center text-slate-500">
-                    <div className="max-w-sm mx-auto space-y-2">
-                      <div className="w-12 h-12 mx-auto rounded bg-slate-100 flex items-center justify-center text-slate-400 text-2xl">
-                        
-                      </div>
-                      <div className="font-medium text-slate-800 text-sm">No creators found</div>
-                      <p className="text-xs text-slate-500">
-                        {searchTerm || statusFilter !== 'all'
-                          ? 'No creators matched your search query or filter selection.'
-                          : 'No creators have registered on the platform yet.'}
-                      </p>
-                      {(searchTerm || statusFilter !== 'all') && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSearchTerm('');
-                            setStatusFilter('all');
-                          }}
-                          className="mt-2 px-3 py-1.5 text-xs font-normal rounded bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
-                        >
-                          Clear Filters
-                        </button>
-                      )}
-                    </div>
+                  <td colSpan={7} className="py-12 text-center text-slate-500 text-xs font-normal">
+                    No creators found matching your criteria.
                   </td>
                 </tr>
               ) : (
                 filteredCreators.map((creator) => {
-                  const isSuspended = !creator.is_active;
                   return (
                     <tr
                       key={creator.id}
-                      className="hover:bg-slate-50/80 transition-colors group"
+                      className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
                     >
-                      {/* Creator Name & Avatar */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center font-medium text-xs shrink-0">
-                            {creator.name ? creator.name.charAt(0).toUpperCase() : 'C'}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-medium text-slate-900 group-hover:text-secondary transition-colors">
-                                {creator.name}
-                              </span>
-                              {creator.is_verified && (
-                                <span title="Verified Creator">
-                                  
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[11px] text-slate-400 font-mono">
-                              ID: #{creator.id}
-                            </span>
-                          </div>
+                      <td className="py-2.5">
+                        <div className="font-medium text-slate-900 dark:text-white">
+                          {creator.name}
                         </div>
+                        <span className="text-[11px] text-slate-400 font-mono">
+                          ID: #{creator.id}
+                        </span>
                       </td>
 
-                      {/* Email */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-2.5">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-slate-700 text-xs">
+                          <span className="font-mono text-slate-700 dark:text-slate-300 text-xs">
                             {creator.email}
                           </span>
                           <button
                             type="button"
                             onClick={() => handleCopyEmail(creator.email)}
-                            className="text-slate-400 hover:text-slate-600 p-1 transition-colors"
+                            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-[11px] font-normal cursor-pointer"
                             title="Copy email address"
                           >
                             {copiedEmail === creator.email ? 'Copied' : 'Copy'}
@@ -379,43 +309,27 @@ export default function AdminCreatorsPage() {
                         )}
                       </td>
 
-                      {/* Status */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-2.5">
                         <div className="flex items-center gap-2">
                           <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-medium uppercase border ${
+                            className={`inline-flex items-center px-1.5 py-0.2 rounded border text-[9px] font-medium uppercase ${
                               creator.is_active
                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                 : 'bg-rose-50 text-rose-700 border-rose-200'
                             }`}
                           >
-                            {creator.is_active ? (
-                              <>
-                                
-                                Active
-                              </>
-                            ) : (
-                              <>
-                                
-                                Suspended
-                              </>
-                            )}
+                            {creator.is_active ? 'Active' : 'Suspended'}
                           </span>
 
                           <button
                             type="button"
                             onClick={() => handleToggleActive(creator.id)}
                             disabled={actionLoadingId === creator.id}
-                            className={`text-[10px] font-normal px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+                            className={`text-[10px] font-medium px-2 py-0.5 rounded border transition-colors cursor-pointer ${
                               creator.is_active
                                 ? 'border-rose-200 text-rose-600 hover:bg-rose-50'
                                 : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
                             } disabled:opacity-50`}
-                            title={
-                              creator.is_active
-                                ? 'Suspend creator access'
-                                : 'Activate creator access'
-                            }
                           >
                             {actionLoadingId === creator.id
                               ? 'Updating...'
@@ -426,13 +340,9 @@ export default function AdminCreatorsPage() {
                         </div>
                       </td>
 
-                      {/* Current Package */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-1.5 text-xs">
-                          
-                          <span className="font-normal text-slate-800">
-                            {creator.current_package || 'No Plan'}
-                          </span>
+                      <td className="py-2.5">
+                        <div className="text-xs text-slate-800 dark:text-slate-200 font-medium">
+                          {creator.current_package || 'No Plan'}
                         </div>
                         {creator.subscription_status && (
                           <span className="text-[10px] text-slate-400 uppercase font-mono">
@@ -441,16 +351,13 @@ export default function AdminCreatorsPage() {
                         )}
                       </td>
 
-                      {/* Websites count */}
-                      <td className="py-3.5 px-4 text-center">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-medium font-mono bg-indigo-50 text-indigo-700 border border-indigo-200">
-                          
+                      <td className="py-2.5 text-center">
+                        <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-medium font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                           {creator.websites_count || 0}
                         </span>
                       </td>
 
-                      {/* Registered Date */}
-                      <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px]">
+                      <td className="py-2.5 text-slate-500 text-[11px] font-mono whitespace-nowrap">
                         {creator.created_at
                           ? new Date(creator.created_at).toLocaleDateString('en-US', {
                               year: 'numeric',
@@ -460,25 +367,23 @@ export default function AdminCreatorsPage() {
                           : '—'}
                       </td>
 
-                      {/* Action buttons */}
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="py-2.5 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1.5">
                           <Link
                             href={`/developer/creators/${creator.id}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-secondary hover:bg-secondary-dark text-white text-xs font-medium transition-all shadow-xs"
-                            title="View all details of this creator"
+                            className="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium transition-colors"
                           >
-                            <span>Full View</span>
-                            
+                            Full View
                           </Link>
 
                           <Link
                             href={`/creator/${creator.id}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1.5 rounded border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
-                            title="Open Creator Portal in new tab"
-                          >Open</Link>
+                            className="px-2 py-1 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium transition-colors"
+                          >
+                            Open Portal
+                          </Link>
                         </div>
                       </td>
                     </tr>
@@ -490,18 +395,13 @@ export default function AdminCreatorsPage() {
         </div>
 
         {/* Footer info bar */}
-        <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-500 gap-2">
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-500 gap-2">
           <div>
-            Showing <span className="font-medium text-slate-800">{filteredCreators.length}</span> of{' '}
-            <span className="font-medium text-slate-800">{creators.length}</span> creators
+            Showing {filteredCreators.length} of {creators.length} creators
           </div>
           <div className="flex items-center gap-3 text-[11px]">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded bg-emerald-500" /> Active: {activeCount}
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded bg-rose-500" /> Suspended: {suspendedCount}
-            </span>
+            <span>Active: {activeCount}</span>
+            <span>Suspended: {suspendedCount}</span>
           </div>
         </div>
       </div>

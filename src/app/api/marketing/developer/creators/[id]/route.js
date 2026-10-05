@@ -112,10 +112,19 @@ export async function GET(request, { params }) {
       daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
     }
 
-    const totalSpentCents = payments.reduce(
-      (acc, p) => acc + (p.status === 'successful' || p.status === 'COMPLETED' ? Number(p.amount_in_cents || (Number(p.amount || 0) * 100)) : 0),
-      0
-    );
+    let totalSpentUsd = 0;
+    let totalSpentBdt = 0;
+    for (const p of payments) {
+      if (['successful', 'completed'].includes(p.status?.toLowerCase())) {
+        const amt = Number(p.amount || 0);
+        const curr = (p.currency || (p.payment_method === 'BKASH' ? 'BDT' : 'USD')).toUpperCase();
+        if (curr === 'BDT') {
+          totalSpentBdt += amt;
+        } else {
+          totalSpentUsd += amt;
+        }
+      }
+    }
     const totalStorageMb = websites.reduce((acc, w) => acc + Number(w.storage_used_mb || 0), 0);
 
     return NextResponse.json({
@@ -130,7 +139,8 @@ export async function GET(request, { params }) {
         totalWebsites: websites.length,
         maxWebsites: activeSubscription?.max_websites ?? activeSubscription?.max_portfolios ?? 0,
         totalStorageMb,
-        totalSpentCents,
+        totalSpentUsd,
+        totalSpentBdt,
         daysRemaining,
         totalPayments: payments.length,
         totalTickets: tickets.length,

@@ -3,13 +3,6 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import {
-  BiLoaderAlt,
-  BiCheckCircle,
-  BiErrorCircle,
-  BiEnvelope,
-  BiShieldQuarter,
-} from 'react-icons/bi';
 import CreatorAuthLayout from 'src/component/marketing/creator/CreatorAuthLayout';
 
 function CreatorVerifyContent() {
@@ -149,10 +142,10 @@ function CreatorVerifyContent() {
     <CreatorAuthLayout
       badge="Account Activation"
       headline="Activate Your Creator Account"
-      description="Verify your email address to unlock instantaneous website publishing, custom domain connection, and 0% commission creator store sales."
+      description="Verify your email address to unlock instantaneous website publishing, custom domain connection, and creator store management."
       features={[
-        'Instant activation of cloud hosting & custom domain engine',
-        'Protected against bots and automated registrations',
+        'Instant activation of cloud hosting and domain engine',
+        'Protected against automated registrations',
         'One-click verification or manual 6-digit code entry',
       ]}
       stats={[
@@ -167,52 +160,49 @@ function CreatorVerifyContent() {
       }}
       topRightLink={{
         prompt: 'Already verified?',
-        text: 'LogIn',
+        text: 'Sign In',
         href: '/creator/login',
       }}
     >
-      <div className="w-full p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xl shadow-slate-200/40 dark:shadow-none space-y-6">
+      <div className="w-full p-5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4">
         {/* State 1: Auto-verifying from URL */}
         {verifyingAuto && (
-          <div className="text-center space-y-4 py-8">
-            <BiLoaderAlt className="animate-spin text-4xl text-secondary mx-auto" />
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Verifying Your Account...</h2>
+          <div className="text-center space-y-2 py-6">
+            <div className="text-xs uppercase tracking-wider text-secondary font-medium">Validating Token</div>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Verifying Your Account</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Validating security token for{' '}
-              <span className="font-semibold text-slate-700 dark:text-slate-200">{emailParam}</span>.
+              Validating security token for <span className="font-medium text-slate-700 dark:text-slate-200">{emailParam}</span>...
             </p>
           </div>
         )}
 
         {/* State 2: Verified Successfully */}
         {!verifyingAuto && success && (
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-4xl mx-auto border border-emerald-100 dark:border-emerald-800">
-              <BiCheckCircle />
-            </div>
-            <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-                {alreadyVerified ? 'Account Already Verified' : 'Account Confirmed!'}
+          <div className="space-y-4 py-2">
+            <div className="space-y-1">
+              <span className="text-xs uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-medium">Verified</span>
+              <h1 className="text-lg font-semibold text-slate-900 dark:text-white">
+                {alreadyVerified ? 'Account Already Verified' : 'Account Confirmed'}
               </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Your creator account is fully verified and active. You can now access your Creator Studio.
               </p>
             </div>
 
-            <div className="pt-2 space-y-2">
+            <div className="pt-2">
               {creatorId ? (
                 <Link
                   href={`/creator/${creatorId}`}
-                  className="w-full block py-2.5 rounded-xl bg-secondary hover:bg-secondary-dark text-white text-xs font-bold shadow-md shadow-secondary/25 hover:shadow-secondary/35 transition-all text-center"
+                  className="w-full block py-2 rounded bg-secondary hover:bg-secondary-dark text-white text-xs font-medium text-center transition-colors"
                 >
-                  Enter Creator Studio →
+                  Enter Creator Studio
                 </Link>
               ) : (
                 <Link
                   href="/creator/login"
-                  className="w-full block py-2.5 rounded-xl bg-secondary hover:bg-secondary-dark text-white text-xs font-bold shadow-md shadow-secondary/25 hover:shadow-secondary/35 transition-all text-center"
+                  className="w-full block py-2 rounded bg-secondary hover:bg-secondary-dark text-white text-xs font-medium text-center transition-colors"
                 >
-                  Proceed to LogIn →
+                  Proceed to Sign In
                 </Link>
               )}
             </div>
@@ -221,10 +211,9 @@ function CreatorVerifyContent() {
 
         {/* State 3: Manual Code Entry */}
         {!verifyingAuto && !success && (
-          <div className="space-y-5">
-            <div className="text-center space-y-2">
-              
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <h1 className="text-lg font-semibold text-slate-900 dark:text-white">
                 Verify Email Address
               </h1>
               <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -233,41 +222,34 @@ function CreatorVerifyContent() {
             </div>
 
             {resendMsg && (
-              <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-medium flex items-center justify-center gap-2">
-                <BiCheckCircle className="text-base text-emerald-600 dark:text-emerald-400" />
-                <span>{resendMsg}</span>
+              <div className="p-2.5 rounded bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs">
+                {resendMsg}
               </div>
             )}
 
             {error && (
-              <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs font-medium flex items-start gap-2.5">
-                <BiErrorCircle className="text-base text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-                <span>{error}</span>
+              <div className="p-2.5 rounded bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs">
+                {error}
               </div>
             )}
 
-            <form onSubmit={handleManualVerify} className="space-y-4">
+            <form onSubmit={handleManualVerify} className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Email Address
                 </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400 text-base">
-                    <BiEnvelope />
-                  </span>
-                  <input
-                    type="email"
-                    required
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    placeholder="creator@example.com"
-                    className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-colors"
-                  />
-                </div>
+                <input
+                  type="email"
+                  required
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  placeholder="creator@example.com"
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-secondary"
+                />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                   6-Digit Verification Code
                 </label>
                 <input
@@ -277,51 +259,34 @@ function CreatorVerifyContent() {
                   value={codeInput}
                   onChange={(e) => setCodeInput(e.target.value.replace(/\D/g, ''))}
                   placeholder="123456"
-                  className="w-full text-center tracking-[10px] font-mono text-2xl font-bold bg-slate-50 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-colors"
+                  className="w-full text-center tracking-[8px] font-mono text-xl font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-slate-900 dark:text-white placeholder-slate-300 focus:outline-none focus:border-secondary"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 rounded-xl bg-secondary hover:bg-secondary-dark text-white text-xs font-bold shadow-md shadow-secondary/25 hover:shadow-secondary/35 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 mt-2"
+                className="w-full py-2 rounded bg-secondary hover:bg-secondary-dark text-white text-xs font-medium cursor-pointer disabled:opacity-70 transition-colors"
               >
-                {loading ? (
-                  <>
-                    <BiLoaderAlt className="animate-spin text-base" />
-                    <span>Verifying Code...</span>
-                  </>
-                ) : (
-                  <span>Verify Account →</span>
-                )}
+                {loading ? 'Verifying Code...' : 'Verify Account'}
               </button>
             </form>
 
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
               <button
                 type="button"
                 onClick={handleResend}
                 disabled={resending}
-                className="text-xs text-secondary hover:text-secondary-dark dark:hover:text-secondary-light font-semibold hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-70 transition-colors"
+                className="text-secondary hover:underline cursor-pointer disabled:opacity-70"
               >
-                {resending ? (
-                  <>
-                    <BiLoaderAlt className="animate-spin text-xs" />
-                    <span>Resending...</span>
-                  </>
-                ) : (
-                  <>
-                    <BiEnvelope className="text-xs" />
-                    <span>Resend 6-Digit Code</span>
-                  </>
-                )}
+                {resending ? 'Resending...' : 'Resend 6-Digit Code'}
               </button>
 
               <Link
                 href="/creator/login"
-                className="text-xs text-slate-500 dark:text-slate-400 hover:text-secondary font-medium transition-colors"
+                className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               >
-                Back to LogIn
+                Back to Sign In
               </Link>
             </div>
           </div>
@@ -335,8 +300,8 @@ export default function CreatorVerifyPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-          <BiLoaderAlt className="animate-spin text-3xl text-secondary" />
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 text-xs text-slate-500">
+          Loading verification...
         </div>
       }
     >

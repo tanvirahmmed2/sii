@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useContext, useMemo } from 'react';
 import { Context } from 'src/component/helper/Context';
-
-
 import FeatureForm from 'src/component/marketing/developer/forms/FeatureForm';
 
 export default function AdminFeaturesPage() {
@@ -116,105 +114,87 @@ export default function AdminFeaturesPage() {
   const standaloneFeatures = totalFeatures - linkedFeatures;
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-4">
       {/* Toast Feedback Notification */}
       {feedback && (
         <div
-          className={`fixed top-6 right-6 z-50 flex items-center gap-2 px-5 py-3 rounded shadow-xl border text-xs font-normal animate-fade-in ${
+          className={`fixed top-4 right-4 z-50 px-4 py-2.5 rounded shadow-lg border text-xs font-medium ${
             feedbackType === 'error'
-              ? 'bg-rose-900/95 text-rose-100 border-rose-700'
-              : 'bg-slate-900/95 text-white border-slate-700'
+              ? 'bg-rose-900 text-rose-100 border-rose-700'
+              : 'bg-slate-900 text-white border-slate-700'
           }`}
         >
-          
-          <span>{feedback}</span>
+          {feedback}
         </div>
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 rounded p-6 sm:p-8 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div>
-          <div className="flex items-center gap-2.5 mb-1.5">
-            <h1 className="text-2xl sm:text-3xl font-medium text-slate-900 tracking-tight">
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-base font-semibold text-slate-900 dark:text-white">
               Platform Features
             </h1>
-            <span className="text-[11px] font-medium uppercase tracking-wider px-3 py-0.5 rounded bg-secondary/10 text-secondary border border-secondary/20">
+            <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
               Capabilities
             </span>
             {!isAdminUser && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
-                
-                <span>Read-Only</span>
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200">
+                Read-Only
               </span>
             )}
           </div>
-          <p className="text-xs sm:text-sm text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Catalog of modular builder capabilities that can be bundled into platform packages and tiers.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={fetchFeatures}
-            className="p-2.5 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors cursor-pointer"
-            title="Refresh features"
-          >Refresh</button>
+            className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium cursor-pointer"
+          >
+            Refresh
+          </button>
           {isAdminUser ? (
             <button
               type="button"
               onClick={handleCreateClick}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded text-xs font-medium transition-all shadow-xs cursor-pointer ${
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
                 showForm && !editingFeature
-                  ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  : 'bg-secondary hover:bg-secondary-dark text-white'
+                  ? 'border border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300'
+                  : 'bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900'
               }`}
             >
-              
-              <span>{showForm && !editingFeature ? 'Hide Form' : 'Add Feature'}</span>
+              {showForm && !editingFeature ? 'Hide Form' : 'Add Feature'}
             </button>
           ) : (
-            <div className="flex items-center gap-1 px-4 py-2 rounded bg-slate-100 text-slate-500 text-xs font-normal">
-              
-              <span>Admin Role Required to Create</span>
+            <div className="px-3 py-1.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 text-xs font-medium">
+              Admin Role Required
             </div>
           )}
         </div>
       </div>
 
       {/* Metric KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white border border-slate-200 rounded p-5 shadow-xs">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-500">Total Features</span>
-            <div className="p-2 rounded bg-secondary/10 text-secondary">
-              
-            </div>
-          </div>
-          <div className="text-2xl font-medium text-slate-900">{totalFeatures}</div>
-          <p className="text-[11px] text-slate-400 mt-1">Platform capabilities defined</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5">
+          <div className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Total Features</div>
+          <div className="text-base font-semibold text-slate-900 dark:text-white mt-1">{totalFeatures}</div>
+          <p className="text-[11px] text-slate-400 mt-0.5">Platform capabilities defined</p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded p-5 shadow-xs">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-500">Bundled In Packages</span>
-            <div className="p-2 rounded bg-emerald-50 text-emerald-600">
-              
-            </div>
-          </div>
-          <div className="text-2xl font-medium text-emerald-600">{linkedFeatures}</div>
-          <p className="text-[11px] text-slate-400 mt-1">Attached to active packages</p>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5">
+          <div className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Bundled In Packages</div>
+          <div className="text-base font-semibold text-emerald-600 dark:text-emerald-400 mt-1">{linkedFeatures}</div>
+          <p className="text-[11px] text-slate-400 mt-0.5">Attached to active packages</p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded p-5 shadow-xs">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-500">Standalone Features</span>
-            <div className="p-2 rounded bg-indigo-50 text-indigo-600">
-              
-            </div>
-          </div>
-          <div className="text-2xl font-medium text-indigo-600">{standaloneFeatures}</div>
-          <p className="text-[11px] text-slate-400 mt-1">Ready to attach to packages</p>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5">
+          <div className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Standalone Features</div>
+          <div className="text-base font-semibold text-indigo-600 dark:text-indigo-400 mt-1">{standaloneFeatures}</div>
+          <p className="text-[11px] text-slate-400 mt-0.5">Ready to attach to packages</p>
         </div>
       </div>
 
@@ -240,116 +220,104 @@ export default function AdminFeaturesPage() {
       )}
 
       {/* Table Card */}
-      <div className="bg-white border border-slate-200 rounded shadow-xs overflow-hidden">
-        <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50">
-          <div className="relative w-full sm:w-80">
-            
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div className="w-full sm:w-80">
             <input
               type="text"
               placeholder="Search features by name, key, or description..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded pl-3 pr-4 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all font-medium"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-slate-800"
             />
           </div>
           <div className="text-xs text-slate-500 font-medium">
-            Showing <span className="font-medium text-slate-800">{filtered.length}</span> of {features.length} records
+            Showing {filtered.length} of {features.length} records
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/80 text-slate-500 font-normal uppercase tracking-wider text-[10px]">
-                <th className="px-5 py-3.5 whitespace-nowrap">ID</th>
-                <th className="px-5 py-3.5 whitespace-nowrap">Feature Name</th>
-                <th className="px-5 py-3.5 whitespace-nowrap">Key Identifier</th>
-                <th className="px-5 py-3.5 whitespace-nowrap">Packages Linked</th>
-                <th className="px-5 py-3.5 whitespace-nowrap">Description</th>
-                <th className="px-5 py-3.5 whitespace-nowrap">Created</th>
-                <th className="px-5 py-3.5 text-right whitespace-nowrap">Actions</th>
+              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 text-[10px] uppercase font-semibold">
+                <th className="pb-2 whitespace-nowrap">ID</th>
+                <th className="pb-2 whitespace-nowrap">Feature Name</th>
+                <th className="pb-2 whitespace-nowrap">Key Identifier</th>
+                <th className="pb-2 whitespace-nowrap">Packages Linked</th>
+                <th className="pb-2 whitespace-nowrap">Description</th>
+                <th className="pb-2 whitespace-nowrap">Created</th>
+                <th className="pb-2 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-16 text-center text-slate-400">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="w-6 h-6 border-2 border-secondary border-t-transparent rounded animate-spin" />
-                      <span className="text-xs font-normal">Loading platform features...</span>
-                    </div>
+                  <td colSpan={7} className="py-12 text-center text-slate-400 text-xs font-normal">
+                    Loading platform features...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-16 text-center text-slate-400">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      
-                      <span className="text-xs font-normal">No features found matching your search.</span>
-                    </div>
+                  <td colSpan={7} className="py-12 text-center text-slate-400 text-xs font-normal">
+                    No features found matching your search.
                   </td>
                 </tr>
               ) : (
                 filtered.map((feat) => (
                   <tr
                     key={feat.id}
-                    className={`hover:bg-slate-50/70 transition-colors ${
-                      editingFeature?.id === feat.id ? 'bg-secondary/5' : ''
-                    }`}
+                    className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
                   >
-                    <td className="px-5 py-4 font-mono font-medium text-slate-500">#{feat.id}</td>
+                    <td className="py-2.5 font-mono font-medium text-slate-400">#{feat.id}</td>
 
-                    <td className="px-5 py-4">
-                      <div className="font-medium text-slate-900 text-sm">{feat.name}</div>
+                    <td className="py-2.5">
+                      <div className="font-medium text-slate-900 dark:text-white">{feat.name}</div>
                     </td>
 
-                    <td className="px-5 py-4 font-mono">
-                      <span className="bg-slate-100 border border-slate-200 px-2.5 py-1 rounded text-[11px] font-normal text-slate-700">
+                    <td className="py-2.5 font-mono">
+                      <span className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded text-[11px] font-normal text-slate-700 dark:text-slate-300">
                         {feat.key}
                       </span>
                     </td>
 
-                    <td className="px-5 py-4">
+                    <td className="py-2.5">
                       {Number(feat.packages_count || 0) > 0 ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          
-                          <span>{feat.packages_count} {feat.packages_count === 1 ? 'Package' : 'Packages'}</span>
+                        <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          {feat.packages_count} {feat.packages_count === 1 ? 'Package' : 'Packages'}
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-medium bg-slate-100 text-slate-500">
-                          <span>Unassigned</span>
+                        <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-medium bg-slate-100 text-slate-500 border border-slate-200">
+                          Unassigned
                         </span>
                       )}
                     </td>
 
-                    <td className="px-5 py-4 text-slate-600 max-w-sm">
-                      <p className="line-clamp-2 text-[11px] leading-relaxed">{feat.description || '—'}</p>
+                    <td className="py-2.5 text-slate-600 dark:text-slate-400 max-w-sm">
+                      <p className="line-clamp-2 text-[11px] leading-relaxed font-normal">{feat.description || '—'}</p>
                     </td>
 
-                    <td className="px-5 py-4 text-slate-500 text-[11px] whitespace-nowrap">
+                    <td className="py-2.5 text-slate-500 text-[11px] font-mono whitespace-nowrap">
                       {feat.created_at ? new Date(feat.created_at).toLocaleDateString() : '—'}
                     </td>
 
-                    <td className="px-5 py-4 text-right whitespace-nowrap">
+                    <td className="py-2.5 text-right whitespace-nowrap">
                       {isAdminUser ? (
-                        <div className="inline-flex items-center gap-1">
+                        <div className="inline-flex items-center gap-1.5">
                           <button
                             type="button"
                             onClick={() => handleEditClick(feat)}
-                            className="p-1.5 text-slate-500 hover:text-secondary hover:bg-secondary/10 rounded transition-colors cursor-pointer"
-                            title="Edit feature"
+                            className="px-2 py-1 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium transition-colors cursor-pointer"
                           >
-                            
+                            Edit
                           </button>
 
                           <button
                             type="button"
                             disabled={deletingId === feat.id}
                             onClick={() => handleDelete(feat.id, feat.name)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
-                            title="Delete feature"
+                            className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium transition-colors cursor-pointer"
                           >
-                            
+                            Delete
                           </button>
                         </div>
                       ) : (

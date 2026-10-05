@@ -2,22 +2,6 @@
 
 import axios from 'axios';
 import { useState, useEffect, useRef } from 'react';
-import {
-  BiSave,
-  BiImage,
-  BiTrash,
-  BiGlobe,
-  BiCategory,
-  BiBookContent,
-  BiFile,
-  BiCloudUpload,
-  BiLinkExternal,
-  BiRefresh,
-  BiCheckCircle,
-  BiStar,
-  BiImages,
-  BiPlus,
-} from 'react-icons/bi';
 
 const CATEGORY_SUGGESTIONS = [
   'Platform',
@@ -87,7 +71,6 @@ export default function BlogForm({
           : '',
       });
 
-      // Initialize gallery from currentBlog.images or currentBlog.image
       let initialImages = [];
       if (Array.isArray(currentBlog.images) && currentBlog.images.length > 0) {
         initialImages = currentBlog.images.map((img, idx) => ({
@@ -115,7 +98,6 @@ export default function BlogForm({
     }
   }, [currentBlog]);
 
-  // Handle title changes
   const handleTitleChange = (e) => {
     setFormData((prev) => ({
       ...prev,
@@ -123,7 +105,6 @@ export default function BlogForm({
     }));
   };
 
-  // Handle selecting multiple files
   const handleFilesSelect = (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -139,7 +120,6 @@ export default function BlogForm({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Remove a pending file
   const handleRemovePendingFile = (id) => {
     setPendingFiles((prev) => {
       const item = prev.find((p) => p.id === id);
@@ -157,7 +137,6 @@ export default function BlogForm({
     });
   };
 
-  // Remove an existing gallery image
   const handleRemoveGalleryImage = (index) => {
     setGallery((prev) => {
       const item = prev[index];
@@ -174,7 +153,6 @@ export default function BlogForm({
     });
   };
 
-  // Set an image as primary cover image
   const handleSetPrimary = (targetId, isPending = false) => {
     if (isPending) {
       setPendingFiles((prev) =>
@@ -192,7 +170,6 @@ export default function BlogForm({
     }
   };
 
-  // Add custom URL image to gallery
   const handleAddCustomUrl = () => {
     const url = customImageUrl.trim();
     if (!url) return;
@@ -212,7 +189,6 @@ export default function BlogForm({
     setSuccessMsg('Added image from URL.');
   };
 
-  // Load Cloudinary library
   const loadCloudinaryLibrary = async () => {
     setShowCloudinaryLibrary(true);
     setLoadingAssets(true);
@@ -249,7 +225,6 @@ export default function BlogForm({
     setSuccessMsg(`Added Cloudinary asset: ${asset.public_id}`);
   };
 
-  // Form Submission
   const handleSubmit = async (e, publishOverride) => {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
     setLoading(true);
@@ -339,15 +314,14 @@ export default function BlogForm({
   const totalImagesCount = gallery.length + pendingFiles.length;
 
   return (
-    <div className="space-y-6">
-      {/* Messages */}
+    <div className="space-y-4">
       {error && (
-        <div className="p-4 rounded bg-rose-50 border border-rose-200 dark:bg-rose-950/40 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs flex items-center justify-between gap-2">
+        <div className="p-3 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center justify-between gap-2">
           <span>{error}</span>
           <button
             type="button"
             onClick={() => setError('')}
-            className="text-rose-500 hover:text-rose-800 dark:hover:text-rose-200 font-medium cursor-pointer"
+            className="text-rose-500 hover:text-rose-800 font-medium cursor-pointer"
           >
             ✕
           </button>
@@ -355,29 +329,25 @@ export default function BlogForm({
       )}
 
       {successMsg && (
-        <div className="p-4 rounded bg-emerald-50 border border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
-            <BiCheckCircle className="text-base shrink-0" />
-            <span>{successMsg}</span>
-          </div>
+        <div className="p-3 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center justify-between gap-2">
+          <span>{successMsg}</span>
           <button
             type="button"
             onClick={() => setSuccessMsg('')}
-            className="text-emerald-500 hover:text-emerald-800 dark:hover:text-emerald-200 font-medium cursor-pointer"
+            className="text-emerald-500 hover:text-emerald-800 font-medium cursor-pointer"
           >
             ✕
           </button>
         </div>
       )}
 
-      <form onSubmit={(e) => handleSubmit(e, formData.is_published)} className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content Column (2 spans) */}
-          <div className="lg:col-span-2 space-y-5">
-            {/* Title */}
+      <form onSubmit={(e) => handleSubmit(e, formData.is_published)} className="space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Main Content Column */}
+          <div className="lg:col-span-2 space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Article Title <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Article Title <span className="text-rose-600">*</span>
               </label>
               <input
                 type="text"
@@ -385,87 +355,78 @@ export default function BlogForm({
                 placeholder="e.g. The Future of Online Learning in 2026"
                 value={formData.title}
                 onChange={handleTitleChange}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3.5 py-2 text-sm text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-600 transition-colors"
+                className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
               />
             </div>
 
-            {/* Category */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
-                <BiCategory className="text-sm text-slate-400" />
-                <span>Category</span>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Category
               </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  list="category-suggestions"
-                  placeholder="e.g. Engineering, Education, Guides..."
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-600 transition-colors"
-                />
-                <datalist id="category-suggestions">
-                  {CATEGORY_SUGGESTIONS.map((c) => (
-                    <option key={c} value={c} />
-                  ))}
-                </datalist>
-              </div>
+              <input
+                type="text"
+                list="category-suggestions"
+                placeholder="e.g. Engineering, Education, Guides..."
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+              />
+              <datalist id="category-suggestions">
+                {CATEGORY_SUGGESTIONS.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
             </div>
 
-            {/* Excerpt / Brief Description */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Brief Description (Shown on Top of Article)
+                <label className="block text-xs font-semibold text-slate-700">
+                  Brief Description
                 </label>
-                <span className="text-[10px] text-slate-400">
+                <span className="text-[10px] text-slate-400 font-mono">
                   {formData.excerpt.length} characters
                 </span>
               </div>
               <textarea
                 rows={3}
-                placeholder="A concise, high-level summary displayed boldly at the top of the article."
+                placeholder="A concise, high-level summary displayed at the top of the article."
                 value={formData.excerpt}
                 onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-600 transition-colors"
+                className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
               />
             </div>
 
-            {/* Content Body */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
-                <BiBookContent className="text-sm text-slate-400" />
-                <span>Article Description &amp; Content Body</span>
-                <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Article Content Body <span className="text-rose-600">*</span>
               </label>
               <textarea
                 rows={16}
                 required
-                placeholder="Write full article description here. This content will be interleaved with gallery images."
+                placeholder="Write full article content here."
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                className="w-full font-mono bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-3.5 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-600 transition-colors leading-relaxed"
+                className="w-full font-mono bg-white border border-slate-300 rounded p-3 text-xs text-slate-900 focus:outline-none focus:border-slate-800 leading-relaxed"
               />
             </div>
           </div>
 
-          {/* Sidebar Settings Column (1 span) */}
-          <div className="space-y-5">
+          {/* Sidebar Settings Column */}
+          <div className="space-y-4">
             {/* Publishing Status Card */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3.5 shadow-xs">
-              <h3 className="text-xs font-medium uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                <BiFile className="text-sm text-blue-600 dark:text-blue-400" />
-                <span>Publishing Status</span>
+            <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
+              <h3 className="text-xs font-semibold text-slate-900">
+                Publishing Status
               </h3>
 
-              <div className="flex items-center justify-between p-2.5 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <span className="text-xs font-normal text-slate-700 dark:text-slate-300">
+              <div className="flex items-center justify-between p-2.5 rounded bg-slate-50 border border-slate-200">
+                <span className="text-xs font-normal text-slate-700">
                   {formData.is_published ? (
-                    <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-                      <BiCheckCircle /> Live Published
+                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-200">
+                      Live Published
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
+                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200">
                       Draft (Private)
                     </span>
                   )}
@@ -479,11 +440,7 @@ export default function BlogForm({
                       is_published: !prev.is_published,
                     }))
                   }
-                  className={`px-3 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
-                    formData.is_published
-                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 hover:bg-amber-200'
-                      : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 hover:bg-emerald-200'
-                  }`}
+                  className="px-2 py-1 rounded text-xs font-medium border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   {formData.is_published ? 'Set as Draft' : 'Mark Published'}
                 </button>
@@ -498,96 +455,84 @@ export default function BlogForm({
                     type="datetime-local"
                     value={formData.published_at}
                     onChange={(e) => setFormData({ ...formData, published_at: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-600"
+                    className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                   />
                 </div>
               )}
             </div>
 
             {/* Multiple Images Gallery Card */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-4 shadow-xs">
+            <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-medium uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                  <BiImages className="text-sm text-blue-600 dark:text-blue-400" />
-                  <span>Article Images ({totalImagesCount})</span>
+                <h3 className="text-xs font-semibold text-slate-900">
+                  Article Images ({totalImagesCount})
                 </h3>
 
                 <button
                   type="button"
                   onClick={loadCloudinaryLibrary}
-                  className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1"
+                  className="text-xs text-slate-700 hover:text-slate-900 font-medium cursor-pointer underline"
                 >
-                  <BiPlus />
-                  <span>Cloudinary</span>
+                  Cloudinary Library
                 </button>
               </div>
 
-              {/* Gallery Grid (Existing + Pending Images) */}
+              {/* Gallery Grid */}
               {totalImagesCount > 0 ? (
-                <div className="grid grid-cols-2 gap-2.5 max-h-72 overflow-y-auto pr-1">
-                  {/* Existing Saved Images */}
+                <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
                   {gallery.map((img, idx) => {
                     const imgKey = img.id ? `img-${img.id}` : `url-${idx}`;
                     const targetId = img.id !== undefined && img.id !== null ? img.id : idx;
                     return (
                       <div
                         key={imgKey}
-                        className={`group relative aspect-video rounded overflow-hidden border transition-all ${
+                        className={`group relative aspect-video rounded overflow-hidden border ${
                           img.is_primary
-                            ? 'border-emerald-500 ring-2 ring-emerald-500/30'
-                            : 'border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800'
+                            ? 'border-emerald-600'
+                            : 'border-slate-200 bg-slate-100'
                         }`}
                       >
                         <img
                           src={img.image}
                           alt={img.caption || `Image ${idx + 1}`}
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src =
-                              'https://placehold.co/400x250/f1f5f9/94a3b8?text=Image+Not+Found';
-                          }}
                         />
 
-                        {/* Primary Badge */}
                         {img.is_primary && (
-                          <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9px] font-medium uppercase tracking-wider flex items-center gap-0.5 shadow-xs">
-                            <BiStar className="text-[10px]" /> Cover
+                          <div className="absolute top-1 left-1 px-1.5 py-0.2 rounded bg-emerald-700 text-white text-[9px] font-medium">
+                            Cover
                           </div>
                         )}
 
-                        {/* Hover Overlay Actions */}
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-1">
+                        <div className="absolute inset-0 bg-slate-900/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-1">
                           {!img.is_primary && (
                             <button
                               type="button"
                               onClick={() => handleSetPrimary(targetId, false)}
-                              className="p-1.5 rounded-full bg-slate-800 hover:bg-emerald-600 text-white transition-colors cursor-pointer"
-                              title="Set as First/Cover Image"
+                              className="px-1.5 py-0.5 rounded bg-slate-800 text-white text-[10px] font-medium hover:bg-emerald-700 cursor-pointer"
                             >
-                              <BiStar className="text-xs" />
+                              Cover
                             </button>
                           )}
                           <button
                             type="button"
                             onClick={() => handleRemoveGalleryImage(idx)}
-                            className="p-1.5 rounded-full bg-slate-800 hover:bg-rose-600 text-white transition-colors cursor-pointer"
-                            title="Remove image"
+                            className="px-1.5 py-0.5 rounded bg-slate-800 text-rose-300 text-[10px] font-medium hover:bg-rose-700 hover:text-white cursor-pointer"
                           >
-                            <BiTrash className="text-xs" />
+                            Remove
                           </button>
                         </div>
                       </div>
                     );
                   })}
 
-                  {/* Pending Upload Files */}
                   {pendingFiles.map((item) => (
                     <div
                       key={item.id}
-                      className={`group relative aspect-video rounded overflow-hidden border transition-all ${
+                      className={`group relative aspect-video rounded overflow-hidden border ${
                         item.is_primary
-                          ? 'border-emerald-500 ring-2 ring-emerald-500/30'
-                          : 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/40'
+                          ? 'border-emerald-600'
+                          : 'border-slate-300 bg-slate-50'
                       }`}
                     >
                       <img
@@ -595,48 +540,45 @@ export default function BlogForm({
                         alt="Pending Upload"
                         className="w-full h-full object-cover"
                       />
-                      <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-blue-600 text-white text-[9px] font-medium tracking-wide">
+                      <div className="absolute top-1 left-1 px-1.5 py-0.2 rounded bg-slate-800 text-white text-[9px] font-medium">
                         Pending
                       </div>
 
                       {item.is_primary && (
-                        <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9px] font-medium flex items-center gap-0.5">
-                          <BiStar /> Cover
+                        <div className="absolute top-1 right-1 px-1.5 py-0.2 rounded bg-emerald-700 text-white text-[9px] font-medium">
+                          Cover
                         </div>
                       )}
 
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-1">
+                      <div className="absolute inset-0 bg-slate-900/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-1">
                         {!item.is_primary && (
                           <button
                             type="button"
                             onClick={() => handleSetPrimary(item.id, true)}
-                            className="p-1.5 rounded-full bg-slate-800 hover:bg-emerald-600 text-white transition-colors cursor-pointer"
-                            title="Set as First/Cover Image"
+                            className="px-1.5 py-0.5 rounded bg-slate-800 text-white text-[10px] font-medium hover:bg-emerald-700 cursor-pointer"
                           >
-                            <BiStar className="text-xs" />
+                            Cover
                           </button>
                         )}
                         <button
                           type="button"
                           onClick={() => handleRemovePendingFile(item.id)}
-                          className="p-1.5 rounded-full bg-slate-800 hover:bg-rose-600 text-white transition-colors cursor-pointer"
-                          title="Remove file"
+                          className="px-1.5 py-0.5 rounded bg-slate-800 text-rose-300 text-[10px] font-medium hover:bg-rose-700 hover:text-white cursor-pointer"
                         >
-                          <BiTrash className="text-xs" />
+                          Remove
                         </button>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="py-6 px-3 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded bg-slate-50/50 dark:bg-slate-900/50">
-                  <BiImage className="text-2xl text-slate-400 mx-auto mb-1" />
+                <div className="py-6 px-3 text-center border border-dashed border-slate-200 rounded bg-slate-50">
                   <p className="text-xs text-slate-500">No images attached yet.</p>
                   <p className="text-[10px] text-slate-400 mt-0.5">Upload one or multiple images below.</p>
                 </div>
               )}
 
-              {/* Multi-file Upload Input */}
+              {/* Upload Input */}
               <div className="space-y-2">
                 <input
                   type="file"
@@ -649,16 +591,14 @@ export default function BlogForm({
                 />
                 <label
                   htmlFor="blog-gallery-upload"
-                  className="w-full border border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 rounded p-3 text-center cursor-pointer flex flex-col items-center justify-center gap-1 text-slate-600 dark:text-slate-400 transition-colors"
+                  className="w-full border border-dashed border-slate-300 hover:border-slate-800 rounded p-3 text-center cursor-pointer flex flex-col items-center justify-center gap-0.5 text-slate-600 transition-colors"
                 >
-                  <BiCloudUpload className="text-xl text-slate-400" />
-                  <span className="text-xs font-medium text-slate-800 dark:text-slate-200">
-                    Upload Images (Select one or multiple)
+                  <span className="text-xs font-medium text-slate-800">
+                    Upload Images (Click to Select)
                   </span>
-                  <span className="text-[10px] text-slate-400">PNG, JPG, WEBP up to 10MB</span>
+                  <span className="text-[10px] text-slate-400">PNG, JPG, WEBP</span>
                 </label>
 
-                {/* Direct URL input fallback */}
                 <div className="flex items-center gap-1.5 pt-1">
                   <input
                     type="url"
@@ -671,12 +611,12 @@ export default function BlogForm({
                         handleAddCustomUrl();
                       }
                     }}
-                    className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-600"
+                    className="flex-1 bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                   />
                   <button
                     type="button"
                     onClick={handleAddCustomUrl}
-                    className="px-2.5 py-1.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors cursor-pointer shrink-0"
+                    className="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 text-xs font-medium transition-colors cursor-pointer shrink-0"
                   >
                     Add
                   </button>
@@ -684,15 +624,14 @@ export default function BlogForm({
               </div>
             </div>
 
-            {/* SEO & Search Engine Optimization Card */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3.5 shadow-xs">
-              <h3 className="text-xs font-medium uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                <BiGlobe className="text-sm text-blue-600 dark:text-blue-400" />
-                <span>SEO &amp; Meta Tags</span>
+            {/* SEO Card */}
+            <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
+              <h3 className="text-xs font-semibold text-slate-900">
+                SEO &amp; Meta Tags
               </h3>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-slate-700 mb-1">
                   Meta Title
                 </label>
                 <input
@@ -700,36 +639,35 @@ export default function BlogForm({
                   placeholder={formData.title || 'Page title for search engines'}
                   value={formData.meta_title}
                   onChange={(e) => setFormData({ ...formData, meta_title: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-600"
+                  className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-slate-700 mb-1">
                   Meta Description
                 </label>
                 <textarea
                   rows={2}
-                  placeholder={formData.excerpt || 'Brief description snippet shown in Google search results...'}
+                  placeholder={formData.excerpt || 'Brief description snippet...'}
                   value={formData.meta_description}
                   onChange={(e) => setFormData({ ...formData, meta_description: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-blue-600"
+                  className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
 
-              {/* SERP Search Result Preview */}
-              <div className="p-3 rounded bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 space-y-1">
-                <div className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">
-                  Google Preview
+              <div className="p-2.5 rounded bg-slate-50 border border-slate-200 space-y-1">
+                <div className="text-[10px] uppercase font-semibold text-slate-400">
+                  Preview
                 </div>
-                <div className="text-xs font-medium text-blue-700 dark:text-blue-400 truncate">
+                <div className="text-xs font-medium text-slate-900 truncate">
                   {formData.meta_title || formData.title || 'Untitled Article'}
                 </div>
-                <div className="text-[10px] text-emerald-700 dark:text-emerald-400 truncate font-mono">
-                  https://yoursite.com/blogs/...
+                <div className="text-[10px] text-slate-500 truncate font-mono">
+                  /blogs/...
                 </div>
-                <div className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
-                  {formData.meta_description || formData.excerpt || 'Read the latest updates and insights on our educational platform.'}
+                <div className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
+                  {formData.meta_description || formData.excerpt || 'Read the latest updates and insights.'}
                 </div>
               </div>
             </div>
@@ -737,13 +675,13 @@ export default function BlogForm({
         </div>
 
         {/* Footer Actions Bar */}
-        <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             {onCancel && (
               <button
                 type="button"
                 onClick={onCancel}
-                className="px-4 py-2 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -754,10 +692,9 @@ export default function BlogForm({
                 href={`/blogs/${currentBlog.slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 px-3 py-2 text-xs text-slate-500 hover:text-blue-600 dark:hover:text-blue-400"
+                className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900 font-medium"
               >
-                <BiLinkExternal className="text-sm" />
-                <span>View Live</span>
+                View Live
               </a>
             )}
           </div>
@@ -767,7 +704,7 @@ export default function BlogForm({
               type="button"
               disabled={loading}
               onClick={(e) => handleSubmit(e, false)}
-              className="flex-1 sm:flex-initial px-4 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer disabled:opacity-50"
+              className="flex-1 sm:flex-initial px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs transition-colors cursor-pointer disabled:opacity-50"
             >
               {loading ? 'Saving...' : 'Save as Draft'}
             </button>
@@ -776,10 +713,9 @@ export default function BlogForm({
               type="submit"
               disabled={loading}
               onClick={(e) => handleSubmit(e, true)}
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-5 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+              className="flex-1 sm:flex-initial px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-colors cursor-pointer disabled:opacity-50"
             >
-              <BiSave className="text-base" />
-              <span>{loading ? 'Publishing...' : isEditing ? 'Update & Publish' : 'Publish Live'}</span>
+              {loading ? 'Publishing...' : isEditing ? 'Update & Publish' : 'Publish Live'}
             </button>
           </div>
         </div>
@@ -788,10 +724,10 @@ export default function BlogForm({
       {/* Cloudinary Asset Picker Modal */}
       {showCloudinaryLibrary && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <div className="bg-white border border-slate-200 rounded shadow-lg w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
+            <div className="p-3.5 border-b border-slate-200 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-medium text-slate-900 dark:text-white">
+                <h3 className="text-sm font-semibold text-slate-900">
                   Cloudinary Media Library
                 </h3>
                 <p className="text-xs text-slate-500">
@@ -801,7 +737,7 @@ export default function BlogForm({
               <button
                 type="button"
                 onClick={() => setShowCloudinaryLibrary(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 text-lg cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 p-1 text-base cursor-pointer"
               >
                 ✕
               </button>
@@ -809,29 +745,28 @@ export default function BlogForm({
 
             <div className="p-4 flex-1 overflow-y-auto">
               {loadingAssets ? (
-                <div className="p-12 text-center text-slate-400 space-y-2">
-                  <BiRefresh className="text-2xl mx-auto animate-spin" />
-                  <p className="text-xs">Loading Cloudinary assets...</p>
+                <div className="p-12 text-center text-slate-400 text-xs">
+                  Loading Cloudinary assets...
                 </div>
               ) : cloudinaryAssets.length === 0 ? (
                 <div className="p-12 text-center text-slate-400 text-xs">
-                  No Cloudinary assets found or credentials not configured.
+                  No Cloudinary assets found.
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                   {cloudinaryAssets.map((asset) => (
                     <button
                       key={asset.public_id}
                       type="button"
                       onClick={() => handleSelectCloudinaryAsset(asset)}
-                      className="group relative rounded border border-slate-200 dark:border-slate-700 overflow-hidden hover:ring-2 hover:ring-blue-600 text-left transition-all cursor-pointer aspect-video bg-slate-100 dark:bg-slate-800"
+                      className="group relative rounded border border-slate-200 overflow-hidden hover:border-slate-800 text-left transition-all cursor-pointer aspect-video bg-slate-100"
                     >
                       <img
                         src={asset.secure_url}
                         alt={asset.public_id}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        className="w-full h-full object-cover"
                       />
-                      <div className="absolute inset-x-0 bottom-0 bg-black/60 p-1.5 text-[10px] text-white truncate">
+                      <div className="absolute inset-x-0 bottom-0 bg-slate-900/80 p-1 text-[10px] text-white truncate">
                         {asset.public_id}
                       </div>
                     </button>

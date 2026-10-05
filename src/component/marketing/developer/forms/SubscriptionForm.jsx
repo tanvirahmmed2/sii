@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 
-
-
 export default function SubscriptionForm({ packages = [], onSuccess, onCancel }) {
   const [formData, setFormData] = useState(() => ({
     creator_id: 101,
@@ -54,64 +52,63 @@ export default function SubscriptionForm({ packages = [], onSuccess, onCancel })
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded p-6 shadow-xs mb-6">
-      <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded bg-primary/10 text-primary">
-            
-          </div>
-          <div>
-            <h3 className="text-base font-medium text-slate-800">Assign Creator Subscription</h3>
-            <p className="text-xs text-slate-500">Grant or adjust recurring package subscriptions for platform users.</p>
-          </div>
+    <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-4 mb-4">
+      <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Assign Creator Subscription</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Grant or adjust recurring package subscriptions for platform users.
+          </p>
         </div>
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="p-1 text-slate-400 hover:text-slate-600 rounded-md transition-colors"
-          >Close</button>
+            className="px-2.5 py-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 text-xs font-medium rounded border border-slate-200 dark:border-slate-700 cursor-pointer"
+          >
+            Close
+          </button>
         )}
       </div>
 
       {error && (
-        <div className="p-3 mb-4 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs font-normal">
+        <div className="p-3 rounded border border-rose-200 bg-rose-50 text-rose-700 text-xs font-medium">
           {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Creator Account ID</label>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Creator Account ID</label>
             <input
               type="number"
               required
               placeholder="e.g. 101"
               value={formData.creator_id}
               onChange={(e) => setFormData({ ...formData, creator_id: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Package ID</label>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Package ID</label>
             <input
               type="number"
               required
               placeholder="e.g. 1"
               value={formData.package_id}
               onChange={(e) => setFormData({ ...formData, package_id: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Subscription Status</label>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Subscription Status</label>
             <select
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
             >
               <option value="ACTIVE">Active</option>
               <option value="TRIALING">Trialing</option>
@@ -121,38 +118,38 @@ export default function SubscriptionForm({ packages = [], onSuccess, onCancel })
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">Current Period Expiry Date</label>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Current Period Expiry Date</label>
             <input
               type="date"
               required
               value={formData.current_period_end}
               onChange={(e) => setFormData({ ...formData, current_period_end: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-300 rounded px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-secondary focus:bg-white transition-colors"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
             />
           </div>
 
-          <div className="flex items-center pt-6">
-            <input
-              type="checkbox"
-              id="cancel_at_period_end"
-              checked={formData.cancel_at_period_end}
-              onChange={(e) => setFormData({ ...formData, cancel_at_period_end: e.target.checked })}
-              className="w-4 h-4 text-primary rounded border-slate-300 focus:ring-primary mr-2"
-            />
-            <label htmlFor="cancel_at_period_end" className="text-xs font-normal text-slate-700 cursor-pointer">
-              Auto-cancel when billing cycle ends
+          <div className="flex items-center pt-5">
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700 dark:text-slate-300">
+              <input
+                type="checkbox"
+                id="cancel_at_period_end"
+                checked={formData.cancel_at_period_end}
+                onChange={(e) => setFormData({ ...formData, cancel_at_period_end: e.target.checked })}
+                className="rounded border-slate-300 cursor-pointer"
+              />
+              <span>Auto-cancel when billing cycle ends</span>
             </label>
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
           {onCancel && (
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2 rounded border border-slate-300 text-slate-700 text-xs font-normal hover:bg-slate-50 transition-colors"
+              className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-50 transition-colors cursor-pointer"
             >
               Cancel
             </button>
@@ -160,10 +157,9 @@ export default function SubscriptionForm({ packages = [], onSuccess, onCancel })
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center gap-1.5 px-5 py-2 rounded bg-primary hover:bg-primary-dark text-slate-900 text-xs font-medium shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
+            className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium disabled:opacity-50 transition-colors cursor-pointer"
           >
-            
-            <span>{loading ? 'Creating...' : 'Grant Subscription'}</span>
+            {loading ? 'Creating...' : 'Grant Subscription'}
           </button>
         </div>
       </form>

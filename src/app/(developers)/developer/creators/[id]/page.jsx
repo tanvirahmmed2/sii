@@ -186,7 +186,7 @@ export default function CreatorDetailsPage({ params }) {
   const { creator, activeSubscription, subscriptions = [], websites = [], payments = [], tickets = [], stats = {} } = data;
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-4">
       {/* Top Breadcrumb & Navigation */}
       <div className="flex items-center justify-between">
         <Link
@@ -211,7 +211,7 @@ export default function CreatorDetailsPage({ params }) {
             href={`/creator/${creator.id}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded bg-secondary hover:bg-secondary-dark text-white text-xs font-medium transition-all shadow-xs"
+            className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors"
           >
             <span>Open Creator Panel</span>
             
@@ -409,7 +409,13 @@ export default function CreatorDetailsPage({ params }) {
             
           </div>
           <div className="text-lg font-medium text-slate-900 mt-2">
-            ${((stats.totalSpentCents || 0) / 100).toFixed(2)}
+            {Number(stats.totalSpentUsd || 0) > 0 && Number(stats.totalSpentBdt || 0) > 0 ? (
+              <span>${Number(stats.totalSpentUsd || 0).toFixed(2)} USD + ৳{Number(stats.totalSpentBdt || 0).toLocaleString()} BDT</span>
+            ) : Number(stats.totalSpentBdt || 0) > 0 ? (
+              <span>৳{Number(stats.totalSpentBdt || 0).toLocaleString()} BDT</span>
+            ) : (
+              <span>${Number(stats.totalSpentUsd || (stats.totalSpentCents ? stats.totalSpentCents / 100 : 0)).toFixed(2)} USD</span>
+            )}
           </div>
           <div className="text-[11px] text-slate-400 mt-0.5">
             {stats.totalPayments || 0} payment transaction(s)

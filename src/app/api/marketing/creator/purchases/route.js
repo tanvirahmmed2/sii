@@ -37,6 +37,7 @@ export async function GET(request) {
                 pay.transaction_id,
                 pay.payment_method,
                 pay.amount AS payment_amount,
+                pay.currency AS payment_currency,
                 (COALESCE(pay.amount, pu.total_amount, 0) * 100)::bigint AS amount_in_cents
          FROM purchases pu
          LEFT JOIN packages p ON pu.package_id = p.id
@@ -66,6 +67,8 @@ export async function GET(request) {
               pay.payment_method,
               pay.payment_date,
               pay.created_at AS payment_created_at,
+              pay.currency AS payment_currency,
+              pay.amount AS payment_amount,
               (COALESCE(pay.amount, pu.total_amount, 0) * 100)::bigint AS amount_in_cents
        FROM purchases pu
        LEFT JOIN packages p ON pu.package_id = p.id

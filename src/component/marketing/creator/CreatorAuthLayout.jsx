@@ -3,94 +3,63 @@
 import React from 'react';
 import Link from 'next/link';
 import { SITE_NAME } from 'src/lib/database/secret';
-import {
-  BiRocket,
-  BiCheckCircle,
-  BiStar,
-  BiShieldQuarter,
-  BiArrowBack,
-  BiCube,
-  BiGlobe,
-  BiCart,
-} from 'react-icons/bi';
 
 export default function CreatorAuthLayout({
-  badge = 'Creator Studio',
-  headline = 'Build Your Identity on Web',
-  description = 'The visual website builder and unified commerce engine designed for ambitious creators, developers, and modern agencies.',
+  headline = 'Creator Studio',
+  description = 'Educational portfolio website builder and creator management workspace.',
   features = [
-    'Pixel-perfect drag & drop canvas with instant cloud publishing',
-    'Integrated store engine with 0% platform cuts and instant payouts',
-    'Automated appointment bookings, lead management, and live chat',
+    'Subdomain and custom domain routing',
+    'Drag-and-drop website editor',
+    'Direct support and developer collaboration',
   ],
   children,
 }) {
   return (
-    <div className="h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors lg:flex lg:flex-row">
-
-      <div className="hidden lg:flex lg:w-1/2 xl:w-5/12 relative overflow-hidden bg-primary-dark text-white p-8 sm:p-12 lg:p-16 flex-col justify-between border-r border-slate-800 shrink-0">
-
-        <div className="relative z-10 flex items-center justify-between">
+    <div className="min-h-screen w-full bg-slate-50 text-slate-900 lg:flex lg:flex-row text-xs">
+      {/* Left Branding Column */}
+      <div className="hidden lg:flex lg:w-5/12 bg-slate-900 text-white p-8 lg:p-12 flex-col justify-between shrink-0">
+        <div className="flex items-center justify-between">
           <Link
             href="/"
-            className="text-2xl sm:text-3xl font-semibold tracking-tight text-white hover:text-slate-200 transition-colors inline-block"
+            className="text-base font-semibold text-white hover:text-slate-300 transition-colors"
           >
             {SITE_NAME}
           </Link>
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-light hover:text-white transition-colors px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10"
+            className="text-xs text-slate-400 hover:text-white transition-colors px-2 py-1 rounded border border-slate-700"
           >
-            <BiArrowBack className="text-sm" />
-            <span>Home</span>
+            Home
           </Link>
         </div>
 
-        {/* Center: Headline & Creator Value Pillars */}
-        <div className="relative z-10 my-10 sm:my-14 space-y-6">
-
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-white leading-tight">
+        <div className="space-y-4 my-auto max-w-sm">
+          <h2 className="text-xl font-semibold text-white leading-snug">
             {headline}
           </h2>
-
-          <p className="text-sm text-light leading-relaxed max-w-lg font-normal">
+          <p className="text-slate-400 text-xs leading-normal">
             {description}
           </p>
 
-          {/* Feature Checklist */}
-          <div className="space-y-3 pt-2">
+          <div className="space-y-2 pt-2 text-slate-300">
             {features.map((feature, idx) => (
-              <div key={idx} className="flex items-start gap-2.5 text-xs text-light">
-                <BiCheckCircle className="text-emerald-400 text-base shrink-0 mt-0.5" />
+              <div key={idx} className="flex items-start gap-2 text-xs">
+                <span className="text-slate-500 font-mono">-</span>
                 <span>{feature}</span>
               </div>
             ))}
           </div>
-
         </div>
 
+        <div className="text-[11px] text-slate-500">
+          Educational SaaS Multi-Tenant Platform
+        </div>
       </div>
-      <div className="flex-1 min-h-screen flex flex-col justify-center lg:justify-between px-4 py-8 sm:px-6 lg:p-12 xl:p-16 bg-slate-50 dark:bg-slate-950 lg:bg-slate-50/70 lg:dark:bg-slate-900/60 overflow-y-auto">
 
-
-        {/* Form Container (Centered with max-w-md width) */}
-        <div className="max-w-md w-full mx-auto my-auto py-2 sm:py-4 h-screen">
+      {/* Right Form Column */}
+      <div className="flex-1 flex flex-col justify-center px-4 py-8 sm:px-6 lg:p-10 bg-slate-50">
+        <div className="max-w-sm w-full mx-auto">
           {children}
-        </div>
-
-        {/* Bottom Security / Privacy Footer (visible on lg+) */}
-        <div className="w-full hidden lg:block pt-8 text-center text-[11px] text-slate-400 dark:text-slate-500">
-          <p>
-            Protected by bank-grade 256-bit SSL encryption. By continuing, you agree to our{' '}
-            <Link href="/faqs" className="underline hover:text-slate-600 dark:hover:text-light">
-              Terms of Service
-            </Link>{' '}
-            and{' '}
-            <Link href="/faqs" className="underline hover:text-slate-600 dark:hover:text-light">
-              Privacy Policy
-            </Link>
-            .
-          </p>
         </div>
       </div>
     </div>

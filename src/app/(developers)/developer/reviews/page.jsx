@@ -2,19 +2,6 @@
 
 import { useState, useEffect, useContext, useCallback } from 'react';
 import Link from 'next/link';
-import {
-  FiStar,
-  FiCheck,
-  FiX,
-  FiTrash2,
-  FiRefreshCw,
-  FiExternalLink,
-  FiAward,
-  FiUser,
-  FiAlertCircle,
-  FiCheckCircle,
-  FiMessageSquare,
-} from 'react-icons/fi';
 import { Context } from 'src/component/helper/Context';
 
 export default function AdminReviewsPage() {
@@ -166,19 +153,19 @@ export default function AdminReviewsPage() {
   const featuredCount = reviews.filter((r) => Boolean(r.is_featured)).length;
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="w-full space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 sm:p-6 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div>
-          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+            <h1 className="text-base font-semibold text-slate-900 dark:text-slate-100">
               Customer Reviews Moderation
             </h1>
-            <span className="text-[11px] font-medium uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+            <span className="text-[9px] font-medium uppercase px-1.5 py-0.2 rounded border bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
               Testimonials
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Moderate creator testimonials and ratings. Approved reviews are highlighted across the main platform.
           </p>
         </div>
@@ -187,18 +174,16 @@ export default function AdminReviewsPage() {
           <Link
             href="/reviews"
             target="_blank"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium transition-colors cursor-pointer shadow-xs"
+            className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium transition-colors"
           >
-            <span>Public Page</span>
-            <FiExternalLink className="w-3.5 h-3.5" />
+            Public Page
           </Link>
           <button
             type="button"
             onClick={() => fetchReviews(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium transition-colors cursor-pointer shadow-xs"
+            className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors cursor-pointer"
           >
-            <FiRefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
+            {loading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
       </div>
@@ -206,79 +191,75 @@ export default function AdminReviewsPage() {
       {/* Action Notification */}
       {actionNotice.text && (
         <div
-          className={`p-4 rounded-xl flex items-center justify-between text-xs font-medium shadow-sm transition-all ${
+          className={`p-3 rounded flex items-center justify-between text-xs font-medium transition-all ${
             actionNotice.type === 'success'
-              ? 'bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-300'
-              : 'bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300'
+              ? 'bg-emerald-50 border border-emerald-200 text-emerald-800 dark:bg-emerald-950 dark:border-emerald-900 dark:text-emerald-300'
+              : 'bg-rose-50 border border-rose-200 text-rose-800 dark:bg-rose-950 dark:border-rose-900 dark:text-rose-300'
           }`}
         >
-          <div className="flex items-center gap-2">
-            {actionNotice.type === 'success' ? <FiCheckCircle className="w-4 h-4 shrink-0" /> : <FiAlertCircle className="w-4 h-4 shrink-0" />}
-            <span>{actionNotice.text}</span>
-          </div>
+          <span>{actionNotice.text}</span>
           <button
-            type="button"
             onClick={() => setActionNotice({ text: '', type: '' })}
-            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+            className="text-xs text-slate-500 hover:text-slate-700 cursor-pointer"
           >
-            <FiX className="w-4 h-4" />
+            Dismiss
           </button>
         </div>
       )}
 
       {/* KPI Counters */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div
           onClick={() => setStatusFilter('ALL')}
-          className={`bg-white dark:bg-slate-900 border rounded-xl p-4 sm:p-5 shadow-xs cursor-pointer transition-all ${
+          className={`bg-white dark:bg-slate-900 border rounded p-3.5 cursor-pointer transition-all ${
             statusFilter === 'ALL'
-              ? 'border-indigo-600 ring-2 ring-indigo-600/20'
+              ? 'border-slate-900 dark:border-slate-100'
               : 'border-slate-200 dark:border-slate-800 hover:border-slate-300'
           }`}
         >
-          <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Total Reviews</div>
-          <div className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">{totalCount}</div>
+          <div className="text-[10px] uppercase font-semibold text-slate-400 mb-1">Total Reviews</div>
+          <div className="text-xl font-semibold text-slate-900 dark:text-slate-100">{totalCount}</div>
         </div>
 
         <div
           onClick={() => setStatusFilter('PENDING')}
-          className={`bg-white dark:bg-slate-900 border rounded-xl p-4 sm:p-5 shadow-xs cursor-pointer transition-all ${
+          className={`bg-white dark:bg-slate-900 border rounded p-3.5 cursor-pointer transition-all ${
             statusFilter === 'PENDING'
-              ? 'border-amber-600 ring-2 ring-amber-600/20'
+              ? 'border-amber-600'
               : 'border-slate-200 dark:border-slate-800 hover:border-slate-300'
           }`}
         >
-          <div className="text-xs font-medium text-amber-600 dark:text-amber-400 mb-1">Pending Approval</div>
-          <div className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">{pendingCount}</div>
+          <div className="text-[10px] uppercase font-semibold text-amber-600 dark:text-amber-400 mb-1">Pending Approval</div>
+          <div className="text-xl font-semibold text-amber-600 dark:text-amber-400">{pendingCount}</div>
         </div>
 
         <div
           onClick={() => setStatusFilter('APPROVED')}
-          className={`bg-white dark:bg-slate-900 border rounded-xl p-4 sm:p-5 shadow-xs cursor-pointer transition-all ${
+          className={`bg-white dark:bg-slate-900 border rounded p-3.5 cursor-pointer transition-all ${
             statusFilter === 'APPROVED'
-              ? 'border-emerald-600 ring-2 ring-emerald-600/20'
+              ? 'border-emerald-600'
               : 'border-slate-200 dark:border-slate-800 hover:border-slate-300'
           }`}
         >
-          <div className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-1">Approved &amp; Live</div>
-          <div className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">{approvedCount}</div>
+          <div className="text-[10px] uppercase font-semibold text-emerald-600 dark:text-emerald-400 mb-1">Approved &amp; Live</div>
+          <div className="text-xl font-semibold text-emerald-600 dark:text-emerald-400">{approvedCount}</div>
         </div>
 
         <div
           onClick={() => setStatusFilter('FEATURED')}
-          className={`bg-white dark:bg-slate-900 border rounded-xl p-4 sm:p-5 shadow-xs cursor-pointer transition-all ${
+          className={`bg-white dark:bg-slate-900 border rounded p-3.5 cursor-pointer transition-all ${
             statusFilter === 'FEATURED'
-              ? 'border-indigo-600 ring-2 ring-indigo-600/20'
+              ? 'border-slate-900 dark:border-slate-100'
               : 'border-slate-200 dark:border-slate-800 hover:border-slate-300'
           }`}
         >
-          <div className="text-xs font-medium text-indigo-600 dark:text-indigo-400 mb-1">Featured Testimonials</div>
-          <div className="text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400">{featuredCount}</div>
+          <div className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 mb-1">Featured</div>
+          <div className="text-xl font-semibold text-slate-900 dark:text-slate-100">{featuredCount}</div>
         </div>
       </div>
 
       {/* Filter Tabs */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 sm:p-4 shadow-xs flex items-center justify-between gap-4 flex-wrap">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           {[
             { key: 'ALL', label: 'All Reviews' },
@@ -290,9 +271,9 @@ export default function AdminReviewsPage() {
               key={tab.key}
               type="button"
               onClick={() => setStatusFilter(tab.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer shrink-0 ${
+              className={`px-3 py-1 rounded text-xs font-medium transition-colors cursor-pointer shrink-0 ${
                 statusFilter === tab.key
-                  ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-xs'
+                  ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
                   : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
@@ -307,16 +288,14 @@ export default function AdminReviewsPage() {
       </div>
 
       {/* Reviews List */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {loading && reviews.length === 0 ? (
-          <div className="p-16 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex flex-col items-center justify-center gap-2 text-slate-400">
-            <FiRefreshCw className="w-6 h-6 animate-spin text-slate-400" />
+          <div className="p-12 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-slate-400">
             <span className="text-xs font-normal">Loading reviews for moderation...</span>
           </div>
         ) : filteredReviews.length === 0 ? (
-          <div className="p-16 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2">
-            <FiMessageSquare className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto stroke-1" />
-            <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200">No reviews found</h3>
+          <div className="p-12 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded space-y-1">
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">No reviews found</h3>
             <p className="text-xs text-slate-400">
               {statusFilter !== 'ALL'
                 ? `No reviews match status filter: ${statusFilter}.`
@@ -332,46 +311,37 @@ export default function AdminReviewsPage() {
             return (
               <div
                 key={rev.id}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-start justify-between gap-6 hover:border-slate-300 dark:hover:border-slate-700 transition-all"
+                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 flex flex-col md:flex-row md:items-start justify-between gap-4"
               >
-                <div className="space-y-3 flex-1 min-w-0">
+                <div className="space-y-2 flex-1 min-w-0">
                   {/* Top metadata row */}
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    {/* Star Rating */}
-                    <div className="flex items-center text-amber-400 text-sm gap-0.5">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <FiStar
-                          key={star}
-                          className={`w-3.5 h-3.5 ${
-                            star <= ratingNum ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-slate-600'
-                          }`}
-                        />
-                      ))}
-                    </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                      ★ {ratingNum}/5
+                    </span>
 
                     <span
-                      className={`text-[10px] font-semibold uppercase px-2.5 py-0.5 rounded-md border ${
+                      className={`text-[9px] font-medium uppercase px-1.5 py-0.5 rounded border ${
                         isApproved
-                          ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
-                          : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800'
+                          : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800'
                       }`}
                     >
                       {isApproved ? 'Approved & Live' : 'Pending Approval'}
                     </span>
 
                     {rev.is_featured && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md border bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800">
-                        <FiAward className="w-3 h-3" />
-                        <span>Featured</span>
+                      <span className="text-[9px] font-medium uppercase px-1.5 py-0.5 rounded border bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950 dark:text-indigo-300 dark:border-indigo-800">
+                        Featured
                       </span>
                     )}
 
-                    <span className="font-mono text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                    <span className="font-mono text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
                       #{rev.id}
                     </span>
 
                     {(rev.institution_name || rev.package_name) && (
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                         {rev.institution_name || rev.package_name}
                         {rev.website_name && (
                           <span className="text-slate-400 font-mono ml-1">({rev.website_name})</span>
@@ -382,21 +352,18 @@ export default function AdminReviewsPage() {
 
                   {/* Title & Comment */}
                   {rev.title && (
-                    <h3 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 leading-snug">
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                       {rev.title}
                     </h3>
                   )}
 
-                  <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed italic bg-slate-50 dark:bg-slate-800/40 p-3.5 sm:p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                  <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed italic bg-slate-50 dark:bg-slate-800/40 p-3 rounded border border-slate-100 dark:border-slate-800">
                     &ldquo;{rev.review_text || rev.comment}&rdquo;
                   </p>
 
                   {/* Creator Info Footer */}
                   <div className="flex items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 pt-1 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-bold flex items-center justify-center text-[10px]">
-                        {(rev.reviewer_name || rev.creator_name || 'C').charAt(0).toUpperCase()}
-                      </div>
+                    <div>
                       <span>
                         By <strong className="text-slate-800 dark:text-slate-200 font-medium">{rev.reviewer_name || rev.creator_name || 'Creator'}</strong>
                         {rev.creator_email && ` (${rev.creator_email})`}
@@ -422,56 +389,46 @@ export default function AdminReviewsPage() {
                 <div className="flex items-center gap-2 self-end md:self-start shrink-0 pt-2 md:pt-0 flex-wrap">
                   {canModerate ? (
                     <>
-                      {/* Approve / Unapprove Button */}
                       {!isApproved ? (
                         <button
                           type="button"
                           disabled={isProcessing}
                           onClick={() => handleModerate(rev.id, 'APPROVED')}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-                          title="Approve and publish"
+                          className="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
                         >
-                          <FiCheck className="w-3.5 h-3.5" />
-                          <span>Approve</span>
+                          Approve
                         </button>
                       ) : (
                         <button
                           type="button"
                           disabled={isProcessing}
                           onClick={() => handleModerate(rev.id, 'PENDING')}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
-                          title="Set back to pending"
+                          className="px-2.5 py-1 rounded border border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-400 bg-amber-50 hover:bg-amber-100 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
                         >
-                          <FiX className="w-3.5 h-3.5" />
-                          <span>Unapprove</span>
+                          Unapprove
                         </button>
                       )}
 
-                      {/* Featured Toggle */}
                       <button
                         type="button"
                         disabled={isProcessing}
                         onClick={() => handleToggleFeatured(rev.id, !rev.is_featured)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 ${
+                        className={`px-2.5 py-1 rounded border text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 ${
                           rev.is_featured
-                            ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400'
-                            : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                            ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-950 dark:border-indigo-800 dark:text-indigo-300'
+                            : 'border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                         }`}
-                        title={rev.is_featured ? 'Remove from featured' : 'Highlight as featured review'}
                       >
-                        <FiAward className="w-3.5 h-3.5" />
-                        <span>{rev.is_featured ? 'Featured' : 'Feature'}</span>
+                        {rev.is_featured ? 'Featured' : 'Feature'}
                       </button>
 
-                      {/* Delete */}
                       <button
                         type="button"
                         disabled={isProcessing}
                         onClick={() => handleDelete(rev.id)}
-                        className="p-1.5 rounded-lg border border-rose-200 dark:border-rose-900 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors cursor-pointer disabled:opacity-50"
-                        title="Permanently delete review"
+                        className="px-2.5 py-1 rounded border border-rose-200 dark:border-rose-900 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
                       >
-                        <FiTrash2 className="w-4 h-4" />
+                        Delete
                       </button>
                     </>
                   ) : (

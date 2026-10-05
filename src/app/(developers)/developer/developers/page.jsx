@@ -6,17 +6,17 @@ import Link from 'next/link';
 import AdminForm from 'src/component/marketing/developer/forms/AdminForm';
 
 const BASE_ROLE_BADGES = {
-  developer: 'bg-cyan-50 dark:bg-cyan-950/40 text-cyan-800 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800',
-  marketer: 'bg-orange-50 dark:bg-orange-950/40 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-800',
-  admin: 'bg-purple-50 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800',
-  manager: 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
-  support: 'bg-teal-50 dark:bg-teal-950/40 text-teal-800 dark:text-teal-300 border-teal-200 dark:border-teal-800',
+  developer: 'bg-cyan-50 text-cyan-800 border-cyan-200',
+  marketer: 'bg-orange-50 text-orange-800 border-orange-200',
+  admin: 'bg-purple-50 text-purple-800 border-purple-200',
+  manager: 'bg-indigo-50 text-indigo-800 border-indigo-200',
+  support: 'bg-teal-50 text-teal-800 border-teal-200',
 };
 
 function getRoleBadgeStyle(slug = '') {
   const s = slug.toLowerCase();
   if (BASE_ROLE_BADGES[s]) return BASE_ROLE_BADGES[s];
-  return 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700';
+  return 'bg-slate-100 text-slate-700 border-slate-200';
 }
 
 const DEFAULT_ROLE_OPTIONS = [
@@ -291,82 +291,82 @@ export default function AdminAdminsPage() {
   });
 
   return (
-    <div className="space-y-4">
+    <div className="w-full space-y-4">
       {/* Action Notification Alert */}
       {actionNotice.text && (
         <div
           className={`p-3 rounded border text-xs font-normal flex items-center justify-between ${
             actionNotice.type === 'error'
-              ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300'
+              ? 'bg-rose-50 border-rose-200 text-rose-800'
               : actionNotice.type === 'success'
-              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
-              : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-slate-50 border-slate-200 text-slate-800'
           }`}
         >
           <span>{actionNotice.text}</span>
           <button
             type="button"
             onClick={() => setActionNotice({ text: '', type: 'info' })}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 ml-2 cursor-pointer"
+            className="text-slate-500 hover:text-slate-800 ml-2 cursor-pointer font-medium"
           >
-            Dismiss
+            ✕
           </button>
         </div>
       )}
 
       {/* Edit Admin Account Modal */}
       {editingAdmin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 max-w-md w-full p-5 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded border border-slate-200 shadow-lg max-w-md w-full p-4 sm:p-5 space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div>
-                <h3 className="text-sm font-medium text-slate-900 dark:text-white">Edit Developer Account</h3>
-                <p className="text-[11px] font-normal text-slate-500">Update account credentials and role</p>
+                <h3 className="text-sm font-semibold text-slate-900">Edit Developer Account</h3>
+                <p className="text-[11px] text-slate-500">Update account credentials and role</p>
               </div>
               <button
                 type="button"
                 onClick={() => setEditingAdmin(null)}
-                className="text-xs font-normal text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
+                className="text-slate-400 hover:text-slate-600 text-sm cursor-pointer"
               >
-                Close
+                ✕
               </button>
             </div>
 
             {editError && (
-              <div className="p-2.5 rounded bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs font-normal">
+              <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-800 text-xs font-normal">
                 {editError}
               </div>
             )}
 
             <form onSubmit={handleSaveEdit} className="space-y-3">
-              <div className="space-y-1">
-                <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Full Name</label>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name <span className="text-rose-600">*</span></label>
                 <input
                   type="text"
                   required
                   value={editFormData.name}
                   onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Email Address</label>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
                 <input
                   type="email"
                   disabled
                   value={editingAdmin.email}
-                  className="w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-500 cursor-not-allowed font-mono"
+                  className="w-full bg-slate-100 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-500 cursor-not-allowed font-mono"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Assigned Role</label>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Assigned Role</label>
                   <select
                     value={editFormData.role}
                     onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
+                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                   >
                     {roleOptions.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -376,12 +376,12 @@ export default function AdminAdminsPage() {
                   </select>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Account Status</label>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Account Status</label>
                   <select
                     value={editFormData.is_active ? 'active' : 'inactive'}
                     onChange={(e) => setEditFormData({ ...editFormData, is_active: e.target.value === 'active' })}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
+                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
@@ -389,8 +389,8 @@ export default function AdminAdminsPage() {
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Reset Password <span className="text-slate-400 font-normal">(Leave blank to keep unchanged)</span>
                 </label>
                 <input
@@ -398,22 +398,22 @@ export default function AdminAdminsPage() {
                   placeholder="••••••••"
                   value={editFormData.password}
                   onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setEditingAdmin(null)}
-                  className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-normal hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                  className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={editLoading}
-                  className="px-3.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium disabled:opacity-50 cursor-pointer"
+                  className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium disabled:opacity-50 cursor-pointer"
                 >
                   {editLoading ? 'Saving...' : 'Save Changes'}
                 </button>
@@ -424,17 +424,17 @@ export default function AdminAdminsPage() {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded p-4">
         <div>
-          <h1 className="text-base font-medium text-slate-900 dark:text-white">Developers &amp; Staff</h1>
-          <p className="text-xs text-slate-500 font-normal">Manage internal operators and platform access.</p>
+          <h1 className="text-base font-semibold text-slate-900">Developers &amp; Staff</h1>
+          <p className="text-xs text-slate-500 mt-0.5">Manage internal operators and platform access.</p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
           {isUserAdmin && (
             <Link
               href="/developer/roles"
-              className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-xs font-normal text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+              className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs transition-colors"
             >
               Roles &amp; Permissions
             </Link>
@@ -442,7 +442,7 @@ export default function AdminAdminsPage() {
           <button
             type="button"
             onClick={() => fetchAdmins(true)}
-            className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-xs font-normal text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+            className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs transition-colors cursor-pointer"
           >
             Refresh
           </button>
@@ -450,7 +450,7 @@ export default function AdminAdminsPage() {
             <button
               type="button"
               onClick={() => setShowAddForm(!showAddForm)}
-              className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium cursor-pointer"
+              className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors cursor-pointer"
             >
               {showAddForm ? 'Hide Form' : 'Add Developer'}
             </button>
@@ -471,14 +471,14 @@ export default function AdminAdminsPage() {
       )}
 
       {/* Table Card */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden">
-        <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-800/30">
+      <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <input
             type="text"
             placeholder="Search by name, email, or role..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full sm:w-72 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-slate-500 font-normal"
+            className="w-full sm:w-72 bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
           />
           <div className="text-xs text-slate-500 font-normal">
             Showing {filteredAdmins.length} of {admins.length} records
@@ -488,19 +488,19 @@ export default function AdminAdminsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-normal text-[11px]">
-                <th className="px-3.5 py-2.5 whitespace-nowrap">ID</th>
-                <th className="px-3.5 py-2.5 whitespace-nowrap">Name</th>
-                <th className="px-3.5 py-2.5 whitespace-nowrap">Email</th>
-                <th className="px-3.5 py-2.5 whitespace-nowrap">Role</th>
-                <th className="px-3.5 py-2.5 whitespace-nowrap">Status</th>
-                <th className="px-3.5 py-2.5 whitespace-nowrap">Verification</th>
-                <th className="px-3.5 py-2.5 whitespace-nowrap">Last Login</th>
-                <th className="px-3.5 py-2.5 whitespace-nowrap">Created</th>
-                <th className="px-3.5 py-2.5 text-right whitespace-nowrap">Actions</th>
+              <tr className="border-b border-slate-200 text-slate-500 text-[10px] uppercase font-semibold">
+                <th className="pb-2">ID</th>
+                <th className="pb-2">Name</th>
+                <th className="pb-2">Email</th>
+                <th className="pb-2">Role</th>
+                <th className="pb-2">Status</th>
+                <th className="pb-2">Verification</th>
+                <th className="pb-2">Last Login</th>
+                <th className="pb-2">Created</th>
+                <th className="pb-2 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+            <tbody className="divide-y divide-slate-100 font-normal text-slate-700">
               {loading ? (
                 <tr>
                   <td colSpan={9} className="py-8 text-center text-slate-400 font-normal">Loading developers...</td>
@@ -517,43 +517,43 @@ export default function AdminAdminsPage() {
                   const isLastActiveAdmin = role === 'admin' && isActive && activeAdminCount <= 1;
 
                   return (
-                    <tr key={admin.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="px-3.5 py-2.5 font-mono font-normal text-slate-500">#{admin.id}</td>
-                      <td className="px-3.5 py-2.5 font-medium text-slate-900 dark:text-white">{admin.name}</td>
-                      <td className="px-3.5 py-2.5 font-mono text-slate-600 dark:text-slate-400 font-normal">{admin.email}</td>
+                    <tr key={admin.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-2.5 font-mono text-slate-500">#{admin.id}</td>
+                      <td className="py-2.5 font-semibold text-slate-900">{admin.name}</td>
+                      <td className="py-2.5 font-mono text-slate-600">{admin.email}</td>
 
                       {/* Role column */}
-                      <td className="px-3.5 py-2.5">
+                      <td className="py-2.5">
                         {isUserAdmin ? (
                           <select
                             value={role}
                             disabled={updatingRoleId === admin.id}
                             onChange={(e) => handleChangeRole(admin, e.target.value)}
-                            className={`text-[11px] font-normal border rounded px-2 py-0.5 bg-transparent cursor-pointer focus:outline-none ${getRoleBadgeStyle(role)}`}
+                            className={`text-[10px] font-medium border rounded px-1.5 py-0.5 bg-white cursor-pointer focus:outline-none ${getRoleBadgeStyle(role)}`}
                           >
                             {roleOptions.map((opt) => (
-                              <option key={opt.value} value={opt.value} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+                              <option key={opt.value} value={opt.value} className="bg-white text-slate-800">
                                 {opt.label}
                               </option>
                             ))}
                           </select>
                         ) : (
-                          <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-normal border ${getRoleBadgeStyle(role)}`}>
+                          <span className={`inline-block px-1.5 py-0.2 rounded text-[10px] font-medium border ${getRoleBadgeStyle(role)}`}>
                             {getRoleLabel(role)}
                           </span>
                         )}
                       </td>
 
                       {/* Status column */}
-                      <td className="px-3.5 py-2.5">
+                      <td className="py-2.5">
                         <button
                           type="button"
                           disabled={!isUserAdmin || updatingStatusId === admin.id || isLastActiveAdmin}
                           onClick={() => handleToggleStatus(admin)}
-                          className={`px-2 py-0.5 rounded text-[11px] font-normal border cursor-pointer ${
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-medium border cursor-pointer ${
                             isActive
-                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                              : 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                              : 'bg-rose-50 text-rose-800 border-rose-200'
                           } disabled:opacity-50`}
                         >
                           {updatingStatusId === admin.id ? 'Updating...' : isActive ? 'Active' : 'Inactive'}
@@ -561,64 +561,64 @@ export default function AdminAdminsPage() {
                       </td>
 
                       {/* Verification column */}
-                      <td className="px-3.5 py-2.5">
+                      <td className="py-2.5">
                         {isVerified ? (
-                          <span className="text-[11px] font-normal text-emerald-700 dark:text-emerald-400">
+                          <span className="text-[10px] font-medium px-1.5 py-0.2 rounded border bg-emerald-50 text-emerald-700 border-emerald-200">
                             Verified
                           </span>
                         ) : (
-                          <div className="flex items-center gap-2">
-                            <span className="text-[11px] font-normal text-amber-700 dark:text-amber-400">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-medium px-1.5 py-0.2 rounded border bg-amber-50 text-amber-700 border-amber-200">
                               Unverified
                             </span>
                             <button
                               type="button"
                               disabled={resendingEmail === admin.email}
                               onClick={() => handleResendCode(admin.email)}
-                              className="text-[11px] text-slate-600 dark:text-slate-400 hover:underline font-normal cursor-pointer"
+                              className="text-[10px] text-slate-600 hover:underline font-medium cursor-pointer"
                             >
-                              {resendingEmail === admin.email ? 'Sending...' : 'Resend Link'}
+                              {resendingEmail === admin.email ? 'Sending...' : 'Resend'}
                             </button>
                           </div>
                         )}
                       </td>
 
                       {/* Last Login */}
-                      <td className="px-3.5 py-2.5 text-slate-500 text-[11px] font-normal">
+                      <td className="py-2.5 text-slate-500 text-xs font-mono">
                         {admin.last_login_at || admin.lastLoginAt
                           ? new Date(admin.last_login_at || admin.lastLoginAt).toLocaleDateString()
                           : 'Never'}
                       </td>
 
                       {/* Created At */}
-                      <td className="px-3.5 py-2.5 text-slate-500 text-[11px] font-normal">
+                      <td className="py-2.5 text-slate-500 text-xs font-mono">
                         {admin.created_at || admin.createdAt
                           ? new Date(admin.created_at || admin.createdAt).toLocaleDateString()
                           : '—'}
                       </td>
 
                       {/* Actions */}
-                      <td className="px-3.5 py-2.5 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="py-2.5 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
                           {isUserAdmin ? (
                             <>
                               <button
                                 type="button"
                                 onClick={() => handleOpenEdit(admin)}
-                                className="text-xs font-normal text-slate-600 dark:text-slate-400 hover:underline cursor-pointer"
+                                className="px-2 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium cursor-pointer"
                               >
                                 Edit
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleDeleteAdmin(admin.id)}
-                                className="text-xs font-normal text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"
+                                className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium cursor-pointer"
                               >
                                 Delete
                               </button>
                             </>
                           ) : (
-                            <span className="text-[11px] text-slate-400 font-normal">Read-only</span>
+                            <span className="text-[10px] text-slate-400">Read-only</span>
                           )}
                         </div>
                       </td>
