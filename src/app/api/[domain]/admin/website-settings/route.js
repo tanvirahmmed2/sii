@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
-import { isAdmin } from 'src/lib/middleware/auth';
+import { isAdmin } from 'src/lib/middleware/developer';
 import { SCHOOL_NAME, LOGO_URL, META_TITLE, META_DESCRIPTION } from 'src/lib/database/secret';
 
 // GET Website Settings

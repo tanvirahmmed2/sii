@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
-import { isAdmin, getAdminUser } from 'src/lib/middleware/auth';
-import { sendEmail } from 'src/lib/database/brevo';
+import { isAdmin, getAdminUser } from 'src/lib/middleware/developer';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+import { getBaseUrl } from 'src/lib/database/secret';
 import { recordActivityLog } from 'src/lib/database/logger';
-import crypto from 'crypto';
+import { generateToken } from 'src/lib/utils/random';
 
 // GET all staff
 export async function GET() {
@@ -78,7 +79,7 @@ export async function POST(request) {
     }
 
     // Generate token
-    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationToken = generateToken(12);
     const verificationExpires = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72 hours
 
     const newStaff = await query(`
@@ -111,7 +112,7 @@ export async function POST(request) {
       details: `Created staff member: ${createdStaff.name} (${createdStaff.email}, Role: ${createdStaff.role})`
     });
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = getBaseUrl(request);
     const verificationUrl = `${baseUrl}/auth/access/staff/verify?token=${verificationToken}`;
 
 
@@ -121,34 +122,18 @@ export async function POST(request) {
         to: emailLower,
         toName: name.trim(),
         subject: 'Complete Your Staff Profile Setup',
-        html: `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
-            <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 40px 32px; text-align: center;">
-              <h1 style="color: #ffffff; font-size: 24px; font-weight: 700; margin: 0;">Welcome to the Staff Portal</h1>
-              <p style="color: rgba(255,255,255,0.85); font-size: 14px; margin: 8px 0 0;">Your staff profile has been created by the administration.</p>
-            </div>
-            <div style="padding: 32px;">
-              <p style="color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 8px;">Hi <strong>${name.trim()}</strong>,</p>
-              <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
-                An administrator has pre-registered your staff account with the role: <strong>${role}</strong>. Click the button below to verify your identity and complete your profile setup. 
-                This verification link is valid for <strong>72 hours</strong>.
-              </p>
-              <div style="text-align: center; margin: 32px 0;">
-                <a href="${verificationUrl}" style="display: inline-block; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-size: 15px; font-weight: 600; letter-spacing: 0.3px;">
-                  Verify &amp; Set Up My Profile
-                </a>
-              </div>
-              <p style="color: #94a3b8; font-size: 12px; line-height: 1.5; margin-top: 24px;">
-                If the button doesn't work, copy and paste this link into your browser:<br/>
-                <a href="${verificationUrl}" style="color: #0284c7; word-break: break-all;">${verificationUrl}</a>
-              </p>
-              <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 24px 0;"/>
-              <p style="color: #cbd5e1; font-size: 11px; margin: 0;">
-                If you didn't expect this email, please ignore it or contact the school administration. This link will expire in 72 hours.
-              </p>
-            </div>
-          </div>
-        `
+        html: buildStyledEmail({
+          title: 'Welcome to the Staff Portal',
+          subtitle: 'Staff Profile Setup & Verification',
+          recipientName: name.trim(),
+          bodyParagraphs: [
+            `An administrator has registered your staff account with the role: ${role}.`,
+            'Click the button below to verify your identity and complete your profile setup.',
+          ],
+          actionUrl: verificationUrl,
+          actionText: 'Verify & Set Up Profile',
+          footerNote: 'This verification link is valid for 72 hours. If you did not expect this email, please contact the administration.',
+        })
       });
     } catch (emailErr) {
       console.error('Failed to send staff verification email (non-fatal):', emailErr.message);

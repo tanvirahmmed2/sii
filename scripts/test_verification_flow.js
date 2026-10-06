@@ -1,5 +1,4 @@
 const { Pool } = require('pg');
-const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 
 const pool = new Pool({
@@ -27,7 +26,7 @@ async function runTest() {
   const rawPass = 'SecureDevPass123!';
   const salt = await bcrypt.genSalt(10);
   const passwordHash = await bcrypt.hash(rawPass, salt);
-  const verificationToken = crypto.randomBytes(32).toString('hex');
+  const verificationToken = Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
 
   const createRes = await pool.query(
     `INSERT INTO developers (name, email, password, role_id, is_active, email_verified, verification_token, verification_token_expires)

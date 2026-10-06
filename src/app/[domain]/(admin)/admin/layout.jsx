@@ -1,6 +1,6 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
-import { isAdmin } from 'src/lib/middleware/auth';
+import { isAdmin } from 'src/lib/middleware/developer';
 import Navbar from 'src/component/website/bars/admin/Navbar';
 import Sidebar from 'src/component/website/bars/admin/Sidebar';
 

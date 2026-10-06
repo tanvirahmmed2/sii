@@ -10,7 +10,7 @@ export function generateInvoiceData(payment, creator = {}) {
   const p = payment || {};
   const c = creator || {};
   const paymentId = p.id || 'N/A';
-  const invoiceNumber = p.invoice_number || `INV-${String(paymentId).padStart(6, '0')}`;
+  const invoiceNumber = p.invoice_number || (p.transaction_id ? String(p.transaction_id) : String(paymentId));
   
   const formattedDate = p.created_at
     ? new Date(p.created_at).toLocaleDateString('en-US', {

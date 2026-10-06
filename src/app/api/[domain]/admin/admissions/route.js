@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
-import { isAdmin, getAdminUser } from 'src/lib/middleware/auth';
+import { isAdmin, getAdminUser } from 'src/lib/middleware/developer';
 import { recordActivityLog } from 'src/lib/database/logger';
 
 // GET Admissions circular list (public or admin)

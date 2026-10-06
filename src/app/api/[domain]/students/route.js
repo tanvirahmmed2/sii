@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
-import { isAdmin } from 'src/lib/middleware/auth';
+import { isAdmin } from 'src/lib/middleware/developer';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 
 // GET all students (with class & section filter)

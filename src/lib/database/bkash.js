@@ -11,6 +11,7 @@ import {
   BKASH_PASSWORD,
   BKASH_CALLBACK_URL,
 } from './secret.js';
+import { generateToken } from '../utils/random.js';
 
 export function validateBangladeshiMobile(mobile) {
   const cleaned = String(mobile || '').replace(/\D/g, '');
@@ -65,7 +66,7 @@ export async function createBkashPayment({
   merchantInvoiceNumber,
 }) {
   if (!isBkashConfigured()) {
-    const paymentID = `BK_PAY_SIM_${Date.now()}`;
+    const paymentID = generateToken(14);
     return {
       paymentID,
       createTime: new Date().toISOString(),
@@ -106,8 +107,8 @@ export async function createBkashPayment({
 }
 
 export async function executeBkashPayment(paymentID) {
-  if (!isBkashConfigured() || String(paymentID).includes('SIM')) {
-    const trxID = `BK${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+  if (!isBkashConfigured()) {
+    const trxID = generateToken(12);
     return {
       statusCode: '0000',
       statusMessage: 'Successful',
@@ -161,7 +162,7 @@ export async function queryBkashPayment({ paymentID }) {
 }
 
 export async function searchBkashTransaction({ trxID }) {
-  if (!isBkashConfigured() || String(trxID).startsWith('BK')) {
+  if (!isBkashConfigured()) {
     return {
       trxID,
       transactionStatus: 'Completed',
@@ -185,7 +186,7 @@ export async function searchBkashTransaction({ trxID }) {
 export async function refundBkashPayment({ paymentID, amount, trxID, sku, reason }) {
   if (!isBkashConfigured()) {
     return {
-      refundTrxID: `REF_${Date.now()}`,
+      refundTrxID: generateToken(12),
       transactionStatus: 'Completed',
       simulated: true,
     };

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
-import { isAdmin, isRegister } from 'src/lib/middleware/auth';
+import { isAdmin, isRegister } from 'src/lib/middleware/developer';
 
 // GET all seats (optionally filtered by room_id or hostel_id)
 export async function GET(request) {

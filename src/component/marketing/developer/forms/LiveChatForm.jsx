@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { generateToken } from 'src/lib/utils/random';
 
 export default function LiveChatForm({ onSuccess, onCancel, apiEndpoint = '/api/marketing/developer/live_chats' }) {
   const [formData, setFormData] = useState({
@@ -18,7 +19,7 @@ export default function LiveChatForm({ onSuccess, onCancel, apiEndpoint = '/api/
     setLoading(true);
     setError('');
 
-    const session_id = formData.session_id || 'sess_' + Math.random().toString(36).substring(2, 9);
+    const session_id = formData.session_id || generateToken(10);
 
     try {
       const res = await fetch(apiEndpoint, {

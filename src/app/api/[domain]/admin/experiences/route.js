@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAdminUser } from 'src/lib/middleware/auth';
+import { getAdminUser } from 'src/lib/middleware/developer';
 import { query } from 'src/lib/database/db';
 
 export async function GET() {

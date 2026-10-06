@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
+import { generateRandomCode, generateRandomHex, generateToken } from 'src/lib/utils/random';
 import { queryDb } from 'src/lib/database/db';
-import { sendEmail } from 'src/lib/database/brevo';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+import { getBaseUrl } from 'src/lib/database/secret';
 import {
   resolveWebsiteFromRequest,
   hashPassword,
@@ -56,13 +57,7 @@ export async function POST(request, context) {
     const body = await request.json().catch(() => ({}));
     const action = body.action || 'login';
 
-    const origin =
-      request.headers.get('origin') ||
-      (request.headers.get('host')
-        ? `${request.headers.get('x-forwarded-proto') || 'http'}://${request.headers.get('host')}`
-        : '') ||
-      process.env.NEXT_PUBLIC_APP_URL ||
-      'http://localhost:3000';
+    const origin = getBaseUrl(request);
 
     const siteTitle = website.settings?.site_title || website.name || 'Tenant Website';
     const siteSlug = website.custom_domain || website.subdomain || website.slug || '';
@@ -103,7 +98,7 @@ export async function POST(request, context) {
       }
 
       const hashedPassword = await hashPassword(password);
-      const verificationCode = crypto.randomInt(100000, 999999).toString();
+      const verificationCode = generateToken(6);
 
       const userRes = await queryDb(
         `INSERT INTO website_users (
@@ -148,25 +143,19 @@ export async function POST(request, context) {
         await sendEmail({
           to: cleanEmail,
           subject: `Verify Your Account - ${siteTitle}`,
-          html: `
-            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 540px; margin: 0 auto; padding: 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; color: #1e293b;">
-              <h2 style="color: #0f172a; margin-top: 0; font-size: 20px;">Welcome to ${siteTitle}!</h2>
-              <p style="font-size: 14px; line-height: 1.6; color: #475569;">
-                Hello ${newUser.name}, please verify your email address to complete your registration.
-              </p>
-              <div style="background: #f8fafc; border: 2px dashed #6366f1; border-radius: 12px; padding: 20px; text-align: center; margin: 24px 0;">
-                <span style="font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #4f46e5;">${verificationCode}</span>
-              </div>
-              <div style="text-align: center; margin: 24px 0;">
-                <a href="${verifyUrl}" style="background: #4f46e5; color: #ffffff; padding: 12px 28px; text-decoration: none; font-size: 14px; font-weight: bold; border-radius: 10px; display: inline-block;">
-                  Verify Email Address
-                </a>
-              </div>
-              <p style="font-size: 12px; color: #64748b; line-height: 1.5;">
-                This code expires in 24 hours. If you did not create this account, please ignore this email.
-              </p>
-            </div>
-          `,
+          html: buildStyledEmail({
+            title: `Welcome to ${siteTitle}`,
+            subtitle: 'Account Verification',
+            recipientName: newUser.name,
+            bodyParagraphs: [
+              'Please verify your email address to complete your registration.',
+            ],
+            code: verificationCode,
+            codeLabel: 'Verification Code',
+            actionUrl: verifyUrl,
+            actionText: 'Verify Email Address',
+            footerNote: 'This code expires in 24 hours. If you did not create this account, please ignore this email.',
+          }),
           text: `Welcome to ${siteTitle}! Your verification code is ${verificationCode}. Verify at: ${verifyUrl}`,
         });
       } catch (mailErr) {
@@ -177,7 +166,6 @@ export async function POST(request, context) {
         success: true,
         message: 'Account registered successfully! Please check your email for the 6-digit verification code.',
         user: newUser,
-        devCode: process.env.NODE_ENV !== 'production' ? verificationCode : undefined,
       });
     }
 
@@ -279,7 +267,7 @@ export async function POST(request, context) {
         });
       }
 
-      const newCode = crypto.randomInt(100000, 999999).toString();
+      const newCode = generateToken(6);
       await queryDb(
         `UPDATE website_users
          SET verification_code = $1, verification_expires_at = CURRENT_TIMESTAMP + INTERVAL '24 hours'
@@ -293,20 +281,19 @@ export async function POST(request, context) {
         await sendEmail({
           to: cleanEmail,
           subject: `Your New Verification Code - ${siteTitle}`,
-          html: `
-            <div style="font-family: sans-serif; max-width: 540px; margin: 0 auto; padding: 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;">
-              <h2 style="color: #0f172a; margin-top: 0;">New Verification Code</h2>
-              <p style="color: #475569; font-size: 14px;">Here is your requested verification code:</p>
-              <div style="background: #f8fafc; border: 2px dashed #6366f1; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
-                <span style="font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #4f46e5;">${newCode}</span>
-              </div>
-              <div style="text-align: center; margin: 20px 0;">
-                <a href="${verifyUrl}" style="background: #4f46e5; color: #ffffff; padding: 12px 28px; text-decoration: none; font-size: 14px; font-weight: bold; border-radius: 10px; display: inline-block;">
-                  Verify Email
-                </a>
-              </div>
-            </div>
-          `,
+          html: buildStyledEmail({
+            title: 'New Verification Code',
+            subtitle: `${siteTitle} Account Verification`,
+            recipientName: user.name,
+            bodyParagraphs: [
+              'Here is your new verification code to verify your account:',
+            ],
+            code: newCode,
+            codeLabel: 'Verification Code',
+            actionUrl: verifyUrl,
+            actionText: 'Verify Email Address',
+            footerNote: 'This code expires in 24 hours. If you did not request this, please ignore this email.',
+          }),
           text: `Your verification code is ${newCode}. Verify at: ${verifyUrl}`,
         });
       } catch (mailErr) {
@@ -316,7 +303,6 @@ export async function POST(request, context) {
       return NextResponse.json({
         success: true,
         message: 'A new verification code has been sent to your email address.',
-        devCode: process.env.NODE_ENV !== 'production' ? newCode : undefined,
       });
     }
 
@@ -344,8 +330,8 @@ export async function POST(request, context) {
       }
 
       const user = userRes.rows[0];
-      const resetToken = crypto.randomBytes(24).toString('hex');
-      const resetCode = crypto.randomInt(100000, 999999).toString();
+      const resetToken = generateToken(16);
+      const resetCode = generateToken(6);
 
       await queryDb(
         `UPDATE website_users
@@ -360,26 +346,19 @@ export async function POST(request, context) {
         await sendEmail({
           to: cleanEmail,
           subject: `Reset Your Password - ${siteTitle}`,
-          html: `
-            <div style="font-family: sans-serif; max-width: 540px; margin: 0 auto; padding: 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;">
-              <h2 style="color: #0f172a; margin-top: 0;">Password Recovery Request</h2>
-              <p style="color: #475569; font-size: 14px;">
-                Hello ${user.name}, we received a request to reset your password for your account on <strong>${siteTitle}</strong>.
-              </p>
-              <div style="background: #f8fafc; border: 2px dashed #6366f1; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
-                <p style="margin: 0 0 6px 0; font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: bold;">Reset Code</p>
-                <span style="font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #4f46e5;">${resetCode}</span>
-              </div>
-              <div style="text-align: center; margin: 24px 0;">
-                <a href="${resetUrl}" style="background: #4f46e5; color: #ffffff; padding: 12px 28px; text-decoration: none; font-size: 14px; font-weight: bold; border-radius: 10px; display: inline-block;">
-                  Reset Password Now
-                </a>
-              </div>
-              <p style="font-size: 12px; color: #64748b; line-line: 1.5;">
-                This recovery code expires in 1 hour. If you did not request this, you can safely ignore this email.
-              </p>
-            </div>
-          `,
+          html: buildStyledEmail({
+            title: 'Password Recovery Request',
+            subtitle: `${siteTitle} Account Security`,
+            recipientName: user.name,
+            bodyParagraphs: [
+              `We received a request to reset your password for your account on ${siteTitle}.`,
+            ],
+            code: resetCode,
+            codeLabel: 'Recovery Token',
+            actionUrl: resetUrl,
+            actionText: 'Reset Password Now',
+            footerNote: 'This recovery code expires in 1 hour. If you did not request this, you can safely ignore this email.',
+          }),
           text: `Reset your password at ${resetUrl} or use code: ${resetCode}`,
         });
       } catch (mailErr) {
@@ -389,7 +368,6 @@ export async function POST(request, context) {
       return NextResponse.json({
         success: true,
         message: 'Password recovery instructions and reset code have been sent to your email.',
-        devCode: process.env.NODE_ENV !== 'production' ? resetCode : undefined,
       });
     }
 

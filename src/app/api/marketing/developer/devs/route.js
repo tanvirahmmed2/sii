@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hashPassword, hasModulePermission } from 'src/lib/middleware/developer';
-import { sendEmail } from 'src/lib/database/brevo';
-import { SITE_NAME } from 'src/lib/database/secret';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+import { SITE_NAME, getBaseUrl } from 'src/lib/database/secret';
 
-import crypto from 'crypto';
+import { generateRandomHex, generateRandomCode } from 'src/lib/utils/random';
 
 async function handleCreateAdmin(d, request) {
   const data = d || {};
@@ -30,8 +30,8 @@ async function handleCreateAdmin(d, request) {
   const roleId = roleRes.rows[0]?.id || 1;
 
   const hashedPassword = await hashPassword(password);
-  const verificationToken = crypto.randomBytes(32).toString('hex');
-  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const verificationToken = generateRandomHex(32);
+  const verificationCode = generateRandomCode(100000, 999999);
 
   const insertRes = await queryDb(
     `INSERT INTO developers (
@@ -43,61 +43,32 @@ async function handleCreateAdmin(d, request) {
     [name, email, hashedPassword, roleId, isActive, verificationToken, verificationCode]
   );
 
-  const origin =
-    request?.headers?.get('origin') ||
-    (request?.headers?.get('host')
-      ? `${request.headers.get('x-forwarded-proto') || 'http'}://${request.headers.get('host')}`
-      : '') ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    'http://localhost:3000';
-
-  const verifyUrl = `${origin}/developer-auth/verify?token=${verificationToken}&email=${encodeURIComponent(email)}`;
+  const baseUrl = getBaseUrl(request);
+  const verifyUrl = `${baseUrl}/developer-auth/verify?token=${verificationToken}&email=${encodeURIComponent(email)}`;
 
   const newAdmin = {
     ...insertRes.rows[0],
     role: roleRes.rows[0]?.slug || roleSlug,
     role_name: roleRes.rows[0]?.name || 'Developer',
     is_verified: false,
-    verification_link: verifyUrl,
-    verification_code: verificationCode,
   };
 
   try {
     await sendEmail({
       to: email,
       subject: `Verify Your Developer Account - ${SITE_NAME}`,
-      html: `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px; background: #0f172a; color: #f8fafc; border-radius: 20px; border: 1px solid #1e293b;">
-          <div style="text-align: center; margin-bottom: 24px;">
-            <h1 style="color: #6366f1; font-size: 24px; margin: 0 0 8px 0; font-weight: 800;">${SITE_NAME} Developer Portal</h1>
-            <p style="color: #94a3b8; font-size: 14px; margin: 0;">Account Verification & Activation</p>
-          </div>
-          <div style="background: #1e293b; padding: 28px; border-radius: 14px; margin-bottom: 24px; border: 1px solid #334155;">
-            <p style="margin-top: 0; color: #cbd5e1; font-size: 15px;">Hello <strong>${name}</strong>,</p>
-            <p style="color: #94a3b8; font-size: 14px; line-height: 1.6;">
-              An administrator account has been created for you on <strong>${SITE_NAME}</strong> with the role of <strong>${newAdmin.role_name}</strong>.
-            </p>
-            <p style="color: #94a3b8; font-size: 14px; line-height: 1.6;">
-              To activate your account and set up access, please click the button below to verify your email address:
-            </p>
-            <div style="text-align: center; margin: 28px 0;">
-              <a href="${verifyUrl}" style="background: #4f46e5; color: #ffffff; padding: 14px 32px; text-decoration: none; font-size: 14px; font-weight: 700; border-radius: 12px; display: inline-block; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);">
-                Verify & Activate Account →
-              </a>
-            </div>
-            <div style="background: #0b0f19; padding: 14px; border-radius: 8px; border: 1px dashed #475569; margin: 20px 0; word-break: break-all; font-size: 12px; color: #94a3b8;">
-              <span style="color: #64748b; display: block; margin-bottom: 4px;">Direct Link:</span>
-              <a href="${verifyUrl}" style="color: #38bdf8; text-decoration: underline;">${verifyUrl}</a>
-            </div>
-            <p style="margin-bottom: 0; font-size: 12px; color: #64748b; text-align: center;">
-              This activation link is valid for 24 hours. Keep this link confidential.
-            </p>
-          </div>
-          <p style="font-size: 12px; color: #64748b; text-align: center; margin: 0;">
-            If you did not expect this invitation, please ignore this email or contact support.
-          </p>
-        </div>
-      `,
+      html: buildStyledEmail({
+        title: `${SITE_NAME} Developer Portal`,
+        subtitle: 'Account Verification & Activation',
+        recipientName: name,
+        bodyParagraphs: [
+          `An administrator account has been created for you on ${SITE_NAME} with the role of ${newAdmin.role_name}.`,
+          'To activate your account and set up access, please click the button below to verify your email address.',
+        ],
+        actionUrl: verifyUrl,
+        actionText: 'Verify & Activate Account',
+        footerNote: 'This activation link is valid for 24 hours. If you did not expect this invitation, please ignore this email.',
+      }),
       text: `Hello ${name},\n\nAn administrator account was created for you on ${SITE_NAME}.\n\nPlease click the link below to verify your email and activate your account:\n${verifyUrl}\n\nThis link expires in 24 hours.`,
     });
   } catch (mailErr) {

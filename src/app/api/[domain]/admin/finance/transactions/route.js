@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
-import { isAdmin, isCashier } from 'src/lib/middleware/auth';
+import { isAdmin, isCashier } from 'src/lib/middleware/developer';
 
 // GET general transaction ledger
 export async function GET() {

@@ -35,7 +35,7 @@ export async function GET(request, context) {
       LEFT JOIN creators c ON s.creator_id = c.id
       LEFT JOIN developers d ON s.assigned_developer_id = d.id
       LEFT JOIN developer_roles dr ON d.role_id = dr.id
-      WHERE ${isNumeric ? 's.id = $1 OR s.ticket_number = $1' : 's.ticket_number = $1'}
+      WHERE ${isNumeric ? '(s.id = $1::bigint OR s.ticket_number = $1::text)' : 's.ticket_number = $1'}
       LIMIT 1
     `, [id]);
 
@@ -80,6 +80,17 @@ export async function GET(request, context) {
       ORDER BY si.created_at ASC
     `, [ticket.id]).catch(() => ({ rows: [] }));
 
+    const imagesByMessage = {};
+    (imagesRes.rows || []).forEach((img) => {
+      if (!imagesByMessage[img.message_id]) imagesByMessage[img.message_id] = [];
+      imagesByMessage[img.message_id].push(img);
+    });
+
+    const messagesWithImages = messagesRes.rows.map((m) => ({
+      ...m,
+      images: imagesByMessage[m.id] || [],
+    }));
+
     // Fetch staff developers for assignment dropdown
     const devsRes = await queryDb(`
       SELECT d.id, d.name, d.email, COALESCE(r.slug, 'developer') AS role, COALESCE(r.name, 'Developer') AS role_name 
@@ -92,7 +103,7 @@ export async function GET(request, context) {
     return NextResponse.json({
       success: true,
       ticket,
-      messages: messagesRes.rows,
+      messages: messagesWithImages,
       images: imagesRes.rows,
       staffMembers: devsRes.rows,
       currentUser: auth.staff,
@@ -131,7 +142,7 @@ export async function PUT(request, context) {
           priority = COALESCE($2, priority),
           assigned_developer_id = CASE WHEN $3::text IS NOT NULL THEN $4::bigint ELSE assigned_developer_id END,
           updated_at = CURRENT_TIMESTAMP
-      WHERE ${isNumeric ? 'id = $5 OR ticket_number = $5' : 'ticket_number = $5'}
+      WHERE ${isNumeric ? '(id = $5::bigint OR ticket_number = $5::text)' : 'ticket_number = $5'}
       RETURNING *
     `, [
       status || null,
@@ -173,7 +184,7 @@ export async function DELETE(request, context) {
     const isNumeric = /^\d+$/.test(id);
     const deleteRes = await queryDb(`
       DELETE FROM supports 
-      WHERE ${isNumeric ? 'id = $1 OR ticket_number = $1' : 'ticket_number = $1'}
+      WHERE ${isNumeric ? '(id = $1::bigint OR ticket_number = $1::text)' : 'ticket_number = $1'}
       RETURNING id
     `, [id]);
 

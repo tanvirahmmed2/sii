@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
+import { generateToken } from 'src/lib/utils/random';
 
 // ============================================================================
 // GET: List recent payroll payments
@@ -29,7 +30,7 @@ export async function GET(request) {
       FROM payroll_payments pp
       JOIN payrolls p ON pp.payroll_id = p.id
       JOIN developers d ON pp.developer_id = d.id
-      LEFT JOIN roles r ON d.role_id = r.id
+      LEFT JOIN developer_roles r ON d.role_id = r.id
       LEFT JOIN developers proc ON pp.processed_by_developer_id = proc.id
       ORDER BY pp.payment_date DESC
       LIMIT 100
@@ -91,7 +92,7 @@ export async function POST(request) {
         item.developer_id,
         payAmount,
         payment_method || 'BANK_TRANSFER',
-        transaction_reference || `TXN-${Date.now()}`,
+        transaction_reference || generateToken(12),
         auth.staff.id,
         notes || null,
       ]

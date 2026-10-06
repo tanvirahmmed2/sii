@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
-import { isAdmin, isRegister, isCashier } from 'src/lib/middleware/auth';
+import { isAdmin, isRegister, isCashier } from 'src/lib/middleware/developer';
 import { uploadImage } from 'src/lib/database/cloudinary';
 import { sendEmail } from 'src/lib/database/brevo';
 import { recordActivityLog } from 'src/lib/database/logger';

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
-import { isAdmin } from 'src/lib/middleware/auth';
+import { isAdmin } from 'src/lib/middleware/developer';
 import { syncExamStatuses } from 'src/lib/database/exams';
 
 // GET details of a single exam including routines

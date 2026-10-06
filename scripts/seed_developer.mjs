@@ -163,11 +163,11 @@ async function seed() {
     const devRes = await client.query(
       `INSERT INTO developers (
          role_id, name, email, phone, designation, password,
-         bio, github_profile, linkedin_profile, is_active,
+         bio, github_profile, linkedin_profile, is_active, email_verified,
          two_factor_code, two_factor_expires, recovery_token, recovery_token_expires,
          updated_at
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, TRUE, NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP)
        ON CONFLICT (email) DO UPDATE
          SET role_id = EXCLUDED.role_id,
              name = EXCLUDED.name,
@@ -176,12 +176,13 @@ async function seed() {
              password = EXCLUDED.password,
              bio = EXCLUDED.bio,
              is_active = TRUE,
+             email_verified = TRUE,
              two_factor_code = NULL,
              two_factor_expires = NULL,
              recovery_token = NULL,
              recovery_token_expires = NULL,
              updated_at = CURRENT_TIMESTAMP
-       RETURNING id, name, email, designation, role_id, is_active`,
+       RETURNING id, name, email, designation, role_id, is_active, email_verified`,
       [
         adminRoleId,
         'Tanvir Ahmmed',

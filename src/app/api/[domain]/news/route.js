@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
-import { isAdmin, isRegister, getAdminUser } from 'src/lib/middleware/auth';
+import { isAdmin, isRegister, getAdminUser } from 'src/lib/middleware/developer';
 import { uploadImage } from 'src/lib/database/cloudinary';
 import { recordActivityLog } from 'src/lib/database/logger';
 

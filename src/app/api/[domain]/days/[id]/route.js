@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
-import { isAdmin, isRegister } from 'src/lib/middleware/auth';
+import { isAdmin, isRegister } from 'src/lib/middleware/developer';
 
 export async function PUT(request, { params }) {
   try {

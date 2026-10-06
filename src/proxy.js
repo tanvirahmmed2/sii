@@ -23,6 +23,12 @@ function getPlatformBaseDomain(request) {
     if (incoming.includes('localhost') || incoming.includes('127.0.0.1')) {
       return incoming;
     }
+    const clean = incoming.split(':')[0];
+    const parts = clean.split('.');
+    if (parts.length >= 2) {
+      return parts.slice(-2).join('.');
+    }
+    return clean;
   }
   return 'localhost:3000';
 }

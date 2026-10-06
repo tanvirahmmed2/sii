@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
-import { isAdmin, hashPassword } from 'src/lib/middleware/auth';
+import { isAdmin, hashPassword } from 'src/lib/middleware/developer';
 
 // GET a specific teacher (Public by username slug OR numeric id)
 export async function GET(request, context) {

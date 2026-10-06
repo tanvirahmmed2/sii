@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
-import { hashPassword } from 'src/lib/middleware/auth';
-import { sendEmail } from 'src/lib/database/brevo';
+import { hashPassword } from 'src/lib/middleware/developer';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+import { generateToken } from 'src/lib/utils/random';
 
 export async function POST(request) {
   try {
@@ -55,8 +56,8 @@ export async function POST(request) {
 
     // Step 1: Token Request (when recovery_token or new_password is not provided)
     if (!recovery_token || !new_password) {
-      // Generate a 6-digit verification code
-      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      // Generate pure alphanumeric token (no prefix/suffix)
+      const verificationCode = generateToken(6);
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
 
       // Save token and expiry to DB
@@ -73,18 +74,17 @@ export async function POST(request) {
           to: student.email,
           toName: student.name,
           subject: 'Student Portal - Password Recovery Token',
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; background-color: #ffffff;">
-              <h2 style="color: #0f172a; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">Student Password Recovery</h2>
-              <p style="color: #475569; font-size: 16px; line-height: 1.5;">Hello ${student.name},</p>
-              <p style="color: #475569; font-size: 16px; line-height: 1.5;">We received a request to reset your password for the Student Portal. Use the verification token below to reset your credentials:</p>
-              <div style="background-color: #f1f5f9; padding: 15px; text-align: center; border-radius: 8px; margin: 20px 0;">
-                <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #2563eb;">${verificationCode}</span>
-              </div>
-              <p style="color: #ef4444; font-size: 14px; font-weight: 500;">Note: This token is valid for 15 minutes and can only be used once.</p>
-              <p style="color: #64748b; font-size: 14px; margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 15px;">If you did not request this, you can safely ignore this email. Your password will remain unchanged.</p>
-            </div>
-          `
+          html: buildStyledEmail({
+            title: 'Student Password Recovery',
+            subtitle: 'Student Portal Security Token',
+            recipientName: student.name,
+            bodyParagraphs: [
+              'We received a request to reset your password for the Student Portal. Use the verification token below to reset your credentials:',
+            ],
+            code: verificationCode,
+            codeLabel: 'Recovery Token',
+            footerNote: 'This token is valid for 15 minutes and can only be used once. If you did not request this, your password remains unchanged.',
+          })
         });
       } catch (emailError) {
         console.error('Failed to send recovery email via Brevo:', emailError);

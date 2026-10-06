@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import pool, { query } from 'src/lib/database/db';
-import { isAdmin, isCashier, verifyJWT } from 'src/lib/middleware/auth';
+import { isAdmin, isCashier, verifyJWT } from 'src/lib/middleware/developer';
 import { triggerMonthlyFeeGeneration } from 'src/lib/database/fees';
+import { generateToken } from 'src/lib/utils/random';
 
 // GET student fees logs (Admin/Cashier only)
 export async function GET(request) {
@@ -321,7 +322,7 @@ export async function PUT(request) {
     );
 
     // Insert into unified ledger payment_transactions
-    const txnNo = `TXN-FEE-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    const txnNo = generateToken(12);
     try {
       await client.query(
         `INSERT INTO payment_transactions (

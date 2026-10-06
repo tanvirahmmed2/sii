@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
+import { generateRandomCode, generateToken as generateAlphanumericToken } from 'src/lib/utils/random';
 import { queryDb } from 'src/lib/database/db';
-import { SITE_NAME, CREATOR_TOKEN } from 'src/lib/database/secret';
+import { SITE_NAME, CREATOR_TOKEN, getBaseUrl } from 'src/lib/database/secret';
 import {
   authenticateCreator,
   getCreatorSession,
@@ -10,7 +10,7 @@ import {
   generateToken,
   hashPassword,
 } from 'src/lib/middleware/creator';
-import { sendEmail } from 'src/lib/database/brevo';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
 
 /**
  * API Route: /api/creator/auth
@@ -35,7 +35,7 @@ export async function handleAuthAction(body, request) {
     }
 
     const hashedPassword = await hashPassword(d.password);
-    const verificationCode = crypto.randomInt(100000, 999999).toString();
+    const verificationCode = generateAlphanumericToken(6);
     const institution = (d.institution || d.company || '').trim() || null;
     const phone = (d.phone || '').trim() || null;
     const country = (d.country || '').trim() || null;
@@ -63,39 +63,26 @@ export async function handleAuthAction(body, request) {
 
     console.log(`[CREATOR REGISTRATION] Account created: ${cleanEmail}. Verification Code: ${verificationCode}`);
 
-    const origin =
-      request?.headers?.get('origin') ||
-      (request?.headers?.get('host')
-        ? `${request.headers.get('x-forwarded-proto') || 'http'}://${request.headers.get('host')}`
-        : '') ||
-      process.env.NEXT_PUBLIC_APP_URL ||
-      'http://localhost:3000';
-
-    const verifyUrl = `${origin}/creator/verify?token=${verificationCode}&email=${encodeURIComponent(cleanEmail)}`;
+    const baseUrl = getBaseUrl(request);
+    const verifyUrl = `${baseUrl}/creator/verify?token=${verificationCode}&email=${encodeURIComponent(cleanEmail)}`;
 
     try {
       await sendEmail({
         to: cleanEmail,
         subject: `Your Verification Code: ${verificationCode} - ${SITE_NAME}`,
-        html: `
-          <div style="font-family: sans-serif; max-width: 540px; margin: 0 auto; padding: 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; color: #1e293b;">
-            <h2 style="color: #0f172a; margin-top: 0; font-size: 22px;">Welcome to ${SITE_NAME}, ${newCreator.name}!</h2>
-            <p style="font-size: 14px; line-height: 1.6; color: #475569;">
-              Thank you for joining our platform. Use the 6-digit verification code below to activate your creator account:
-            </p>
-            <div style="background: #f8fafc; border: 2px dashed #6366f1; border-radius: 12px; padding: 20px; text-align: center; margin: 24px 0;">
-              <span style="font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #4f46e5;">${verificationCode}</span>
-            </div>
-            <div style="text-align: center; margin: 24px 0;">
-              <a href="${verifyUrl}" style="background: #0f172a; color: #ffffff; padding: 12px 28px; text-decoration: none; font-size: 14px; font-weight: bold; border-radius: 10px; display: inline-block;">
-                Or Click Here to Verify Instantly →
-              </a>
-            </div>
-            <p style="font-size: 12px; color: #64748b; line-height: 1.5;">
-              This code and link will expire in 24 hours. If you did not create an account, please ignore this email.
-            </p>
-          </div>
-        `,
+        html: buildStyledEmail({
+          title: `Welcome to ${SITE_NAME}`,
+          subtitle: 'Creator Account Verification',
+          recipientName: newCreator.name,
+          bodyParagraphs: [
+            'Thank you for joining our platform. Use the verification token below to activate your creator account.',
+          ],
+          code: verificationCode,
+          codeLabel: 'Verification Token',
+          actionUrl: verifyUrl,
+          actionText: 'Verify Account Instantly',
+          footerNote: 'This verification token and link will expire in 24 hours. If you did not create an account, please ignore this email.',
+        }),
         text: `Hello ${newCreator.name},\n\nYour ${SITE_NAME} creator verification code is: ${verificationCode}\n\nOr verify directly at:\n${verifyUrl}\n\nExpires in 24 hours.`,
       });
     } catch (mailErr) {
@@ -112,7 +99,6 @@ export async function handleAuthAction(body, request) {
         institution: newCreator.institution,
         emailVerified: false,
       },
-      verificationCode,
     });
   }
 
@@ -226,7 +212,7 @@ export async function handleAuthAction(body, request) {
       return NextResponse.json({ success: true, message: 'This account is already verified! You can log in directly.', alreadyVerified: true });
     }
 
-    const newCode = crypto.randomInt(100000, 999999).toString();
+    const newCode = generateAlphanumericToken(6);
     await queryDb(
       `UPDATE creators 
        SET verification_token = $1, verification_token_expires = CURRENT_TIMESTAMP + INTERVAL '24 hours', updated_at = CURRENT_TIMESTAMP 
@@ -236,39 +222,26 @@ export async function handleAuthAction(body, request) {
 
     console.log(`[CREATOR RESEND] New verification code for ${cleanEmail}: ${newCode}`);
 
-    const origin =
-      request?.headers?.get('origin') ||
-      (request?.headers?.get('host')
-        ? `${request.headers.get('x-forwarded-proto') || 'http'}://${request.headers.get('host')}`
-        : '') ||
-      process.env.NEXT_PUBLIC_APP_URL ||
-      'http://localhost:3000';
-
-    const verifyUrl = `${origin}/creator/verify?token=${newCode}&email=${encodeURIComponent(cleanEmail)}`;
+    const baseUrl = getBaseUrl(request);
+    const verifyUrl = `${baseUrl}/creator/verify?token=${newCode}&email=${encodeURIComponent(cleanEmail)}`;
 
     try {
       await sendEmail({
         to: cleanEmail,
         subject: `Your Verification Code: ${newCode} - ${SITE_NAME}`,
-        html: `
-          <div style="font-family: sans-serif; max-width: 540px; margin: 0 auto; padding: 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; color: #1e293b;">
-            <h2 style="color: #0f172a; margin-top: 0; font-size: 22px;">Verify Your Creator Account</h2>
-            <p style="font-size: 14px; line-height: 1.6; color: #475569;">
-              Hello ${creator.name}, here is your new verification code:
-            </p>
-            <div style="background: #f8fafc; border: 2px dashed #6366f1; border-radius: 12px; padding: 20px; text-align: center; margin: 24px 0;">
-              <span style="font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #4f46e5;">${newCode}</span>
-            </div>
-            <div style="text-align: center; margin: 24px 0;">
-              <a href="${verifyUrl}" style="background: #0f172a; color: #ffffff; padding: 12px 28px; text-decoration: none; font-size: 14px; font-weight: bold; border-radius: 10px; display: inline-block;">
-                Or Click Here to Verify Instantly →
-              </a>
-            </div>
-            <p style="font-size: 12px; color: #64748b; line-height: 1.5;">
-              This code will expire in 24 hours.
-            </p>
-          </div>
-        `,
+        html: buildStyledEmail({
+          title: 'Verify Your Creator Account',
+          subtitle: `${SITE_NAME} Security Verification`,
+          recipientName: creator.name,
+          bodyParagraphs: [
+            'Here is your new verification token to activate your creator account.',
+          ],
+          code: newCode,
+          codeLabel: 'Verification Token',
+          actionUrl: verifyUrl,
+          actionText: 'Verify Account Instantly',
+          footerNote: 'This verification token and link will expire in 24 hours. If you did not request this, please ignore this email.',
+        }),
         text: `Hello ${creator.name},\n\nYour new verification code is: ${newCode}\n\nOr verify at:\n${verifyUrl}\n\nExpires in 24 hours.`,
       });
     } catch (mailErr) {
@@ -278,7 +251,6 @@ export async function handleAuthAction(body, request) {
     return NextResponse.json({
       success: true,
       message: 'A new 6-digit verification code has been sent to your email.',
-      verificationCode: newCode,
     });
   }
 
@@ -350,7 +322,7 @@ export async function handleAuthAction(body, request) {
     }
 
     const cleanEmail = String(email).trim().toLowerCase();
-    const recoveryCode = crypto.randomInt(100000, 999999).toString();
+    const recoveryCode = generateAlphanumericToken(6);
 
     const res = await queryDb(
       `UPDATE creators 
@@ -371,20 +343,17 @@ export async function handleAuthAction(body, request) {
       await sendEmail({
         to: cleanEmail,
         subject: `Your Password Reset Code: ${recoveryCode} - ${SITE_NAME}`,
-        html: `
-          <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background: #ffffff;">
-            <h2 style="color: #0f172a; margin-top: 0; font-size: 20px;">Password Reset Code</h2>
-            <p style="font-size: 14px; color: #475569; line-height: 1.5;">
-              Hello ${creator.name}, you requested to reset your password on ${SITE_NAME}. Use the 6-digit code below to set your new password:
-            </p>
-            <div style="background: #f8fafc; border: 2px dashed #e11d48; border-radius: 12px; padding: 18px; text-align: center; margin: 20px 0;">
-              <span style="font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #e11d48;">${recoveryCode}</span>
-            </div>
-            <p style="font-size: 12px; color: #64748b; line-height: 1.5;">
-              This code will expire in 1 hour. If you did not request a password reset, please ignore this email.
-            </p>
-          </div>
-        `,
+        html: buildStyledEmail({
+          title: 'Password Reset Request',
+          subtitle: `${SITE_NAME} Security Recovery`,
+          recipientName: creator.name,
+          bodyParagraphs: [
+            `You requested to reset your password on ${SITE_NAME}. Use the security recovery token below to set your new password:`,
+          ],
+          code: recoveryCode,
+          codeLabel: 'Recovery Token',
+          footerNote: 'This recovery token will expire in 1 hour. If you did not request a password reset, please ignore this email.',
+        }),
         text: `Hello ${creator.name},\n\nYour ${SITE_NAME} password reset code is: ${recoveryCode}\n\nExpires in 1 hour.`,
       });
     } catch (mailErr) {
@@ -394,7 +363,6 @@ export async function handleAuthAction(body, request) {
     return NextResponse.json({
       success: true,
       message: 'A 6-digit password reset code has been sent to your email.',
-      recoveryCode,
     });
   }
 

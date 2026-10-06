@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { query } from 'src/lib/database/db';
-import { comparePassword, signJWT } from 'src/lib/middleware/auth';
-import { sendEmail } from 'src/lib/database/brevo';
+import { comparePassword, signJWT } from 'src/lib/middleware/developer';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
 import { recordLoginLog } from 'src/lib/database/logger';
+import { generateToken } from 'src/lib/utils/random';
 
 export async function POST(request) {
   try {
@@ -87,8 +88,8 @@ export async function POST(request) {
       }, { status: 200 });
     }
 
-    // 2FA is Enabled -> Generate 6-digit 2FA OTP code
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // 2FA is Enabled -> Generate pure alphanumeric OTP code
+    const otpCode = generateToken(6);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes validity
 
     // Save 2FA OTP code to DB
@@ -105,21 +106,17 @@ export async function POST(request) {
         to: admin.email,
         toName: admin.name,
         subject: 'Admin Portal - 2FA Verification Code',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-            <div style="text-align: center; margin-bottom: 20px;">
-              <h2 style="color: #0f172a; margin: 0;">Admin Portal Two-Factor Security</h2>
-              <p style="color: #64748b; font-size: 14px; margin-top: 4px;">School Management System</p>
-            </div>
-            <p style="color: #334155; font-size: 15px; line-height: 1.5;">Hello <strong>${admin.name}</strong>,</p>
-            <p style="color: #334155; font-size: 15px; line-height: 1.5;">Your 6-digit verification code for logging in to the Admin Portal is:</p>
-            <div style="background-color: #f1f5f9; padding: 18px; text-align: center; border-radius: 10px; margin: 24px 0;">
-              <span style="font-size: 34px; font-weight: bold; letter-spacing: 6px; color: #059669;">${otpCode}</span>
-            </div>
-            <p style="color: #ef4444; font-size: 13px; font-weight: 500;">This verification code will expire in 10 minutes and can only be used once.</p>
-            <p style="color: #64748b; font-size: 13px; margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 16px;">If you did not attempt to log in, please secure your account immediately or notify IT support.</p>
-          </div>
-        `
+        html: buildStyledEmail({
+          title: 'Admin Portal Two-Factor Security',
+          subtitle: 'Two-Factor Authentication',
+          recipientName: admin.name,
+          bodyParagraphs: [
+            'Your verification code for logging in to the Admin Portal is ready. Enter this code to complete authentication:',
+          ],
+          code: otpCode,
+          codeLabel: 'Security Code',
+          footerNote: 'This verification code will expire in 10 minutes and can only be used once. If you did not attempt to log in, please secure your account immediately.',
+        })
       });
     } catch (emailError) {
       console.error('Failed to send 2FA OTP email:', emailError);

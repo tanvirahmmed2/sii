@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import pool from 'src/lib/database/db';
-import { isAdmin } from 'src/lib/middleware/auth';
-import { sendEmail } from 'src/lib/database/brevo';
+import { isAdmin } from 'src/lib/middleware/developer';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+import { getBaseUrl } from 'src/lib/database/secret';
 import { triggerMonthlyFeeGeneration } from 'src/lib/database/fees';
+import { generateToken } from 'src/lib/utils/random';
 
 // POST publish admission results (Admin only)
 export async function POST(request) {
@@ -99,7 +101,7 @@ export async function POST(request) {
       const seqStr = String(currentStudentSeq).padStart(2, '0');
       const candidateRoll = parseInt(`${classNum}0${seqStr}`, 10);
 
-      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const verificationCode = generateToken(6);
       const codeExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
       const parentsInfo = `Father: ${cand.father_name || cand.guardian_name} (${cand.father_phone || cand.guardian_phone}), Mother: ${cand.mother_name || 'N/A'}`;
 
@@ -290,29 +292,26 @@ export async function POST(request) {
 
       // Send setup email
       try {
-        const setupLink = `${request.headers.get('origin') || 'http://localhost:3000'}/auth/student/registration`;
+        const baseUrl = getBaseUrl(request);
+        const setupLink = `${baseUrl}/auth/student/registration`;
         await sendEmail({
           to: cand.email,
           toName: cand.applicant_name,
           subject: `Admission Selected & Registration Code - ${circular.title}`,
-          html: `
-            <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #f1f5f9; border-radius: 16px;">
-              <h2 style="color: #059669;">Congratulations ${cand.applicant_name}!</h2>
-              <p>You have been <strong>SELECTED</strong> for admission to Class <strong>${cand.class_name}</strong> under circular "<strong>${circular.title}</strong>".</p>
-              <p>Your official student registration credentials are ready below:</p>
-              
-              <div style="background-color: #f8fafc; padding: 16px; border-radius: 12px; margin: 20px 0; border: 1px solid #e2e8f0;">
-                <p style="margin: 6px 0;"><strong>Registration Number:</strong> <code style="color: #059669; font-size: 16px; font-weight: bold;">${regNo}</code></p>
-                <p style="margin: 6px 0;"><strong>Verification Code:</strong> <code style="color: #059669; font-size: 16px; font-weight: bold;">${verificationCode}</code></p>
-              </div>
-
-              <p style="text-align: center; margin: 24px 0;">
-                <a href="${setupLink}" style="background-color: #059669; color: white; padding: 12px 28px; text-decoration: none; border-radius: 9999px; font-weight: bold; display: inline-block;">
-                  Complete Student Portal Setup
-                </a>
-              </p>
-            </div>
-          `
+          html: buildStyledEmail({
+            title: `Congratulations ${cand.applicant_name}!`,
+            subtitle: `Admission Selection - ${circular.title}`,
+            recipientName: cand.applicant_name,
+            bodyParagraphs: [
+              `You have been selected for admission to Class ${cand.class_name} under circular "${circular.title}".`,
+              `Registration Number: ${regNo}`,
+            ],
+            code: verificationCode,
+            codeLabel: 'Registration Verification Code',
+            actionUrl: setupLink,
+            actionText: 'Complete Student Portal Setup',
+            footerNote: 'Please keep your credentials and registration code confidential.',
+          })
         });
       } catch (mailErr) {
         console.error(`Failed to send setup email to ${cand.email}:`, mailErr);

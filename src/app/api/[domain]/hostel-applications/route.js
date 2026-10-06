@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
-import { isAdmin, isRegister, isStudent, getStudentUser } from 'src/lib/middleware/auth';
+import { isAdmin, isRegister, isStudent, getStudentUser } from 'src/lib/middleware/developer';
 
 // GET hostel applications
 export async function GET(request) {

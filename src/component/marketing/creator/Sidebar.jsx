@@ -19,15 +19,15 @@ export const CREATOR_NAV_SECTIONS = [
     title: 'Engagement & Comms',
     links: [
       { href: '/tickets', label: 'Support Tickets' },
-      { href: '/reviews', label: 'Client Reviews' },
-      { href: '/updates', label: 'Product Updates' },
+      { href: '/reviews', label: 'Reviews' },
+      { href: '/updates', label: 'Updates' },
     ],
   },
   {
     title: 'Account Settings',
     links: [
-      { href: '/profile', label: 'Creator Profile' },
-      { href: '/settings', label: 'Security & 2FA' },
+      { href: '/profile', label: 'Profile' },
+      { href: '/settings', label: 'Security' },
     ],
   },
 ];

@@ -20,7 +20,7 @@ function slugify(text) {
  */
 export async function GET(request) {
   try {
-    const auth = await hasModulePermission(request, 'developers');
+    const auth = await hasModulePermission(request, ['roles', 'developers']);
     if (!auth.success) {
       return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
     }
@@ -113,7 +113,7 @@ export async function GET(request) {
  */
 export async function POST(request) {
   try {
-    const auth = await hasModulePermission(request, 'developers');
+    const auth = await hasModulePermission(request, ['roles', 'developers']);
     if (!auth.success) {
       return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
     }
@@ -205,7 +205,7 @@ export async function POST(request) {
  */
 export async function PUT(request) {
   try {
-    const auth = await hasModulePermission(request, 'developers');
+    const auth = await hasModulePermission(request, ['roles', 'developers']);
     if (!auth.success) {
       return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
     }
@@ -325,7 +325,7 @@ export async function PUT(request) {
  */
 export async function DELETE(request) {
   try {
-    const auth = await hasModulePermission(request, 'developers');
+    const auth = await hasModulePermission(request, ['roles', 'developers']);
     if (!auth.success) {
       return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
     }

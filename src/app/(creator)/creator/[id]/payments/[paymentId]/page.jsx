@@ -108,7 +108,7 @@ export default function CreatorPaymentInvoicePage({ params }) {
               Official Invoice
             </span>
             <h1 className="text-sm font-semibold text-slate-900">
-              INV-{payment.id}
+              {payment.transaction_id || payment.id}
             </h1>
             <span className="text-[10px] text-slate-500 font-mono">
               Txn: {payment.transaction_id || 'N/A'}

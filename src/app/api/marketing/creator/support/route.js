@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession } from 'src/lib/middleware/creator';
+import { uploadImage } from 'src/lib/database/cloudinary';
 
 /**
  * API Route: /api/creator/support
@@ -54,7 +55,7 @@ export async function handleSupportAction(body, sessionCreator) {
 
   // 1. Create Support Ticket
   if (action === 'create_ticket' || !action) {
-    const { subject, priority = 'medium', message } = body;
+    const { subject, priority = 'medium', message, image, imageUrl: providedImageUrl, fileName, fileSize, mimeType } = body;
 
     if (!subject || !message) {
       return NextResponse.json({ success: false, error: 'Subject and message are required.' }, { status: 400 });
@@ -77,11 +78,36 @@ export async function handleSupportAction(body, sessionCreator) {
     );
     const ticket = ticketRes.rows[0];
 
-    await queryDb(
+    const msgRes = await queryDb(
       `INSERT INTO support_messages (support_id, sender_type, sender_id, message)
-       VALUES ($1, 'creator', $2, $3)`,
+       VALUES ($1, 'creator', $2, $3)
+       RETURNING *`,
       [ticket.id, creatorId, message.trim()]
     );
+    const initialMsg = msgRes.rows[0];
+
+    // Optional image attachment
+    let finalImageUrl = providedImageUrl || null;
+    let imageId = null;
+    if (image && typeof image === 'string' && (image.startsWith('data:image') || image.startsWith('http'))) {
+      try {
+        const uploadRes = await uploadImage(image, 'support_tickets');
+        finalImageUrl = uploadRes.secure_url;
+        imageId = uploadRes.publicId;
+      } catch (uploadErr) {
+        console.error('Failed to upload image on ticket creation:', uploadErr);
+      }
+    }
+
+    if (finalImageUrl && initialMsg) {
+      await queryDb(
+        `INSERT INTO support_images (message_id, image_url, image_id, file_name, file_size, mime_type)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [initialMsg.id, finalImageUrl, imageId || null, fileName || null, fileSize || null, mimeType || null]
+      ).catch((err) => {
+        console.error('Error inserting initial ticket support image:', err);
+      });
+    }
 
     return NextResponse.json({ success: true, ticket });
   }

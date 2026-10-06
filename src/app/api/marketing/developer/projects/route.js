@@ -42,7 +42,7 @@ export async function GET(request) {
       FROM project p
       LEFT JOIN creators c ON p.creator_id = c.id
       LEFT JOIN developers d ON p.assigned_developer_id = d.id
-      LEFT JOIN roles dr ON d.role_id = dr.id
+      LEFT JOIN developer_roles dr ON d.role_id = dr.id
       WHERE 1=1
     `;
     const params = [];

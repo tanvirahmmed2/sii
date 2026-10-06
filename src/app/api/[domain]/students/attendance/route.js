@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
-import { isAdmin, isTeacher } from 'src/lib/middleware/auth';
+import { isAdmin, isTeacher } from 'src/lib/middleware/developer';
 
 // GET student attendance sheets (Admin/Teachers)
 export async function GET(request) {

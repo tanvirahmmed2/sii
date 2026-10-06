@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
-import { isAdmin, isCashier } from 'src/lib/middleware/auth';
+import { isAdmin, isCashier } from 'src/lib/middleware/developer';
+import { generateToken } from 'src/lib/utils/random';
 
 export async function GET(request) {
   try {
@@ -120,7 +121,7 @@ export async function PUT(request) {
         paymentId = paymentRes.rows[0].id;
       }
 
-      const transactionNo = `TXN-PAY-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+      const transactionNo = generateToken(12);
       await client.query(`
         INSERT INTO payment_transactions (
           transaction_number, payment_method, amount, transaction_type, category, 

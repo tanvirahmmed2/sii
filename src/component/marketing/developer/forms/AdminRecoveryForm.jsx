@@ -11,7 +11,6 @@ export default function AdminRecoveryForm() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [generatedToken, setGeneratedToken] = useState(null);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -32,9 +31,7 @@ export default function AdminRecoveryForm() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setGeneratedToken(data.token);
-        setToken(data.token);
-        setSuccessMessage(data.message || 'Recovery token generated and sent to email.');
+        setSuccessMessage(data.message || 'Recovery token has been sent to your email.');
         setStep('reset');
       } else {
         setError(data.error || 'Failed to generate recovery token.');
@@ -114,7 +111,7 @@ export default function AdminRecoveryForm() {
             <p>Your password has been updated. You can now sign in with your new password.</p>
           </div>
           <Link
-            href="/developer-auth/login"
+            href={`/developer-auth/login?email=${encodeURIComponent(email)}`}
             className="block text-center w-full py-2.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium transition-colors"
           >
             Sign In with New Password
@@ -131,17 +128,6 @@ export default function AdminRecoveryForm() {
             </div>
           )}
 
-          {generatedToken && (
-            <div className="p-3 rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 space-y-1">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-medium text-slate-700 dark:text-slate-300">Recovery Token:</span>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400">Valid for 60m</span>
-              </div>
-              <div className="p-2 bg-white dark:bg-slate-900 rounded font-mono text-xs text-slate-900 dark:text-slate-200 select-all break-all border border-slate-200 dark:border-slate-700 font-normal">
-                {generatedToken}
-              </div>
-            </div>
-          )}
 
           <div className="space-y-1">
             <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">
@@ -152,7 +138,7 @@ export default function AdminRecoveryForm() {
               required
               value={token}
               onChange={(e) => setToken(e.target.value)}
-              placeholder="rec_..."
+              placeholder="e.g. 123D1"
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-mono font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
             />
           </div>

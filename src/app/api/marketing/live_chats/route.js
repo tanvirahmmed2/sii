@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
+import { generateRandomHex, generateToken } from 'src/lib/utils/random';
 import { cookies } from 'next/headers.js';
 import { queryDb } from 'src/lib/database/db';
 import { LIVE_CHAT_TOKEN, SITE_NAME } from 'src/lib/database/secret';
@@ -129,7 +129,7 @@ export async function POST(request) {
         '127.0.0.1';
       const userAgent = request.headers.get('user-agent') || 'Unknown';
 
-      const sessionId = 'live_' + crypto.randomBytes(16).toString('hex');
+      const sessionId = generateToken(16);
 
       // Insert live chat session adhering to schema.psql
       const chatRes = await queryDb(

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server.js';
 import { queryDb } from '../../../../../lib/database/db.js';
 import { getCreatorSession } from '../../../../../lib/middleware/creator.js';
-import { BASE_DOMAIN, BASE_URL } from '../../../../../lib/database/secret.js';
+import { BASE_DOMAIN, getBaseUrl } from '../../../../../lib/database/secret.js';
 import { checkDomainAvailability, checkCustomDomainAvailability } from './check-domain/route.js';
 
 export const dynamic = 'force-dynamic';
@@ -55,7 +55,7 @@ export async function GET(request) {
         return NextResponse.json({
           success: true,
           baseDomain: BASE_DOMAIN,
-          baseUrl: BASE_URL,
+          baseUrl: getBaseUrl(request),
           ...checkRes,
         });
       }
@@ -63,7 +63,7 @@ export async function GET(request) {
       return NextResponse.json({
         success: true,
         baseDomain: BASE_DOMAIN,
-        baseUrl: BASE_URL,
+        baseUrl: getBaseUrl(request),
         ...checkRes,
       });
     }
@@ -77,10 +77,7 @@ export async function GET(request) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
-    const hostHeader = request?.headers?.get?.('x-forwarded-host') || request?.headers?.get?.('host') || BASE_DOMAIN || 'localhost:3000';
-    const cleanHost = hostHeader.split(',')[0].trim();
-    const proto = request?.headers?.get?.('x-forwarded-proto') || 'http';
-    const dynamicBaseUrl = `${proto}://${cleanHost}`;
+    const dynamicBaseUrl = getBaseUrl(request);
 
     // 2. If specific website requested by ID, domain, subdomain, or slug
     const targetIdentifier = websiteIdParam || domainParam;
@@ -179,7 +176,7 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       return NextResponse.json({
         success: true,
         baseDomain: BASE_DOMAIN,
-        baseUrl: BASE_URL,
+        baseUrl: getBaseUrl(request),
         ...checkRes,
       });
     }
@@ -188,7 +185,7 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     return NextResponse.json({
       success: true,
       baseDomain: BASE_DOMAIN,
-      baseUrl: BASE_URL,
+      baseUrl: getBaseUrl(request),
       ...checkRes,
     });
   }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { query } from 'src/lib/database/db';
-import { verifyJWT } from 'src/lib/middleware/auth';
+import { verifyJWT } from 'src/lib/middleware/developer';
 
 export async function GET() {
   try {

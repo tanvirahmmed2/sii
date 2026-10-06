@@ -112,7 +112,11 @@ export default function AdminAdminsPage() {
   }, []);
 
   const permissions = Array.isArray(currentUser?.permissions) ? currentUser.permissions : [];
-  const isUserAdmin = Boolean(permissions.includes('developers'));
+  const isUserAdmin = Boolean(
+    permissions.includes('developers') ||
+    currentUser?.role === 'admin' ||
+    currentUser?.isSuperAdmin
+  );
 
   const activeAdminCount = admins.filter(
     (a) => (a.role || '').toLowerCase() === 'admin' && a.is_active !== false && a.isActive !== false

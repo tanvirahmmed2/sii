@@ -3,6 +3,7 @@ import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession } from 'src/lib/middleware/creator';
 import { createPaddleTransaction, getPaddleTransaction } from 'src/lib/database/paddle';
 import { executeBkashPayment, validateBangladeshiMobile, validateBkashOtp, validateBkashPin } from 'src/lib/database/bkash';
+import { generateToken } from 'src/lib/utils/random';
 
 function isValidLuhn(cardNumber) {
   const digits = String(cardNumber || '').replace(/\D/g, '');
@@ -218,12 +219,12 @@ export async function handlePaymentsAction(body, sessionCreator, request = null)
       }
 
       try {
-        const bkResult = await executeBkashPayment(body.bkashPaymentId || `BK_PAY_${payment.id}`);
+        const bkResult = await executeBkashPayment(body.bkashPaymentId || generateToken(14));
         gatewayResponse = bkResult;
-        finalTxnId = body.bkashTrxId || bkResult.trxID || `BK${Date.now().toString(36).toUpperCase()}`;
+        finalTxnId = body.bkashTrxId || bkResult.trxID || generateToken(12);
       } catch (bkErr) {
         console.warn('bKash gateway execute notice:', bkErr.message);
-        finalTxnId = body.bkashTrxId || `BK${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+        finalTxnId = body.bkashTrxId || generateToken(12);
         gatewayResponse = { mode: 'bkash_direct_pgw', bkashNumber: mobileCheck.number };
       }
     } else {
@@ -278,7 +279,7 @@ export async function handlePaymentsAction(body, sessionCreator, request = null)
         }
       }
 
-      finalTxnId = `TXN_PAD_${payment.id}_${Date.now()}`;
+      finalTxnId = `PAD_${payment.id}_${Date.now()}`;
       try {
         const creatorData = sessionCreator || (await queryDb('SELECT name, email FROM creators WHERE id = $1', [creatorId])).rows[0];
         const paddleSession = await createPaddleTransaction({

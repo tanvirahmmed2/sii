@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
-import { sendEmail } from 'src/lib/database/brevo';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
 import { SITE_NAME } from 'src/lib/database/secret';
 
 export async function POST(request) {
@@ -47,44 +47,21 @@ export async function POST(request) {
       .map((p) => `<p style="margin: 0 0 14px 0; line-height: 1.6; color: #334155; font-size: 15px;">${p}</p>`)
       .join('');
 
-    const emailHtml = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 20px; background-color: #f8fafc; color: #0f172a;">
-        <div style="background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; padding: 32px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
-          <!-- Header -->
-          <div style="border-bottom: 1px solid #f1f5f9; padding-bottom: 20px; margin-bottom: 24px;">
-            <span style="display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6366f1; background: #eef2ff; padding: 4px 10px; border-radius: 9999px; margin-bottom: 10px;">Official Response</span>
-            <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #0f172a;">${SITE_NAME || 'Support'} Team</h2>
-          </div>
-
-          <!-- Greeting -->
-          <p style="margin: 0 0 16px 0; font-size: 15px; color: #334155;">Hello <strong>${contact.name || 'there'}</strong>,</p>
-
-          <!-- Reply Body -->
-          <div style="margin-bottom: 28px;">
-            ${formattedReplyHtml}
-          </div>
-
-          <p style="margin: 0 0 24px 0; font-size: 14px; color: #64748b;">
-            Best regards,<br />
-            <strong style="color: #0f172a;">${dev.name || 'Support Team'}</strong><br />
-            <span style="font-size: 12px; color: #94a3b8; text-transform: capitalize;">${dev.role || 'Developer'} Team • ${SITE_NAME || 'Platform'}</span>
-          </p>
-
-          <!-- Original Message Box -->
-          <div style="background: #f8fafc; border-left: 4px solid #cbd5e1; border-radius: 6px; padding: 14px 16px; margin-top: 24px;">
-            <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 6px;">Your Original Inquiry:</div>
-            <div style="font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 6px;">"${contact.subject}"</div>
-            <div style="font-size: 13px; color: #475569; line-height: 1.5; white-space: pre-line;">${contact.message}</div>
-          </div>
+    const emailHtml = buildStyledEmail({
+      title: `${SITE_NAME || 'Support'} Team Response`,
+      subtitle: `In response to: ${contact.subject}`,
+      recipientName: contact.name || 'there',
+      bodyParagraphs: [
+        replyText,
+      ],
+      extraHtml: `
+        <div style="margin-top: 18px; padding: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px;">
+          <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 4px;">Original Inquiry:</div>
+          <div style="font-size: 12px; color: #334155; line-height: 1.5; white-space: pre-line;">${contact.message}</div>
         </div>
-
-        <!-- Footer -->
-        <div style="text-align: center; margin-top: 24px; font-size: 12px; color: #94a3b8;">
-          This message was sent to ${contact.email} regarding your contact submission.<br />
-          © ${new Date().getFullYear()} ${SITE_NAME || 'Platform'}. All rights reserved.
-        </div>
-      </div>
-    `;
+      `,
+      footerNote: `Replied by ${dev.name || 'Support'} (${dev.role || 'Developer'}). If you have further questions, feel free to reply to this message.`,
+    });
 
     try {
       await sendEmail({

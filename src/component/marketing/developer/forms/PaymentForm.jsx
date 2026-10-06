@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { generateToken } from 'src/lib/utils/random';
 
 export default function PaymentForm({ onSuccess, onCancel }) {
   const [formData, setFormData] = useState({
@@ -21,7 +22,7 @@ export default function PaymentForm({ onSuccess, onCancel }) {
     setLoading(true);
     setError('');
 
-    const transaction_id = formData.transaction_id || 'txn_' + Date.now() + Math.random().toString(36).substring(2, 6);
+    const transaction_id = formData.transaction_id || generateToken(12);
 
     try {
       const res = await fetch('/api/marketing/developer/payments', {
@@ -184,7 +185,7 @@ export default function PaymentForm({ onSuccess, onCancel }) {
           <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Transaction Gateway ID</label>
           <input
             type="text"
-            placeholder="e.g. txn_paddle_ch_3Nf4..."
+            placeholder="e.g. 123D148B92"
             value={formData.transaction_id}
             onChange={(e) => setFormData({ ...formData, transaction_id: e.target.value })}
             className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"

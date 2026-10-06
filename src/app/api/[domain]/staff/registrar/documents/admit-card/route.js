@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { verifyJWT } from 'src/lib/middleware/auth';
+import { verifyJWT } from 'src/lib/middleware/developer';
 import { query } from 'src/lib/database/db';
 import { logActivity } from 'src/lib/database/activity_logger';
 
@@ -158,7 +158,7 @@ export async function POST(request) {
     const printItems = [];
 
     for (const student of studentsRes.rows) {
-      const admitNo = `ADM-${exam.id}-${student.registration_number || student.id}`;
+      const admitNo = `${exam.id}${student.registration_number || student.id}`.replace(/[^0-9A-Za-z]/g, '');
       await query(`
         INSERT INTO student_admit_cards (
           admit_card_no, student_id, exam_id, fee_cleared, issue_date, issued_by_type, issued_by_id

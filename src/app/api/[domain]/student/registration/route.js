@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
-import { hashPassword } from 'src/lib/middleware/auth';
+import { hashPassword } from 'src/lib/middleware/developer';
 
 // POST: Verify if registration number and verification code exists and is valid
 export async function POST(request) {

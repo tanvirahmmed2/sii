@@ -35,7 +35,7 @@ function numberToWords(num) {
 export function generateStudentFeeReceiptHTML(fee, studentInfo = {}) {
   const schoolName = SCHOOL_NAME || 'Star Cadet Academia';
 
-  const receiptNo = `REC-FEE-2026${String(fee.id).padStart(4, '0')}`;
+  const receiptNo = fee.transaction_id || String(fee.id);
   const studentName = studentInfo?.student_name || studentInfo?.name || fee?.student_name || fee?.name || 'N/A';
   const regNo = studentInfo?.registration_number || studentInfo?.reg_no || fee?.registration_number || fee?.reg_no || 'N/A';
   const rollNo = studentInfo?.roll || fee?.roll ? String(studentInfo?.roll || fee?.roll) : 'N/A';

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
-import { isAdmin, getAdminUser } from 'src/lib/middleware/auth';
+import { isAdmin, getAdminUser } from 'src/lib/middleware/developer';
 import { uploadImage } from 'src/lib/database/cloudinary';
 import { recordActivityLog } from 'src/lib/database/logger';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';

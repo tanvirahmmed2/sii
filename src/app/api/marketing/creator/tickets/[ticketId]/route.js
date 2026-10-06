@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
+import { uploadImage } from 'src/lib/database/cloudinary';
 
 // GET SINGLE TICKET & CONVERSATION THREAD (Creator)
 export async function GET(request, context) {
@@ -25,7 +26,7 @@ export async function GET(request, context) {
       LEFT JOIN creators c ON s.creator_id = c.id
       LEFT JOIN developers d ON s.assigned_developer_id = d.id
       LEFT JOIN developer_roles dr ON d.role_id = dr.id
-      WHERE ${isNumeric ? 's.id = $1 OR s.ticket_number = $1' : 's.ticket_number = $1'}
+      WHERE ${isNumeric ? '(s.id = $1::bigint OR s.ticket_number = $1::text)' : 's.ticket_number = $1'}
       LIMIT 1
     `, [ticketId]);
 
@@ -62,10 +63,21 @@ export async function GET(request, context) {
       ORDER BY si.created_at ASC
     `, [ticket.id]).catch(() => ({ rows: [] }));
 
+    const imagesByMessage = {};
+    (imagesRes.rows || []).forEach((img) => {
+      if (!imagesByMessage[img.message_id]) imagesByMessage[img.message_id] = [];
+      imagesByMessage[img.message_id].push(img);
+    });
+
+    const messagesWithImages = messagesRes.rows.map((m) => ({
+      ...m,
+      images: imagesByMessage[m.id] || [],
+    }));
+
     return NextResponse.json({
       success: true,
       ticket,
-      messages: messagesRes.rows,
+      messages: messagesWithImages,
       images: imagesRes.rows,
     });
   } catch (error) {
@@ -79,23 +91,44 @@ export async function POST(request, context) {
   try {
     const params = await context?.params;
     const ticketId = params?.ticketId;
-    const body = await request.json();
-
-    const { creatorId, message, imageUrl } = body;
-    const cleanMessage = message?.trim();
 
     if (!ticketId) {
       return NextResponse.json({ success: false, error: 'Ticket identifier is required.' }, { status: 400 });
     }
 
-    if (!cleanMessage) {
-      return NextResponse.json({ success: false, error: 'Message cannot be empty.' }, { status: 400 });
+    const contentType = request.headers.get('content-type') || '';
+    let creatorId, cleanMessage, imageFile, imageUrl, fileName, mimeType, fileSize;
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      creatorId = formData.get('creatorId');
+      cleanMessage = formData.get('message')?.trim() || '';
+      imageFile = formData.get('image');
+      imageUrl = formData.get('imageUrl') || null;
+      if (imageFile && typeof imageFile === 'object') {
+        fileName = imageFile.name;
+        mimeType = imageFile.type;
+        fileSize = imageFile.size;
+      }
+    } else {
+      const body = await request.json().catch(() => ({}));
+      creatorId = body.creatorId;
+      cleanMessage = body.message?.trim() || '';
+      imageUrl = body.imageUrl || body.image_url || null;
+      imageFile = body.image || body.imageBase64 || null;
+      fileName = body.fileName || null;
+      mimeType = body.mimeType || null;
+      fileSize = body.fileSize || null;
+    }
+
+    if (!cleanMessage && !imageFile && !imageUrl) {
+      return NextResponse.json({ success: false, error: 'Message or image attachment is required.' }, { status: 400 });
     }
 
     const isNumeric = /^\d+$/.test(ticketId);
     const ticketRes = await queryDb(`
       SELECT * FROM supports 
-      WHERE ${isNumeric ? 'id = $1 OR ticket_number = $1' : 'ticket_number = $1'}
+      WHERE ${isNumeric ? '(id = $1::bigint OR ticket_number = $1::text)' : 'ticket_number = $1'}
       LIMIT 1
     `, [ticketId]);
 
@@ -106,21 +139,45 @@ export async function POST(request, context) {
     const ticket = ticketRes.rows[0];
     const senderId = creatorId ? Number(creatorId) : ticket.creator_id;
 
-    // Insert message into thread
+    let imageId = null;
+    if (imageFile && typeof imageFile === 'object' && imageFile.size > 0) {
+      const uploadRes = await uploadImage(imageFile, 'support_tickets');
+      imageUrl = uploadRes.secure_url;
+      imageId = uploadRes.publicId;
+    } else if (typeof imageFile === 'string' && imageFile.startsWith('data:image')) {
+      const uploadRes = await uploadImage(imageFile, 'support_tickets');
+      imageUrl = uploadRes.secure_url;
+      imageId = uploadRes.publicId;
+    }
+
+    // Insert message into thread (sender_type must be lowercase 'creator' to satisfy DB constraint)
     const msgRes = await queryDb(`
       INSERT INTO support_messages (support_id, sender_type, sender_id, message)
       VALUES ($1, 'creator', $2, $3)
       RETURNING *
-    `, [ticket.id, senderId, cleanMessage]);
+    `, [ticket.id, senderId, cleanMessage || '']);
 
     const newMsg = msgRes.rows[0];
 
-    // Optional image attachment
+    // Optional image attachment saved to support_images
+    let attachedImages = [];
     if (imageUrl) {
-      await queryDb(`
-        INSERT INTO support_images (message_id, image_url)
-        VALUES ($1, $2)
-      `, [newMsg.id, imageUrl]).catch(() => {});
+      const imgRes = await queryDb(`
+        INSERT INTO support_images (message_id, image_url, image_id, file_name, file_size, mime_type)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+      `, [
+        newMsg.id,
+        imageUrl,
+        imageId || null,
+        fileName || null,
+        fileSize || null,
+        mimeType || null,
+      ]).catch((err) => {
+        console.error('Error inserting support image:', err);
+        return { rows: [] };
+      });
+      attachedImages = imgRes.rows || [];
     }
 
     // Reopen ticket if closed/resolved and update timestamps
@@ -135,7 +192,10 @@ export async function POST(request, context) {
 
     return NextResponse.json({
       success: true,
-      message: newMsg,
+      message: {
+        ...newMsg,
+        images: attachedImages,
+      },
       ticket: updateRes.rows[0],
     });
   } catch (error) {

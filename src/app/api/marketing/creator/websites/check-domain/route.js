@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server.js';
 import { queryDb } from '../../../../../../lib/database/db.js';
-import { BASE_DOMAIN, BASE_URL } from '../../../../../../lib/database/secret.js';
+import { getBaseUrl } from '../../../../../../lib/database/secret.js';
 
 export const dynamic = 'force-dynamic';
 

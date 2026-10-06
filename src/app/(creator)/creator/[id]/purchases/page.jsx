@@ -281,7 +281,7 @@ export default function CreatorPurchasesPage() {
                   return (
                     <tr key={p.id} className="hover:bg-slate-50">
                       <td className="py-2.5 font-mono text-slate-900 font-medium">
-                        {p.purchase_code || `PUR-${p.id}`}
+                        {p.purchase_code || String(p.id)}
                       </td>
                       <td className="py-2.5 font-medium text-slate-900">
                         {p.package_name || 'Subscription Plan'}

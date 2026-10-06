@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
-import { isTeacher, isAdmin, isStudent, verifyJWT } from 'src/lib/middleware/auth';
+import { isTeacher, isAdmin, isStudent, verifyJWT } from 'src/lib/middleware/developer';
 import { cookies } from 'next/headers';
 import { logActivity } from 'src/lib/database/activity_logger';
 

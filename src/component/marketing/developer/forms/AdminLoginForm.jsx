@@ -14,8 +14,8 @@ export default function AdminLoginForm() {
   const initialVerified = searchParams.get('verified') === 'true';
   const initialEmailParam = searchParams.get('email') || '';
 
-  const [email, setEmail] = useState(initialEmailParam || 'tanvir@gmail.com');
-  const [password, setPassword] = useState('123');
+  const [email, setEmail] = useState(initialEmailParam || '');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

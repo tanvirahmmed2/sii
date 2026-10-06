@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
+import { generateRandomHex } from 'src/lib/utils/random';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { queryDb } from 'src/lib/database/db';
 
@@ -27,7 +27,7 @@ export async function POST(request, context) {
     );
 
     const orderNumber = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
-    const txnId = 'txn_' + crypto.randomBytes(8).toString('hex');
+    const transactionId = generateRandomHex(16);
 
     const oRes = await queryDb(`
       INSERT INTO website_purchase (website_id, order_number, customer_name, customer_email, total_amount_in_cents, currency, status, payment_status, items)
@@ -40,7 +40,7 @@ export async function POST(request, context) {
     await queryDb(`
       INSERT INTO website_purchase_payments (purchase_id, website_id, amount_in_cents, currency, payment_method, transaction_id, status)
       VALUES ($1, $2, $3, 'USD', 'CARD', $4, 'SUCCESS')
-    `, [order.id, websiteId, totalAmountInCents, txnId]);
+    `, [order.id, websiteId, totalAmountInCents, transactionId]);
 
     return NextResponse.json({ success: true, order });
   } catch (error) {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
-import { getAdminUser, comparePassword, hashPassword } from 'src/lib/middleware/auth';
+import { getAdminUser, comparePassword, hashPassword } from 'src/lib/middleware/developer';
 
 export async function GET() {
   try {

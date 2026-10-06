@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { query } from 'src/lib/database/db';
-import { comparePassword, signJWT } from 'src/lib/middleware/auth';
+import { comparePassword, signJWT } from 'src/lib/middleware/developer';
 import { recordLoginLog } from 'src/lib/database/logger';
 
 export async function POST(request) {

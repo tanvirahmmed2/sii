@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
-import { isAdmin, isRegister } from 'src/lib/middleware/auth';
+import { isAdmin, isRegister } from 'src/lib/middleware/developer';
 
 // PUT update notice (Admin only)
 export async function PUT(request, context) {

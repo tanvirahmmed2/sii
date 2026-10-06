@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
-import { isAdmin } from 'src/lib/middleware/auth';
+import { isAdmin } from 'src/lib/middleware/developer';
+import { generateToken } from 'src/lib/utils/random';
 
 // GET Purchase Orders
 export async function GET() {
@@ -116,7 +117,7 @@ export async function POST(request) {
     }
 
     // 4. Log general debit transaction in general ledger
-    const transactionNo = `TXN-INV-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    const transactionNo = generateToken(12);
     await query(`
       INSERT INTO payment_transactions (
         transaction_number, payment_method, amount, transaction_type, category, 

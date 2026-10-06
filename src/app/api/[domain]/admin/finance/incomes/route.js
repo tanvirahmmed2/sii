@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
-import { isAdmin } from 'src/lib/middleware/auth';
+import { isAdmin } from 'src/lib/middleware/developer';
+import { generateToken } from 'src/lib/utils/random';
 
 // GET Incomes
 export async function GET() {
@@ -50,7 +51,7 @@ export async function POST(request) {
     const income = incResult.rows[0];
 
     // 2. Generate transaction number
-    const transactionNo = `TXN-INC-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    const transactionNo = generateToken(12);
 
     // 3. Insert into payment_transactions (Credit transaction)
     await query(`

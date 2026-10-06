@@ -445,7 +445,7 @@ export default function PaymentGatewayCheckout({
             <div className="flex justify-between">
               <span className="text-slate-500">Transaction ID:</span>
               <span className="text-slate-900 font-semibold">
-                {resultTxnId || payment?.transaction_id || `TRX_${payment?.id}`}
+                {resultTxnId || payment?.transaction_id || payment?.id}
               </span>
             </div>
             <div className="flex justify-between border-t border-slate-200 pt-1 font-semibold">

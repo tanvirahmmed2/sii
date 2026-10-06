@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession } from 'src/lib/middleware/creator';
+import { generateToken } from 'src/lib/utils/random';
 
 /**
  * API Route: /api/creator/subscriptions
@@ -141,7 +142,7 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
     const billingCycle = isYearly ? 'yearly' : 'monthly';
     const baseAmount = isYearly ? Number(pkg.yearly_price_usd || pkg.yearly_price || 0) : Number(pkg.monthly_price_usd || pkg.monthly_price || 0);
     const durationInterval = isYearly ? "INTERVAL '365 days'" : "INTERVAL '30 days'";
-    const purchaseCode = 'PUR-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+    const purchaseCode = generateToken(12);
 
     // 1. Insert into purchases table
     const puRes = await queryDb(
@@ -153,12 +154,12 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
     const purchase = puRes.rows[0];
 
     // 2. Insert into payments table
-    const txnId = 'TXN_' + Date.now().toString(36).toUpperCase() + '_' + Math.random().toString(36).substring(2, 7).toUpperCase();
+    const transactionId = generateToken(12);
     const payRes = await queryDb(
       `INSERT INTO payments (purchase_id, creator_id, transaction_id, amount, currency, payment_method, status, payment_date)
        VALUES ($1, $2, $3, $4, 'USD', $5, 'successful', CURRENT_TIMESTAMP)
        RETURNING *`,
-      [purchase.id, creatorId, txnId, baseAmount, paymentMethod]
+      [purchase.id, creatorId, transactionId, baseAmount, paymentMethod]
     );
 
     // 3. Clear creator's wishlist upon successful package purchase

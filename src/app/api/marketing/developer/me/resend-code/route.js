@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
+import { generateRandomHex, generateRandomCode } from 'src/lib/utils/random';
 import { queryDb } from 'src/lib/database/db';
-import { sendEmail } from 'src/lib/database/brevo';
-import { SITE_NAME } from 'src/lib/database/secret';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+import { SITE_NAME, getBaseUrl } from 'src/lib/database/secret';
 
 export async function POST(request) {
   try {
@@ -48,8 +48,8 @@ export async function POST(request) {
       });
     }
 
-    const newToken = crypto.randomBytes(32).toString('hex');
-    const newCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const newToken = generateRandomHex(32);
+    const newCode = generateRandomCode(100000, 999999);
 
     await queryDb(
       `UPDATE developers 
@@ -62,50 +62,28 @@ export async function POST(request) {
       [newToken, newCode, admin.id]
     );
 
-    const origin =
-      request?.headers?.get('origin') ||
-      (request?.headers?.get('host')
-        ? `${request.headers.get('x-forwarded-proto') || 'http'}://${request.headers.get('host')}`
-        : '') ||
-      process.env.NEXT_PUBLIC_APP_URL ||
-      'http://localhost:3000';
-
-    const verifyUrl = `${origin}/developer-auth/verify?token=${newToken}&email=${encodeURIComponent(cleanEmail)}`;
+    const baseUrl = getBaseUrl(request);
+    const verifyUrl = `${baseUrl}/developer-auth/verify?token=${newToken}&email=${encodeURIComponent(cleanEmail)}`;
 
     // Send link via Brevo mailer
     try {
+      const emailHtml = buildStyledEmail({
+        title: `${SITE_NAME} Developer Portal`,
+        subtitle: 'Account Verification Link',
+        recipientName: admin.name || 'Developer',
+        bodyParagraphs: [
+          'You requested a new verification link for your platform administrator account.',
+          'Click the link below to verify your email and activate your account.'
+        ],
+        actionText: 'Verify & Activate Account',
+        actionUrl: verifyUrl,
+        footerNote: 'This link will expire in 24 hours. Do not share it with anyone.'
+      });
+
       await sendEmail({
         to: cleanEmail,
-        subject: `New Developer Verification Link - ${SITE_NAME}`,
-        html: `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px; background: #0f172a; color: #f8fafc; border-radius: 20px; border: 1px solid #1e293b;">
-            <div style="text-align: center; margin-bottom: 24px;">
-              <h1 style="color: #6366f1; font-size: 24px; margin: 0 0 8px 0; font-weight: 800;">${SITE_NAME} Developer Portal</h1>
-              <p style="color: #94a3b8; font-size: 14px; margin: 0;">New Account Verification Link</p>
-            </div>
-            <div style="background: #1e293b; padding: 28px; border-radius: 14px; margin-bottom: 24px; border: 1px solid #334155;">
-              <p style="margin-top: 0; color: #cbd5e1; font-size: 15px;">Hello <strong>${admin.name}</strong>,</p>
-              <p style="color: #94a3b8; font-size: 14px; line-height: 1.6;">
-                You requested a new verification link for your administrator account. Click the button below to verify your email and activate your account:
-              </p>
-              <div style="text-align: center; margin: 28px 0;">
-                <a href="${verifyUrl}" style="background: #4f46e5; color: #ffffff; padding: 14px 32px; text-decoration: none; font-size: 14px; font-weight: 700; border-radius: 12px; display: inline-block; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);">
-                  Verify & Activate Account →
-                </a>
-              </div>
-              <div style="background: #0b0f19; padding: 14px; border-radius: 8px; border: 1px dashed #475569; margin: 20px 0; word-break: break-all; font-size: 12px; color: #94a3b8;">
-                <span style="color: #64748b; display: block; margin-bottom: 4px;">Direct Link:</span>
-                <a href="${verifyUrl}" style="color: #38bdf8; text-decoration: underline;">${verifyUrl}</a>
-              </div>
-              <p style="margin-bottom: 0; font-size: 12px; color: #64748b; text-align: center;">
-                This link will expire in 24 hours. Do not share it with anyone.
-              </p>
-            </div>
-            <p style="font-size: 12px; color: #64748b; text-align: center; margin: 0;">
-              If you did not request this, please contact security immediately.
-            </p>
-          </div>
-        `,
+        subject: `Developer Verification Link - ${SITE_NAME}`,
+        html: emailHtml,
         text: `Hello ${admin.name},\n\nYour new developer verification link is:\n${verifyUrl}\n\nThis link expires in 24 hours.`,
       });
     } catch (mailErr) {

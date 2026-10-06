@@ -29,10 +29,32 @@ export const SITE_MAIL ='support@hiesci.io';
 export const SITE_CONTACT ='+1 (800) 555-0199';
 export const SITE_ADDRESS ='Tech Innovation District, 100 Enterprise Way, Suite 400';
 export const COMPANY_NAME ='EduCraft Technologies Inc.';
-export const COMPANY_URL = process.env.COMPANY_URL || process.env.BASE_URL || '';
-export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL || COMPANY_URL || '';
+export const COMPANY_URL = process.env.COMPANY_URL || 'https://educraft.io';
 
-export const extractBaseDomain = (url = BASE_URL) => {
+export const getBaseUrl = (request) => {
+  if (!request) return '';
+  try {
+    if (typeof request === 'string') {
+      return new URL(request).origin;
+    }
+    if (request.nextUrl?.origin) {
+      return request.nextUrl.origin;
+    }
+    const host = request.headers?.get?.('x-forwarded-host') || request.headers?.get?.('host');
+    if (host) {
+      const proto = request.headers?.get?.('x-forwarded-proto') || (request.url?.startsWith('https') ? 'https' : 'http');
+      return `${proto}://${host.split(',')[0].trim()}`;
+    }
+    if (request.url) {
+      return new URL(request.url).origin;
+    }
+  } catch {}
+  return '';
+};
+
+export const BASE_URL = '';
+
+export const extractBaseDomain = (url = '') => {
   if (!url) return '';
   try {
     const raw = String(url).trim();
@@ -43,7 +65,7 @@ export const extractBaseDomain = (url = BASE_URL) => {
   }
 };
 
-export const BASE_DOMAIN = extractBaseDomain(BASE_URL);
+export const BASE_DOMAIN = '';
 
 export const DEVELOPER_TOKEN='hiesci-dev'
 export const CREATOR_TOKEN='hiesci-creator'

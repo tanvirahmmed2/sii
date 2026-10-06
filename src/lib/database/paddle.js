@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { generateToken } from '../utils/random.js';
 import {
   PADDLE_API_KEY,
   PADDLE_ENVIRONMENT,
@@ -42,13 +43,13 @@ export async function createPaddleTransaction({
 
   // If live credentials are not set, provide a graceful development simulation
   if (!isPaddleConfigured()) {
-    const simTxnId = `txn_pad_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}`;
+    const simTxnId = generateToken(14);
     return {
       success: true,
       simulated: true,
       id: simTxnId,
       status: 'ready',
-      checkout_url: returnUrl || `/creator/checkout?txn=${simTxnId}`,
+      checkout_url: returnUrl || `/creator/checkout?ref=${simTxnId}`,
       currency,
       amount: numericAmount,
       amount_in_cents: amountInCents,
@@ -122,7 +123,7 @@ export async function createPaddleTransaction({
   } catch (error) {
     console.error('Paddle API Error in createPaddleTransaction:', error.message);
     // Fallback to simulated object if gateway network fails in dev/test
-    const simTxnId = `txn_pad_fallback_${Date.now()}`;
+    const simTxnId = generateToken(14);
     return {
       success: true,
       simulated: true,
@@ -144,7 +145,7 @@ export async function createPaddleTransaction({
  * @returns {Promise<Object>}
  */
 export async function getPaddleTransaction(transactionId) {
-  if (!isPaddleConfigured() || transactionId.startsWith('txn_pad_')) {
+  if (!isPaddleConfigured() || !transactionId) {
     return {
       id: transactionId,
       status: 'completed',

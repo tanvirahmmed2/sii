@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
 import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession } from 'src/lib/middleware/creator';
 
@@ -107,7 +106,7 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Project title and description are required.' }, { status: 400 });
     }
 
-    const projectNum = `PRJ-${Date.now().toString().slice(-6)}-${crypto.randomInt(100, 999)}`;
+    const projectNum = `PRJ-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
     const budgetCents = Math.round(Number(rawBudget) * 100) || 0;
 
     const projRes = await queryDb(`

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { executeBkashPayment } from 'src/lib/database/bkash';
+import { generateToken } from 'src/lib/utils/random';
 
 export async function GET(request) {
   try {
@@ -65,10 +66,10 @@ export async function GET(request) {
     // Execute payment via bKash API
     const bkResult = await executeBkashPayment(paymentID, {
       expectedAmount: packageBdtPrice,
-      invoiceNumber: `INV_${payRecord.id}`,
+      invoiceNumber: generateToken(10),
     });
 
-    const finalTxnId = bkResult.trxID || `BK${Date.now().toString(36).toUpperCase()}`;
+    const finalTxnId = bkResult.trxID || generateToken(12);
 
     // Provision active subscription
     const durationInterval = isYearly ? "INTERVAL '365 days'" : "INTERVAL '30 days'";

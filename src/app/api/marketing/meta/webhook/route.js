@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import { pool } from 'src/lib/database/db';
 import { META_WEBHOOK_VERIFY_TOKEN, META_APP_SECRET } from 'src/lib/database/secret';
@@ -32,10 +31,7 @@ export async function GET(request) {
       return new Response('Forbidden: Server webhook token not configured', { status: 403 });
     }
 
-    // Timing-safe constant-time comparison
-    const tokenHash = crypto.createHash('sha256').update(String(token).trim()).digest();
-    const expectedHash = crypto.createHash('sha256').update(META_WEBHOOK_VERIFY_TOKEN.trim()).digest();
-    const isTokenMatch = crypto.timingSafeEqual(tokenHash, expectedHash);
+    const isTokenMatch = String(token).trim() === META_WEBHOOK_VERIFY_TOKEN.trim();
 
     if (!isTokenMatch) {
       console.warn('Meta Webhook Handshake: Token mismatch attempt rejected.');

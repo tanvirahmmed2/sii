@@ -107,7 +107,12 @@ export default function RolesManagementPage() {
   }, []);
 
   const userPerms = Array.isArray(currentUser?.permissions) ? currentUser.permissions : [];
-  const canManage = Boolean(userPerms.includes('developers'));
+  const canManage = Boolean(
+    userPerms.includes('developers') ||
+    userPerms.includes('roles') ||
+    currentUser?.role === 'admin' ||
+    currentUser?.isSuperAdmin
+  );
 
   const showNotice = (text, type = 'info') => {
     setNotice({ text, type });

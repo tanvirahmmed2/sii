@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { verifyJWT, comparePassword, hashPassword } from 'src/lib/middleware/auth';
+import { verifyJWT, comparePassword, hashPassword } from 'src/lib/middleware/developer';
 import { query } from 'src/lib/database/db';
 import { uploadImage, deleteImage } from 'src/lib/database/cloudinary';
 

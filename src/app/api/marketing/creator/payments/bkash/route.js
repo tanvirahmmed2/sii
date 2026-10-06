@@ -12,6 +12,7 @@ import {
   validateBkashPin,
   isBkashConfigured,
 } from 'src/lib/database/bkash';
+import { generateToken } from 'src/lib/utils/random';
 
 /**
  * Helper: Resolve Creator Session & Verify Ownership
@@ -160,7 +161,7 @@ export async function POST(request) {
 
       const bkashRes = await createBkashPayment({
         amount: bdtPrice,
-        invoiceNumber: `INV_${payment.id}`,
+        invoiceNumber: generateToken(10),
         payerReference: String(creatorId),
         callbackUrl,
       });
@@ -225,7 +226,7 @@ export async function POST(request) {
       if (!bkPaymentId) {
         const createRes = await createBkashPayment({
           amount: bdtPrice,
-          invoiceNumber: `INV_${payment.id}`,
+          invoiceNumber: generateToken(10),
           payerReference: mobileCheck.number,
           callbackUrl: `${new URL(request.url).origin}/api/marketing/creator/payments/bkash/callback?paymentId=${paymentId}`,
         });
@@ -331,24 +332,24 @@ export async function POST(request) {
         : Number(payment.monthly_price_bdt || 3500);
 
       // Execute via bKash Tokenized Checkout API
-      const bkPaymentId = body.bkashPaymentId || `BK_PAY_${payment.id}`;
+      const bkPaymentId = body.bkashPaymentId || generateToken(12);
       let bkResult;
       try {
         bkResult = await executeBkashPayment(bkPaymentId, {
           expectedAmount: packageBdtPrice,
           customerMsisdn: mobileCheck.number,
-          invoiceNumber: `INV_${payment.id}`,
+          invoiceNumber: generateToken(10),
         });
       } catch (bkErr) {
         console.warn('bKash gateway simulation notice:', bkErr.message);
         bkResult = {
-          trxID: body.bkashTrxId || `BK${Date.now().toString(36).toUpperCase()}`,
+          trxID: body.bkashTrxId || generateToken(12),
           customerMsisdn: mobileCheck.number,
           amount: String(packageBdtPrice),
         };
       }
 
-      const finalTxnId = body.bkashTrxId || bkResult.trxID || `BK${Date.now().toString(36).toUpperCase()}`;
+      const finalTxnId = body.bkashTrxId || bkResult.trxID || generateToken(12);
 
       // Interval (monthly = 30 days, yearly = 365 days)
       const durationInterval = isYearly ? "INTERVAL '365 days'" : "INTERVAL '30 days'";

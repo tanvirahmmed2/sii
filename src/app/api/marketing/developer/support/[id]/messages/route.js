@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
-import { sendEmail } from 'src/lib/database/brevo';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
 import { SITE_NAME } from 'src/lib/database/secret';
+import { uploadImage } from 'src/lib/database/cloudinary';
 
 // SEND MESSAGE FROM DEVELOPER / STAFF TO CREATOR
 export async function POST(request, context) {
@@ -17,17 +18,38 @@ export async function POST(request, context) {
 
     const params = await context?.params;
     const id = params?.id;
-    const body = await request.json();
-
-    const { message, status, imageUrl } = body;
-    const cleanMessage = message?.trim();
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Ticket identifier is required.' }, { status: 400 });
     }
 
-    if (!cleanMessage) {
-      return NextResponse.json({ success: false, error: 'Reply message cannot be empty.' }, { status: 400 });
+    const contentType = request.headers.get('content-type') || '';
+    let cleanMessage, status, imageFile, imageUrl, fileName, mimeType, fileSize;
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      cleanMessage = formData.get('message')?.trim() || '';
+      status = formData.get('status');
+      imageFile = formData.get('image');
+      imageUrl = formData.get('imageUrl') || null;
+      if (imageFile && typeof imageFile === 'object') {
+        fileName = imageFile.name;
+        mimeType = imageFile.type;
+        fileSize = imageFile.size;
+      }
+    } else {
+      const body = await request.json().catch(() => ({}));
+      cleanMessage = body.message?.trim() || '';
+      status = body.status;
+      imageUrl = body.imageUrl || body.image_url || null;
+      imageFile = body.image || body.imageBase64 || null;
+      fileName = body.fileName || null;
+      mimeType = body.mimeType || null;
+      fileSize = body.fileSize || null;
+    }
+
+    if (!cleanMessage && !imageFile && !imageUrl) {
+      return NextResponse.json({ success: false, error: 'Reply message or image attachment is required.' }, { status: 400 });
     }
 
     const isNumeric = /^\d+$/.test(id);
@@ -35,7 +57,7 @@ export async function POST(request, context) {
       SELECT s.*, c.name AS requester_name, c.email AS requester_email 
       FROM supports s
       LEFT JOIN creators c ON s.creator_id = c.id
-      WHERE ${isNumeric ? 's.id = $1 OR s.ticket_number = $1' : 's.ticket_number = $1'}
+      WHERE ${isNumeric ? '(s.id = $1::bigint OR s.ticket_number = $1::text)' : 's.ticket_number = $1'}
       LIMIT 1
     `, [id]);
 
@@ -46,21 +68,45 @@ export async function POST(request, context) {
     const ticket = ticketRes.rows[0];
     const dev = auth.staff;
 
+    let imageId = null;
+    if (imageFile && typeof imageFile === 'object' && imageFile.size > 0) {
+      const uploadRes = await uploadImage(imageFile, 'support_tickets');
+      imageUrl = uploadRes.secure_url;
+      imageId = uploadRes.publicId;
+    } else if (typeof imageFile === 'string' && imageFile.startsWith('data:image')) {
+      const uploadRes = await uploadImage(imageFile, 'support_tickets');
+      imageUrl = uploadRes.secure_url;
+      imageId = uploadRes.publicId;
+    }
+
     // Insert staff message
     const msgRes = await queryDb(`
       INSERT INTO support_messages (support_id, sender_type, sender_id, message)
       VALUES ($1, 'developer', $2, $3)
       RETURNING *
-    `, [ticket.id, dev.id, cleanMessage]);
+    `, [ticket.id, dev.id, cleanMessage || '']);
 
     const newMsg = msgRes.rows[0];
 
-    // Optional image attachment
+    // Optional image attachment saved to support_images
+    let attachedImages = [];
     if (imageUrl) {
-      await queryDb(`
-        INSERT INTO support_images (message_id, image_url)
-        VALUES ($1, $2)
-      `, [newMsg.id, imageUrl]).catch(() => {});
+      const imgRes = await queryDb(`
+        INSERT INTO support_images (message_id, image_url, image_id, file_name, file_size, mime_type)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+      `, [
+        newMsg.id,
+        imageUrl,
+        imageId || null,
+        fileName || null,
+        fileSize || null,
+        mimeType || null,
+      ]).catch((err) => {
+        console.error('Error inserting support image:', err);
+        return { rows: [] };
+      });
+      attachedImages = imgRes.rows || [];
     }
 
     // Determine target status
@@ -80,28 +126,16 @@ export async function POST(request, context) {
     // Send email notification to creator (fire-and-forget / non-blocking)
     if (ticket.requester_email) {
       const emailSubject = `[${ticket.ticket_number}] Update on: ${ticket.subject}`;
-      const emailHtml = `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 28px 20px; background: #f8fafc; color: #0f172a;">
-          <div style="background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; padding: 28px;">
-            <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6366f1; margin-bottom: 8px;">Support Ticket #${ticket.ticket_number}</div>
-            <h2 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 700; color: #0f172a;">${ticket.subject}</h2>
-            
-            <p style="font-size: 14px; color: #334155; margin-bottom: 20px;">Hello <strong>${ticket.requester_name || 'Creator'}</strong>,</p>
-
-            <div style="background: #f1f5f9; border-left: 4px solid #6366f1; padding: 16px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; color: #1e293b; line-height: 1.6; white-space: pre-line;">
-              ${cleanMessage}
-            </div>
-
-            <p style="font-size: 13px; color: #64748b; margin-bottom: 0;">
-              Replied by: <strong>${dev.name}</strong> (${dev.role || 'Staff'})<br />
-              Status: <span style="font-weight: 700; color: #059669;">${targetStatus}</span>
-            </p>
-          </div>
-          <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #94a3b8;">
-            © ${new Date().getFullYear()} ${SITE_NAME || 'PortfolioBuilder'}. You can reply directly in your creator dashboard tickets tab.
-          </div>
-        </div>
-      `;
+      const emailHtml = buildStyledEmail({
+        title: `Support Ticket #${ticket.ticket_number}`,
+        subtitle: ticket.subject,
+        recipientName: ticket.requester_name || 'Creator',
+        bodyParagraphs: [
+          `New reply from ${dev.name} (${dev.role || 'Staff'}):`,
+          cleanMessage,
+        ],
+        footerNote: `Status: ${targetStatus}. You can reply directly in your creator dashboard tickets tab.`,
+      });
 
       sendEmail({
         to: ticket.requester_email,
@@ -120,6 +154,7 @@ export async function POST(request, context) {
         sender_name: dev.name,
         developer_name: dev.name,
         developer_role: dev.role,
+        images: attachedImages,
       },
       ticket: updateRes.rows[0],
     });

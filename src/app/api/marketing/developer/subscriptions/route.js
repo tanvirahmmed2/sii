@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
+import { generateToken } from 'src/lib/utils/random';
 
 export async function GET(request) {
   try {
@@ -63,7 +64,7 @@ export async function POST(request) {
     }
 
     if (!data.purchase_code) {
-      data.purchase_code = `PUR-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      data.purchase_code = generateToken(12);
     }
     if (data.total_amount === undefined) {
       data.total_amount = data.amount || 0;

@@ -102,9 +102,8 @@ export async function handleProfileAction(body, sessionCreator) {
       return NextResponse.json({ success: false, error: 'Creator not found.' }, { status: 404 });
     }
 
-    const isBcryptMatch = await comparePassword(currentPassword, c.rows[0].password).catch(() => false);
-    const isPlainMatch = c.rows[0].password === currentPassword;
-    if (!isBcryptMatch && !isPlainMatch) {
+    const isMatch = await comparePassword(currentPassword, c.rows[0].password);
+    if (!isMatch) {
       return NextResponse.json({ success: false, error: 'Current password is incorrect.' }, { status: 401 });
     }
 

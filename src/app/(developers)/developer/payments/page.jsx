@@ -310,7 +310,7 @@ export default function AdminPaymentsPage() {
                       <td className="py-2.5 font-mono font-medium text-slate-400">#{p.id}</td>
 
                       <td className="py-2.5 font-mono font-medium text-slate-800 dark:text-slate-200">
-                        {p.transaction_id || `TXN_${p.id}`}
+                        {p.transaction_id || p.id}
                       </td>
 
                       <td className="py-2.5">

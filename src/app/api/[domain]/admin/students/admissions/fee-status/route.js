@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import pool from 'src/lib/database/db';
-import { isAdmin, isRegister, isCashier, verifyJWT } from 'src/lib/middleware/auth';
-import { sendEmail } from 'src/lib/database/brevo';
+import { isAdmin, isRegister, isCashier, verifyJWT } from 'src/lib/middleware/developer';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+import { getBaseUrl } from 'src/lib/database/secret';
+import { generateToken } from 'src/lib/utils/random';
 
 export async function PUT(request) {
   let client;
@@ -104,7 +106,7 @@ export async function PUT(request) {
       const rmk = remarks || `Collected admission fee for candidate #${student_admission_id}`;
 
       // Insert into unified transactions ledger (Credit transaction)
-      const transactionNo = `TXN-ADM-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+      const transactionNo = generateToken(12);
       await client.query(`
         INSERT INTO payment_transactions (
           transaction_number, payment_method, amount, transaction_type, category, 
@@ -120,43 +122,28 @@ export async function PUT(request) {
       ]);
 
       // Send email to applicant with upload link for candidate image & signature
-      const origin = request.headers.get('origin') || 'http://localhost:3000';
-      const uploadLink = `${origin}/admission/upload/${applicant.id}`;
+      const baseUrl = getBaseUrl(request);
+      const uploadLink = `${baseUrl}/admission/upload/${applicant.id}`;
 
       try {
+        const emailHtml = buildStyledEmail({
+          title: 'Admission Fee Payment Recorded',
+          subtitle: `Application #${applicant.id}`,
+          recipientName: applicant.applicant_name,
+          bodyParagraphs: [
+            `Your admission fee payment of BDT ${actualAmountPaid.toFixed(2)} (${method}) has been confirmed.`,
+            'To complete your admission application, please submit your candidate photo and signature using the secure link below.'
+          ],
+          actionText: 'Upload Photo & Signature',
+          actionUrl: uploadLink,
+          footerNote: 'Please submit your documents promptly so academic administration can finalize your admission review.'
+        });
+
         await sendEmail({
           to: applicant.email,
           toName: applicant.applicant_name,
-          subject: `Payment Completed - Action Required: Upload Photo & Signature`,
-          html: `
-            <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 16px;">
-              <div style="text-align: center; padding-bottom: 16px; border-b: 1px solid #f1f5f9;">
-                <h2 style="color: #16a34a; margin: 0;">Payment Confirmed!</h2>
-                <p style="color: #64748b; font-size: 14px; margin-top: 4px;">Admission fee payment has been successfully recorded</p>
-              </div>
-
-              <div style="margin: 20px 0; background: #f0fdf4; padding: 16px; border-radius: 12px; border: 1px solid #bbf7d0;">
-                <p style="margin: 6px 0; font-size: 14px;"><strong>Applicant Name:</strong> ${applicant.applicant_name}</p>
-                <p style="margin: 6px 0; font-size: 14px;"><strong>Applicant Number:</strong> APP-1000${applicant.id}</p>
-                <p style="margin: 6px 0; font-size: 14px;"><strong>Amount Paid:</strong> BDT ${actualAmountPaid.toFixed(2)} (${method})</p>
-                <p style="margin: 6px 0; font-size: 14px;"><strong>Status:</strong> <span style="color: #15803d; font-weight: bold;">PAID</span></p>
-              </div>
-
-              <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 16px; border-radius: 12px; text-align: center; margin-bottom: 20px;">
-                <h3 style="color: #0f172a; margin: 0 0 8px 0;">Final Step: Provide Photo & Signature</h3>
-                <p style="color: #475569; font-size: 13px; margin: 0 0 16px 0;">
-                  Please click the link below to upload your profile photo and candidate signature so your application can be reviewed for final approval by administration.
-                </p>
-                <a href="${uploadLink}" style="display: inline-block; background-color: #0284c7; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 9999px; font-weight: bold; font-size: 14px;">
-                  Upload Photo & Signature
-                </a>
-              </div>
-
-              <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 24px; border-top: 1px solid #f1f5f9; padding-top: 12px;">
-                School Academic Administration Board
-              </p>
-            </div>
-          `
+          subject: 'Admission Fee Payment Completed - Document Upload Required',
+          html: emailHtml,
         });
       } catch (mailErr) {
         console.error('Failed to send upload link email to applicant:', mailErr);

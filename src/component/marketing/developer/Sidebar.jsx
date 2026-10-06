@@ -8,7 +8,8 @@ export const ADMIN_NAV_SECTIONS = [
   {
     title: 'Workspace & Overview',
     links: [
-      { href: '/developer', label: 'Overview', exact: true },
+      { href: '/developer', label: 'Developer Console', exact: true },
+      { href: '/developer/overview', label: 'Platform Overview' },
       { href: '/developer/tasks', label: 'Tasks & Sprints' },
       { href: '/developer/notices', label: 'Company Notices' },
       { href: '/developer/chats', label: 'Internal Chat' },

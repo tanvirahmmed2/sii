@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
+import { generateToken } from 'src/lib/utils/random';
 
 // GET: Retrieve live chat sessions or a specific conversation for permitted developer
 export async function GET(request) {
@@ -110,7 +111,7 @@ export async function POST(request) {
     if (action === 'create_record' && (!body.table || body.table === 'live_chats')) {
       const visitorName = (data.visitor_name || '').trim();
       const visitorEmail = (data.visitor_email || '').trim().toLowerCase() || null;
-      const sessionId = data.session_id || 'live_dev_' + Math.random().toString(36).substring(2, 10);
+      const sessionId = data.session_id || generateToken(12);
       const status = (data.status || 'OPEN').toUpperCase();
       const ip = data.ip_address || '127.0.0.1';
 

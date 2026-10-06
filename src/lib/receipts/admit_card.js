@@ -3,7 +3,7 @@ import { SCHOOL_NAME } from 'src/lib/database/secret';
 function renderSingleAdmitCardBlock(exam = {}, student = {}, schedules = []) {
   const schoolName = SCHOOL_NAME || '';
 
-  const admitCardNo = `ADM-${exam.id || ''}-${student.registration_number || student.id || ''}`;
+  const admitCardNo = `${exam.id || ''}${student.registration_number || student.id || ''}`.replace(/[^0-9A-Za-z]/g, '');
   const studentName = student.name || 'N/A';
   const regNo = student.registration_number || 'N/A';
   const rollNo = student.roll ? String(student.roll) : 'N/A';

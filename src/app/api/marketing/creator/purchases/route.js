@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession } from 'src/lib/middleware/creator';
+import { generateToken } from 'src/lib/utils/random';
 
 /**
  * API Route: /api/creator/purchases
@@ -136,7 +137,7 @@ export async function handlePurchasesAction(body, sessionCreator) {
       }
     }
 
-    const purchaseCode = 'ORD_' + Date.now().toString(36).toUpperCase() + '_' + Math.random().toString(36).substring(2, 6).toUpperCase();
+    const purchaseCode = generateToken(12);
 
     // Metadata for provisioning website upon payment
     const purchaseNotes = JSON.stringify({
@@ -156,12 +157,12 @@ export async function handlePurchasesAction(body, sessionCreator) {
     const purchase = puRes.rows[0];
 
     // 2. Generate unique transaction identifier and create pending payment linked to purchase
-    const txnId = 'TXN_' + Date.now().toString(36).toUpperCase() + '_' + Math.random().toString(36).substring(2, 7).toUpperCase();
+    const transactionId = generateToken(12);
     const payRes = await queryDb(
       `INSERT INTO payments (purchase_id, creator_id, transaction_id, amount, currency, payment_method, status, payment_date)
        VALUES ($1, $2, $3, $4, $5, $6, 'pending', CURRENT_TIMESTAMP)
        RETURNING *`,
-      [purchase.id, creatorId, txnId, baseAmount, currency, paymentMethod]
+      [purchase.id, creatorId, transactionId, baseAmount, currency, paymentMethod]
     );
     const payment = payRes.rows[0];
 

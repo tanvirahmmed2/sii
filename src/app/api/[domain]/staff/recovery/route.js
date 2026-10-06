@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
-import { hashPassword } from 'src/lib/middleware/auth';
-import { sendEmail } from 'src/lib/database/brevo';
-import crypto from 'crypto';
+import { hashPassword } from 'src/lib/middleware/developer';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+import { getBaseUrl } from 'src/lib/database/secret';
+import { generateToken } from 'src/lib/utils/random';
 
 // POST: Request recovery token
 export async function POST(request) {
@@ -24,7 +25,7 @@ export async function POST(request) {
 
     const staff = result.rows[0];
 
-    const recoveryToken = crypto.randomBytes(32).toString('hex');
+    const recoveryToken = generateToken(8);
     const recoveryExpires = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours
 
     await query(`
@@ -33,7 +34,7 @@ export async function POST(request) {
       WHERE id = $3
     `, [recoveryToken, recoveryExpires, staff.id]);
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = getBaseUrl(request);
     const recoveryUrl = `${baseUrl}/auth/access/staff/recovery?token=${recoveryToken}`;
 
     try {
@@ -41,29 +42,19 @@ export async function POST(request) {
         to: staff.email,
         toName: staff.name,
         subject: 'Reset Your Staff Account Password',
-        html: `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
-            <div style="background: #0284c7; padding: 40px 32px; text-align: center;">
-              <h1 style="color: #ffffff; font-size: 24px; font-weight: 700; margin: 0;">Password Reset Request</h1>
-            </div>
-            <div style="padding: 32px;">
-              <p style="color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 8px;">Hi <strong>${staff.name}</strong>,</p>
-              <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
-                You requested to reset your password. Click the button below to choose a new password. 
-                This password reset link is valid for <strong>2 hours</strong>.
-              </p>
-              <div style="text-align: center; margin: 32px 0;">
-                <a href="${recoveryUrl}" style="display: inline-block; background: #0284c7; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-size: 15px; font-weight: 600; letter-spacing: 0.3px;">
-                  Reset My Password
-                </a>
-              </div>
-              <p style="color: #94a3b8; font-size: 12px; line-height: 1.5; margin-top: 24px;">
-                If the button doesn't work, copy and paste this link into your browser:<br/>
-                <a href="${recoveryUrl}" style="color: #0284c7; word-break: break-all;">${recoveryUrl}</a>
-              </p>
-            </div>
-          </div>
-        `
+        html: buildStyledEmail({
+          title: 'Password Reset Request',
+          subtitle: 'Staff Portal Security',
+          recipientName: staff.name,
+          bodyParagraphs: [
+            'You requested to reset your password. Click the button below to choose a new password, or use the security recovery token.',
+          ],
+          code: recoveryToken,
+          codeLabel: 'Recovery Token',
+          actionUrl: recoveryUrl,
+          actionText: 'Reset Password',
+          footerNote: 'This password reset link is valid for 2 hours. If you did not request this, please ignore this email.',
+        })
       });
     } catch (emailErr) {
       console.error('Failed to send recovery email (non-fatal):', emailErr.message);
