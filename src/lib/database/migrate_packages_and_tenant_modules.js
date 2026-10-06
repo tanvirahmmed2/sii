@@ -21,8 +21,11 @@ async function migrateDatabase() {
       ALTER TABLE packages ADD COLUMN IF NOT EXISTS features JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE packages ADD COLUMN IF NOT EXISTS is_popular BOOLEAN DEFAULT FALSE;
       ALTER TABLE packages ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
-      ALTER TABLE packages ADD COLUMN IF NOT EXISTS trial_days INT DEFAULT 14;
+      ALTER TABLE packages ADD COLUMN IF NOT EXISTS grace_period INT DEFAULT 3;
+      ALTER TABLE packages DROP COLUMN IF EXISTS trial_days;
       ALTER TABLE packages ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0;
+      ALTER TABLE packages ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT TRUE;
+      CREATE INDEX IF NOT EXISTS idx_packages_public ON packages(is_public, is_active, sort_order);
     `);
 
     // Backfill any existing packages

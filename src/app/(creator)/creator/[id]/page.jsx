@@ -41,12 +41,6 @@ export default function CreatorOverviewPage() {
       description: 'Manage your portfolio websites, domain routing, and drag-and-drop studio.',
     },
     {
-      title: 'Custom Projects',
-      href: `/creator/${creatorId}/projects`,
-      badge: 'Development',
-      description: 'Custom feature requests, quotes, working progress status, and developer communication.',
-    },
-    {
       title: 'My Subscription',
       href: `/creator/${creatorId}/subscription`,
       badge: hasActivePackage ? 'Active' : 'Expired / None',

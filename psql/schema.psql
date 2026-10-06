@@ -177,8 +177,9 @@ CREATE TABLE IF NOT EXISTS packages (
     max_websites INT DEFAULT 1,
     features JSONB DEFAULT '[]'::jsonb,
     is_popular BOOLEAN DEFAULT FALSE,
+    is_public BOOLEAN DEFAULT TRUE,
     is_active BOOLEAN DEFAULT TRUE,
-    trial_days INT DEFAULT 14,
+    grace_period INT DEFAULT 3,
     sort_order INT DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -190,6 +191,11 @@ ALTER TABLE packages ADD COLUMN IF NOT EXISTS yearly_price_usd DECIMAL(12, 2) NO
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS monthly_price_bdt DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS yearly_price_bdt DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS max_websites INT DEFAULT 1;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT TRUE;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS grace_period INT DEFAULT 3;
+ALTER TABLE packages DROP COLUMN IF EXISTS trial_days;
+
+CREATE INDEX IF NOT EXISTS idx_packages_public ON packages(is_public, is_active, sort_order);
 
 DROP TRIGGER IF EXISTS update_packages_updated_at ON packages;
 CREATE TRIGGER update_packages_updated_at

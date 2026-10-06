@@ -44,8 +44,9 @@ export default function PackageForm({
     max_staff: initialData?.max_staff ?? 20,
     max_storage_mb: initialData?.max_storage_mb ?? 5120,
     max_websites: initialData?.max_websites ?? initialData?.max_portfolios ?? 1,
-    trial_days: initialData?.trial_days ?? 14,
+    grace_period: initialData?.grace_period !== undefined ? Number(initialData.grace_period) : 3,
     is_popular: Boolean(initialData?.is_popular),
+    is_public: initialData?.is_public !== undefined ? Boolean(initialData.is_public) : true,
     is_active: initialData?.is_active !== undefined ? Boolean(initialData.is_active) : true,
     sort_order: initialData?.sort_order ?? 0,
   });
@@ -161,9 +162,10 @@ export default function PackageForm({
       max_staff: Math.max(1, parseInt(formData.max_staff, 10) || 20),
       max_storage_mb: Math.max(100, parseInt(formData.max_storage_mb, 10) || 5120),
       max_websites: Math.max(1, parseInt(formData.max_websites, 10) || 1),
-      trial_days: Math.max(0, parseInt(formData.trial_days, 10) || 14),
+      grace_period: Math.max(0, parseInt(formData.grace_period, 10) || 3),
       sort_order: parseInt(formData.sort_order, 10) || 0,
       is_popular: Boolean(formData.is_popular),
+      is_public: Boolean(formData.is_public),
       is_active: Boolean(formData.is_active),
       tenant_module_ids: selectedModuleIds,
     };
@@ -200,8 +202,9 @@ export default function PackageForm({
             max_staff: 20,
             max_storage_mb: 5120,
             max_websites: 1,
-            trial_days: 14,
+            grace_period: 3,
             is_popular: false,
+            is_public: true,
             is_active: true,
             sort_order: 0,
           });
@@ -591,7 +594,7 @@ export default function PackageForm({
           )}
         </div>
 
-        {/* 5. DESCRIPTION, TRIAL & TOGGLES */}
+        {/* 5. DESCRIPTION, GRACE PERIOD & TOGGLES */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="sm:col-span-2 space-y-1">
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -610,13 +613,13 @@ export default function PackageForm({
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Trial Days
+                  Grace Period (Days)
                 </label>
                 <input
                   type="number"
                   min="0"
-                  value={formData.trial_days}
-                  onChange={(e) => setFormData({ ...formData, trial_days: e.target.value })}
+                  value={formData.grace_period}
+                  onChange={(e) => setFormData({ ...formData, grace_period: e.target.value })}
                   className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:border-slate-800"
                 />
               </div>
@@ -634,6 +637,23 @@ export default function PackageForm({
             </div>
 
             <div className="space-y-2 pt-1">
+              <label className="flex items-start gap-2 cursor-pointer p-2 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700">
+                <input
+                  type="checkbox"
+                  checked={formData.is_public}
+                  onChange={(e) => setFormData({ ...formData, is_public: e.target.checked })}
+                  className="mt-0.5 rounded border-slate-300 cursor-pointer"
+                />
+                <div className="flex flex-col">
+                  <span className="text-xs font-medium text-slate-800 dark:text-slate-200">
+                    Public Plan (Shown on /packages)
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-normal">
+                    Uncheck for custom/private plans exclusively used in developer subscriptions
+                  </span>
+                </div>
+              </label>
+
               <label className="flex items-center gap-2 cursor-pointer p-2 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700">
                 <input
                   type="checkbox"

@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 
-
-
 function formatPackageRecord(p) {
   let features = [];
   if (Array.isArray(p.features)) {
@@ -60,8 +58,9 @@ function formatPackageRecord(p) {
     max_websites: maxWebsites,
     max_portfolios: maxWebsites,
     is_popular: Boolean(p.is_popular),
+    is_public: p.is_public !== false,
     is_active: Boolean(p.is_active),
-    trial_days: Number(p.trial_days ?? 14),
+    grace_period: Number(p.grace_period ?? 3),
     sort_order: Number(p.sort_order ?? 0),
     features,
     tenant_modules: Array.isArray(p.tenant_modules) ? p.tenant_modules : [],
@@ -137,15 +136,17 @@ export async function GET(request) {
       });
     }
 
-    // List all active packages
+    // List all active public packages (strictly hide custom / private plans)
     const listQuery = `
       ${baseQuery}
-      WHERE p.is_active = TRUE
+      WHERE p.is_active = TRUE AND p.is_public = TRUE
       ORDER BY p.sort_order ASC, COALESCE(p.monthly_price_usd, p.monthly_price, 0) ASC, p.id ASC
     `;
 
     const res = await queryDb(listQuery);
-    const formattedPackages = (res.rows || []).map(formatPackageRecord);
+    const formattedPackages = (res.rows || [])
+      .map(formatPackageRecord)
+      .filter((p) => p.is_public === true && p.is_active === true);
 
     return NextResponse.json({
       success: true,

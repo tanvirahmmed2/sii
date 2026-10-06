@@ -45,20 +45,40 @@ function CheckoutContent() {
   }, []);
 
   useEffect(() => {
-    fetch('/api/marketing/packages')
-      .then((res) => res.json())
-      .then((data) => {
-        const list = data.packages || [];
+    const loadPackages = async () => {
+      try {
+        const res = await fetch('/api/marketing/packages');
+        const data = await res.json();
+        let list = data.packages || [];
+
+        // If a specific package was requested (e.g. custom private plan), ensure it's loaded
+        if (initialPkgId && !list.some((p) => p.id === Number(initialPkgId))) {
+          try {
+            const singleRes = await fetch(`/api/marketing/packages?id=${initialPkgId}`);
+            const singleData = await singleRes.json();
+            if (singleData.success && (singleData.package || singleData.record)) {
+              list = [singleData.package || singleData.record, ...list];
+            }
+          } catch {
+            // ignore
+          }
+        }
+
         setPackages(list);
         if (initialPkgId && list.some((p) => p.id === Number(initialPkgId))) {
           setSelectedPkgId(Number(initialPkgId));
         } else if (list.length > 0 && !selectedPkgId) {
           setSelectedPkgId(list[0].id);
         }
-      })
-      .catch(console.error)
-      .finally(() => setLoadingPackages(false));
-  }, [initialPkgId, selectedPkgId]);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingPackages(false);
+      }
+    };
+
+    loadPackages();
+  }, [initialPkgId]);
 
   const selectedPkg = packages.find((p) => p.id === selectedPkgId) || null;
 

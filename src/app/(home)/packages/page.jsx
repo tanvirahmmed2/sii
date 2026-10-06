@@ -54,7 +54,7 @@ export default function PackagesPage() {
       const res = await fetch('/api/marketing/packages');
       const data = await res.json();
       if (data.success && Array.isArray(data.packages)) {
-        setPackages(data.packages);
+        setPackages(data.packages.filter((p) => p.is_public !== false && p.is_active !== false));
       } else {
         setPackages([]);
       }
@@ -151,7 +151,9 @@ export default function PackagesPage() {
         : Number(pkg.monthly_price_usd ?? pkg.monthly_price ?? 0);
     };
 
-    return [...(packages || [])].sort((a, b) => {
+    return [...(packages || [])]
+      .filter((pkg) => pkg.is_public !== false && pkg.is_active !== false)
+      .sort((a, b) => {
       const priceA = getPrice(a);
       const priceB = getPrice(b);
 

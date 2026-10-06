@@ -4,9 +4,50 @@ import { hasModulePermission } from 'src/lib/middleware/developer';
 
 export async function GET(request) {
   try {
-    const auth = await hasModulePermission(request, 'creators');
+    const auth = await hasModulePermission(request, ['creators', 'subscriptions']);
     if (!auth.success) {
       return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const emailParam = searchParams.get('email');
+
+    // Creator availability check for subscriptions
+    if (emailParam) {
+      const cleanEmail = emailParam.trim().toLowerCase();
+      const checkRes = await queryDb(
+        `SELECT c.id, c.name, c.email, c.phone, c.institution, c.country, c.city, c.is_active, c.email_verified AS is_verified
+         FROM creators c
+         WHERE LOWER(TRIM(c.email)) = $1
+         LIMIT 1`,
+        [cleanEmail]
+      );
+
+      if (checkRes.rows.length === 0) {
+        return NextResponse.json({
+          success: true,
+          found: false,
+          available: false,
+          creator: null,
+          message: 'No registered creator found with this email address.',
+        });
+      }
+
+      const foundCreator = checkRes.rows[0];
+      const isAvailable = Boolean(foundCreator.is_active);
+
+      return NextResponse.json({
+        success: true,
+        found: true,
+        available: isAvailable,
+        creator: {
+          ...foundCreator,
+          id: Number(foundCreator.id),
+        },
+        message: isAvailable
+          ? 'Creator is registered and available.'
+          : 'Creator account is currently disabled/inactive.',
+      });
     }
 
     const res = await queryDb(`

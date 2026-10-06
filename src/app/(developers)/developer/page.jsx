@@ -110,13 +110,6 @@ const ALL_MODULES = [
     category: 'Commerce',
     desc: 'Revenue transactions, payment gateway settlements, and invoices.',
   },
-  {
-    slug: 'projects',
-    label: 'Custom Projects',
-    path: '/developer/projects',
-    category: 'Commerce',
-    desc: 'Bespoke client development contracts and custom build requests.',
-  },
 
   // Content & Resources
   {

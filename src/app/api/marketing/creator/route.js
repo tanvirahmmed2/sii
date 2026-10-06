@@ -175,9 +175,9 @@ export async function GET(request) {
                 (COALESCE(monthly_price_usd, monthly_price, 0) * 100)::bigint AS price_in_cents,
                 discount_percentage, max_students, max_teachers, max_staff, max_storage_mb,
                 COALESCE(max_websites, 1) AS max_websites,
-                features, is_popular, is_active, trial_days, sort_order
+                features, is_popular, is_active, grace_period, sort_order
          FROM packages
-         WHERE is_active = TRUE
+         WHERE is_active = TRUE AND is_public = TRUE
          ORDER BY sort_order ASC, monthly_price_usd ASC, id ASC`
       ).catch(() => ({ rows: [] })),
 

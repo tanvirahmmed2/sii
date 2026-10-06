@@ -9,7 +9,6 @@ export const CREATOR_NAV_SECTIONS = [
     links: [
       { href: '', label: 'Overview', exact: true },
       { href: '/workspace', label: 'My Websites' },
-      { href: '/projects', label: 'Custom Projects' },
       { href: '/subscription', label: 'My Subscription' },
       { href: '/purchases', label: 'Packages & Plans' },
       { href: '/payments', label: 'Billing & Invoices' },

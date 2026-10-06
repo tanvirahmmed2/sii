@@ -16,6 +16,7 @@ export default function AdminPackagesPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [visibilityFilter, setVisibilityFilter] = useState('ALL');
   const [sortOrder, setSortOrder] = useState('PRICE_ASC');
   const [deletingId, setDeletingId] = useState(null);
   const [togglingId, setTogglingId] = useState(null);
@@ -121,7 +122,12 @@ export default function AdminPackagesPage() {
           (statusFilter === 'ACTIVE' && pkg.is_active !== false) ||
           (statusFilter === 'DISABLED' && pkg.is_active === false);
 
-        return matchesSearch && matchesStatus;
+        const matchesVisibility =
+          visibilityFilter === 'ALL' ||
+          (visibilityFilter === 'PUBLIC' && pkg.is_public !== false) ||
+          (visibilityFilter === 'CUSTOM' && pkg.is_public === false);
+
+        return matchesSearch && matchesStatus && matchesVisibility;
       })
       .sort((a, b) => {
         const getMonthlyPrice = (item) =>
@@ -289,6 +295,18 @@ export default function AdminPackagesPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Visibility Filter */}
+            <select
+              value={visibilityFilter}
+              onChange={(e) => setVisibilityFilter(e.target.value)}
+              className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:border-slate-800 cursor-pointer"
+              title="Filter by visibility"
+            >
+              <option value="ALL">All Visibility</option>
+              <option value="PUBLIC">Public Only</option>
+              <option value="CUSTOM">Custom / Private</option>
+            </select>
+
             {/* Status Filter */}
             <select
               value={statusFilter}
@@ -380,8 +398,17 @@ export default function AdminPackagesPage() {
                           >
                             {pkg.name}
                           </Link>
-                          {pkg.is_popular && (
+                          {pkg.is_public === false ? (
                             <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200">
+                              Custom Plan
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                              Public
+                            </span>
+                          )}
+                          {pkg.is_popular && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 border border-purple-200">
                               Popular
                             </span>
                           )}
@@ -420,7 +447,7 @@ export default function AdminPackagesPage() {
                           {pkg.max_students || 500} Students
                         </div>
                         <div className="text-[10px] text-slate-400">
-                          {pkg.max_teachers || 30} Teachers &bull; {pkg.max_storage_mb || 5120} MB
+                          {pkg.max_teachers || 30} Teachers &bull; {pkg.max_storage_mb || 5120} MB &bull; {pkg.grace_period ?? 3}d Grace
                         </div>
                       </td>
 

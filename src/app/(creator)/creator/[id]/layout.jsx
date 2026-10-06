@@ -31,7 +31,6 @@ export default function CreatorLayout({ children, params }) {
     purchases: [],
     packages: [],
     tickets: [],
-    projects: [],
     updates: [],
     stats: {},
   });

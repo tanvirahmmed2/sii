@@ -16,7 +16,6 @@ export default function PlatformOverviewPage() {
     revenueBdt: 0,
     leads: 0,
     subscribers: 0,
-    projects: 0,
     subscriptions: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -41,7 +40,6 @@ export default function PlatformOverviewPage() {
           fetch('/api/marketing/developer/payments').then((r) => r.json()),
           fetch('/api/marketing/developer/leads').then((r) => r.json()),
           fetch('/api/marketing/developer/subscribers').then((r) => r.json()),
-          fetch('/api/marketing/developer/projects').then((r) => r.json()),
           fetch('/api/marketing/developer/subscriptions').then((r) => r.json()),
         ]);
 
@@ -51,7 +49,7 @@ export default function PlatformOverviewPage() {
           setDeveloper(devRes.developer || devRes.user);
         }
 
-        const [devs, pkgs, webs, blogs, supp, pay, leads, subs, projs, subscr] = statsRes;
+        const [devs, pkgs, webs, blogs, supp, pay, leads, subs, subscr] = statsRes;
 
         const payments = pay.status === 'fulfilled' && pay.value?.records ? pay.value.records : [];
         const completedPayments = payments.filter((p) =>
@@ -80,7 +78,6 @@ export default function PlatformOverviewPage() {
             revenueBdt: revBdt,
             leads: leads.status === 'fulfilled' && leads.value?.records ? leads.value.records.length : 0,
             subscribers: subs.status === 'fulfilled' && subs.value?.records ? subs.value.records.length : 0,
-            projects: projs.status === 'fulfilled' && projs.value?.records ? projs.value.records.length : 0,
             subscriptions: subscr.status === 'fulfilled' && subscr.value?.records ? subscr.value.records.length : 0,
           });
         }
@@ -149,12 +146,6 @@ export default function PlatformOverviewPage() {
       href: '/developer/support',
     },
     {
-      title: 'Custom Projects',
-      value: counts.projects,
-      sub: 'Client Engagements',
-      href: '/developer/projects',
-    },
-    {
       title: 'Inbound Leads',
       value: counts.leads,
       sub: 'Prospect Inquiries',
@@ -201,7 +192,6 @@ export default function PlatformOverviewPage() {
         { label: 'Subscriptions', path: '/developer/subscriptions', desc: 'Recurring creator memberships and renewals' },
         { label: 'Purchases Log', path: '/developer/purchases', desc: 'One-time package purchases and addons' },
         { label: 'Payments Ledger', path: '/developer/payments', desc: 'Settled bKash & Paddle transactions' },
-        { label: 'Custom Projects', path: '/developer/projects', desc: 'Enterprise and custom software contracts' },
       ],
     },
     {

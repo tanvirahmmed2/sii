@@ -33,7 +33,6 @@ export const ADMIN_NAV_SECTIONS = [
       { href: '/developer/subscriptions', label: 'Subscriptions' },
       { href: '/developer/purchases', label: 'Purchases' },
       { href: '/developer/payments', label: 'Payments' },
-      { href: '/developer/projects', label: 'Custom Projects' },
     ],
   },
   {

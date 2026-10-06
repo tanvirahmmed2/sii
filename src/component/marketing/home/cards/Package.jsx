@@ -36,7 +36,7 @@ export default function Package({
   const maxTeachers = Number(pkg.max_teachers ?? pkg.maxTeachers ?? 30);
   const maxStaff = Number(pkg.max_staff ?? pkg.maxStaff ?? 20);
   const maxStorageMb = Number(pkg.max_storage_mb ?? pkg.maxStorageMb ?? 5120);
-  const trialDays = Number(pkg.trial_days ?? pkg.trialDays ?? 0);
+  const gracePeriod = Number(pkg.grace_period ?? pkg.gracePeriod ?? 3);
   const discountPct = Number(pkg.discount_percentage ?? pkg.discountPercentage ?? 0);
 
   const storageDisplay =
@@ -108,10 +108,10 @@ export default function Package({
             <h3 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
               {pkg.name}
             </h3>
-            {trialDays > 0 && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+            {gracePeriod > 0 && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                 <BiTime className="text-xs" />
-                <span>{trialDays}d Trial</span>
+                <span>{gracePeriod}d Grace</span>
               </span>
             )}
           </div>

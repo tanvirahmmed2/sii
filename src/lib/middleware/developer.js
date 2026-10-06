@@ -110,19 +110,19 @@ export const DEVELOPER_ROLE_PERMISSIONS = {
   admin: [
     'overview', 'developers', 'roles', 'team', 'creators', 'users', 'websites',
     'blogs', 'packages', 'features', 'modules', 'purchases', 'payments', 'subscriptions', 'payroll', 'my-salaries',
-    'live-chats', 'chats', 'contacts', 'support', 'projects', 'reports', 'reviews', 'spams',
+    'live-chats', 'chats', 'contacts', 'support', 'reports', 'reviews', 'spams',
     'facebook-messages', 'instagram-messages', 'whatsapp-messages',
     'leads', 'subscribers', 'profile', 'settings', 'faqs', 'updates', 'tasks', 'notices', 'tutorials', 'policies'
   ],
   manager: [
     'overview', 'creators', 'users', 'websites', 'packages', 'features',
-    'purchases', 'payments', 'subscriptions', 'live-chats', 'chats', 'contacts', 'support', 'projects', 'my-salaries',
+    'purchases', 'payments', 'subscriptions', 'live-chats', 'chats', 'contacts', 'support', 'my-salaries',
     'facebook-messages', 'instagram-messages', 'whatsapp-messages',
     'reports', 'reviews', 'leads', 'subscribers', 'profile', 'settings', 'faqs', 'updates', 'tasks', 'notices', 'tutorials', 'policies'
   ],
   developer: [
     'overview', 'websites', 'packages', 'features',
-    'spams', 'reports', 'blogs', 'support', 'live-chats', 'contacts', 'reviews', 'projects', 'profile', 'settings', 'chats', 'tasks', 'notices', 'my-salaries', 'tutorials', 'faqs', 'updates', 'policies'
+    'spams', 'reports', 'blogs', 'support', 'live-chats', 'contacts', 'reviews', 'profile', 'settings', 'chats', 'tasks', 'notices', 'my-salaries', 'tutorials', 'faqs', 'updates', 'policies'
   ],
   marketer: [
     'overview', 'blogs', 'leads',

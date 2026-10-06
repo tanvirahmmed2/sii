@@ -196,8 +196,9 @@ export async function POST(request) {
       : (data.max_portfolios !== undefined ? Math.max(1, Number(data.max_portfolios)) : 1);
 
     const isPopular = Boolean(data.is_popular);
+    const isPublic = data.is_public !== undefined ? Boolean(data.is_public) : true;
     const isActive = data.is_active !== undefined ? Boolean(data.is_active) : true;
-    const trialDays = data.trial_days !== undefined ? Math.max(0, Number(data.trial_days)) : 14;
+    const gracePeriod = data.grace_period !== undefined ? Math.max(0, Number(data.grace_period)) : 3;
     const sortOrder = Number(data.sort_order) || 0;
     const features = Array.isArray(data.features)
       ? JSON.stringify(data.features)
@@ -212,13 +213,13 @@ export async function POST(request) {
         monthly_price_usd, yearly_price_usd, monthly_price_bdt, yearly_price_bdt,
         monthly_price, yearly_price, discount_percentage,
         max_students, max_teachers, max_staff, max_storage_mb, max_websites,
-        features, is_popular, is_active, trial_days, sort_order
+        features, is_popular, is_public, is_active, grace_period, sort_order
       ) VALUES (
         $1, $2, $3, $4,
         $5, $6, $7, $8,
         $9, $10, $11,
         $12, $13, $14, $15, $16,
-        $17::jsonb, $18, $19, $20, $21
+        $17::jsonb, $18, $19, $20, $21, $22
       )
       RETURNING *`,
       [
@@ -226,7 +227,7 @@ export async function POST(request) {
         monthlyPriceUsd, yearlyPriceUsd, monthlyPriceBdt, yearlyPriceBdt,
         monthlyPriceUsd, yearlyPriceUsd, discountPercentage,
         maxStudents, maxTeachers, maxStaff, maxStorageMb, maxWebsites,
-        features, isPopular, isActive, trialDays, sortOrder
+        features, isPopular, isPublic, isActive, gracePeriod, sortOrder
       ]
     );
 
@@ -374,8 +375,9 @@ export async function PUT(request) {
           : (current.max_websites ?? current.max_portfolios ?? 1));
 
     const isPopular = data.is_popular !== undefined ? Boolean(data.is_popular) : Boolean(current.is_popular);
+    const isPublic = data.is_public !== undefined ? Boolean(data.is_public) : (current.is_public !== undefined ? Boolean(current.is_public) : true);
     const isActive = data.is_active !== undefined ? Boolean(data.is_active) : Boolean(current.is_active);
-    const trialDays = data.trial_days !== undefined ? Math.max(0, Number(data.trial_days)) : (current.trial_days || 14);
+    const gracePeriod = data.grace_period !== undefined ? Math.max(0, Number(data.grace_period)) : (current.grace_period !== undefined ? Number(current.grace_period) : 3);
     const sortOrder = data.sort_order !== undefined ? Number(data.sort_order) || 0 : (current.sort_order || 0);
 
     let featuresJson = current.features ? JSON.stringify(current.features) : '[]';
@@ -405,17 +407,18 @@ export async function PUT(request) {
            max_websites = $16,
            features = $17::jsonb,
            is_popular = $18,
-           is_active = $19,
-           trial_days = $20,
-           sort_order = $21,
+           is_public = $19,
+           is_active = $20,
+           grace_period = $21,
+           sort_order = $22,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $22`,
+       WHERE id = $23`,
       [
         name, slug, tagline, description,
         monthlyPriceUsd, yearlyPriceUsd, monthlyPriceBdt, yearlyPriceBdt,
         monthlyPriceUsd, yearlyPriceUsd, discountPercentage,
         maxStudents, maxTeachers, maxStaff, maxStorageMb, maxWebsites,
-        featuresJson, isPopular, isActive, trialDays, sortOrder,
+        featuresJson, isPopular, isPublic, isActive, gracePeriod, sortOrder,
         Number(id)
       ]
     );
