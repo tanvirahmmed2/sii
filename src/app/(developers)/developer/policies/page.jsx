@@ -3,6 +3,7 @@
 import { useState, useEffect, useContext, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function DeveloperPoliciesPage() {
   const { user } = useContext(Context);
@@ -429,8 +430,8 @@ export default function DeveloperPoliciesPage() {
             <tbody className="divide-y divide-slate-100 font-normal text-slate-700">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-slate-400">
-                    Loading policies...
+                  <td colSpan={5} className="py-8 text-center">
+                    <LoadingScreen fullScreen={false} size="sm" label="Loading policies..." />
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (

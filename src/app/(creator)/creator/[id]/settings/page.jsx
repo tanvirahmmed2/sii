@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCreator } from '../layout';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 function parseUserAgent(ua) {
   if (!ua || ua === 'Unknown') return { browser: 'Browser', os: 'Device', label: 'Web Browser' };
@@ -287,7 +288,7 @@ export default function CreatorSettingsPage() {
         </div>
 
         {loadingSessions ? (
-          <div className="py-6 text-center text-slate-500">Checking device sessions...</div>
+          <LoadingScreen fullScreen={false} size="sm" label="Checking device sessions..." />
         ) : sessionsList.length === 0 ? (
           <div className="py-6 text-center text-slate-400">No active login sessions recorded.</div>
         ) : (

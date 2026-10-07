@@ -4,16 +4,27 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useCreator } from '../layout';
 import Link from 'next/link';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 function SubscriptionContent() {
   const {
     creatorId,
     creator,
+    subscriptions = [],
     activeSubscription,
+    activeSubscriptions = [],
     websites = [],
     stats = {},
     refetch,
   } = useCreator();
+
+  const displaySubscriptions = subscriptions.length > 0
+    ? subscriptions
+    : activeSubscriptions.length > 0
+    ? activeSubscriptions
+    : activeSubscription
+    ? [activeSubscription]
+    : [];
 
   const searchParams = useSearchParams();
   const targetWebsiteId = searchParams.get('websiteId');
@@ -270,70 +281,194 @@ function SubscriptionContent() {
         </div>
       </div>
 
-      {/* Subscription KPI Card */}
-      {isSubActive ? (
-        <div className="bg-white border border-slate-200 rounded p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-center">
-            <div className="space-y-0.5">
-              <span className="text-[10px] uppercase font-semibold text-slate-400">Current Plan</span>
-              <h2 className="text-sm font-semibold text-slate-900">{activeSubscription.package_name}</h2>
-              <span className="text-[11px] text-slate-500 font-mono">
-                ${(Number(activeSubscription.price_in_cents || 0) / 100).toFixed(2)} / {activeSubscription.billing_interval || 'monthly'}
-              </span>
-            </div>
+      {/* All Purchased Subscriptions Section */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-900">
+            Purchased Subscriptions & Plans ({displaySubscriptions.length})
+          </h2>
+          <span className="text-[11px] text-slate-500">
+            {stats.activeSubscriptionsCount || (activeSubscription ? 1 : 0)} Active Tier(s)
+          </span>
+        </div>
 
-            <div className="space-y-0.5">
-              <span className="text-[10px] uppercase font-semibold text-slate-400">Websites Allowed</span>
-              <div className="text-sm font-semibold text-slate-900 font-mono">
-                {websites.length} / {maxWebsites}
-              </div>
-              <span className="text-[11px] text-slate-500">
-                {maxWebsites - websites.length} slot(s) free
-              </span>
-            </div>
-
-            <div className="space-y-0.5">
-              <span className="text-[10px] uppercase font-semibold text-slate-400">Days Remaining</span>
-              <div className="text-sm font-semibold text-slate-900 font-mono">
-                {daysRemaining} Days
-              </div>
-              <span className="text-[11px] text-slate-500">
-                Ends: {activeSubscription.current_period_end ? new Date(activeSubscription.current_period_end).toLocaleDateString() : '—'}
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
+        {displaySubscriptions.length === 0 ? (
+          <div className="bg-white border border-slate-200 rounded p-6 text-center space-y-2">
+            <h3 className="text-sm font-semibold text-slate-900">No Purchased Subscriptions Found</h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              You do not currently have any purchased subscription plans. Purchase a package to activate website hosting and campus capabilities.
+            </p>
+            <div className="pt-2">
               <Link
-                href={`/creator/${creatorId}/workspace`}
-                className="w-full text-center py-1.5 px-3 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium"
+                href="/packages"
+                className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium inline-block transition-colors"
               >
-                Manage Websites
-              </Link>
-              <Link
-                href={`/creator/${creatorId}/payments`}
-                className="w-full text-center py-1.5 px-3 rounded border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium"
-              >
-                Billing Invoices
+                Explore Subscription Packages &rarr;
               </Link>
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="bg-white border border-slate-200 rounded p-5 text-center space-y-2">
-          <h3 className="text-sm font-semibold text-slate-900">No Active Subscription Found</h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            You do not currently have an active plan. Purchase a package to activate website hosting capabilities.
-          </p>
-          <div className="pt-2">
-            <Link
-              href="/packages"
-              className="px-3 py-1.5 rounded bg-slate-900 text-white font-medium inline-block"
-            >
-              Explore Packages &rarr;
-            </Link>
+        ) : (
+          <div className="grid grid-cols-1 gap-3.5">
+            {displaySubscriptions.map((sub) => {
+              const isActive = sub.is_active || ['active', 'completed'].includes(String(sub.status || '').toLowerCase());
+              const websitesAllowed = Number(sub.websitesAllowed ?? sub.max_websites ?? 1);
+              const websitesUsed = Number(sub.websitesUsed ?? sub.websites_count ?? 0);
+              const websitesRemaining = Math.max(0, websitesAllowed - websitesUsed);
+              const canCreate = isActive && websitesRemaining > 0;
+              const subWebsites = sub.provisioned_websites || websites.filter((w) => String(w.subscription_id) === String(sub.id));
+
+              return (
+                <div
+                  key={sub.id}
+                  className={`bg-white border rounded-lg p-4 transition-all shadow-sm ${
+                    isActive ? 'border-slate-300 ring-1 ring-slate-100' : 'border-slate-200 bg-slate-50/50'
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-slate-100 pb-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-slate-900">{sub.package_name}</h3>
+                        <span
+                          className={`text-[9px] font-semibold px-2 py-0.5 rounded border uppercase tracking-wider ${
+                            isActive
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : sub.status === 'past_due'
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : 'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}
+                        >
+                          {sub.status || 'Active'}
+                        </span>
+                        <span className="text-[10px] text-slate-500 capitalize bg-slate-100 px-2 py-0.5 rounded font-mono">
+                          {sub.billing_interval || sub.billing_cycle || 'monthly'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500">
+                        {sub.package_tagline || sub.package_description || 'Full Educational SaaS Multi-Tenant Platform'}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {sub.payment_id && (
+                        <Link
+                          href={`/creator/${creatorId}/payments/${sub.payment_id}`}
+                          className="px-2.5 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs transition-colors"
+                        >
+                          View Receipt
+                        </Link>
+                      )}
+                      {canCreate && (
+                        <Link
+                          href={`/creator/${creatorId}/workspace/new?subscriptionId=${sub.id}`}
+                          className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs transition-colors inline-flex items-center gap-1"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                          </svg>
+                          Create Website
+                        </Link>
+                      )}
+                      {!canCreate && isActive && (
+                        <span className="px-2.5 py-1 rounded bg-slate-100 border border-slate-200 text-slate-500 text-[11px] font-medium">
+                          Websites Limit Full ({websitesUsed}/{websitesAllowed})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Quota & Capacity Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 py-3 border-b border-slate-100">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] uppercase font-semibold text-slate-400 block">Websites Quota</span>
+                      <div className="text-xs font-bold text-slate-900 font-mono">
+                        {websitesUsed} / {websitesAllowed}
+                      </div>
+                      <span className="text-[10px] text-slate-500">
+                        {websitesRemaining} slot(s) free
+                      </span>
+                    </div>
+
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] uppercase font-semibold text-slate-400 block">Teachers Limit</span>
+                      <div className="text-xs font-bold text-slate-900 font-mono">
+                        {sub.max_teachers ? `${sub.max_teachers} Max` : 'Unlimited'}
+                      </div>
+                      <span className="text-[10px] text-slate-500">Faculty accounts</span>
+                    </div>
+
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] uppercase font-semibold text-slate-400 block">Students Limit</span>
+                      <div className="text-xs font-bold text-slate-900 font-mono">
+                        {sub.max_students ? `${sub.max_students} Max` : 'Unlimited'}
+                      </div>
+                      <span className="text-[10px] text-slate-500">Enrolled capacity</span>
+                    </div>
+
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] uppercase font-semibold text-slate-400 block">Cloud Storage</span>
+                      <div className="text-xs font-bold text-slate-900 font-mono">
+                        {sub.max_storage_mb || 5120} MB
+                      </div>
+                      <span className="text-[10px] text-slate-500">Document storage</span>
+                    </div>
+
+                    <div className="space-y-0.5 col-span-2 sm:col-span-1">
+                      <span className="text-[10px] uppercase font-semibold text-slate-400 block">Subscription Period</span>
+                      <div className="text-xs font-bold text-slate-900 font-mono">
+                        {sub.daysRemaining !== undefined ? `${sub.daysRemaining} Days Left` : 'Active'}
+                      </div>
+                      <span className="text-[10px] text-slate-500">
+                        Ends: {sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString() : 'Continuous'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Provisioned Websites under this Subscription */}
+                  <div className="pt-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] font-semibold text-slate-700">
+                        Websites Attached to this Plan ({subWebsites.length})
+                      </span>
+                      {canCreate && (
+                        <Link
+                          href={`/creator/${creatorId}/workspace/new?subscriptionId=${sub.id}`}
+                          className="text-[11px] text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          + Provision new website for this plan
+                        </Link>
+                      )}
+                    </div>
+
+                    {subWebsites.length === 0 ? (
+                      <p className="text-[11px] text-slate-400 italic">
+                        No websites created under this subscription package yet.
+                      </p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2 pt-0.5">
+                        {subWebsites.map((w) => (
+                          <div
+                            key={w.id}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-100 border border-slate-200 text-xs"
+                          >
+                            <span className="font-semibold text-slate-800">{w.name}</span>
+                            <span className="text-slate-400 font-mono text-[10px]">({w.subdomain})</span>
+                            <Link
+                              href={`/creator/${creatorId}/workspace/${w.subdomain || w.slug}`}
+                              className="text-blue-600 hover:underline font-medium text-[10px] ml-1"
+                            >
+                              Workspace &rarr;
+                            </Link>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Provisioned Websites Section */}
       <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
@@ -442,7 +577,7 @@ function SubscriptionContent() {
             )}
 
             {loadingSettings ? (
-              <div className="py-6 text-center text-slate-500">Loading settings...</div>
+              <LoadingScreen fullScreen={false} size="sm" label="Loading settings..." />
             ) : (
               <form onSubmit={handleSaveSettings} className="space-y-3">
                 <div>
@@ -567,7 +702,7 @@ function SubscriptionContent() {
             )}
 
             {loadingTeam ? (
-              <div className="py-6 text-center text-slate-500">Loading team...</div>
+              <LoadingScreen fullScreen={false} size="sm" label="Loading team..." />
             ) : (
               <div className="space-y-4">
                 {/* Team Members List */}
@@ -684,11 +819,7 @@ function SubscriptionContent() {
 export default function CreatorSubscriptionPage() {
   return (
     <Suspense
-      fallback={
-        <div className="py-8 text-center text-xs text-slate-500 font-medium">
-          Loading subscription details...
-        </div>
-      }
+      fallback={<LoadingScreen fullScreen={false} label="Loading subscription details..." />}
     >
       <SubscriptionContent />
     </Suspense>

@@ -98,6 +98,12 @@ export async function GET(request) {
                 ws.twitter_url,
                 ws.instagram_url,
                 ws.youtube_url,
+                p.name AS package_name,
+                p.slug AS package_slug,
+                s.id AS subscription_id,
+                s.status AS subscription_status,
+                s.billing_cycle AS subscription_billing_cycle,
+                s.current_period_end AS subscription_period_end,
                 COALESCE(w.contact_email, ws.contact_email) AS contact_email,
                 COALESCE(w.contact_phone, ws.contact_phone) AS contact_phone, 
                 COALESCE(w.address, ws.address) AS address,
@@ -105,6 +111,8 @@ export async function GET(request) {
                 (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published
          FROM websites w
          LEFT JOIN website_settings ws ON w.id = ws.website_id
+         LEFT JOIN subscriptions s ON w.subscription_id = s.id
+         LEFT JOIN packages p ON COALESCE(w.package_id, s.package_id) = p.id
          WHERE w.creator_id = $1 
            AND (
              ($2 = true AND w.id = $3::bigint) OR
@@ -123,17 +131,23 @@ export async function GET(request) {
 
       return NextResponse.json({
         success: true,
-        baseDomain: cleanHost,
+        baseDomain: BASE_DOMAIN || 'localhost:3000',
         baseUrl: dynamicBaseUrl,
         website: singleRes.rows[0],
       });
     }
 
-    // 3. List all websites for creator
+    // 3. List all websites for creator linked with package and subscription
     const res = await queryDb(
       `SELECT w.*, 
               w.name AS site_title,
               ws.motto AS tagline,
+              p.name AS package_name,
+              p.slug AS package_slug,
+              s.id AS subscription_id,
+              s.status AS subscription_status,
+              s.billing_cycle AS subscription_billing_cycle,
+              s.current_period_end AS subscription_period_end,
               COALESCE(w.contact_email, ws.contact_email) AS contact_email,
               COALESCE(w.contact_phone, ws.contact_phone) AS contact_phone, 
               COALESCE(w.address, ws.address) AS address,
@@ -141,6 +155,8 @@ export async function GET(request) {
               (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published
        FROM websites w
        LEFT JOIN website_settings ws ON w.id = ws.website_id
+       LEFT JOIN subscriptions s ON w.subscription_id = s.id
+       LEFT JOIN packages p ON COALESCE(w.package_id, s.package_id) = p.id
        WHERE w.creator_id = $1
        ORDER BY w.id DESC`,
       [creatorId]
@@ -148,7 +164,7 @@ export async function GET(request) {
 
     return NextResponse.json({
       success: true,
-      baseDomain: cleanHost,
+      baseDomain: BASE_DOMAIN || 'localhost:3000',
       baseUrl: dynamicBaseUrl,
       websites: res.rows,
     });
@@ -233,35 +249,87 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     const fullSubdomain = domainValidation.fullDomain || `${cleanSubdomain}.${baseDomain}`;
     const slug = cleanSubdomain;
 
-    // Check active package subscription and quotas from purchases table
-    const activeSub = await queryDb(
-      `SELECT pu.*, COALESCE(p.max_websites, 1) AS max_websites, pu.package_id 
-       FROM purchases pu 
-       JOIN packages p ON pu.package_id = p.id 
-       WHERE pu.creator_id = $1 
-         AND pu.status IN ('completed', 'active') 
-         AND (pu.period_end IS NULL OR pu.period_end > CURRENT_TIMESTAMP)
-       ORDER BY pu.id DESC LIMIT 1`,
-      [creatorId]
-    ).catch(() => ({ rows: [] }));
+    // Check and validate subscription selection & website limits
+    const requestedSubId = Number(body.subscriptionId || body.subscription_id || 0);
+    let chosenSub = null;
 
-    if (activeSub.rows.length === 0) {
-      return NextResponse.json({
-        success: false,
-        error: 'An active package subscription is required to create a website. Please purchase a package first.',
-      }, { status: 403 });
-    }
+    if (requestedSubId > 0) {
+      const subRes = await queryDb(
+        `SELECT s.*, p.name AS package_name, COALESCE(p.max_websites, 1) AS max_websites, p.id AS pkg_id
+         FROM subscriptions s
+         JOIN packages p ON s.package_id = p.id
+         WHERE s.id = $1 AND s.creator_id = $2
+         LIMIT 1`,
+        [requestedSubId, creatorId]
+      );
 
-    const packageRecord = activeSub.rows[0];
-    const maxLimit = Number(packageRecord.max_websites || 1);
-    const countRes = await queryDb('SELECT COUNT(*)::int AS count FROM websites WHERE creator_id = $1', [creatorId]);
-    const currentCount = countRes.rows[0].count;
+      if (subRes.rows.length === 0) {
+        return NextResponse.json({
+          success: false,
+          error: 'The selected subscription does not exist or does not belong to your account.',
+        }, { status: 404 });
+      }
 
-    if (currentCount >= maxLimit) {
-      return NextResponse.json({
-        success: false,
-        error: `Your current package tier allows up to ${maxLimit} website(s). Please upgrade your package to create more websites.`,
-      }, { status: 403 });
+      chosenSub = subRes.rows[0];
+
+      const isActiveStatus = ['completed', 'active'].includes(String(chosenSub.status || '').toLowerCase());
+      const isPeriodValid = !chosenSub.current_period_end || new Date(chosenSub.current_period_end) > new Date();
+
+      if (!isActiveStatus || !isPeriodValid) {
+        return NextResponse.json({
+          success: false,
+          error: `Selected subscription (${chosenSub.package_name}) is inactive or expired. Please renew your subscription to create websites.`,
+        }, { status: 403 });
+      }
+
+      // Check quota specifically for this chosen subscription
+      const countRes = await queryDb(
+        `SELECT COUNT(*)::int AS count 
+         FROM websites 
+         WHERE creator_id = $1 
+           AND (subscription_id = $2 OR (subscription_id IS NULL AND package_id = $3))`,
+        [creatorId, chosenSub.id, chosenSub.package_id]
+      );
+      const usedCount = countRes.rows[0].count;
+      const maxLimit = Number(chosenSub.max_websites || 1);
+
+      if (usedCount >= maxLimit) {
+        return NextResponse.json({
+          success: false,
+          error: `Your subscription for "${chosenSub.package_name}" allows a maximum of ${maxLimit} website(s). You have already created ${usedCount} website(s) for this subscription.`,
+        }, { status: 403 });
+      }
+    } else {
+      // Auto-select an active subscription that has remaining website creation capacity
+      const allActiveSubsRes = await queryDb(
+        `SELECT s.*, p.name AS package_name, COALESCE(p.max_websites, 1) AS max_websites, p.id AS pkg_id,
+                (SELECT COUNT(*)::int FROM websites w WHERE w.creator_id = $1 AND (w.subscription_id = s.id OR (w.subscription_id IS NULL AND w.package_id = s.package_id))) AS current_count
+         FROM subscriptions s
+         JOIN packages p ON s.package_id = p.id
+         WHERE s.creator_id = $1
+           AND s.status IN ('completed', 'active')
+           AND (s.current_period_end IS NULL OR s.current_period_end > CURRENT_TIMESTAMP)
+         ORDER BY s.id DESC`,
+        [creatorId]
+      );
+
+      const availableSub = allActiveSubsRes.rows.find((s) => Number(s.current_count) < Number(s.max_websites || 1));
+
+      if (!availableSub) {
+        if (allActiveSubsRes.rows.length === 0) {
+          return NextResponse.json({
+            success: false,
+            error: 'An active package subscription is required to create a website. Please purchase a package first.',
+          }, { status: 403 });
+        } else {
+          return NextResponse.json({
+            success: false,
+            error: 'All your active subscriptions have reached their website creation limits. Please upgrade or purchase an additional package.',
+          }, { status: 403 });
+        }
+      }
+
+      chosenSub = availableSub;
     }
 
     const primaryColor = body.primaryColor || body.primary_color || body.themeConfig?.primaryColor || '#1e40af';
@@ -271,6 +339,7 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       `INSERT INTO websites (
          creator_id,
          package_id,
+         subscription_id,
          name,
          slug,
          subdomain,
@@ -285,13 +354,15 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
          contact_phone,
          address,
          storage_used_mb,
-         is_maintenance_mode
+         is_maintenance_mode,
+         subscription_expires_at
        ) VALUES (
-         $1, $2, $3, $4, $5, NULL, FALSE, $6, $7, 'active', $8, $9, $10, $11, $12, 15, FALSE
+         $1, $2, $3, $4, $5, $6, NULL, FALSE, $7, $8, 'active', $9, $10, $11, $12, $13, 15, FALSE, $14
        ) RETURNING *`,
       [
         creatorId,
-        packageRecord.package_id || null,
+        chosenSub.pkg_id || chosenSub.package_id || null,
+        chosenSub.id,
         name,
         slug,
         cleanSubdomain,
@@ -302,10 +373,19 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
         contactEmail || null,
         contactPhone || null,
         address || null,
+        chosenSub.current_period_end || null,
       ]
     );
 
     const newWebsite = res.rows[0];
+
+    // Link subscription's website_id if not already pointing to a website
+    await queryDb(
+      `UPDATE subscriptions 
+       SET website_id = $1, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $2 AND website_id IS NULL`,
+      [newWebsite.id, chosenSub.id]
+    ).catch(() => {});
 
     // Seed default settings, modules, roles & content
     await seedWebsiteDefaults(newWebsite.id, newWebsite.name, { primaryColor, theme: themeName }, {

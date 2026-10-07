@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useContext, useRef } from 'react';
 import { Context } from 'src/component/helper/Context';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function DeveloperChatsPage() {
   const { user } = useContext(Context);
@@ -229,7 +230,9 @@ export default function DeveloperChatsPage() {
 
           <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
             {loadingChats ? (
-              <div className="p-8 text-center text-xs text-slate-400">Loading conversations...</div>
+              <div className="p-8">
+                <LoadingScreen fullScreen={false} size="sm" label="Loading conversations..." />
+              </div>
             ) : filteredChats.length === 0 ? (
               <div className="p-8 text-center text-slate-400 text-xs">
                 No active conversations found.
@@ -299,7 +302,9 @@ export default function DeveloperChatsPage() {
               {/* Messages Scroll Area */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/30">
                 {loadingMessages ? (
-                  <div className="text-center py-8 text-xs text-slate-400">Loading message thread...</div>
+                  <div className="py-8">
+                    <LoadingScreen fullScreen={false} size="sm" label="Loading message thread..." />
+                  </div>
                 ) : messages.length === 0 ? (
                   <div className="text-center py-12 space-y-1">
                     <p className="text-xs text-slate-500 font-medium">No messages yet. Start the conversation!</p>

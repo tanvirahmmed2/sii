@@ -3,6 +3,7 @@
 import { useState, useEffect, useContext } from 'react';
 import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function DeveloperProfilePage() {
   const { refetchUser, setUser } = useContext(Context) || {};
@@ -198,11 +199,7 @@ export default function DeveloperProfilePage() {
   };
 
   if (loading) {
-    return (
-      <div className="p-4 text-xs font-normal text-slate-500">
-        Loading profile data...
-      </div>
-    );
+    return <LoadingScreen fullScreen={false} label="Loading profile data..." />;
   }
 
   return (

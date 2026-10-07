@@ -3,6 +3,7 @@
 import { Suspense, use } from 'react';
 import { useSearchParams } from 'next/navigation';
 import PaymentGatewayCheckout from 'src/component/marketing/creator/PaymentGatewayCheckout';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 function PayContent({ params }) {
   const resolvedParams = params && typeof params.then === 'function' ? use(params) : params;
@@ -23,11 +24,7 @@ function PayContent({ params }) {
 export default function CreatorPaymentPayPage({ params }) {
   return (
     <Suspense
-      fallback={
-        <div className="py-8 text-center text-xs text-slate-500 font-medium">
-          Loading payment gateway...
-        </div>
-      }
+      fallback={<LoadingScreen fullScreen={false} label="Loading payment gateway..." />}
     >
       <PayContent params={params} />
     </Suspense>

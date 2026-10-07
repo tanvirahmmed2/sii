@@ -4,6 +4,7 @@ import { useState, useEffect, useContext, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function AdminContactsPage() {
   const router = useRouter();
@@ -238,8 +239,8 @@ export default function AdminContactsPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300 font-normal">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400">
-                    Loading contact inquiries...
+                  <td colSpan={7}>
+                    <LoadingScreen fullScreen={false} size="sm" label="Loading contact inquiries..." />
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
@@ -326,7 +327,7 @@ export default function AdminContactsPage() {
         {/* Mobile Cards View */}
         <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
           {loading ? (
-            <div className="py-12 text-center text-slate-400 text-xs">Loading contact inquiries...</div>
+            <LoadingScreen fullScreen={false} size="sm" label="Loading contact inquiries..." />
           ) : filtered.length === 0 ? (
             <div className="py-12 text-center text-slate-400 text-xs">No records found.</div>
           ) : (

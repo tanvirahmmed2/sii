@@ -3,6 +3,7 @@
 import { useState, useEffect, useContext, useCallback } from 'react';
 import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function AdminReviewsPage() {
   const { user } = useContext(Context);
@@ -290,9 +291,7 @@ export default function AdminReviewsPage() {
       {/* Reviews List */}
       <div className="space-y-3">
         {loading && reviews.length === 0 ? (
-          <div className="p-12 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-slate-400">
-            <span className="text-xs font-normal">Loading reviews for moderation...</span>
-          </div>
+          <LoadingScreen fullScreen={false} label="Loading reviews for moderation..." />
         ) : filteredReviews.length === 0 ? (
           <div className="p-12 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded space-y-1">
             <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">No reviews found</h3>

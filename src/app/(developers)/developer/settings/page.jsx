@@ -4,6 +4,7 @@ import { useState, useEffect, useContext } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 function parseUserAgent(ua) {
   if (!ua || ua === 'Unknown') return { browser: 'Web Browser', os: 'Device', isMobile: false, label: 'Web Browser' };
@@ -253,11 +254,7 @@ export default function DeveloperSettingsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="p-4 text-xs font-normal text-slate-500">
-        Loading settings...
-      </div>
-    );
+    return <LoadingScreen fullScreen={false} label="Loading settings..." />;
   }
 
   return (

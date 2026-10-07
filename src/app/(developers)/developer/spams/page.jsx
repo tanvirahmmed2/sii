@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function AdminSpamModerationPage() {
   const [spams, setSpams] = useState([]);
@@ -70,9 +71,7 @@ export default function AdminSpamModerationPage() {
       {/* Spam List */}
       <div className="space-y-3">
         {loading ? (
-          <div className="py-12 text-center text-slate-400 text-xs">
-            Scanning spam logs...
-          </div>
+          <LoadingScreen fullScreen={false} size="sm" label="Scanning spam logs..." />
         ) : spams.length === 0 ? (
           <div className="p-8 text-center bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-xs space-y-1">
             <div className="font-medium text-slate-800 dark:text-white">Clean logs!</div>

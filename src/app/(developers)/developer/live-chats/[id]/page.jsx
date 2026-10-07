@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import ChatUsersSwipeBar from 'src/component/marketing/developer/ChatUsersSwipeBar';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function SingleLiveChatPage() {
   const params = useParams();
@@ -233,11 +234,7 @@ export default function SingleLiveChatPage() {
   };
 
   if (loading) {
-    return (
-      <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 text-center text-slate-500">
-        <p className="text-xs font-normal">Connecting to live chat stream #{chatId}...</p>
-      </div>
-    );
+    return <LoadingScreen fullScreen={false} label={`Connecting to live chat stream #${chatId}...`} />;
   }
 
   if (error || !chat) {

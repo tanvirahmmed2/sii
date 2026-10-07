@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
 import ChatUsersSwipeBar from 'src/component/marketing/developer/ChatUsersSwipeBar';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function SingleSupportTicketPage() {
   const params = useParams();
@@ -280,12 +281,7 @@ export default function SingleSupportTicketPage() {
   };
 
   if (loading) {
-    return (
-      <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 text-center">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">Loading Support Thread...</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400">Connecting to creator support channel and syncing messages.</p>
-      </div>
-    );
+    return <LoadingScreen fullScreen={false} label="Loading support thread..." />;
   }
 
   if (error || !ticket) {

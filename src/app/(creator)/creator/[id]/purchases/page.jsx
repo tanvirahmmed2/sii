@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useCreator } from '../layout';
 import PaymentGatewayCheckout from 'src/component/marketing/creator/PaymentGatewayCheckout';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function CreatorPurchasesPage() {
   const {
@@ -250,9 +251,7 @@ export default function CreatorPurchasesPage() {
         </div>
 
         {loadingPurchases ? (
-          <div className="py-8 text-center text-slate-500 font-medium">
-            Loading purchases history...
-          </div>
+          <LoadingScreen fullScreen={false} size="sm" label="Loading purchases history..." />
         ) : purchasesList.length === 0 ? (
           <div className="py-8 text-center text-slate-500">
             No past purchase transactions found.

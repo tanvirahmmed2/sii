@@ -13,6 +13,7 @@ import {
   BiCopy,
   BiRefresh,
 } from 'react-icons/bi';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function PoliciesPage() {
   const [policies, setPolicies] = useState([]);
@@ -146,18 +147,10 @@ export default function PoliciesPage() {
           </button>
         </div>
 
-        {/* Loading Skeleton */}
+        {/* Loading State */}
         {loading ? (
-          <div className="space-y-4 pt-4">
-            {[1, 2, 3, 4].map((idx) => (
-              <div
-                key={idx}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs animate-pulse flex items-center justify-between"
-              >
-                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded-md w-1/2" />
-                <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800" />
-              </div>
-            ))}
+          <div className="pt-4">
+            <LoadingScreen fullScreen={false} label="Loading platform policies..." />
           </div>
         ) : filteredPolicies.length === 0 ? (
           /* Empty State */

@@ -23,87 +23,102 @@ export async function GET(request) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
-    // Parallel fetch: active subscription and all historical subscriptions from purchases table
-    const [activeSubRes, allSubsRes] = await Promise.all([
-      queryDb(
-        `SELECT s.id, s.creator_id, s.package_id, s.purchase_id, s.status,
-                s.current_period_start, s.current_period_end,
-                p.name AS package_name, 
-                p.slug AS package_slug, 
-                p.description AS package_description, 
-                COALESCE(p.monthly_price_usd, p.monthly_price, 0) AS price,
-                (COALESCE(p.monthly_price_usd, p.monthly_price, 0) * 100)::int AS price_in_cents, 
-                'USD' AS currency, 
-                s.billing_cycle AS billing_interval, 
-                COALESCE(p.max_websites, 1) AS max_websites,
-                COALESCE(p.max_websites, 1) AS max_portfolios
-         FROM subscriptions s
-         JOIN packages p ON s.package_id = p.id
-         WHERE s.creator_id = $1 
-           AND s.status IN ('completed', 'active')
-           AND (s.current_period_end IS NULL OR s.current_period_end > CURRENT_TIMESTAMP)
-         ORDER BY s.id DESC LIMIT 1`,
-        [creatorId]
-      ).then(async (subRes) => {
-        if (subRes.rows.length > 0) return subRes;
-        return queryDb(
-          `SELECT pu.*, 
-                  pu.period_start AS current_period_start,
-                  pu.period_end AS current_period_end,
-                  p.name AS package_name, 
-                  p.slug AS package_slug, 
-                  p.description AS package_description, 
-                  COALESCE(p.monthly_price_usd, p.monthly_price, 0) AS price,
-                  (COALESCE(p.monthly_price_usd, p.monthly_price, 0) * 100)::int AS price_in_cents, 
-                  'USD' AS currency, 
-                  pu.billing_cycle AS billing_interval, 
-                  COALESCE(p.max_websites, 1) AS max_websites,
-                  COALESCE(p.max_websites, 1) AS max_portfolios
-           FROM purchases pu
-           JOIN packages p ON pu.package_id = p.id
-           WHERE pu.creator_id = $1 
-             AND pu.status IN ('completed', 'active')
-             AND (pu.period_end IS NULL OR pu.period_end > CURRENT_TIMESTAMP)
-           ORDER BY pu.id DESC LIMIT 1`,
-          [creatorId]
-        );
-      }).catch(() => ({ rows: [] })),
-      queryDb(
-        `SELECT pu.*, 
-                pu.period_start AS current_period_start,
-                pu.period_end AS current_period_end,
-                p.name AS package_name, 
-                p.slug AS package_slug,
-                (COALESCE(p.monthly_price_usd, p.monthly_price, 0) * 100)::int AS price_in_cents, 
-                pu.billing_cycle AS billing_interval,
-                COALESCE(p.max_websites, 1) AS max_websites,
-                COALESCE(p.max_websites, 1) AS max_portfolios
-         FROM purchases pu
-         JOIN packages p ON pu.package_id = p.id
-         WHERE pu.creator_id = $1
-         ORDER BY pu.id DESC`,
-        [creatorId]
-      ).catch(() => ({ rows: [] })),
-    ]);
+    // Auto-sync any completed purchases without a subscription row
+    await queryDb(
+      `INSERT INTO subscriptions (creator_id, package_id, purchase_id, status, billing_cycle, current_period_start, current_period_end)
+       SELECT pu.creator_id, pu.package_id, pu.id, 'active', pu.billing_cycle, COALESCE(pu.period_start, pu.created_at), COALESCE(pu.period_end, pu.created_at + INTERVAL '30 days')
+       FROM purchases pu
+       WHERE pu.creator_id = $1 AND pu.status IN ('completed', 'active')
+         AND pu.package_id IS NOT NULL
+         AND NOT EXISTS (SELECT 1 FROM subscriptions s WHERE s.purchase_id = pu.id)`,
+      [creatorId]
+    ).catch(() => {});
 
-    const activeSub = activeSubRes.rows[0] || null;
-    const subscriptions = allSubsRes.rows;
+    // Fetch all subscriptions for creator joined with packages, purchases, and websites
+    const subsRes = await queryDb(
+      `SELECT s.id, s.creator_id, s.package_id, s.purchase_id, s.website_id, s.status,
+              s.current_period_start, s.current_period_end,
+              s.current_period_start AS period_start,
+              s.current_period_end AS period_end,
+              s.billing_cycle AS billing_interval,
+              s.created_at,
+              p.name AS package_name, 
+              p.slug AS package_slug, 
+              p.tagline AS package_tagline,
+              p.description AS package_description, 
+              COALESCE(p.monthly_price_usd, p.monthly_price, 0) AS price,
+              (COALESCE(p.monthly_price_usd, p.monthly_price, 0) * 100)::int AS price_in_cents, 
+              'USD' AS currency, 
+              COALESCE(p.max_websites, 1) AS max_websites,
+              COALESCE(p.max_websites, 1) AS max_portfolios,
+              COALESCE(p.max_teachers, 0) AS max_teachers,
+              COALESCE(p.max_students, 0) AS max_students,
+              COALESCE(p.max_staff, 0) AS max_staff,
+              COALESCE(p.max_storage_mb, 5120) AS max_storage_mb,
+              pu.purchase_code,
+              pu.total_amount,
+              pu.status AS purchase_status,
+              (SELECT pay.id FROM payments pay WHERE pay.purchase_id = s.purchase_id ORDER BY pay.id DESC LIMIT 1) AS payment_id,
+              (SELECT pay.transaction_id FROM payments pay WHERE pay.purchase_id = s.purchase_id ORDER BY pay.id DESC LIMIT 1) AS transaction_id,
+              (SELECT COUNT(*)::int FROM websites w WHERE w.creator_id = $1 AND (w.subscription_id = s.id OR (w.subscription_id IS NULL AND w.package_id = s.package_id))) AS websites_count,
+              (
+                SELECT COALESCE(json_agg(json_build_object(
+                  'id', w.id,
+                  'name', w.name,
+                  'slug', w.slug,
+                  'subdomain', w.subdomain,
+                  'status', w.status,
+                  'institution_type', w.institution_type,
+                  'created_at', w.created_at
+                )), '[]'::json)
+                FROM websites w
+                WHERE w.creator_id = $1 AND (w.subscription_id = s.id OR (w.subscription_id IS NULL AND w.package_id = s.package_id))
+              ) AS provisioned_websites
+       FROM subscriptions s
+       JOIN packages p ON s.package_id = p.id
+       LEFT JOIN purchases pu ON s.purchase_id = pu.id
+       WHERE s.creator_id = $1
+       ORDER BY s.id DESC`,
+      [creatorId]
+    ).catch(() => ({ rows: [] }));
 
-    let daysRemaining = 0;
-    if (activeSub && activeSub.current_period_end) {
-      const now = new Date();
-      const end = new Date(activeSub.current_period_end);
-      const diffTime = end.getTime() - now.getTime();
-      daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-    }
+    const now = new Date();
+    const allSubscriptions = subsRes.rows.map((sub) => {
+      let daysRemaining = 0;
+      if (sub.current_period_end) {
+        const end = new Date(sub.current_period_end);
+        const diffTime = end.getTime() - now.getTime();
+        daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+      }
+      const isActiveStatus = ['active', 'completed'].includes(String(sub.status || '').toLowerCase());
+      const isPeriodValid = !sub.current_period_end || new Date(sub.current_period_end) > now;
+      const is_active = isActiveStatus && isPeriodValid;
+      const websitesAllowed = Number(sub.max_websites || 1);
+      const websitesUsed = Number(sub.websites_count || 0);
+      const websitesRemaining = Math.max(0, websitesAllowed - websitesUsed);
+
+      return {
+        ...sub,
+        daysRemaining,
+        is_active,
+        websitesAllowed,
+        websitesUsed,
+        websitesRemaining,
+        canCreateWebsite: is_active && websitesRemaining > 0,
+      };
+    });
+
+    const activeSubscriptions = allSubscriptions.filter((s) => s.is_active);
+    const activeSub = activeSubscriptions[0] || allSubscriptions[0] || null;
 
     return NextResponse.json({
       success: true,
       activeSubscription: activeSub,
+      activeSubscriptions,
       subscription: activeSub,
-      subscriptions,
-      daysRemaining,
-      hasActivePackage: Boolean(activeSub && ['completed', 'active'].includes(activeSub.status) && daysRemaining > 0),
+      subscriptions: allSubscriptions,
+      daysRemaining: activeSub?.daysRemaining || 0,
+      hasActivePackage: activeSubscriptions.length > 0,
     });
   } catch (error) {
     console.error('Subscriptions GET API error:', error);
@@ -162,15 +177,27 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
       [purchase.id, creatorId, transactionId, baseAmount, paymentMethod]
     );
 
-    // 3. Clear creator's wishlist upon successful package purchase
+    // 3. Insert into subscriptions table
+    const subRes = await queryDb(
+      `INSERT INTO subscriptions (
+         creator_id, package_id, purchase_id, status, billing_cycle,
+         current_period_start, current_period_end
+       ) VALUES (
+         $1, $2, $3, 'active', $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ${durationInterval}
+       ) RETURNING *`,
+      [creatorId, packageId, purchase.id, billingCycle]
+    );
+
+    // 4. Clear creator's wishlist upon successful package purchase
     await queryDb('DELETE FROM wishlists WHERE creator_id = $1', [creatorId]).catch(() => {});
 
     return NextResponse.json({
       success: true,
       subscription: {
-        ...purchase,
-        current_period_start: purchase.period_start,
-        current_period_end: purchase.period_end,
+        ...subRes.rows[0],
+        package_name: pkg.name,
+        package_slug: pkg.slug,
+        max_websites: pkg.max_websites || 1,
       },
       purchase,
       payment: payRes.rows[0],
@@ -182,9 +209,15 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
   if (action === 'cancel') {
     const subId = Number(body.subscriptionId || body.id);
     const res = await queryDb(
-      `UPDATE purchases SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND creator_id = $2 RETURNING *`,
+      `UPDATE subscriptions SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND creator_id = $2 RETURNING *`,
       [subId, creatorId]
     );
+    if (res.rows[0]?.purchase_id) {
+      await queryDb(
+        `UPDATE purchases SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND creator_id = $2`,
+        [res.rows[0].purchase_id, creatorId]
+      ).catch(() => {});
+    }
     return NextResponse.json({ success: true, subscription: res.rows[0] });
   }
 

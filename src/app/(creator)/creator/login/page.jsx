@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import CreatorAuthLayout from 'src/component/marketing/creator/CreatorAuthLayout';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 function CreatorLoginForm() {
   const router = useRouter();
@@ -273,7 +274,7 @@ export default function CreatorLoginPage() {
       headline="Creator Sign In"
       description="Access your school, academy, and portfolio website deployments."
     >
-      <Suspense fallback={<div className="p-8 text-center text-xs text-slate-500 font-medium">Loading...</div>}>
+      <Suspense fallback={<LoadingScreen fullScreen={false} size="sm" label="Loading sign in..." />}>
         <CreatorLoginForm />
       </Suspense>
     </CreatorAuthLayout>

@@ -4,6 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import PackageForm from 'src/component/marketing/developer/forms/PackageForm';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function PackageDetailPage({ params }) {
   const resolvedParams = use(params);
@@ -92,11 +93,7 @@ export default function PackageDetailPage({ params }) {
   };
 
   if (loading) {
-    return (
-      <div className="py-20 text-center text-slate-400 text-xs font-normal">
-        Loading subscription tier...
-      </div>
-    );
+    return <LoadingScreen fullScreen={false} label="Loading subscription tier..." />;
   }
 
   if (error || !pkg) {

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
 import Navbar from 'src/component/marketing/developer/Navbar';
 import Sidebar from 'src/component/marketing/developer/Sidebar';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export const ROLE_PERMISSIONS = {
   admin: [
@@ -49,19 +50,11 @@ export default function DeveloperLayout({ children }) {
   }, [loading, user, router]);
 
   if (loading) {
-    return (
-      <div className="w-full min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
-        <p className="text-xs font-normal text-slate-500">Loading session...</p>
-      </div>
-    );
+    return <LoadingScreen fullScreen={true} label="Loading session..." />;
   }
 
   if (!user) {
-    return (
-      <div className="w-full min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
-        <p className="text-xs font-normal text-slate-500">Redirecting to login...</p>
-      </div>
-    );
+    return <LoadingScreen fullScreen={true} label="Redirecting to login..." />;
   }
 
   const segments = pathname.split('/').filter(Boolean);

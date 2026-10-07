@@ -20,6 +20,7 @@ import {
   BiCheckShield,
   BiStar,
 } from 'react-icons/bi';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function CareerDetailPage({ params }) {
   const unwrappedParams = use(params);
@@ -132,14 +133,7 @@ export default function CareerDetailPage({ params }) {
   };
 
   if (loading) {
-    return (
-      <div className="w-full min-h-screen flex items-center justify-center bg-slate-50/50 dark:bg-slate-950 py-24">
-        <div className="text-center space-y-3">
-          <div className="inline-block animate-spin rounded-full h-9 w-9 border-3 border-slate-200 border-t-indigo-600" />
-          <p className="text-sm font-semibold text-slate-500">Loading position details...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen fullScreen={true} label="Loading position details..." />;
   }
 
   if (notFound || !career) {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
 import PackageForm from 'src/component/marketing/developer/forms/PackageForm';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function AdminPackagesPage() {
   const { user } = useContext(Context) || {};
@@ -356,8 +357,8 @@ export default function AdminPackagesPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400 text-xs font-normal">
-                    Loading packages from database...
+                  <td colSpan={9} className="py-12 text-center">
+                    <LoadingScreen fullScreen={false} size="sm" label="Loading packages from database..." />
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (

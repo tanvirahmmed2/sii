@@ -9,6 +9,7 @@ import {
   BiRightArrowAlt,
   BiCalendar,
 } from 'react-icons/bi';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 function stripHtml(html) {
   if (!html) return '';
@@ -154,23 +155,10 @@ export default function UpdatesPage() {
           </div>
         )}
 
-        {/* Loading Skeleton */}
+        {/* Loading State */}
         {loading ? (
-          <div className="space-y-4 pt-2">
-            {[1, 2, 3, 4].map((idx) => (
-              <div
-                key={idx}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs animate-pulse space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded-md w-24" />
-                  <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-full w-20" />
-                </div>
-                <div className="h-5 bg-slate-200 dark:bg-slate-800 rounded-md w-2/3" />
-                <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-md w-full" />
-                <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-md w-4/5" />
-              </div>
-            ))}
+          <div className="pt-2">
+            <LoadingScreen fullScreen={false} label="Loading product updates..." />
           </div>
         ) : filteredUpdates.length === 0 ? (
           /* Empty State */

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useContext } from 'react';
 import { Context } from 'src/component/helper/Context';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function DeveloperNoticesPage() {
   const { user } = useContext(Context);
@@ -168,7 +169,7 @@ export default function DeveloperNoticesPage() {
       </div>
 
       {loading ? (
-        <div className="p-8 text-center text-xs text-slate-400">Loading notices bulletin...</div>
+        <LoadingScreen fullScreen={false} label="Loading notices bulletin..." />
       ) : notices.length === 0 ? (
         <div className="p-8 text-center bg-white border border-slate-200 rounded space-y-2">
           <p className="text-xs text-slate-500 font-medium">No company notices have been published yet.</p>

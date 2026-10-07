@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import AdminVerifyForm from 'src/component/marketing/developer/forms/AdminVerifyForm';
 import { SITE_NAME } from 'src/lib/database/secret';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export const metadata = {
   title: `Developer Account Verification | ${SITE_NAME}`,
@@ -9,7 +10,7 @@ export const metadata = {
 
 export default function AdminVerifyPage() {
   return (
-    <Suspense fallback={<div className="text-xs text-slate-500">Loading...</div>}>
+    <Suspense fallback={<LoadingScreen fullScreen={true} label="Loading developer verification..." />}>
       <AdminVerifyForm />
     </Suspense>
   );

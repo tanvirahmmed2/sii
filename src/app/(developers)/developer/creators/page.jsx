@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect, useContext, useMemo } from 'react';
 import { Context } from 'src/component/helper/Context';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function AdminCreatorsPage() {
   const { user } = useContext(Context);
@@ -262,8 +263,8 @@ export default function AdminCreatorsPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400 text-xs font-normal">
-                    Loading registered creators...
+                  <td colSpan={7} className="py-12 text-center">
+                    <LoadingScreen fullScreen={false} size="sm" label="Loading registered creators..." />
                   </td>
                 </tr>
               ) : filteredCreators.length === 0 ? (

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCreator } from '../../layout';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 const INSTITUTION_TYPES = [
   { value: 'school', label: 'School' },
@@ -404,13 +405,7 @@ export default function WebsiteManagePage() {
 
   if (loading) {
     return (
-      <div className="py-24 text-center space-y-3 text-slate-500 text-xs">
-        <svg className="animate-spin w-8 h-8 text-blue-600 mx-auto" viewBox="0 0 24 24" fill="none">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-        </svg>
-        <p className="font-medium">Loading website configuration...</p>
-      </div>
+      <LoadingScreen fullScreen={false} label="Loading website configuration..." />
     );
   }
 

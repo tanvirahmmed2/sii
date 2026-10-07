@@ -330,8 +330,11 @@ CREATE TABLE IF NOT EXISTS websites (
     storage_used_mb INT DEFAULT 0,
     is_maintenance_mode BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Idempotent column migrations for websites table
+ALTER TABLE websites ADD COLUMN IF NOT EXISTS subscription_id BIGINT REFERENCES subscriptions(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_websites_subscription_id ON websites(subscription_id);
 
 DROP TRIGGER IF EXISTS update_websites_updated_at ON websites;
 CREATE TRIGGER update_websites_updated_at

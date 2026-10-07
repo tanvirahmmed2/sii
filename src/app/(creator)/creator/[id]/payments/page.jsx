@@ -4,6 +4,8 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useCreator } from '../layout';
 import Link from 'next/link';
+import { printSubscriptionReceipt } from 'src/lib/receipts/subscription_receipt';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 function PaymentsContent() {
   const { creator, payments = [], stats = {}, refetch } = useCreator();
@@ -177,13 +179,40 @@ function PaymentsContent() {
                           ? new Date(p.payment_date || p.created_at).toLocaleDateString()
                           : '—'}
                       </td>
-                      <td className="py-2.5 text-right space-x-2">
+                      <td className="py-2.5 text-right space-x-2.5">
                         <Link
                           href={`/creator/${creator?.id}/payments/${p.id}`}
-                          className="text-slate-800 hover:underline font-medium"
+                          className="text-slate-800 hover:text-blue-600 hover:underline font-medium"
                         >
                           View Receipt
                         </Link>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            printSubscriptionReceipt(
+                              p,
+                              creator,
+                              {
+                                id: p.package_id,
+                                name: p.package_name,
+                                max_websites: p.max_websites,
+                                max_teachers: p.max_teachers,
+                                max_students: p.max_students,
+                                max_storage_mb: p.max_storage_mb,
+                                billing_interval: p.billing_interval,
+                              },
+                              {
+                                id: p.purchase_id,
+                                purchase_code: p.purchase_code,
+                                period_start: p.period_start,
+                                period_end: p.period_end,
+                              }
+                            );
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline font-medium cursor-pointer"
+                        >
+                          Print
+                        </button>
                         {isPending && (
                           <Link
                             href={`/creator/${creator?.id}/payments/${p.id}/pay`}
@@ -208,11 +237,7 @@ function PaymentsContent() {
 export default function CreatorPaymentsPage() {
   return (
     <Suspense
-      fallback={
-        <div className="py-8 text-center text-xs text-slate-500 font-medium">
-          Loading billing invoices...
-        </div>
-      }
+      fallback={<LoadingScreen fullScreen={false} label="Loading billing invoices..." />}
     >
       <PaymentsContent />
     </Suspense>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AdminForm from 'src/component/marketing/developer/forms/AdminForm';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 const BASE_ROLE_BADGES = {
   developer: 'bg-cyan-50 text-cyan-800 border-cyan-200',
@@ -507,7 +508,9 @@ export default function AdminAdminsPage() {
             <tbody className="divide-y divide-slate-100 font-normal text-slate-700">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-slate-400 font-normal">Loading developers...</td>
+                  <td colSpan={9} className="py-8 text-center">
+                    <LoadingScreen fullScreen={false} size="sm" label="Loading developers..." />
+                  </td>
                 </tr>
               ) : filteredAdmins.length === 0 ? (
                 <tr>

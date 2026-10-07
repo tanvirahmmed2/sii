@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
 import ChatUsersSwipeBar from 'src/component/marketing/developer/ChatUsersSwipeBar';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function SupportChatPage() {
   const router = useRouter();
@@ -181,9 +182,7 @@ export default function SupportChatPage() {
 
       {/* Main Content Area */}
       {loading && tickets.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 text-center text-slate-400">
-          <span className="text-xs font-normal">Loading support chats...</span>
-        </div>
+        <LoadingScreen fullScreen={false} label="Loading support chats..." />
       ) : tickets.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 text-center">
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">
@@ -275,8 +274,8 @@ export default function SupportChatPage() {
             </div>
 
             {loadingMessages && messages.length === 0 ? (
-              <div className="h-40 flex items-center justify-center text-slate-400 text-xs">
-                Loading conversation stream...
+              <div className="h-40 flex items-center justify-center">
+                <LoadingScreen fullScreen={false} size="sm" label="Loading conversation stream..." />
               </div>
             ) : (
               messages.map((m) => {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function PaymentGatewayCheckout({
   creatorId,
@@ -373,9 +374,7 @@ export default function PaymentGatewayCheckout({
 
   if (loading) {
     return (
-      <div className="py-8 text-center text-xs text-slate-500 font-medium">
-        Loading payment checkout...
-      </div>
+      <LoadingScreen fullScreen={false} label="Loading payment checkout..." />
     );
   }
 

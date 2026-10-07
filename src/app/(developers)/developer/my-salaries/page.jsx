@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useContext } from 'react';
 import { Context } from 'src/component/helper/Context';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function MySalariesPage() {
   const { user } = useContext(Context);
@@ -97,7 +98,7 @@ export default function MySalariesPage() {
         </div>
 
         {loading ? (
-          <div className="p-12 text-center text-slate-400 text-xs">Loading salary history...</div>
+          <LoadingScreen fullScreen={false} size="sm" label="Loading salary history..." />
         ) : salaries.length === 0 ? (
           <div className="p-12 text-center space-y-2">
             <p className="text-slate-500 text-xs font-medium">No salary disbursements recorded yet.</p>

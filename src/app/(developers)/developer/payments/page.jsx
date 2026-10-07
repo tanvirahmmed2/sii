@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import PaymentForm from 'src/component/marketing/developer/forms/PaymentForm';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState([]);
@@ -286,8 +287,8 @@ export default function AdminPaymentsPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400 text-xs font-normal">
-                    Loading payments...
+                  <td colSpan={10} className="py-12 text-center">
+                    <LoadingScreen fullScreen={false} size="sm" label="Loading payments..." />
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (

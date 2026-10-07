@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
 import { ROLE_PERMISSIONS } from 'src/app/(developers)/developer/layout';
 import { SITE_NAME } from 'src/lib/database/secret';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 const ALL_MODULES = [
   // Workspace & Management
@@ -369,12 +370,7 @@ export default function DeveloperOverviewPage() {
   const activeDev = developer || contextUser;
 
   if (loading && !activeDev) {
-    return (
-      <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 text-center space-y-2">
-        <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Developer Console</h2>
-        <p className="text-xs text-slate-500 font-normal">Loading developer account and assigned modules...</p>
-      </div>
-    );
+    return <LoadingScreen fullScreen={false} label="Loading developer account and assigned modules..." />;
   }
 
   if (!activeDev) {

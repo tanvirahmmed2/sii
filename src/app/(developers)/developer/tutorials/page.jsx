@@ -3,6 +3,7 @@
 import { useState, useEffect, useContext, useRef } from 'react';
 import Image from 'next/image';
 import { Context } from 'src/component/helper/Context';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 function extractYoutubeId(url) {
   if (!url) return null;
@@ -451,8 +452,8 @@ export default function DeveloperTutorialsPage() {
             <tbody className="divide-y divide-slate-100 font-normal text-slate-700">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-400">
-                    Loading video guides...
+                  <td colSpan={6} className="py-8 text-center">
+                    <LoadingScreen fullScreen={false} size="sm" label="Loading video guides..." />
                   </td>
                 </tr>
               ) : filteredTutorials.length === 0 ? (

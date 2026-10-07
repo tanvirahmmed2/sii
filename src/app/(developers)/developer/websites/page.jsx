@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import WebsiteForm from 'src/component/marketing/developer/forms/WebsiteForm';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function AdminWebsitesPage() {
   const [websites, setWebsites] = useState([]);
@@ -136,7 +137,9 @@ export default function AdminWebsitesPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400 text-xs font-normal">Loading websites...</td>
+                  <td colSpan={8} className="py-12 text-center">
+                    <LoadingScreen fullScreen={false} size="sm" label="Loading websites..." />
+                  </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>

@@ -48,10 +48,17 @@ export async function GET(request) {
       const singleRes = await queryDb(
         `SELECT pay.*, 
                 (pay.amount * 100)::bigint AS amount_in_cents,
+                p.id AS package_id,
                 p.name AS package_name, 
                 p.slug AS package_slug, 
+                p.tagline AS package_tagline,
                 p.description AS package_description,
                 COALESCE(p.max_websites, 1) AS max_websites,
+                COALESCE(p.max_teachers, 0) AS max_teachers,
+                COALESCE(p.max_students, 0) AS max_students,
+                COALESCE(p.max_staff, 0) AS max_staff,
+                COALESCE(p.max_storage_mb, 5120) AS max_storage_mb,
+                pu.purchase_code,
                 pu.billing_cycle AS billing_interval, 
                 (COALESCE(p.monthly_price_usd, p.monthly_price, 0) * 100)::int AS package_price,
                 p.monthly_price_usd,
@@ -62,10 +69,18 @@ export async function GET(request) {
                 pu.period_start AS current_period_start,
                 pu.period_end AS current_period_end,
                 pu.notes AS purchase_notes,
-                pu.status AS purchase_status
+                pu.status AS purchase_status,
+                c.name AS creator_name,
+                c.email AS creator_email,
+                c.phone AS creator_phone,
+                c.institution AS creator_institution,
+                c.address AS creator_address,
+                c.city AS creator_city,
+                c.country AS creator_country
          FROM payments pay
          LEFT JOIN purchases pu ON pay.purchase_id = pu.id
          LEFT JOIN packages p ON pu.package_id = p.id
+         LEFT JOIN creators c ON pay.creator_id = c.id
          WHERE pay.id = $1 AND pay.creator_id = $2
          LIMIT 1`,
         [Number(paymentIdParam), creatorId]
@@ -89,6 +104,31 @@ export async function GET(request) {
       return NextResponse.json({
         success: true,
         payment: paymentRecord,
+        creator: {
+          name: paymentRecord.creator_name,
+          email: paymentRecord.creator_email,
+          phone: paymentRecord.creator_phone,
+          institution: paymentRecord.creator_institution,
+          address: paymentRecord.creator_address || paymentRecord.creator_city || paymentRecord.creator_country,
+        },
+        package: {
+          id: paymentRecord.package_id,
+          name: paymentRecord.package_name,
+          slug: paymentRecord.package_slug,
+          tagline: paymentRecord.package_tagline,
+          description: paymentRecord.package_description,
+          max_websites: paymentRecord.max_websites,
+          max_teachers: paymentRecord.max_teachers,
+          max_students: paymentRecord.max_students,
+          max_staff: paymentRecord.max_staff,
+          max_storage_mb: paymentRecord.max_storage_mb,
+        },
+        purchase: {
+          purchase_code: paymentRecord.purchase_code,
+          billing_cycle: paymentRecord.billing_interval,
+          period_start: paymentRecord.current_period_start,
+          period_end: paymentRecord.current_period_end,
+        },
         transactions: [],
       });
     }
@@ -99,7 +139,11 @@ export async function GET(request) {
               (pay.amount * 100)::bigint AS amount_in_cents,
               p.name AS package_name, 
               p.slug AS package_slug, 
+              pu.purchase_code,
               pu.billing_cycle AS billing_interval, 
+              COALESCE(p.max_websites, 1) AS max_websites,
+              COALESCE(p.max_teachers, 0) AS max_teachers,
+              COALESCE(p.max_students, 0) AS max_students,
               p.monthly_price_usd,
               p.yearly_price_usd,
               p.monthly_price_bdt,

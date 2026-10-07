@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function LiveChatDetailsPage() {
   const router = useRouter();
@@ -253,9 +254,7 @@ export default function LiveChatDetailsPage() {
       {/* Chat Sessions List */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden">
         {loading && chats.length === 0 ? (
-          <div className="p-12 text-center text-slate-400">
-            <span className="text-xs font-normal">Loading live chat conversations...</span>
-          </div>
+          <LoadingScreen fullScreen={false} label="Loading live chat conversations..." />
         ) : filteredChats.length === 0 ? (
           <div className="p-12 text-center text-slate-400 space-y-1">
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">No conversations found</p>

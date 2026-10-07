@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 
 
@@ -581,8 +582,8 @@ export default function RolesManagementPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {loading ? (
-              <div className="col-span-full py-16 text-center text-slate-400 text-xs">
-                Loading platform roles...
+              <div className="col-span-full py-16 text-center">
+                <LoadingScreen fullScreen={false} size="sm" label="Loading platform roles..." />
               </div>
             ) : filteredRoles.length === 0 ? (
               <div className="col-span-full py-16 text-center text-slate-400 text-xs">
@@ -750,7 +751,13 @@ export default function RolesManagementPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300">
-                {matrixPermissions.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={2 + roles.length} className="py-12 text-center">
+                      <LoadingScreen fullScreen={false} size="sm" label="Loading permissions matrix..." />
+                    </td>
+                  </tr>
+                ) : matrixPermissions.length === 0 ? (
                   <tr>
                     <td colSpan={2 + roles.length} className="py-12 text-center text-slate-400">
                       No matching permissions found.
@@ -853,7 +860,13 @@ export default function RolesManagementPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
-                  {filteredPermissions.length === 0 ? (
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center">
+                        <LoadingScreen fullScreen={false} size="sm" label="Loading permissions catalog..." />
+                      </td>
+                    </tr>
+                  ) : filteredPermissions.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="py-12 text-center text-slate-400">
                         No permissions found.

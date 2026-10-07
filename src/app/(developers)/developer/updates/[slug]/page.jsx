@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function UpdateDetailPage({ params }) {
   const resolvedParams = use(params);
@@ -126,11 +127,7 @@ export default function UpdateDetailPage({ params }) {
   };
 
   if (loading) {
-    return (
-      <div className="w-full py-16 text-center text-slate-400">
-        <span className="text-xs font-normal">Loading product update...</span>
-      </div>
-    );
+    return <LoadingScreen fullScreen={false} label="Loading product update..." />;
   }
 
   if (error || !update) {

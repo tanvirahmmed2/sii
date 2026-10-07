@@ -16,6 +16,7 @@ import {
   BiChevronRight,
 } from 'react-icons/bi';
 import { SITE_NAME } from 'src/lib/database/secret';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function PublicReviewsPage() {
   const [reviews, setReviews] = useState([]);
@@ -172,10 +173,7 @@ export default function PublicReviewsPage() {
 
       {/* Reviews Grid */}
       {loading ? (
-        <div className="py-20 flex flex-col items-center justify-center gap-3 text-slate-400">
-          <BiLoaderAlt className="animate-spin text-4xl text-slate-700" />
-          <p className="text-xs font-semibold">Loading verified reviews...</p>
-        </div>
+        <LoadingScreen fullScreen={false} label="Loading verified reviews..." />
       ) : reviews.length === 0 ? (
         <div className="py-16 text-center bg-white border border-slate-200 rounded-3xl p-8 max-w-md mx-auto space-y-3">
           <BiMessageSquareDetail className="text-4xl text-slate-300 mx-auto" />

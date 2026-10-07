@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import SubscriptionForm from 'src/component/marketing/developer/forms/SubscriptionForm';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function AdminSubscriptionsPage() {
   const [subs, setSubs] = useState([]);
@@ -215,8 +216,8 @@ export default function AdminSubscriptionsPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400 text-xs font-normal">
-                    Loading subscriptions ledger...
+                  <td colSpan={9} className="py-12 text-center">
+                    <LoadingScreen fullScreen={false} size="sm" label="Loading subscriptions ledger..." />
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (

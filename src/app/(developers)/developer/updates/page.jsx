@@ -3,6 +3,7 @@
 import { useState, useEffect, useContext, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function DeveloperUpdatesPage() {
   const { user } = useContext(Context);
@@ -486,8 +487,8 @@ export default function DeveloperUpdatesPage() {
             <tbody className="divide-y divide-slate-100 font-normal text-slate-700">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-400">
-                    Loading product releases...
+                  <td colSpan={6} className="py-8 text-center">
+                    <LoadingScreen fullScreen={false} size="sm" label="Loading product releases..." />
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (

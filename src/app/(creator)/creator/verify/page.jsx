@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import CreatorAuthLayout from 'src/component/marketing/creator/CreatorAuthLayout';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 function CreatorVerifyContent() {
   const router = useRouter();
@@ -299,11 +300,7 @@ function CreatorVerifyContent() {
 export default function CreatorVerifyPage() {
   return (
     <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 text-xs text-slate-500">
-          Loading verification...
-        </div>
-      }
+      fallback={<LoadingScreen fullScreen={true} label="Loading verification..." />}
     >
       <CreatorVerifyContent />
     </Suspense>

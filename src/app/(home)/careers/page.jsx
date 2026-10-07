@@ -17,6 +17,7 @@ import {
   BiSpeaker,
 } from 'react-icons/bi';
 import { SITE_NAME } from 'src/lib/database/secret';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function CareersPage() {
   const [careers, setCareers] = useState([]);
@@ -276,10 +277,7 @@ export default function CareersPage() {
 
         {/* Listings Grid */}
         {loading ? (
-          <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-3 border-slate-200 border-t-indigo-600 mb-3" />
-            <p className="text-sm font-semibold text-slate-500">Loading open positions...</p>
-          </div>
+          <LoadingScreen fullScreen={false} label="Loading open positions..." />
         ) : filteredCareers.length === 0 ? (
           <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
             <div className="w-16 h-16 mx-auto rounded-2xl bg-indigo-50 dark:bg-indigo-950/70 flex items-center justify-center text-indigo-500 text-3xl">

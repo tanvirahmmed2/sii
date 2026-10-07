@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useContext } from 'react';
 import { Context } from 'src/component/helper/Context';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function DeveloperPayrollPage() {
   const { user } = useContext(Context);
@@ -274,7 +275,7 @@ export default function DeveloperPayrollPage() {
         </div>
 
         {loading ? (
-          <div className="p-12 text-center text-slate-400 text-xs">Loading payroll records...</div>
+          <LoadingScreen fullScreen={false} size="sm" label="Loading payroll records..." />
         ) : payrolls.length === 0 ? (
           <div className="p-12 text-center space-y-2">
             <p className="text-slate-500 text-xs font-medium">No payroll cycles created yet.</p>
@@ -393,7 +394,7 @@ export default function DeveloperPayrollPage() {
           </div>
 
           {detailLoading ? (
-            <div className="p-8 text-center text-xs text-slate-400">Loading developer salary lines...</div>
+            <LoadingScreen fullScreen={false} size="sm" label="Loading developer salary lines..." />
           ) : !payrollDetail || !payrollDetail.items || payrollDetail.items.length === 0 ? (
             <div className="p-8 text-center text-xs text-slate-400">No developer salary lines found for this run.</div>
           ) : (

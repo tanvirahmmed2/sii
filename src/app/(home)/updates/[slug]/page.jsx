@@ -12,6 +12,7 @@ import {
   BiTag,
   BiListCheck,
 } from 'react-icons/bi';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function SingleUpdatePage({ params }) {
   const unwrappedParams = use(params);
@@ -48,12 +49,7 @@ export default function SingleUpdatePage({ params }) {
   }, [slug]);
 
   if (loading) {
-    return (
-      <div className="w-full min-h-[60vh] flex flex-col items-center justify-center gap-3 text-slate-400">
-        <BiLoaderAlt className="animate-spin text-4xl text-secondary" />
-        <p className="text-xs font-semibold">Loading product update...</p>
-      </div>
-    );
+    return <LoadingScreen fullScreen={true} label="Loading product update..." />;
   }
 
   if (error || !update) {

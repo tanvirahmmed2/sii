@@ -9,6 +9,7 @@ import {
   BiRightArrowAlt,
 } from 'react-icons/bi';
 import HomeBlogCard from 'src/component/marketing/home/cards/BlogCard';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function BlogsPage() {
   const [blogs, setBlogs] = useState([]);
@@ -147,24 +148,10 @@ export default function BlogsPage() {
           </div>
         )}
 
-        {/* Loading Skeleton */}
+        {/* Loading State */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-8">
-            {[1, 2, 3, 4, 5, 6].map((idx) => (
-              <div
-                key={idx}
-                className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs animate-pulse space-y-4"
-              >
-                <div className="aspect-16/10 bg-slate-100 rounded-2xl" />
-                <div className="h-4 bg-slate-200 rounded-md w-3/4" />
-                <div className="h-3 bg-slate-100 rounded-md w-1/2" />
-                <div className="space-y-2 pt-2">
-                  <div className="h-3 bg-slate-100 rounded-md w-full" />
-                  <div className="h-3 bg-slate-100 rounded-md w-5/6" />
-                </div>
-                <div className="h-9 bg-slate-100 rounded-xl w-full pt-4" />
-              </div>
-            ))}
+          <div className="pt-8">
+            <LoadingScreen fullScreen={false} label="Loading articles..." />
           </div>
         ) : filteredBlogs.length === 0 ? (
           /* Empty State */

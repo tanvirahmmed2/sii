@@ -4,6 +4,7 @@ import { useState, useEffect, useContext, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function SupportDetailsPage() {
   const router = useRouter();
@@ -249,9 +250,7 @@ export default function SupportDetailsPage() {
       {/* Tickets List */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden">
         {loading && tickets.length === 0 ? (
-          <div className="p-12 text-center text-slate-400">
-            <span className="text-xs font-normal">Loading support tickets...</span>
-          </div>
+          <LoadingScreen fullScreen={false} label="Loading support tickets..." />
         ) : filteredTickets.length === 0 ? (
           <div className="p-12 text-center text-slate-400 space-y-1">
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">No support tickets found</p>

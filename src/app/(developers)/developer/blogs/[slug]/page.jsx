@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import BlogForm from 'src/component/marketing/developer/forms/BlogForm';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function BlogDetailPage({ params }) {
   const resolvedParams = use(params);
@@ -92,11 +93,7 @@ export default function BlogDetailPage({ params }) {
   };
 
   if (loading) {
-    return (
-      <div className="w-full py-16 text-center text-slate-400">
-        <span className="text-xs font-normal">Loading article form...</span>
-      </div>
-    );
+    return <LoadingScreen fullScreen={false} label="Loading article form..." />;
   }
 
   if (error || !blog) {

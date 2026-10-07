@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useContext } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useContext, use } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 
 import { Context } from 'src/component/helper/Context';
@@ -134,22 +135,7 @@ export default function CreatorDetailsPage({ params }) {
 
   // Loading State
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="bg-white border border-slate-200 rounded p-6 flex items-center gap-4">
-          <div className="w-16 h-16 rounded bg-slate-100 animate-pulse" />
-          <div className="space-y-2 flex-1">
-            <div className="h-6 w-48 bg-slate-100 rounded animate-pulse" />
-            <div className="h-4 w-72 bg-slate-100 rounded animate-pulse" />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white border border-slate-200 rounded p-5 h-28 animate-pulse" />
-          ))}
-        </div>
-      </div>
-    );
+    return <LoadingScreen fullScreen={false} label="Loading creator profile..." />;
   }
 
   // Error / Not Found State

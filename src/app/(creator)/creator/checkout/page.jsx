@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 function CheckoutContent() {
   const router = useRouter();
@@ -132,11 +133,7 @@ function CheckoutContent() {
   };
 
   if (checkingAuth || loadingPackages) {
-    return (
-      <div className="py-12 text-center text-xs text-slate-500 font-medium">
-        Loading checkout details...
-      </div>
-    );
+    return <LoadingScreen fullScreen={true} label="Loading checkout details..." />;
   }
 
   if (!creator) {
@@ -322,11 +319,7 @@ function CheckoutContent() {
 export default function CreatorCheckoutPage() {
   return (
     <Suspense
-      fallback={
-        <div className="py-12 text-center text-xs text-slate-500 font-medium">
-          Loading checkout...
-        </div>
-      }
+      fallback={<LoadingScreen fullScreen={true} label="Loading checkout..." />}
     >
       <CheckoutContent />
     </Suspense>

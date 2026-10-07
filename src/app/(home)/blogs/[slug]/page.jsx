@@ -14,6 +14,7 @@ import {
   BiCheck,
   BiCategory,
 } from 'react-icons/bi';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 /**
  * Split article content/description evenly by the number of images.
@@ -129,16 +130,7 @@ export default function SingleBlogPage({ params }) {
   };
 
   if (loading) {
-    return (
-      <main className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6">
-        <div className="text-center space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-secondary/10 text-secondary border border-secondary/20 flex items-center justify-center mx-auto animate-spin text-2xl">
-            <BiRocket />
-          </div>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Loading article details...</p>
-        </div>
-      </main>
-    );
+    return <LoadingScreen fullScreen={true} label="Loading article details..." />;
   }
 
   if (error || !blog) {

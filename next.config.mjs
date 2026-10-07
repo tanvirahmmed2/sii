@@ -14,5 +14,5 @@ const nextConfig = {
   },
   allowedDevOrigins: ['192.168.1.102'],
 };
-
-export default nextConfig;
+// Config updated to refresh dev server
+export default nextConfig;

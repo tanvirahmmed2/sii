@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useCreator } from '../layout';
 import Link from 'next/link';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 const INSTITUTION_TYPES = [
   { value: 'school', label: 'School' },
@@ -28,20 +29,28 @@ function WorkspaceContent() {
     creatorId,
     creator,
     websites = [],
+    subscriptions = [],
     activeSubscription,
+    activeSubscriptions = [],
     stats = {},
     refetch,
   } = useCreator();
 
   const searchParams = useSearchParams();
   const setupParam = searchParams.get('setup');
+  const targetSubParam = searchParams.get('subscriptionId');
 
   const [baseDomain, setBaseDomain] = useState(
     typeof window !== 'undefined' && window.location?.host ? window.location.host : 'localhost:3000'
   );
 
+  const activeSubs = activeSubscriptions.length > 0
+    ? activeSubscriptions
+    : subscriptions.filter((s) => s.is_active || ['active', 'completed'].includes(String(s.status || '').toLowerCase()));
+
   // Create Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedSubscriptionId, setSelectedSubscriptionId] = useState(targetSubParam || '');
   const [name, setName] = useState('');
   const [contactNumber, setContactNumber] = useState(creator?.phone || '');
   const [mail, setMail] = useState(creator?.email || '');
@@ -58,6 +67,19 @@ function WorkspaceContent() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
   const [createSuccess, setCreateSuccess] = useState('');
+
+  // Auto-select valid subscription with available slots
+  useEffect(() => {
+    if (activeSubs.length > 0 && !selectedSubscriptionId) {
+      const preferred = activeSubs.find((s) => {
+        const allowed = Number(s.websitesAllowed ?? s.max_websites ?? 1);
+        const used = Number(s.websitesUsed ?? s.websites_count ?? 0);
+        return allowed - used > 0;
+      });
+      if (preferred) setSelectedSubscriptionId(String(preferred.id));
+      else setSelectedSubscriptionId(String(activeSubs[0].id));
+    }
+  }, [activeSubs, selectedSubscriptionId]);
 
   // Edit Modal State
   const [editingWebsite, setEditingWebsite] = useState(null);
@@ -266,6 +288,31 @@ function WorkspaceContent() {
     setCreateError('');
     setCreateSuccess('');
 
+    if (activeSubs.length === 0) {
+      setCreateError('An active package subscription is required to create a website. Please purchase a package first.');
+      setCreating(false);
+      return;
+    }
+
+    if (!selectedSubscriptionId) {
+      setCreateError('Please select a subscription package for this website.');
+      setCreating(false);
+      return;
+    }
+
+    const chosenSub = activeSubs.find((s) => String(s.id) === String(selectedSubscriptionId));
+    if (chosenSub) {
+      const allowed = Number(chosenSub.websitesAllowed ?? chosenSub.max_websites ?? 1);
+      const used = Number(chosenSub.websitesUsed ?? chosenSub.websites_count ?? 0);
+      if (used >= allowed) {
+        setCreateError(
+          `Your subscription for "${chosenSub.package_name}" allows up to ${allowed} website(s). You have already created ${used} website(s) for this subscription.`
+        );
+        setCreating(false);
+        return;
+      }
+    }
+
     const cleanDomain = customDomain.trim().toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
     if (!cleanDomain || cleanDomain.length < 3) {
       setCreateError('Custom domain is required and must be at least 3 characters.');
@@ -286,6 +333,7 @@ function WorkspaceContent() {
         body: JSON.stringify({
           action: 'create_website',
           creatorId: Number(creatorId),
+          subscriptionId: Number(selectedSubscriptionId),
           name: name.trim(),
           contactNumber: contactNumber.trim(),
           contactPhone: contactNumber.trim(),
@@ -455,25 +503,115 @@ function WorkspaceContent() {
         </div>
       </div>
 
-      {/* Quota Progress Bar if Package Active */}
-      {hasActivePackage && (
-        <div className="bg-slate-50/80 border border-slate-200/70 rounded-lg p-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 flex-1 max-w-md">
-            <div className="flex-1 bg-slate-200 rounded-full h-2 overflow-hidden">
-              <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-500"
-                style={{
-                  width: `${Math.min(100, Math.round((websites.length / (maxWebsites || 1)) * 100))}%`,
-                }}
-              />
+      {/* Purchased Subscriptions & Quota Allocations */}
+      {activeSubs.length > 0 ? (
+        <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-sm space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900">
+                Purchased Subscriptions & Quotas ({activeSubs.length})
+              </h2>
+              <p className="text-[11px] text-slate-500">
+                Websites can be created under each active package tier according to its provisioned website limits.
+              </p>
             </div>
-            <span className="text-[11px] font-medium text-slate-600 whitespace-nowrap">
-              {websites.length} / {maxWebsites} Allocated
-            </span>
+            <Link
+              href={`/creator/${creatorId}/subscription`}
+              className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
+            >
+              View All Subscriptions &rarr;
+            </Link>
           </div>
-          <span className="text-[11px] text-slate-500">
-            Base Domain: <code className="font-bold text-blue-700">.{baseDomain}</code>
-          </span>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {activeSubs.map((sub) => {
+              const allowed = Number(sub.websitesAllowed ?? sub.max_websites ?? 1);
+              const used = Number(sub.websitesUsed ?? sub.websites_count ?? 0);
+              const remaining = Math.max(0, allowed - used);
+              const isFull = remaining <= 0;
+
+              return (
+                <div
+                  key={sub.id}
+                  className={`border rounded-lg p-3.5 space-y-2.5 transition-all ${
+                    String(selectedSubscriptionId) === String(sub.id)
+                      ? 'border-blue-500 ring-2 ring-blue-100 bg-blue-50/20'
+                      : 'border-slate-200 hover:border-slate-300 bg-slate-50/40'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-900 text-xs">{sub.package_name}</span>
+                        <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase">
+                          Active
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-500 capitalize">
+                        {sub.billing_interval || 'monthly'} tier
+                      </span>
+                    </div>
+
+                    <span className="text-[11px] font-mono font-bold text-slate-800">
+                      {used} / {allowed} Sites
+                    </span>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className={`h-1.5 rounded-full transition-all duration-300 ${isFull ? 'bg-amber-500' : 'bg-blue-600'}`}
+                      style={{ width: `${Math.min(100, Math.round((used / allowed) * 100))}%` }}
+                    />
+                  </div>
+
+                  {/* Quota details */}
+                  <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-600 pt-0.5">
+                    <div>Teachers: <strong>{sub.max_teachers ? `${sub.max_teachers} Max` : 'Unlimited'}</strong></div>
+                    <div>Students: <strong>{sub.max_students ? `${sub.max_students} Max` : 'Unlimited'}</strong></div>
+                  </div>
+
+                  {/* Creation button */}
+                  <div className="pt-1">
+                    {!isFull ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedSubscriptionId(String(sub.id));
+                          setShowCreateModal(true);
+                        }}
+                        className="w-full py-1.5 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Create Website for this Plan
+                      </button>
+                    ) : (
+                      <div className="w-full py-1.5 px-3 rounded-md bg-slate-100 border border-slate-200 text-slate-500 font-medium text-xs text-center">
+                        Quota Reached ({allowed}/{allowed})
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="font-bold text-xs">No Active Subscription Package Found</h3>
+            <p className="text-[11px] text-amber-700 mt-0.5">
+              You need an active subscription package to launch and host educational websites.
+            </p>
+          </div>
+          <Link
+            href="/packages"
+            className="px-3.5 py-1.5 rounded-lg bg-amber-900 text-white font-semibold text-xs whitespace-nowrap hover:bg-amber-800 transition-colors inline-block"
+          >
+            Browse Packages &rarr;
+          </Link>
         </div>
       )}
 
@@ -557,6 +695,13 @@ function WorkspaceContent() {
                         {w.tagline && (
                           <div className="text-[11px] text-slate-400 truncate max-w-xs mt-0.5">
                             {w.tagline}
+                          </div>
+                        )}
+                        {w.package_name && (
+                          <div className="mt-1">
+                            <span className="inline-block text-[9px] font-semibold px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                              Plan: {w.package_name}
+                            </span>
                           </div>
                         )}
                       </td>
@@ -737,6 +882,59 @@ function WorkspaceContent() {
             )}
 
             <form onSubmit={handleCreateWebsite} className="space-y-4">
+              {/* Field 0: Subscription Package Selector */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                  Subscription Package <span className="text-rose-500">*</span>
+                </label>
+                {activeSubs.length === 0 ? (
+                  <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+                    No active subscriptions available. Please purchase a package first.
+                  </div>
+                ) : (
+                  <select
+                    value={selectedSubscriptionId}
+                    onChange={(e) => setSelectedSubscriptionId(e.target.value)}
+                    required
+                    className="w-full bg-slate-50/50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all font-medium"
+                  >
+                    <option value="">-- Select Subscription Package --</option>
+                    {activeSubs.map((s) => {
+                      const allowed = Number(s.websitesAllowed ?? s.max_websites ?? 1);
+                      const used = Number(s.websitesUsed ?? s.websites_count ?? 0);
+                      const remaining = Math.max(0, allowed - used);
+                      return (
+                        <option key={s.id} value={s.id} disabled={remaining <= 0}>
+                          {s.package_name} — {used}/{allowed} websites used {remaining <= 0 ? '(Quota Full)' : `(${remaining} free slot(s))`}
+                        </option>
+                      );
+                    })}
+                  </select>
+                )}
+
+                {/* Display info about the selected package */}
+                {(() => {
+                  const currentPlan = activeSubs.find((s) => String(s.id) === String(selectedSubscriptionId));
+                  if (!currentPlan) return null;
+                  const allowed = Number(currentPlan.websitesAllowed ?? currentPlan.max_websites ?? 1);
+                  const used = Number(currentPlan.websitesUsed ?? currentPlan.websites_count ?? 0);
+                  const remaining = Math.max(0, allowed - used);
+                  return (
+                    <div className="mt-2 p-2.5 rounded-lg bg-slate-50 border border-slate-200 grid grid-cols-3 gap-2 text-[10px] text-slate-600">
+                      <div>
+                        Quota: <strong className={remaining <= 0 ? 'text-rose-600' : 'text-slate-900'}>{used}/{allowed} Used</strong>
+                      </div>
+                      <div>
+                        Teachers: <strong>{currentPlan.max_teachers ? `${currentPlan.max_teachers} Max` : 'Unlimited'}</strong>
+                      </div>
+                      <div>
+                        Students: <strong>{currentPlan.max_students ? `${currentPlan.max_students} Max` : 'Unlimited'}</strong>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
               {/* Field 1: Name */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
@@ -1180,15 +1378,7 @@ function WorkspaceContent() {
 export default function CreatorWorkspacePage() {
   return (
     <Suspense
-      fallback={
-        <div className="py-12 text-center text-xs text-slate-500 font-medium flex items-center justify-center gap-2">
-          <svg className="w-4 h-4 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          Loading workspace...
-        </div>
-      }
+      fallback={<LoadingScreen fullScreen={false} label="Loading workspace..." />}
     >
       <WorkspaceContent />
     </Suspense>

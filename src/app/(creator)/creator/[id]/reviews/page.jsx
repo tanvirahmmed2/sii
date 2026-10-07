@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function CreatorReviewsPage() {
   const [review, setReview] = useState(null);
@@ -171,7 +172,7 @@ export default function CreatorReviewsPage() {
         </div>
 
         {loading ? (
-          <div className="py-8 text-center text-slate-500 font-medium">Loading review...</div>
+          <LoadingScreen fullScreen={false} size="sm" label="Loading review..." />
         ) : !review ? (
           <div className="py-8 text-center text-slate-400 space-y-2">
             <p>You have not submitted a testimonial yet.</p>

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ChatUsersSwipeBar from 'src/component/marketing/developer/ChatUsersSwipeBar';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function AdminLiveChatsPage() {
   const router = useRouter();
@@ -185,9 +186,7 @@ export default function AdminLiveChatsPage() {
 
       {/* Main Content Area */}
       {loading && chats.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 text-center text-slate-400">
-          <span className="text-xs font-normal">Loading live chats...</span>
-        </div>
+        <LoadingScreen fullScreen={false} label="Loading live chats..." />
       ) : chats.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 text-center">
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">
@@ -265,8 +264,8 @@ export default function AdminLiveChatsPage() {
           {/* Messages Stream */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/30 dark:bg-slate-900/30">
             {loadingMessages && messages.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-slate-400 text-xs">
-                Loading messages...
+              <div className="h-full flex items-center justify-center">
+                <LoadingScreen fullScreen={false} size="sm" label="Loading messages..." />
               </div>
             ) : messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs">

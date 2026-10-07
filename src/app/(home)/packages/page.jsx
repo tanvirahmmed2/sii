@@ -22,6 +22,7 @@ import {
 } from 'react-icons/bi';
 import Package from 'src/component/marketing/home/cards/Package';
 import { SITE_MAIL, SITE_CONTACT } from 'src/lib/database/secret';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function PackagesPage() {
   const router = useRouter();
@@ -311,12 +312,7 @@ ${inquiryMessage}`,
 
       {/* Packages Grid */}
       {loading ? (
-        <div className="py-24 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 max-w-xl mx-auto shadow-xs">
-          <BiLoaderAlt className="animate-spin text-4xl text-secondary mx-auto" />
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 font-semibold">
-            Loading subscription packages...
-          </p>
-        </div>
+        <LoadingScreen fullScreen={false} label="Loading subscription packages..." />
       ) : sortedPackages.length === 0 ? (
         <div className="py-16 text-center max-w-md mx-auto space-y-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-xs">
           <div className="w-14 h-14 mx-auto rounded-2xl bg-secondary/10 flex items-center justify-center text-secondary text-2xl border border-secondary/20">

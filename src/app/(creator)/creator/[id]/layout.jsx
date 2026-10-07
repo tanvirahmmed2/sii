@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import { useParams, useRouter } from 'next/navigation';
 import CreatorNavbar from 'src/component/marketing/creator/Navbar';
 import CreatorSidebar from 'src/component/marketing/creator/Sidebar';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export const CreatorContext = createContext(null);
 
@@ -154,11 +155,7 @@ export default function CreatorLayout({ children, params }) {
   }
 
   if (loading) {
-    return (
-      <div className="w-full min-h-screen flex items-center justify-center bg-slate-50 text-xs text-slate-500 font-medium">
-        Loading workspace...
-      </div>
-    );
+    return <LoadingScreen fullScreen={true} label="Loading workspace..." />;
   }
 
   const contextValue = {

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function CreatorSingleTicketPage() {
   const params = useParams();
@@ -158,9 +159,7 @@ export default function CreatorSingleTicketPage() {
 
   if (loading) {
     return (
-      <div className="py-8 text-center text-xs text-slate-500 font-medium">
-        Loading ticket thread...
-      </div>
+      <LoadingScreen fullScreen={false} label="Loading ticket thread..." />
     );
   }
 

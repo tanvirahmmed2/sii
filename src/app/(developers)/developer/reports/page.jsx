@@ -3,6 +3,7 @@
 import { useState, useEffect, useContext, useCallback } from 'react';
 import ReportForm from 'src/component/marketing/developer/forms/ReportForm';
 import { Context } from 'src/component/helper/Context';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function AdminReportsPage() {
   const { user } = useContext(Context);
@@ -382,7 +383,9 @@ export default function AdminReportsPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300 font-normal">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">Loading moderation reports...</td>
+                  <td colSpan={8} className="py-12 text-center">
+                    <LoadingScreen fullScreen={false} size="sm" label="Loading moderation reports..." />
+                  </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
@@ -465,7 +468,9 @@ export default function AdminReportsPage() {
         {/* Mobile Cards View */}
         <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
           {loading ? (
-            <div className="py-10 text-center text-slate-400 text-xs">Loading reports...</div>
+            <div className="py-10">
+              <LoadingScreen fullScreen={false} size="sm" label="Loading reports..." />
+            </div>
           ) : filtered.length === 0 ? (
             <div className="py-10 text-center text-slate-400 text-xs">No reports found.</div>
           ) : (

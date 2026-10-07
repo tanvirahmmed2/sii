@@ -12,6 +12,7 @@ import {
   BiCalendar,
   BiLinkExternal,
 } from 'react-icons/bi';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 function extractYoutubeId(url) {
   if (!url) return null;
@@ -153,23 +154,10 @@ export default function TutorialsPage() {
           </div>
         )}
 
-        {/* Loading Skeleton */}
+        {/* Loading State */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-8">
-            {[1, 2, 3, 4, 5, 6].map((idx) => (
-              <div
-                key={idx}
-                className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs animate-pulse space-y-4"
-              >
-                <div className="aspect-16/10 bg-slate-100 rounded-2xl" />
-                <div className="h-4 bg-slate-200 rounded-md w-3/4" />
-                <div className="space-y-2 pt-2">
-                  <div className="h-3 bg-slate-100 rounded-md w-full" />
-                  <div className="h-3 bg-slate-100 rounded-md w-5/6" />
-                </div>
-                <div className="h-4 bg-slate-100 rounded-md w-1/3 pt-2" />
-              </div>
-            ))}
+          <div className="pt-8">
+            <LoadingScreen fullScreen={false} label="Loading tutorials..." />
           </div>
         ) : filteredTutorials.length === 0 ? (
           /* Empty State */

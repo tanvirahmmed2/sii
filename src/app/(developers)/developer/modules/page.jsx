@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useContext, useMemo } from 'react';
 import { Context } from 'src/component/helper/Context';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function AdminDatabaseModulesPage() {
   const { user } = useContext(Context) || {};
@@ -238,8 +239,8 @@ export default function AdminDatabaseModulesPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-16 text-center text-slate-400">
-                    <span className="text-xs font-normal">Querying PostgreSQL catalog...</span>
+                  <td colSpan={7} className="py-16 text-center">
+                    <LoadingScreen fullScreen={false} size="sm" label="Querying PostgreSQL catalog..." />
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
@@ -389,8 +390,8 @@ export default function AdminDatabaseModulesPage() {
 
             <div className="p-4 overflow-y-auto flex-1">
               {loadingSchema ? (
-                <div className="py-12 text-center text-slate-400">
-                  <span className="text-xs font-normal">Reading columns and records from PostgreSQL...</span>
+                <div className="py-12">
+                  <LoadingScreen fullScreen={false} size="sm" label="Reading columns and records from PostgreSQL..." />
                 </div>
               ) : inspectTab === 'schema' ? (
                 inspectData?.columns && inspectData.columns.length > 0 ? (

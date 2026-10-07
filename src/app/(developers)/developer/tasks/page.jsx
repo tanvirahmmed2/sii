@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useContext } from 'react';
 import { Context } from 'src/component/helper/Context';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function DeveloperTasksPage() {
   const { user } = useContext(Context);
@@ -277,7 +278,9 @@ export default function DeveloperTasksPage() {
       </div>
 
       {/* Main View: Kanban Board */}
-      {viewMode === 'board' ? (
+      {loading ? (
+        <LoadingScreen fullScreen={false} label="Loading developer tasks..." />
+      ) : viewMode === 'board' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {COLUMNS.map((col) => {
             const columnTasks = tasks.filter((t) => t.status === col.key);

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState([]);
@@ -99,8 +100,8 @@ export default function AdminUsersPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-slate-400 text-xs font-normal">
-                    Loading users...
+                  <td colSpan={5} className="py-12 text-center">
+                    <LoadingScreen fullScreen={false} size="sm" label="Loading users..." />
                   </td>
                 </tr>
               ) : users.length === 0 ? (

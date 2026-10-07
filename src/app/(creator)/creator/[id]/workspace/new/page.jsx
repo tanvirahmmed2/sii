@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useCreator } from '../../layout';
 
@@ -28,22 +28,32 @@ const PRESET_COLORS = [
 export default function CreateWebsitePage() {
   const router = useRouter();
   const routeParams = useParams();
+  const searchParams = useSearchParams();
+  const querySubId = searchParams.get('subscriptionId');
+
   const {
     creatorId: contextCreatorId,
     creator,
     websites = [],
+    subscriptions = [],
     activeSubscription,
+    activeSubscriptions = [],
     stats = {},
     refetch,
   } = useCreator();
 
   const creatorId = routeParams?.id || contextCreatorId;
 
+  const activeSubs = activeSubscriptions.length > 0
+    ? activeSubscriptions
+    : subscriptions.filter((s) => s.is_active || ['active', 'completed'].includes(String(s.status || '').toLowerCase()));
+
   const [baseDomain, setBaseDomain] = useState(
     typeof window !== 'undefined' && window.location?.host ? window.location.host : 'localhost:3000'
   );
 
   // Form states
+  const [selectedSubscriptionId, setSelectedSubscriptionId] = useState(querySubId || '');
   const [name, setName] = useState('');
   const [institutionType, setInstitutionType] = useState('school');
   const [eeinNumber, setEeinNumber] = useState('');
@@ -55,6 +65,21 @@ export default function CreateWebsitePage() {
   const [address, setAddress] = useState('');
   const [primaryColor, setPrimaryColor] = useState('#1e40af');
   const [theme, setTheme] = useState('default');
+
+  // Auto-select subscription from query param or first available
+  useEffect(() => {
+    if (querySubId) {
+      setSelectedSubscriptionId(querySubId);
+    } else if (activeSubs.length > 0 && !selectedSubscriptionId) {
+      const preferred = activeSubs.find((s) => {
+        const allowed = Number(s.websitesAllowed ?? s.max_websites ?? 1);
+        const used = Number(s.websitesUsed ?? s.websites_count ?? 0);
+        return allowed - used > 0;
+      });
+      if (preferred) setSelectedSubscriptionId(String(preferred.id));
+      else setSelectedSubscriptionId(String(activeSubs[0].id));
+    }
+  }, [querySubId, activeSubs, selectedSubscriptionId]);
 
   // Real-time Subdomain Verification
   const [domainStatus, setDomainStatus] = useState({
@@ -168,14 +193,40 @@ export default function CreateWebsitePage() {
     return () => clearTimeout(timeout);
   }, [subdomain, baseDomain]);
 
-  const maxWebsites = stats?.maxWebsites || activeSubscription?.max_websites || activeSubscription?.max_portfolios || 1;
-  const isQuotaReached = websites.length >= maxWebsites && activeSubscription;
+  const selectedSub = activeSubs.find((s) => String(s.id) === String(selectedSubscriptionId)) || (activeSubs.length > 0 ? activeSubs[0] : null);
+  const selectedSubAllowed = Number(selectedSub?.websitesAllowed ?? selectedSub?.max_websites ?? selectedSub?.max_portfolios ?? 1);
+  const selectedSubUsed = Number(selectedSub?.websitesUsed ?? selectedSub?.websites_count ?? 0);
+  const isSelectedSubQuotaReached = selectedSub ? selectedSubUsed >= selectedSubAllowed : true;
+  const noActiveSubs = activeSubs.length === 0;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setCreating(true);
     setCreateError('');
     setCreateSuccess('');
+
+    if (noActiveSubs) {
+      setCreateError('You do not have an active subscription. Please purchase a package plan first.');
+      setCreating(false);
+      return;
+    }
+
+    if (!selectedSubscriptionId && selectedSub?.id) {
+      setSelectedSubscriptionId(String(selectedSub.id));
+    }
+
+    const currentSubId = selectedSubscriptionId || selectedSub?.id;
+    if (!currentSubId) {
+      setCreateError('Please select a subscription for this website.');
+      setCreating(false);
+      return;
+    }
+
+    if (isSelectedSubQuotaReached) {
+      setCreateError(`The selected package (${selectedSub?.package_name || 'plan'}) has reached its limit of ${selectedSubAllowed} website(s). Please choose another subscription or upgrade.`);
+      setCreating(false);
+      return;
+    }
 
     const cleanSubdomain = subdomain.trim().toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
     if (!cleanSubdomain || cleanSubdomain.length < 3) {
@@ -197,6 +248,7 @@ export default function CreateWebsitePage() {
         body: JSON.stringify({
           action: 'create_website',
           creatorId: Number(creatorId),
+          subscriptionId: Number(currentSubId),
           name: name.trim(),
           institutionType: institutionType,
           eeinNumber: eeinNumber.trim(),
@@ -241,7 +293,7 @@ export default function CreateWebsitePage() {
           Back to Websites Workspace
         </Link>
         <span className="text-[11px] font-mono text-slate-500">
-          Provisioned: {websites.length} / {maxWebsites}
+          {selectedSub ? `Plan Quota: ${selectedSubUsed} / ${selectedSubAllowed} Websites` : `Websites: ${websites.length}`}
         </span>
       </div>
 
@@ -260,22 +312,43 @@ export default function CreateWebsitePage() {
           </p>
         </div>
 
-        {/* Quota Warning if Exceeded */}
-        {isQuotaReached && (
+        {/* Warning if No Active Subscriptions */}
+        {noActiveSubs && (
+          <div className="m-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 flex items-start gap-3">
+            <svg className="w-5 h-5 text-red-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div className="text-xs">
+              <p className="font-bold">No Active Subscription Found</p>
+              <p className="mt-0.5">
+                You must have an active subscription package before you can provision an institution website.
+              </p>
+              <Link
+                href={`/creator/${creatorId}/subscription`}
+                className="mt-2 inline-flex items-center gap-1 font-semibold text-blue-700 hover:underline"
+              >
+                Browse & Purchase Subscription Plans &rarr;
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Quota Warning if Selected Subscription is Full */}
+        {!noActiveSubs && isSelectedSubQuotaReached && (
           <div className="m-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 flex items-start gap-3">
             <svg className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <div className="text-xs">
-              <p className="font-bold">Subscription Allocation Limit Reached</p>
+              <p className="font-bold">Package Website Limit Reached</p>
               <p className="mt-0.5">
-                Your current plan allows up to {maxWebsites} website(s). You may upgrade your package to create more websites.
+                Selected subscription <strong>{selectedSub?.package_name || selectedSub?.name}</strong> has reached its maximum quota of {selectedSubAllowed} website(s). Please choose another active subscription below or upgrade.
               </p>
               <Link
                 href={`/creator/${creatorId}/subscription`}
                 className="mt-2 inline-block font-semibold text-blue-700 hover:underline"
               >
-                Upgrade Package Plan &rarr;
+                Upgrade or Purchase New Plan &rarr;
               </Link>
             </div>
           </div>
@@ -302,10 +375,113 @@ export default function CreateWebsitePage() {
             </div>
           )}
 
-          {/* Section 1: Institution Identity */}
+          {/* Section 1: Subscription Selection */}
+          <div className="space-y-4">
+            <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">1. Select Subscription Package</h2>
+                <p className="text-[11px] text-slate-500">
+                  Select which active package subscription this website will be linked to.
+                </p>
+              </div>
+              <Link
+                href={`/creator/${creatorId}/subscription`}
+                className="text-[11px] font-semibold text-blue-600 hover:text-blue-800"
+              >
+                Manage Plans &rarr;
+              </Link>
+            </div>
+
+            {activeSubs.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {activeSubs.map((sub) => {
+                  const allowed = Number(sub.websitesAllowed ?? sub.max_websites ?? sub.max_portfolios ?? 1);
+                  const used = Number(sub.websitesUsed ?? sub.websites_count ?? 0);
+                  const isFull = used >= allowed;
+                  const isSelected = String(selectedSubscriptionId) === String(sub.id);
+
+                  return (
+                    <div
+                      key={sub.id}
+                      onClick={() => {
+                        if (!isFull) {
+                          setSelectedSubscriptionId(String(sub.id));
+                        }
+                      }}
+                      className={`relative p-4 rounded-xl border transition-all text-left ${
+                        isFull
+                          ? 'border-slate-200 bg-slate-50/70 opacity-60 cursor-not-allowed'
+                          : isSelected
+                          ? 'border-blue-600 bg-blue-50/40 ring-2 ring-blue-500/20 shadow-sm cursor-pointer'
+                          : 'border-slate-200 hover:border-slate-300 bg-white cursor-pointer'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name="subscriptionSelect"
+                            value={sub.id}
+                            checked={isSelected}
+                            disabled={isFull}
+                            onChange={() => setSelectedSubscriptionId(String(sub.id))}
+                            className="text-blue-600 focus:ring-blue-500"
+                          />
+                          <div>
+                            <h3 className="font-bold text-slate-900 text-xs">
+                              {sub.package_name || sub.name || `Package #${sub.package_id}`}
+                            </h3>
+                            <span className="text-[10px] text-slate-500 font-medium">
+                              Sub #{sub.id} &bull; {sub.billing_cycle || sub.interval || 'Monthly'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {isFull ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                            Limit Reached
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            Available ({allowed - used} left)
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Quota Progress */}
+                      <div className="mt-3 space-y-1">
+                        <div className="flex justify-between text-[10px] text-slate-600 font-medium">
+                          <span>Websites Quota</span>
+                          <span className="font-mono">{used} / {allowed}</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${isFull ? 'bg-amber-500' : 'bg-blue-600'}`}
+                            style={{ width: `${Math.min(100, Math.round((used / allowed) * 100))}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Package Limits */}
+                      <div className="mt-3 pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-[10px] text-slate-500">
+                        <span>Teachers: <strong className="text-slate-700">{sub.max_teachers ?? 'Unlimited'}</strong></span>
+                        <span>Students: <strong className="text-slate-700">{sub.max_students ?? 'Unlimited'}</strong></span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl border border-dashed border-slate-200 text-center py-6">
+                <p className="text-slate-500 text-xs">No active subscriptions available to link.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Section 2: Institution Identity */}
           <div className="space-y-4">
             <div className="border-b border-slate-100 pb-2">
-              <h2 className="text-sm font-bold text-slate-900">1. Institution Identity</h2>
+              <h2 className="text-sm font-bold text-slate-900">2. Institution Identity</h2>
               <p className="text-[11px] text-slate-500">Provide official educational institution details.</p>
             </div>
 
@@ -367,11 +543,11 @@ export default function CreateWebsitePage() {
             </div>
           </div>
 
-          {/* Section 2: Subdomain Selection (CORE USER FEATURE) */}
+          {/* Section 3: Subdomain Selection (CORE USER FEATURE) */}
           <div className="space-y-4">
             <div className="border-b border-slate-100 pb-2">
               <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                2. Live Subdomain Routing
+                3. Live Subdomain Routing
                 <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">
                   Live Check
                 </span>
@@ -470,10 +646,10 @@ export default function CreateWebsitePage() {
             </div>
           </div>
 
-          {/* Section 3: Contact & Campus Info */}
+          {/* Section 4: Contact & Campus Info */}
           <div className="space-y-4">
             <div className="border-b border-slate-100 pb-2">
-              <h2 className="text-sm font-bold text-slate-900">3. Contact & Campus Location</h2>
+              <h2 className="text-sm font-bold text-slate-900">4. Contact & Campus Location</h2>
               <p className="text-[11px] text-slate-500">Official contact credentials for institutional notices and enquiries.</p>
             </div>
 
@@ -513,10 +689,10 @@ export default function CreateWebsitePage() {
             </div>
           </div>
 
-          {/* Section 4: Visual Branding & Presets */}
+          {/* Section 5: Visual Branding & Presets */}
           <div className="space-y-4">
             <div className="border-b border-slate-100 pb-2">
-              <h2 className="text-sm font-bold text-slate-900">4. Branding & Visual Theme</h2>
+              <h2 className="text-sm font-bold text-slate-900">5. Branding & Visual Theme</h2>
               <p className="text-[11px] text-slate-500">Select institutional colors and styling palette.</p>
             </div>
 
@@ -564,7 +740,7 @@ export default function CreateWebsitePage() {
 
             <button
               type="submit"
-              disabled={creating || isQuotaReached || domainStatus.state === 'taken' || domainStatus.state === 'invalid'}
+              disabled={creating || noActiveSubs || isSelectedSubQuotaReached || domainStatus.state === 'taken' || domainStatus.state === 'invalid'}
               className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {creating ? (

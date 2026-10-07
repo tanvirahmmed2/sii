@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import LeadForm from 'src/component/marketing/developer/forms/LeadForm';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function AdminLeadsPage() {
   const [leads, setLeads] = useState([]);
@@ -141,7 +142,9 @@ export default function AdminLeadsPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400 text-xs font-normal">Loading leads...</td>
+                  <td colSpan={8} className="py-12 text-center">
+                    <LoadingScreen fullScreen={false} size="sm" label="Loading leads..." />
+                  </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>

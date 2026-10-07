@@ -4,6 +4,7 @@ import { useState, useEffect, useContext, useCallback, use } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function ContactDetailPage({ params }) {
   const router = useRouter();
@@ -183,12 +184,7 @@ export default function ContactDetailPage({ params }) {
   };
 
   if (loading) {
-    return (
-      <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 text-center text-slate-500">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">Loading Inquiry Details...</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400">Retrieving communication records and sender history.</p>
-      </div>
-    );
+    return <LoadingScreen fullScreen={false} label="Loading inquiry details..." />;
   }
 
   if (error || !contact) {
