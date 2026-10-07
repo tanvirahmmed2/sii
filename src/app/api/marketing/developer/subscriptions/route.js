@@ -237,32 +237,42 @@ export async function POST(request) {
     const payment = payRes.rows[0];
 
     // 8. Insert or Update Subscriptions Record
+    const websiteIdInput = data.website_id ? Number(data.website_id) : null;
     let subscription = null;
     try {
       const subRes = await queryDb(
         `INSERT INTO subscriptions (
-          creator_id, package_id, purchase_id, status, billing_cycle,
+          creator_id, package_id, website_id, purchase_id, status, billing_cycle,
           current_period_start, current_period_end, cancel_at_period_end
         ) VALUES (
-          $1, $2, $3, $4, $5,
-          $6, $7, FALSE
+          $1, $2, $3, $4, $5, $6,
+          $7, $8, FALSE
         )
         RETURNING *`,
-        [creatorId, packageId, purchase.id, subscriptionStatus, billingCycle, periodStart, periodEnd]
+        [creatorId, packageId, websiteIdInput, purchase.id, subscriptionStatus, billingCycle, periodStart, periodEnd]
       );
       subscription = subRes.rows[0];
     } catch (subErr) {
       console.warn('Notice inserting subscription record:', subErr.message);
     }
 
-    // 9. If paid, update website subscription expiration if websites exist
-    if (isPaid) {
-      await queryDb(
-        `UPDATE websites
-         SET subscription_expires_at = $1, package_id = $2, updated_at = CURRENT_TIMESTAMP
-         WHERE creator_id = $3`,
-        [periodEnd, packageId, creatorId]
-      ).catch(() => {});
+    // 9. Update website subscription expiration and link if website exists
+    if (subscription?.id) {
+      if (websiteIdInput) {
+        await queryDb(
+          `UPDATE websites
+           SET subscription_id = $1, subscription_expires_at = $2, updated_at = CURRENT_TIMESTAMP
+           WHERE id = $3`,
+          [subscription.id, periodEnd, websiteIdInput]
+        ).catch(() => {});
+      } else if (isPaid) {
+        await queryDb(
+          `UPDATE websites
+           SET subscription_expires_at = $1, subscription_id = COALESCE(subscription_id, $2), updated_at = CURRENT_TIMESTAMP
+           WHERE creator_id = $3`,
+          [periodEnd, subscription.id, creatorId]
+        ).catch(() => {});
+      }
     }
 
     return NextResponse.json({

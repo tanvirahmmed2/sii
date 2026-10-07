@@ -13,10 +13,14 @@ export async function GET(request) {
              (CASE WHEN w.status = 'active' AND NOT w.is_maintenance_mode THEN true ELSE false END) AS is_published,
              c.name AS creator_name, 
              c.email AS creator_email,
-             p.name AS package_name
+             p.name AS package_name,
+             p.slug AS package_slug,
+             s.status AS subscription_status,
+             s.current_period_end AS subscription_period_end
       FROM websites w
       LEFT JOIN creators c ON w.creator_id = c.id
-      LEFT JOIN packages p ON w.package_id = p.id
+      LEFT JOIN subscriptions s ON w.subscription_id = s.id
+      LEFT JOIN packages p ON s.package_id = p.id
       ORDER BY w.id DESC
     `).catch(() => ({ rows: [] }));
     return NextResponse.json({ success: true, table: 'websites', records: res.rows, websites: res.rows });
@@ -35,6 +39,7 @@ export async function POST(request) {
     const body = await request.json();
     const rawData = body.data || body;
     const data = { ...rawData };
+    delete data.package_id; // package_id dropped from websites; derived via subscription
 
     if (!data.slug) {
       data.slug = (data.subdomain || data.name || 'site')
@@ -60,9 +65,9 @@ export async function POST(request) {
     }
 
     const allowedKeys = [
-      'creator_id', 'package_id', 'name', 'slug', 'subdomain', 'custom_domain',
+      'creator_id', 'subscription_id', 'name', 'slug', 'subdomain', 'custom_domain',
       'custom_domain_verified', 'institution_type', 'eiin_number', 'status',
-      'theme', 'primary_color', 'logo', 'logo_id', 'favicon', 'favicon_id',
+      'theme', 'primary_color', 'secondary_color', 'logo', 'logo_id', 'favicon', 'favicon_id',
       'contact_email', 'contact_phone', 'address', 'subscription_expires_at',
       'storage_used_mb', 'is_maintenance_mode'
     ];
@@ -75,6 +80,16 @@ export async function POST(request) {
       values
     );
     const row = res.rows[0];
+
+    // Link subscription bidirectionally if provided
+    if (row?.id && data.subscription_id) {
+      const subId = Number(data.subscription_id);
+      await queryDb(
+        `UPDATE subscriptions SET website_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+        [row.id, subId]
+      ).catch(() => {});
+    }
+
     return NextResponse.json({
       success: true,
       record: {
@@ -100,6 +115,7 @@ export async function PUT(request) {
     
     const rawData = body.data || body;
     const data = { ...rawData };
+    delete data.package_id; // package_id removed from websites table
 
     if (data.is_published !== undefined) {
       const isPub = Boolean(data.is_published);
@@ -114,10 +130,20 @@ export async function PUT(request) {
       }
     }
 
+    // Bidirectional sync if subscription_id is updated
+    if (data.subscription_id !== undefined) {
+      const targetSubId = data.subscription_id ? Number(data.subscription_id) : null;
+      if (targetSubId) {
+        await queryDb(`UPDATE subscriptions SET website_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [id, targetSubId]).catch(() => {});
+      } else {
+        await queryDb(`UPDATE subscriptions SET website_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE website_id = $1`, [id]).catch(() => {});
+      }
+    }
+
     const allowedKeys = [
-      'package_id', 'name', 'slug', 'subdomain', 'custom_domain',
+      'creator_id', 'subscription_id', 'name', 'slug', 'subdomain', 'custom_domain',
       'custom_domain_verified', 'institution_type', 'eiin_number', 'status',
-      'theme', 'primary_color', 'logo', 'logo_id', 'favicon', 'favicon_id',
+      'theme', 'primary_color', 'secondary_color', 'logo', 'logo_id', 'favicon', 'favicon_id',
       'contact_email', 'contact_phone', 'address', 'subscription_expires_at',
       'storage_used_mb', 'is_maintenance_mode'
     ];

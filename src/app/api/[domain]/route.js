@@ -132,6 +132,10 @@ export async function PUT(request, context) {
       updates.push(`primary_color = $${idx++}`);
       values.push(body.primary_color);
     }
+    if (body.secondary_color !== undefined) {
+      updates.push(`secondary_color = $${idx++}`);
+      values.push(body.secondary_color);
+    }
     if (body.theme !== undefined) {
       updates.push(`theme = $${idx++}`);
       values.push(body.theme);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import SubscriptionForm from 'src/component/marketing/developer/forms/SubscriptionForm';
 import LoadingScreen from 'src/component/common/LoadingScreen';
 
@@ -13,9 +14,9 @@ export default function AdminSubscriptionsPage() {
   const [deletingId, setDeletingId] = useState(null);
   const [feedback, setFeedback] = useState(null);
 
-  const fetchSubs = async () => {
+  const fetchSubs = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const res = await fetch('/api/marketing/developer/subscriptions');
       const data = await res.json();
       if (data.success) {
@@ -29,7 +30,26 @@ export default function AdminSubscriptionsPage() {
   };
 
   useEffect(() => {
-    fetchSubs();
+    let ignore = false;
+    fetch('/api/marketing/developer/subscriptions')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!ignore) {
+          if (data.success) {
+            setSubs(data.records || data.subscriptions || []);
+          }
+          setLoading(false);
+        }
+      })
+      .catch((e) => {
+        if (!ignore) {
+          console.error('Failed to load subscriptions:', e);
+          setLoading(false);
+        }
+      });
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const showNotification = (msg) => {
@@ -234,8 +254,13 @@ export default function AdminSubscriptionsPage() {
 
                   return (
                     <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="py-2.5 font-mono font-medium text-slate-400">
-                        #{s.id}
+                      <td className="py-2.5 font-mono font-medium">
+                        <Link
+                          href={`/developer/subscriptions/${s.subscription_id || s.id}`}
+                          className="text-slate-900 dark:text-white hover:underline font-semibold"
+                        >
+                          #{s.id}
+                        </Link>
                         {s.purchase_code && (
                           <div className="text-[10px] text-slate-500 font-mono">{s.purchase_code}</div>
                         )}
@@ -330,14 +355,22 @@ export default function AdminSubscriptionsPage() {
                       </td>
 
                       <td className="py-2.5 text-right whitespace-nowrap">
-                        <button
-                          type="button"
-                          disabled={deletingId === s.id}
-                          onClick={() => handleDelete(s.id, s.creator_email)}
-                          className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium transition-colors cursor-pointer"
-                        >
-                          {deletingId === s.id ? 'Deleting...' : 'Delete'}
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Link
+                            href={`/developer/subscriptions/${s.subscription_id || s.id}`}
+                            className="px-2 py-1 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium transition-colors"
+                          >
+                            Inspect
+                          </Link>
+                          <button
+                            type="button"
+                            disabled={deletingId === s.id}
+                            onClick={() => handleDelete(s.id, s.creator_email)}
+                            className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium transition-colors cursor-pointer"
+                          >
+                            {deletingId === s.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

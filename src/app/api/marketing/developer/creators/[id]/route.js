@@ -59,7 +59,7 @@ export async function GET(request, { params }) {
       ).catch(() => ({ rows: [] })),
 
       queryDb(
-        `SELECT id, creator_id, name, slug, subdomain, custom_domain, theme, primary_color,
+        `SELECT id, creator_id, name, slug, subdomain, custom_domain, theme, primary_color, secondary_color,
                 status, storage_used_mb,
                 (CASE WHEN status = 'active' AND NOT is_maintenance_mode THEN true ELSE false END) AS is_published,
                 created_at, updated_at

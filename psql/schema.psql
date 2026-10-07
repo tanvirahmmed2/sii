@@ -308,7 +308,7 @@ CREATE TABLE IF NOT EXISTS subscribers (
 CREATE TABLE IF NOT EXISTS websites (
     id BIGSERIAL PRIMARY KEY,
     creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
-    package_id BIGINT REFERENCES packages(id) ON DELETE SET NULL,
+    subscription_id BIGINT,
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(100) UNIQUE NOT NULL,
     subdomain VARCHAR(100) UNIQUE NOT NULL,
@@ -319,6 +319,7 @@ CREATE TABLE IF NOT EXISTS websites (
     status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'pending', 'suspended', 'expired', 'archived')),
     theme VARCHAR(100) DEFAULT 'default',
     primary_color VARCHAR(50) DEFAULT '#1e40af',
+    secondary_color VARCHAR(50) DEFAULT '#0ea5e9',
     logo TEXT,
     logo_id VARCHAR(255),
     favicon TEXT,
@@ -330,11 +331,8 @@ CREATE TABLE IF NOT EXISTS websites (
     storage_used_mb INT DEFAULT 0,
     is_maintenance_mode BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
-
--- Idempotent column migrations for websites table
-ALTER TABLE websites ADD COLUMN IF NOT EXISTS subscription_id BIGINT REFERENCES subscriptions(id) ON DELETE SET NULL;
-CREATE INDEX IF NOT EXISTS idx_websites_subscription_id ON websites(subscription_id);
 
 DROP TRIGGER IF EXISTS update_websites_updated_at ON websites;
 CREATE TRIGGER update_websites_updated_at
@@ -391,7 +389,7 @@ CREATE TABLE IF NOT EXISTS payments (
     transaction_id VARCHAR(100) UNIQUE NOT NULL,
     amount DECIMAL(12, 2) NOT NULL CHECK (amount >= 0.00),
     currency VARCHAR(10) NOT NULL DEFAULT 'USD',
-    payment_method VARCHAR(100) NOT NULL DEFAULT 'Stripe',
+    payment_method VARCHAR(100) NOT NULL DEFAULT 'Paddle',
     payment_gateway VARCHAR(100),
     gateway_fee DECIMAL(10, 2) DEFAULT 0.00 CHECK (gateway_fee >= 0.00),
     gateway_response JSONB,
@@ -449,6 +447,20 @@ DROP TRIGGER IF EXISTS update_subscriptions_updated_at ON subscriptions;
 CREATE TRIGGER update_subscriptions_updated_at
     BEFORE UPDATE ON subscriptions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Foreign key link connecting websites.subscription_id to subscriptions(id)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints 
+        WHERE constraint_name = 'fk_websites_subscription' AND table_name = 'websites'
+    ) THEN
+        ALTER TABLE websites 
+        ADD CONSTRAINT fk_websites_subscription 
+        FOREIGN KEY (subscription_id) REFERENCES subscriptions(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_websites_subscription_id ON websites(subscription_id);
 
 -- ----------------------------------------------------------------------------
 -- 17. BLOGS TABLE (SaaS Platform Company Blog & Educational Articles)
@@ -791,7 +803,7 @@ CREATE TABLE IF NOT EXISTS chat_images (
 
 -- Core Platform Indexes
 CREATE INDEX IF NOT EXISTS idx_websites_creator ON websites(creator_id);
-CREATE INDEX IF NOT EXISTS idx_websites_package ON websites(package_id);
+CREATE INDEX IF NOT EXISTS idx_websites_subscription ON websites(subscription_id);
 CREATE INDEX IF NOT EXISTS idx_websites_subdomain ON websites(subdomain);
 CREATE INDEX IF NOT EXISTS idx_websites_custom_domain ON websites(custom_domain);
 CREATE INDEX IF NOT EXISTS idx_purchases_creator ON purchases(creator_id);

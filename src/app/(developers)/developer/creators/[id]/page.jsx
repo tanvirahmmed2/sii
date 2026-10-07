@@ -673,7 +673,7 @@ export default function CreatorDetailsPage({ params }) {
 
                       <td className="py-3.5 px-4 text-right">
                         <Link
-                          href={`/developer/websites?id=${w.id}`}
+                          href={`/developer/websites/${w.id}`}
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-normal transition-colors"
                         >
                           <span>Manage Site</span>
@@ -722,8 +722,13 @@ export default function CreatorDetailsPage({ params }) {
                 ) : (
                   subscriptions.map((s) => (
                     <tr key={s.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-medium text-slate-800">
-                        #{s.id}
+                      <td className="py-3.5 px-4 font-mono font-medium">
+                        <Link
+                          href={`/developer/subscriptions/${s.id}`}
+                          className="text-slate-800 hover:text-slate-900 hover:underline font-semibold"
+                        >
+                          #{s.id}
+                        </Link>
                       </td>
 
                       <td className="py-3.5 px-4">

@@ -35,6 +35,7 @@ export async function GET(request) {
               w.subdomain, 
               w.custom_domain, 
               w.primary_color,
+              w.secondary_color,
               w.theme,
               (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published
        FROM websites w
@@ -85,6 +86,10 @@ export async function POST(request) {
     if (body.primary_color) {
       websiteUpdates.push(`primary_color = $${wIdx++}`);
       websiteValues.push(body.primary_color);
+    }
+    if (body.secondary_color) {
+      websiteUpdates.push(`secondary_color = $${wIdx++}`);
+      websiteValues.push(body.secondary_color);
     }
     if (body.theme) {
       websiteUpdates.push(`theme = $${wIdx++}`);

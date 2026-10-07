@@ -74,7 +74,8 @@ export async function GET(request) {
        FROM reviews r
        LEFT JOIN creators c ON r.creator_id = c.id
        LEFT JOIN websites w ON r.website_id = w.id
-       LEFT JOIN packages p ON w.package_id = p.id
+       LEFT JOIN subscriptions sub ON w.subscription_id = sub.id
+       LEFT JOIN packages p ON sub.package_id = p.id
        ${whereClause}
        ORDER BY r.is_featured DESC, r.created_at DESC, r.id DESC
     `;

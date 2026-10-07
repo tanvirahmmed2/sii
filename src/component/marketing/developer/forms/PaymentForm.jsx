@@ -156,13 +156,15 @@ export default function PaymentForm({ onSuccess, onCancel }) {
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Method / Gateway</label>
             <select
               value={formData.payment_method}
-              onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+              onChange={(e) => {
+                const nextMethod = e.target.value;
+                const nextCurr = nextMethod === 'BKASH' ? 'BDT' : 'USD';
+                setFormData({ ...formData, payment_method: nextMethod, currency: nextCurr });
+              }}
               className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
             >
-              <option value="PADDLE_CARD">Paddle (USD)</option>
               <option value="BKASH">bKash (BDT)</option>
-              <option value="STRIPE_CARD">Credit Card</option>
-              <option value="BANK_TRANSFER">Bank Wire</option>
+              <option value="PADDLE_CARD">Paddle (USD)</option>
             </select>
           </div>
 

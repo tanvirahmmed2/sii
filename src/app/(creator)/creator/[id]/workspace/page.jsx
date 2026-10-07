@@ -60,6 +60,7 @@ function WorkspaceContent() {
   const [address, setAddress] = useState('');
   const [tagline, setTagline] = useState('');
   const [primaryColor, setPrimaryColor] = useState('#1e40af');
+  const [secondaryColor, setSecondaryColor] = useState('#0ea5e9');
 
   // Realtime Domain Availability State
   const [domainTouched, setDomainTouched] = useState(false);
@@ -91,6 +92,7 @@ function WorkspaceContent() {
   const [editCustomDomain, setEditCustomDomain] = useState('');
   const [editAddress, setEditAddress] = useState('');
   const [editPrimaryColor, setEditPrimaryColor] = useState('#1e40af');
+  const [editSecondaryColor, setEditSecondaryColor] = useState('#0ea5e9');
   const [editIsPublished, setEditIsPublished] = useState(true);
   const [editDomainStatus, setEditDomainStatus] = useState({ state: 'idle', message: '' });
   const [updating, setUpdating] = useState(false);
@@ -268,6 +270,7 @@ function WorkspaceContent() {
     setEditEeinNumber(w.eiin_number || '');
     setEditAddress(w.address || '');
     setEditPrimaryColor(w.primary_color || '#1e40af');
+    setEditSecondaryColor(w.secondary_color || '#0ea5e9');
     setEditIsPublished(w.status === 'active' && !w.is_maintenance_mode);
     setUpdateMsg('');
     setUpdateErr('');
@@ -348,6 +351,7 @@ function WorkspaceContent() {
           address: address.trim(),
           tagline: tagline.trim(),
           primaryColor: primaryColor,
+          secondaryColor: secondaryColor,
         }),
       });
 
@@ -364,6 +368,8 @@ function WorkspaceContent() {
           setEeinNumber('');
           setAddress('');
           setTagline('');
+          setPrimaryColor('#1e40af');
+          setSecondaryColor('#0ea5e9');
         }, 1200);
       } else {
         setCreateError(data.error || 'Failed to create website.');
@@ -412,6 +418,7 @@ function WorkspaceContent() {
           subdomain: cleanDomain,
           address: editAddress.trim(),
           primary_color: editPrimaryColor,
+          secondary_color: editSecondaryColor,
           is_published: editIsPublished,
         }),
       });
@@ -686,10 +693,16 @@ function WorkspaceContent() {
                       {/* Name & Tagline */}
                       <td className="py-3 px-2">
                         <Link href={manageUrl} className="font-semibold text-slate-900 text-xs flex items-center gap-1.5 hover:text-blue-600">
-                          <span
-                            className="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0"
-                            style={{ backgroundColor: w.primary_color || '#1e40af' }}
-                          />
+                          <div className="flex items-center -space-x-1 flex-shrink-0" title={`Primary: ${w.primary_color || '#1e40af'} | Secondary: ${w.secondary_color || '#0ea5e9'}`}>
+                            <span
+                              className="w-2.5 h-2.5 rounded-full border border-white inline-block flex-shrink-0"
+                              style={{ backgroundColor: w.primary_color || '#1e40af' }}
+                            />
+                            <span
+                              className="w-2.5 h-2.5 rounded-full border border-white inline-block flex-shrink-0"
+                              style={{ backgroundColor: w.secondary_color || '#0ea5e9' }}
+                            />
+                          </div>
                           {w.name}
                         </Link>
                         {w.tagline && (
@@ -1117,27 +1130,46 @@ function WorkspaceContent() {
                 />
               </div>
 
-              {/* Theme & Brand Color */}
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1.5">
-                  Institutional Brand Theme Color
-                </label>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {PRESET_COLORS.map((c) => (
-                    <button
-                      key={c.hex}
-                      type="button"
-                      onClick={() => setPrimaryColor(c.hex)}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] transition-all cursor-pointer ${
-                        primaryColor === c.hex
-                          ? 'border-slate-800 bg-slate-900 text-white font-semibold'
-                          : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.hex }} />
-                      {c.name}
-                    </button>
-                  ))}
+              {/* Theme & Brand Colors */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1.5">
+                    Primary Brand Color
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={primaryColor}
+                      onChange={(e) => setPrimaryColor(e.target.value)}
+                      className="w-8 h-8 rounded border border-slate-300 p-0.5 cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={primaryColor}
+                      onChange={(e) => setPrimaryColor(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-xs font-mono text-slate-900"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1.5">
+                    Secondary Brand Color
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={secondaryColor}
+                      onChange={(e) => setSecondaryColor(e.target.value)}
+                      className="w-8 h-8 rounded border border-slate-300 p-0.5 cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={secondaryColor}
+                      onChange={(e) => setSecondaryColor(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1 text-xs font-mono text-slate-900"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -1336,6 +1368,48 @@ function WorkspaceContent() {
                   onChange={(e) => setEditAddress(e.target.value)}
                   className="w-full bg-slate-50/50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Primary Color
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={editPrimaryColor}
+                      onChange={(e) => setEditPrimaryColor(e.target.value)}
+                      className="w-8 h-8 rounded border border-slate-300 p-0.5 cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={editPrimaryColor}
+                      onChange={(e) => setEditPrimaryColor(e.target.value)}
+                      className="w-full bg-slate-50/50 border border-slate-300 rounded px-2.5 py-1 text-xs font-mono text-slate-900"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Secondary Color
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={editSecondaryColor}
+                      onChange={(e) => setEditSecondaryColor(e.target.value)}
+                      className="w-8 h-8 rounded border border-slate-300 p-0.5 cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={editSecondaryColor}
+                      onChange={(e) => setEditSecondaryColor(e.target.value)}
+                      className="w-full bg-slate-50/50 border border-slate-300 rounded px-2.5 py-1 text-xs font-mono text-slate-900"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 pt-1">

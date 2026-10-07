@@ -622,7 +622,7 @@ function SubscriptionContent() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <div>
                     <label className="block text-[11px] font-medium text-slate-700 mb-1">Primary Color</label>
                     <div className="flex items-center gap-2">
@@ -633,6 +633,19 @@ function SubscriptionContent() {
                         className="w-8 h-8 rounded border border-slate-300 p-0.5 cursor-pointer"
                       />
                       <span className="font-mono text-[11px]">{siteSettings?.primary_color}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1">Secondary Color</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={siteSettings?.secondary_color || '#0ea5e9'}
+                        onChange={(e) => setSiteSettings({ ...siteSettings, secondary_color: e.target.value })}
+                        className="w-8 h-8 rounded border border-slate-300 p-0.5 cursor-pointer"
+                      />
+                      <span className="font-mono text-[11px]">{siteSettings?.secondary_color}</span>
                     </div>
                   </div>
 

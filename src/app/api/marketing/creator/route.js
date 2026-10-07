@@ -99,7 +99,7 @@ export async function GET(request) {
                 pu.status AS purchase_status,
                 (SELECT pay.id FROM payments pay WHERE pay.purchase_id = s.purchase_id ORDER BY pay.id DESC LIMIT 1) AS payment_id,
                 (SELECT pay.transaction_id FROM payments pay WHERE pay.purchase_id = s.purchase_id ORDER BY pay.id DESC LIMIT 1) AS transaction_id,
-                (SELECT COUNT(*)::int FROM websites w WHERE w.creator_id = $1 AND (w.subscription_id = s.id OR (w.subscription_id IS NULL AND w.package_id = s.package_id))) AS websites_count
+                (SELECT COUNT(*)::int FROM websites w WHERE w.creator_id = $1 AND w.subscription_id = s.id) AS websites_count
          FROM subscriptions s
          JOIN packages p ON s.package_id = p.id
          LEFT JOIN purchases pu ON s.purchase_id = pu.id
@@ -144,11 +144,11 @@ export async function GET(request) {
       queryDb(
         `SELECT w.id, w.name, w.slug, w.subdomain, w.custom_domain, w.status,
                 (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published,
-                w.is_maintenance_mode, w.logo, w.theme, w.primary_color,
-                w.package_id, w.subscription_id,
+                w.is_maintenance_mode, w.logo, w.theme, w.primary_color, w.secondary_color,
+                w.subscription_id,
                 p.name AS package_name
          FROM websites w
-         LEFT JOIN packages p ON w.package_id = p.id
+         LEFT JOIN subscriptions sub ON w.subscription_id = sub.id LEFT JOIN packages p ON sub.package_id = p.id
          WHERE w.creator_id = $1
          ORDER BY w.id DESC LIMIT 50`,
         [creatorId]

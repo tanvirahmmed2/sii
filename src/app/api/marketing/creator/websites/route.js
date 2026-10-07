@@ -108,11 +108,12 @@ export async function GET(request) {
                 COALESCE(w.contact_phone, ws.contact_phone) AS contact_phone, 
                 COALESCE(w.address, ws.address) AS address,
                 w.primary_color,
+                w.secondary_color,
                 (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published
          FROM websites w
          LEFT JOIN website_settings ws ON w.id = ws.website_id
          LEFT JOIN subscriptions s ON w.subscription_id = s.id
-         LEFT JOIN packages p ON COALESCE(w.package_id, s.package_id) = p.id
+         LEFT JOIN packages p ON s.package_id = p.id
          WHERE w.creator_id = $1 
            AND (
              ($2 = true AND w.id = $3::bigint) OR
@@ -152,11 +153,12 @@ export async function GET(request) {
               COALESCE(w.contact_phone, ws.contact_phone) AS contact_phone, 
               COALESCE(w.address, ws.address) AS address,
               w.primary_color,
+              w.secondary_color,
               (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published
        FROM websites w
        LEFT JOIN website_settings ws ON w.id = ws.website_id
        LEFT JOIN subscriptions s ON w.subscription_id = s.id
-       LEFT JOIN packages p ON COALESCE(w.package_id, s.package_id) = p.id
+       LEFT JOIN packages p ON s.package_id = p.id
        WHERE w.creator_id = $1
        ORDER BY w.id DESC`,
       [creatorId]
@@ -303,7 +305,7 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       // Auto-select an active subscription that has remaining website creation capacity
       const allActiveSubsRes = await queryDb(
         `SELECT s.*, p.name AS package_name, COALESCE(p.max_websites, 1) AS max_websites, p.id AS pkg_id,
-                (SELECT COUNT(*)::int FROM websites w WHERE w.creator_id = $1 AND (w.subscription_id = s.id OR (w.subscription_id IS NULL AND w.package_id = s.package_id))) AS current_count
+                (SELECT COUNT(*)::int FROM websites w WHERE w.creator_id = $1 AND w.subscription_id = s.id) AS current_count
          FROM subscriptions s
          JOIN packages p ON s.package_id = p.id
          WHERE s.creator_id = $1
@@ -333,12 +335,12 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     }
 
     const primaryColor = body.primaryColor || body.primary_color || body.themeConfig?.primaryColor || '#1e40af';
+    const secondaryColor = body.secondaryColor || body.secondary_color || body.themeConfig?.secondaryColor || '#0ea5e9';
     const themeName = body.theme || body.themeConfig?.mode || 'default';
 
     const res = await queryDb(
       `INSERT INTO websites (
          creator_id,
-         package_id,
          subscription_id,
          name,
          slug,
@@ -350,6 +352,7 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
          status,
          theme,
          primary_color,
+         secondary_color,
          contact_email,
          contact_phone,
          address,
@@ -357,11 +360,10 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
          is_maintenance_mode,
          subscription_expires_at
        ) VALUES (
-         $1, $2, $3, $4, $5, $6, NULL, FALSE, $7, $8, 'active', $9, $10, $11, $12, $13, 15, FALSE, $14
+         $1, $2, $3, $4, $5, NULL, FALSE, $6, $7, 'active', $8, $9, $10, $11, $12, $13, 15, FALSE, $14
        ) RETURNING *`,
       [
         creatorId,
-        chosenSub.pkg_id || chosenSub.package_id || null,
         chosenSub.id,
         name,
         slug,
@@ -370,6 +372,7 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
         eiinNumber || null,
         themeName,
         primaryColor,
+        secondaryColor,
         contactEmail || null,
         contactPhone || null,
         address || null,
@@ -388,7 +391,7 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     ).catch(() => {});
 
     // Seed default settings, modules, roles & content
-    await seedWebsiteDefaults(newWebsite.id, newWebsite.name, { primaryColor, theme: themeName }, {
+    await seedWebsiteDefaults(newWebsite.id, newWebsite.name, { primaryColor, secondaryColor, theme: themeName }, {
       contactEmail,
       contactPhone,
       address,
@@ -502,6 +505,10 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
         updates.push(`primary_color = $${idx++}`);
         values.push(tc.primaryColor);
       }
+      if (tc.secondaryColor) {
+        updates.push(`secondary_color = $${idx++}`);
+        values.push(tc.secondaryColor);
+      }
       if (tc.mode || tc.theme) {
         updates.push(`theme = $${idx++}`);
         values.push(tc.mode || tc.theme || 'default');
@@ -511,6 +518,11 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     if (body.primary_color !== undefined || body.primaryColor !== undefined) {
       updates.push(`primary_color = $${idx++}`);
       values.push(body.primary_color || body.primaryColor);
+    }
+
+    if (body.secondary_color !== undefined || body.secondaryColor !== undefined) {
+      updates.push(`secondary_color = $${idx++}`);
+      values.push(body.secondary_color || body.secondaryColor);
     }
 
     if (body.theme !== undefined) {
@@ -647,6 +659,7 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
               COALESCE(w.contact_phone, ws.contact_phone) AS contact_phone, 
               COALESCE(w.address, ws.address) AS address,
               w.primary_color,
+              w.secondary_color,
               (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published
        FROM websites w
        LEFT JOIN website_settings ws ON w.id = ws.website_id
@@ -665,6 +678,7 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
         is_published: updated.status === 'active' && !updated.is_maintenance_mode,
         theme_config: {
           primaryColor: updated.primary_color || '#1e40af',
+          secondaryColor: updated.secondary_color || '#0ea5e9',
           mode: updated.theme || 'default',
         },
       },

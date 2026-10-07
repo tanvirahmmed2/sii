@@ -60,7 +60,7 @@ export async function GET(request) {
               pu.status AS purchase_status,
               (SELECT pay.id FROM payments pay WHERE pay.purchase_id = s.purchase_id ORDER BY pay.id DESC LIMIT 1) AS payment_id,
               (SELECT pay.transaction_id FROM payments pay WHERE pay.purchase_id = s.purchase_id ORDER BY pay.id DESC LIMIT 1) AS transaction_id,
-              (SELECT COUNT(*)::int FROM websites w WHERE w.creator_id = $1 AND (w.subscription_id = s.id OR (w.subscription_id IS NULL AND w.package_id = s.package_id))) AS websites_count,
+              (SELECT COUNT(*)::int FROM websites w WHERE w.creator_id = $1 AND w.subscription_id = s.id) AS websites_count,
               (
                 SELECT COALESCE(json_agg(json_build_object(
                   'id', w.id,
@@ -72,7 +72,7 @@ export async function GET(request) {
                   'created_at', w.created_at
                 )), '[]'::json)
                 FROM websites w
-                WHERE w.creator_id = $1 AND (w.subscription_id = s.id OR (w.subscription_id IS NULL AND w.package_id = s.package_id))
+                WHERE w.creator_id = $1 AND w.subscription_id = s.id
               ) AS provisioned_websites
        FROM subscriptions s
        JOIN packages p ON s.package_id = p.id
@@ -141,7 +141,7 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
   // Direct purchase subscription action
   if (action === 'purchase_subscription' || action === 'purchase') {
     const packageId = Number(body.packageId);
-    const paymentMethod = body.paymentMethod || 'Stripe';
+    const paymentMethod = body.paymentMethod || 'Paddle';
 
     if (!packageId) {
       return NextResponse.json({ success: false, error: 'Package ID is required.' }, { status: 400 });

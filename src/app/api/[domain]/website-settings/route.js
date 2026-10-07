@@ -41,6 +41,7 @@ export async function GET(request, context) {
       instagram_url: s?.instagram_url || '',
       youtube_url: s?.youtube_url || '',
       primary_color: website?.primary_color || '#1e40af',
+      secondary_color: website?.secondary_color || '#0ea5e9',
       theme: website?.theme || 'default',
     };
 

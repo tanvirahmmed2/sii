@@ -10,6 +10,8 @@ export default function WebsiteForm({ onSuccess, onCancel }) {
     custom_domain: '',
     status: 'ACTIVE',
     storage_used_mb: 0,
+    primary_color: '#1e40af',
+    secondary_color: '#0ea5e9',
     is_published: true,
   });
   const [loading, setLoading] = useState(false);
@@ -45,6 +47,8 @@ export default function WebsiteForm({ onSuccess, onCancel }) {
           custom_domain: '',
           status: 'ACTIVE',
           storage_used_mb: 0,
+          primary_color: '#1e40af',
+          secondary_color: '#0ea5e9',
           is_published: true,
         });
         if (onSuccess) onSuccess(data.record);
@@ -154,6 +158,44 @@ export default function WebsiteForm({ onSuccess, onCancel }) {
               onChange={(e) => setFormData({ ...formData, storage_used_mb: e.target.value })}
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
             />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Primary Color</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={formData.primary_color || '#1e40af'}
+                onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
+                className="w-8 h-8 rounded border border-slate-300 cursor-pointer p-0.5"
+              />
+              <input
+                type="text"
+                value={formData.primary_color}
+                onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Secondary Color</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={formData.secondary_color || '#0ea5e9'}
+                onChange={(e) => setFormData({ ...formData, secondary_color: e.target.value })}
+                className="w-8 h-8 rounded border border-slate-300 cursor-pointer p-0.5"
+              />
+              <input
+                type="text"
+                value={formData.secondary_color}
+                onChange={(e) => setFormData({ ...formData, secondary_color: e.target.value })}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
+              />
+            </div>
           </div>
         </div>
 

@@ -61,6 +61,7 @@ export default function WebsiteManagePage() {
   const [instagramUrl, setInstagramUrl] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [primaryColor, setPrimaryColor] = useState('#1e40af');
+  const [secondaryColor, setSecondaryColor] = useState('#0ea5e9');
   const [theme, setTheme] = useState('default');
   const [logo, setLogo] = useState('');
   const [favicon, setFavicon] = useState('');
@@ -115,6 +116,7 @@ export default function WebsiteManagePage() {
         setInstagramUrl(w.instagram_url || '');
         setYoutubeUrl(w.youtube_url || '');
         setPrimaryColor(w.primary_color || '#1e40af');
+        setSecondaryColor(w.secondary_color || '#0ea5e9');
         setTheme(w.theme || 'default');
         setLogo(w.logo || '');
         setFavicon(w.favicon || '');
@@ -268,6 +270,7 @@ export default function WebsiteManagePage() {
         instagram_url: instagramUrl.trim(),
         youtube_url: youtubeUrl.trim(),
         primary_color: primaryColor,
+        secondary_color: secondaryColor,
         theme: theme,
         logo: logo.trim(),
         favicon: favicon.trim(),
@@ -465,10 +468,16 @@ export default function WebsiteManagePage() {
           </div>
 
           <h1 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <span
-              className="w-3 h-3 rounded-full inline-block shrink-0"
-              style={{ backgroundColor: primaryColor }}
-            />
+            <div className="flex items-center -space-x-1 shrink-0" title={`Primary: ${primaryColor} | Secondary: ${secondaryColor}`}>
+              <span
+                className="w-3 h-3 rounded-full inline-block border border-white shadow-xs"
+                style={{ backgroundColor: primaryColor }}
+              />
+              <span
+                className="w-3 h-3 rounded-full inline-block border border-white shadow-xs"
+                style={{ backgroundColor: secondaryColor }}
+              />
+            </div>
             {website.name}
             <span className="text-xs font-normal text-slate-400 font-mono">
               ({cleanSub}.{baseDomain})
@@ -987,6 +996,38 @@ export default function WebsiteManagePage() {
                     className="w-8 h-8 rounded border border-slate-200 cursor-pointer p-0.5"
                   />
                   <span className="font-mono text-[11px] text-slate-500">{primaryColor}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Secondary Color Presets */}
+            <div className="space-y-3">
+              <label className="block font-semibold text-slate-700">Secondary Brand Accent Color</label>
+              <div className="flex flex-wrap items-center gap-3">
+                {PRESET_COLORS.map((c) => (
+                  <button
+                    key={`sec-${c.hex}`}
+                    type="button"
+                    onClick={() => setSecondaryColor(c.hex)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium cursor-pointer transition-all ${
+                      secondaryColor.toLowerCase() === c.hex.toLowerCase()
+                        ? 'border-blue-600 bg-blue-50/60 ring-2 ring-blue-500/20 shadow-sm'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: c.hex }} />
+                    <span>{c.name}</span>
+                  </button>
+                ))}
+
+                <div className="flex items-center gap-2 pl-2">
+                  <input
+                    type="color"
+                    value={secondaryColor}
+                    onChange={(e) => setSecondaryColor(e.target.value)}
+                    className="w-8 h-8 rounded border border-slate-200 cursor-pointer p-0.5"
+                  />
+                  <span className="font-mono text-[11px] text-slate-500">{secondaryColor}</span>
                 </div>
               </div>
             </div>

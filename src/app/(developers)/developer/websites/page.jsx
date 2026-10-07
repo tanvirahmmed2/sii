@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import WebsiteForm from 'src/component/marketing/developer/forms/WebsiteForm';
 import LoadingScreen from 'src/component/common/LoadingScreen';
 
@@ -11,9 +12,9 @@ export default function AdminWebsitesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingId, setDeletingId] = useState(null);
 
-  const fetchWebsites = async () => {
+  const fetchWebsites = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const res = await fetch('/api/marketing/developer/websites');
       const data = await res.json();
       if (data.success) {
@@ -27,7 +28,26 @@ export default function AdminWebsitesPage() {
   };
 
   useEffect(() => {
-    fetchWebsites();
+    let ignore = false;
+    fetch('/api/marketing/developer/websites')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!ignore) {
+          if (data.success) {
+            setWebsites(data.records || []);
+          }
+          setLoading(false);
+        }
+      })
+      .catch((e) => {
+        if (!ignore) {
+          console.error(e);
+          setLoading(false);
+        }
+      });
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const handleDelete = async (id) => {
@@ -148,8 +168,34 @@ export default function AdminWebsitesPage() {
               ) : (
                 filtered.map((w) => (
                   <tr key={w.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="py-2.5 font-mono text-slate-400 font-medium">#{w.id}</td>
-                    <td className="py-2.5 font-medium text-slate-900 dark:text-white">{w.name}</td>
+                    <td className="py-2.5 font-mono font-medium">
+                      <Link
+                        href={`/developer/websites/${w.id}`}
+                        className="text-slate-900 dark:text-white hover:underline font-semibold"
+                      >
+                        #{w.id}
+                      </Link>
+                    </td>
+                    <td className="py-2.5 font-medium">
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center -space-x-1 flex-shrink-0" title={`Primary: ${w.primary_color || '#1e40af'} | Secondary: ${w.secondary_color || '#0ea5e9'}`}>
+                          <span
+                            className="w-2.5 h-2.5 rounded-full border border-white dark:border-slate-800 shadow-xs inline-block"
+                            style={{ backgroundColor: w.primary_color || '#1e40af' }}
+                          />
+                          <span
+                            className="w-2.5 h-2.5 rounded-full border border-white dark:border-slate-800 shadow-xs inline-block"
+                            style={{ backgroundColor: w.secondary_color || '#0ea5e9' }}
+                          />
+                        </div>
+                        <Link
+                          href={`/developer/websites/${w.id}`}
+                          className="text-slate-900 dark:text-white hover:underline"
+                        >
+                          {w.name}
+                        </Link>
+                      </div>
+                    </td>
                     <td className="py-2.5 font-mono text-slate-600 dark:text-slate-400">{w.subdomain || '—'}</td>
                     <td className="py-2.5 font-mono text-slate-600 dark:text-slate-400">{w.custom_domain || '—'}</td>
                     <td className="py-2.5 text-slate-600 dark:text-slate-400 font-mono">{w.storage_used_mb ?? 0} MB</td>
@@ -168,14 +214,22 @@ export default function AdminWebsitesPage() {
                       </span>
                     </td>
                     <td className="py-2.5 text-right whitespace-nowrap">
-                      <button
-                        type="button"
-                        disabled={deletingId === w.id}
-                        onClick={() => handleDelete(w.id)}
-                        className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer"
-                      >
-                        {deletingId === w.id ? 'Deleting...' : 'Delete'}
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Link
+                          href={`/developer/websites/${w.id}`}
+                          className="px-2 py-1 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium transition-colors"
+                        >
+                          Manage
+                        </Link>
+                        <button
+                          type="button"
+                          disabled={deletingId === w.id}
+                          onClick={() => handleDelete(w.id)}
+                          className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer"
+                        >
+                          {deletingId === w.id ? 'Deleting...' : 'Delete'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
