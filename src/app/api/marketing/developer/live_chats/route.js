@@ -52,9 +52,8 @@ export async function GET(request) {
 
       // Fetch list of active permitted developers for re-assignment
       const devRes = await queryDb(
-        `SELECT d.id, d.name, d.email, d.designation, d.avatar_url, COALESCE(dr.name, 'Developer') as role_name 
+        `SELECT d.id, d.name, d.email, d.designation, d.avatar_url, COALESCE(d.designation, 'Developer') as role_name 
          FROM developers d 
-         LEFT JOIN developer_roles dr ON d.role_id = dr.id 
          WHERE d.is_active = TRUE 
          ORDER BY d.name ASC`
       ).catch(() => ({ rows: [] }));

@@ -17,10 +17,9 @@ export async function GET(request) {
         n.*,
         d.name AS creator_name,
         d.email AS creator_email,
-        COALESCE(dr.slug, 'developer') AS creator_role
+        'developer' AS creator_role
       FROM notices n
       LEFT JOIN developers d ON n.created_by_developer_id = d.id
-      LEFT JOIN developer_roles dr ON d.role_id = dr.id
       ORDER BY n.is_pinned DESC, n.created_at DESC
     `).catch(() => ({ rows: [] }));
 

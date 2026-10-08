@@ -17,10 +17,9 @@ export async function GET(request) {
 
     const devRes = await queryDb(
       `SELECT d.id, d.name, d.email, d.phone, d.designation, d.bio, d.avatar_url,
-              d.github_profile, d.linkedin_profile, d.role_id, d.is_active, d.last_login_at, d.created_at, d.updated_at,
-              COALESCE(dr.slug, 'developer') AS role, COALESCE(dr.name, 'Developer') AS role_name
+              d.github_profile, d.linkedin_profile, d.is_active, d.last_login_at, d.created_at, d.updated_at,
+              'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name
        FROM developers d
-       LEFT JOIN developer_roles dr ON d.role_id = dr.id
        WHERE d.id = $1
        LIMIT 1`,
       [authUser.id]
@@ -89,11 +88,10 @@ export async function PUT(request) {
 
     // Load current developer record including current password hash
     const currentRes = await queryDb(
-      `SELECT d.id, d.name, d.email, d.phone, d.bio, d.avatar_url, d.github_profile, d.linkedin_profile, d.password, d.role_id,
-              COALESCE(dr.slug, 'developer') AS role, COALESCE(dr.name, 'Developer') AS role_name,
+      `SELECT d.id, d.name, d.email, d.phone, d.bio, d.avatar_url, d.github_profile, d.linkedin_profile, d.password,
+              'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name,
               d.is_active
        FROM developers d
-       LEFT JOIN developer_roles dr ON d.role_id = dr.id
        WHERE d.id = $1 LIMIT 1`,
       [authUser.id]
     );
@@ -176,7 +174,7 @@ export async function PUT(request) {
            password = $7,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $8
-       RETURNING id, name, email, phone, designation, bio, avatar_url, github_profile, linkedin_profile, role_id, is_active, last_login_at, created_at, updated_at`,
+       RETURNING id, name, email, phone, designation, bio, avatar_url, github_profile, linkedin_profile, is_active, last_login_at, created_at, updated_at`,
       [newName, newEmail, newPhone, newBio, newGithub, newLinkedin, newPasswordHash, authUser.id]
     );
 
@@ -218,7 +216,7 @@ export async function PUT(request) {
       try {
         const { generateToken, setAdminSessionCookie } = await import('src/lib/middleware/developer');
         const refreshedToken = generateToken(
-          { id: updatedDev.id, email: newEmail, role: updatedDev.role, roleId: updatedDev.role_id },
+          { id: updatedDev.id, email: newEmail, designation: updatedDev.designation },
           '7d'
         );
         await queryDb('UPDATE developer_login_sessions SET token = $1 WHERE developer_id = $2 AND is_active = TRUE', [

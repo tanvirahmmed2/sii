@@ -2,8 +2,7 @@ import { redirect } from 'next/navigation';
 import React from 'react'
 
 const page = () => {
-  return redirect('/admin/teachers/list');
-  
+  return redirect('/staff-panel/teachers/list');
 }
 
 export default page

@@ -120,22 +120,6 @@ export async function POST(request, context) {
 
       const newUser = userRes.rows[0];
 
-      // Assign default role if available (e.g. 'member' or 'customer')
-      try {
-        let defaultRole = await queryDb(
-          "SELECT id FROM website_roles WHERE website_id = $1 AND slug IN ('member', 'customer', 'client', 'user') LIMIT 1",
-          [websiteId]
-        );
-        if (defaultRole.rows.length > 0) {
-          await queryDb(
-            'INSERT INTO website_user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-            [newUser.id, defaultRole.rows[0].id]
-          );
-        }
-      } catch (roleErr) {
-        console.warn('Default role assignment notice:', roleErr.message);
-      }
-
       // Send verification email
       const verifyUrl = `${origin}/website/${encodeURIComponent(siteSlug)}/verify?email=${encodeURIComponent(cleanEmail)}&code=${verificationCode}`;
 

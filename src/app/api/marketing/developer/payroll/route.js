@@ -50,9 +50,8 @@ export async function GET(request) {
 
     // 3. List active developers for new payroll creation modal
     const devsRes = await queryDb(`
-      SELECT d.id, d.name, d.email, COALESCE(r.slug, 'developer') AS role, COALESCE(r.name, 'Developer') AS role_name
+      SELECT d.id, d.name, d.email, 'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name
       FROM developers d
-      LEFT JOIN developer_roles r ON d.role_id = r.id
       WHERE d.is_active = TRUE 
       ORDER BY d.name ASC
     `).catch(() => ({ rows: [] }));

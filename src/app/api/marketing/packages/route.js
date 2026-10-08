@@ -81,23 +81,23 @@ export async function GET(request) {
                (
                  SELECT json_agg(
                    json_build_object(
-                     'id', tm.id,
-                     'name', tm.name,
-                     'slug', tm.slug,
-                     'description', tm.description,
-                     'icon', tm.icon,
-                     'is_active', tm.is_active
-                   ) ORDER BY tm.id ASC
+                     'id', wm.id,
+                     'name', wm.name,
+                     'slug', wm.slug,
+                     'description', wm.description,
+                     'icon', wm.icon,
+                     'is_active', wm.is_active
+                   ) ORDER BY wm.id ASC
                  )
                  FROM package_modules pm
-                 JOIN tenant_modules tm ON pm.tenant_module_id = tm.id
+                 JOIN website_modules wm ON pm.website_module_id = wm.id
                  WHERE pm.package_id = p.id
                ),
                '[]'::json
              ) AS tenant_modules,
              COALESCE(
                (
-                 SELECT json_agg(pm.tenant_module_id ORDER BY pm.tenant_module_id ASC)
+                 SELECT json_agg(pm.website_module_id ORDER BY pm.website_module_id ASC)
                  FROM package_modules pm
                  WHERE pm.package_id = p.id
                ),
@@ -105,9 +105,9 @@ export async function GET(request) {
              ) AS tenant_module_ids,
              COALESCE(
                (
-                 SELECT json_agg(DISTINCT tm.name ORDER BY tm.name ASC)
+                 SELECT json_agg(DISTINCT wm.name ORDER BY wm.name ASC)
                  FROM package_modules pm
-                 JOIN tenant_modules tm ON pm.tenant_module_id = tm.id
+                 JOIN website_modules wm ON pm.website_module_id = wm.id
                  WHERE pm.package_id = p.id
                ),
                '[]'::json

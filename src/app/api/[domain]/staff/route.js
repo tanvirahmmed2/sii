@@ -1,48 +1,79 @@
 import { NextResponse } from 'next/server';
-import { query } from 'src/lib/database/db';
+import { queryDb } from 'src/lib/database/db';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 
-// GET public staff list & available roles
-export async function GET() {
+// GET public staff roster & modules for the website
+export async function GET(request, context) {
   try {
-    // 1. Query staff from staffs table
-    const staffsResult = await query(`
-      SELECT 
-        id, name, email, username, COALESCE(phone, number) AS phone, number, role, address, image, created_at
-      FROM staffs 
-      WHERE is_active = TRUE OR is_registered = TRUE
-      ORDER BY name ASC
-    `);
+    const resolvedParams = await context?.params;
+    const website = await resolveWebsiteFromRequest(request, { params: resolvedParams });
 
-    // 2. Query distinct roles from staffs table
-    const rolesResult = await query(`
-      SELECT DISTINCT role 
-      FROM staffs 
-      WHERE (is_active = TRUE OR is_registered = TRUE) AND role IS NOT NULL AND role <> ''
-    `);
+    if (!website) {
+      return NextResponse.json(
+        { success: false, error: 'Campus portal website not found.' },
+        { status: 404 }
+      );
+    }
 
-    const rolesList = rolesResult.rows.map(r => r.role);
-    
-    // Ensure default common roles exist if list is small
-    const defaultRoles = ['cashier', 'registrar', 'staff'];
-    const mergedRoles = Array.from(new Set([...rolesList, ...defaultRoles]));
+    // 1. Query staff from website_staffs
+    const staffsResult = await queryDb(
+      `SELECT 
+        id, name, email, username, number, address, image, created_at, is_active, is_registered
+      FROM website_staffs 
+      WHERE website_id = $1 AND is_active = TRUE
+      ORDER BY name ASC`,
+      [website.id]
+    );
 
-    return NextResponse.json({
-      success: true,
-      message: 'Staff members retrieved successfully',
-      paylod: { 
-        staff: staffsResult.rows,
-        roles: mergedRoles
+    // 2. Query all permissions for these staffs
+    const permsResult = await queryDb(
+      `SELECT wmp.staff_id, wm.slug AS module_slug, wmp.can_view, wmp.can_create, wmp.can_edit, wmp.can_delete,
+              wm.name AS module_name
+       FROM website_modules_permissions wmp
+       JOIN website_modules wm ON wm.id = wmp.website_module_id
+       WHERE wmp.website_id = $1 AND wmp.can_view = TRUE AND wm.is_active = TRUE`,
+      [website.id]
+    );
+
+    const staffPermsMap = {};
+    for (const p of permsResult.rows) {
+      if (!staffPermsMap[p.staff_id]) {
+        staffPermsMap[p.staff_id] = [];
       }
-    }, { status: 200 });
+      staffPermsMap[p.staff_id].push({
+        slug: p.module_slug,
+        name: p.module_name,
+        canView: p.can_view,
+        canCreate: p.can_create,
+        canEdit: p.can_edit,
+        canDelete: p.can_delete,
+      });
+    }
+
+    const enrichedStaff = staffsResult.rows.map((s) => ({
+      ...s,
+      modules: staffPermsMap[s.id] || [],
+    }));
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'Staff members retrieved successfully',
+        paylod: {
+          staff: enrichedStaff,
+        },
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error('Error fetching public staff:', error);
-    return NextResponse.json({
-      success: false,
-      message: 'Failed to retrieve staff members.',
-      paylod: { 
-        staff: [],
-        roles: ['cashier', 'registrar', 'staff']
-      }
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        message: 'Failed to retrieve staff members.',
+        paylod: { staff: [] },
+      },
+      { status: 500 }
+    );
   }
 }

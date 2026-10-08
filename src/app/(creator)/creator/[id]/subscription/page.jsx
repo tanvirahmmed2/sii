@@ -37,21 +37,7 @@ function SubscriptionContent() {
   const [settingsMsg, setSettingsMsg] = useState('');
   const [settingsErr, setSettingsErr] = useState('');
 
-  // Website Team Modal State
-  const [selectedWebsiteForTeam, setSelectedWebsiteForTeam] = useState(null);
-  const [teamData, setTeamData] = useState({ users: [], roles: [], modules: [], permissions: [] });
-  const [loadingTeam, setLoadingTeam] = useState(false);
-  const [addingUser, setAddingUser] = useState(false);
-  const [teamMsg, setTeamMsg] = useState('');
-  const [teamErr, setTeamErr] = useState('');
 
-  // New User Form State
-  const [newUserName, setNewUserName] = useState('');
-  const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserPassword, setNewUserPassword] = useState('');
-  const [newUserRole, setNewUserRole] = useState('');
-  const [newUserPhone, setNewUserPhone] = useState('');
-  const [selectedPermIds, setSelectedPermIds] = useState([]);
 
   useEffect(() => {
     if (targetWebsiteId && websites.length > 0) {
@@ -153,99 +139,7 @@ function SubscriptionContent() {
     }
   };
 
-  const handleOpenTeam = async (website) => {
-    setSelectedWebsiteForTeam(website);
-    setLoadingTeam(true);
-    setTeamMsg('');
-    setTeamErr('');
 
-    try {
-      const res = await fetch(`/api/marketing/creator/website-team?websiteId=${website.id}`);
-      const data = await res.json();
-      if (data.success) {
-        setTeamData(data);
-        if (data.roles && data.roles.length > 0) {
-          setNewUserRole(data.roles[0].id);
-        }
-      } else {
-        setTeamErr(data.error || 'Failed to load team data.');
-      }
-    } catch {
-      setTeamErr('Network error loading team members.');
-    } finally {
-      setLoadingTeam(false);
-    }
-  };
-
-  const handleAddUser = async (e) => {
-    e.preventDefault();
-    if (!selectedWebsiteForTeam) return;
-    setAddingUser(true);
-    setTeamMsg('');
-    setTeamErr('');
-
-    try {
-      const res = await fetch('/api/marketing/creator/website-team', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'add_user',
-          websiteId: selectedWebsiteForTeam.id,
-          name: newUserName.trim(),
-          email: newUserEmail.trim(),
-          password: newUserPassword.trim() || undefined,
-          roleId: Number(newUserRole),
-          phone: newUserPhone.trim() || undefined,
-          permissionIds: selectedPermIds,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setTeamMsg('User created and role assigned successfully.');
-        setNewUserName('');
-        setNewUserEmail('');
-        setNewUserPassword('');
-        setNewUserPhone('');
-        setSelectedPermIds([]);
-        await handleOpenTeam(selectedWebsiteForTeam);
-      } else {
-        setTeamErr(data.error || 'Failed to create user.');
-      }
-    } catch {
-      setTeamErr('Network error creating user.');
-    } finally {
-      setAddingUser(false);
-    }
-  };
-
-  const handleDeleteUser = async (userId) => {
-    if (!confirm('Are you sure you want to remove this user from this website?')) return;
-    try {
-      const res = await fetch('/api/marketing/creator/website-team', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'delete_user',
-          websiteId: selectedWebsiteForTeam.id,
-          userId,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        await handleOpenTeam(selectedWebsiteForTeam);
-      } else {
-        alert(data.error || 'Failed to delete user.');
-      }
-    } catch {
-      alert('Network error deleting user.');
-    }
-  };
-
-  const togglePermission = (permId) => {
-    setSelectedPermIds((prev) =>
-      prev.includes(permId) ? prev.filter((id) => id !== permId) : [...prev, permId]
-    );
-  };
 
   return (
     <div className="w-full space-y-4 text-xs text-slate-800">
@@ -267,7 +161,7 @@ function SubscriptionContent() {
             </span>
           </div>
           <p className="text-slate-500 text-xs">
-            Review active tier terms, website limits, branding settings, and user role permissions.
+            Review active tier terms, website limits, branding settings, and staff module permissions.
           </p>
         </div>
 
@@ -476,7 +370,7 @@ function SubscriptionContent() {
           <div>
             <h2 className="text-sm font-semibold text-slate-900">Provisioned Websites ({websites.length})</h2>
             <p className="text-[11px] text-slate-500">
-              Configure branding and assign team roles for websites in your subscription.
+              Configure branding and manage staff module permissions for websites in your subscription.
             </p>
           </div>
           <Link
@@ -525,13 +419,12 @@ function SubscriptionContent() {
                     >
                       Website Settings
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenTeam(w)}
-                      className="px-2.5 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium cursor-pointer"
+                    <Link
+                      href={`/creator/${creatorId}/workspace/${w.subdomain || w.slug}?tab=staffs`}
+                      className="px-2.5 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium"
                     >
-                      Team & Roles
-                    </button>
+                      Staff &amp; Permissions
+                    </Link>
                     <a
                       href={`/website/${cleanSub}`}
                       target="_blank"
@@ -686,145 +579,7 @@ function SubscriptionContent() {
         </div>
       )}
 
-      {/* Website Team Modal */}
-      {selectedWebsiteForTeam && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-          <div className="bg-white rounded border border-slate-200 max-w-lg w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto text-xs">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h3 className="text-sm font-semibold text-slate-900">
-                Team & Roles: {selectedWebsiteForTeam.name}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setSelectedWebsiteForTeam(null)}
-                className="text-slate-400 hover:text-slate-700 font-medium"
-              >
-                Close
-              </button>
-            </div>
 
-            {teamErr && (
-              <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 font-medium">
-                {teamErr}
-              </div>
-            )}
-            {teamMsg && (
-              <div className="p-2.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium">
-                {teamMsg}
-              </div>
-            )}
-
-            {loadingTeam ? (
-              <LoadingScreen fullScreen={false} size="sm" label="Loading team..." />
-            ) : (
-              <div className="space-y-4">
-                {/* Team Members List */}
-                <div className="space-y-1.5">
-                  <h4 className="font-semibold text-slate-900 text-xs">
-                    Current Team Members ({teamData.users?.length || 0})
-                  </h4>
-                  {teamData.users?.length === 0 ? (
-                    <p className="text-slate-400 italic">No additional team members assigned.</p>
-                  ) : (
-                    <div className="divide-y divide-slate-100 border border-slate-200 rounded">
-                      {teamData.users.map((u) => (
-                        <div key={u.id} className="p-2.5 flex items-center justify-between">
-                          <div>
-                            <div className="font-medium text-slate-900 flex items-center gap-2">
-                              <span>{u.name}</span>
-                              <span className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 text-[10px] font-medium border border-slate-200">
-                                {u.role_name || 'Member'}
-                              </span>
-                            </div>
-                            <div className="text-[11px] text-slate-500 font-mono">{u.email}</div>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteUser(u.id)}
-                            className="text-rose-600 hover:underline font-medium cursor-pointer"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Add User Form */}
-                <form onSubmit={handleAddUser} className="p-3 border border-slate-200 rounded space-y-3 bg-slate-50">
-                  <h4 className="font-semibold text-slate-900 text-xs">
-                    Add New Team Member
-                  </h4>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-700 mb-1">Name</label>
-                      <input
-                        type="text"
-                        required
-                        value={newUserName}
-                        onChange={(e) => setNewUserName(e.target.value)}
-                        placeholder="Sarah"
-                        className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-700 mb-1">Email</label>
-                      <input
-                        type="email"
-                        required
-                        value={newUserEmail}
-                        onChange={(e) => setNewUserEmail(e.target.value)}
-                        placeholder="sarah@example.com"
-                        className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-700 mb-1">Role</label>
-                      <select
-                        value={newUserRole}
-                        onChange={(e) => setNewUserRole(e.target.value)}
-                        className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                      >
-                        {teamData.roles?.map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-700 mb-1">Password</label>
-                      <input
-                        type="password"
-                        value={newUserPassword}
-                        onChange={(e) => setNewUserPassword(e.target.value)}
-                        placeholder="Leave blank for auto"
-                        className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-end pt-1">
-                    <button
-                      type="submit"
-                      disabled={addingUser}
-                      className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50"
-                    >
-                      {addingUser ? 'Adding...' : 'Add Team Member'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

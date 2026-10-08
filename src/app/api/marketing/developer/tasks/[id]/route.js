@@ -20,11 +20,10 @@ export async function GET(request, { params }) {
         dt.developer_id AS assigned_to_developer_id,
         d.name AS assignee_name,
         d.email AS assignee_email,
-        COALESCE(dr.slug, 'developer') AS assignee_role,
+        'developer' AS assignee_role,
         d.name AS creator_name
       FROM developer_tasks dt
       LEFT JOIN developers d ON dt.developer_id = d.id
-      LEFT JOIN developer_roles dr ON d.role_id = dr.id
       WHERE dt.id = $1
     `, [id]).catch(() => null);
 
@@ -35,11 +34,10 @@ export async function GET(request, { params }) {
           COALESCE(t.assigned_to_developer_id, t.developer_id) AS assigned_to_developer_id,
           assignee.name AS assignee_name,
           assignee.email AS assignee_email,
-          COALESCE(ar.slug, 'developer') AS assignee_role,
+          'developer' AS assignee_role,
           creator.name AS creator_name
         FROM tasks t
         LEFT JOIN developers assignee ON COALESCE(t.assigned_to_developer_id, t.developer_id) = assignee.id
-        LEFT JOIN developer_roles ar ON assignee.role_id = ar.id
         LEFT JOIN developers creator ON t.created_by_developer_id = creator.id
         WHERE t.id = $1
       `, [id]).catch(() => ({ rows: [] }));
@@ -54,10 +52,9 @@ export async function GET(request, { params }) {
         tc.*,
         d.name AS author_name,
         d.email AS author_email,
-        COALESCE(r.slug, 'developer') AS author_role
+        'developer' AS author_role
       FROM task_comments tc
       JOIN developers d ON tc.developer_id = d.id
-      LEFT JOIN developer_roles r ON d.role_id = r.id
       WHERE tc.task_id = $1
       ORDER BY tc.created_at ASC
     `, [id]).catch(() => ({ rows: [] }));

@@ -11,8 +11,10 @@ const VerifyInner = () => {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
 
-  const [status, setStatus] = useState('loading');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [status, setStatus] = useState(() => (!token ? 'invalid' : 'loading'));
+  const [errorMessage, setErrorMessage] = useState(() =>
+    !token ? 'No verification token found in the URL. Please use the link from your email.' : ''
+  );
   const [staff, setStaff] = useState(null);
 
   const [address, setAddress] = useState('');
@@ -21,11 +23,7 @@ const VerifyInner = () => {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      setStatus('invalid');
-      setErrorMessage('No verification token found in the URL. Please use the link from your email.');
-      return;
-    }
+    if (!token) return;
 
     const validateToken = async () => {
       try {
@@ -209,8 +207,8 @@ const VerifyInner = () => {
           <p className="text-xs font-bold text-slate-700 mt-0.5">{staff?.number}</p>
         </div>
         <div>
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Role / Designation</span>
-          <p className="text-xs font-bold text-slate-700 mt-0.5 capitalize">{staff?.role} ({staff?.designation || 'Staff'})</p>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Staff Member</span>
+          <p className="text-xs font-bold text-slate-700 mt-0.5 capitalize">{staff?.designation || 'Institutional Staff'}</p>
         </div>
       </div>
 

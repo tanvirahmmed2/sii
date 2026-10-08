@@ -32,13 +32,13 @@ export async function GET(request, context) {
       queryDb('SELECT * FROM website_testimonials WHERE website_id = $1 ORDER BY sort_order ASC, id DESC', [websiteId]).catch(() => ({ rows: [] })),
       queryDb('SELECT * FROM website_offers WHERE website_id = $1 AND is_active = TRUE ORDER BY id DESC', [websiteId]).catch(() => ({ rows: [] })),
       queryDb(
-        `SELECT DISTINCT tm.name AS module_title
+        `SELECT DISTINCT wm.name AS module_title
          FROM websites w
-         LEFT JOIN subscriptions s ON s.creator_id = w.creator_id AND s.status = 'active'
+         LEFT JOIN subscriptions s ON (s.id = w.subscription_id OR s.website_id = w.id OR (s.creator_id = w.creator_id AND s.status = 'active'))
          JOIN package_modules pm ON pm.package_id = s.package_id
-         JOIN tenant_modules tm ON pm.tenant_module_id = tm.id
+         JOIN website_modules wm ON pm.website_module_id = wm.id
          WHERE w.id = $1
-         ORDER BY tm.name ASC`,
+         ORDER BY wm.name ASC`,
         [websiteId]
       ).catch(() => ({ rows: [] })),
     ]);

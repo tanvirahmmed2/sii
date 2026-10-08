@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function AdminSubjectsRedirect() {
-  redirect('/admin/subjects/new');
+  redirect('/staff-panel/subjects/new');
 }

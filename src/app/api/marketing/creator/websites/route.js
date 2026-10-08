@@ -289,8 +289,8 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
         `SELECT COUNT(*)::int AS count 
          FROM websites 
          WHERE creator_id = $1 
-           AND (subscription_id = $2 OR (subscription_id IS NULL AND package_id = $3))`,
-        [creatorId, chosenSub.id, chosenSub.package_id]
+           AND subscription_id = $2`,
+        [creatorId, chosenSub.id]
       );
       const usedCount = countRes.rows[0].count;
       const maxLimit = Number(chosenSub.max_websites || 1);
@@ -761,43 +761,7 @@ export async function seedWebsiteDefaults(websiteId, websiteName, themeConfig = 
       extraSettings.address || null,
     ]);
 
-    // 2. Default Modules
-    const defaultModules = [
-      { name: 'Admissions & Student Enrolment', slug: 'admissions', description: 'Student online registration, admission tests & document verification' },
-      { name: 'Attendance & Timetables', slug: 'attendance', description: 'Daily attendance logs, period schedules and routine management' },
-      { name: 'Exams & Result Transcripts', slug: 'exams', description: 'Exam schedules, mark grading sheets and report cards generation' },
-      { name: 'Student Tuition & Fees', slug: 'fees', description: 'Monthly fee invoices, fines, receipts and online collections' },
-      { name: 'Notices & Announcements', slug: 'notices', description: 'Official campus bulletins, urgent alerts and student circulars' },
-      { name: 'Events & Academic Calendar', slug: 'events', description: 'Campus symposiums, competitions, holidays and sports events' },
-      { name: 'Academic Clubs & Activities', slug: 'clubs', description: 'Student interest clubs, leadership panels and student news' },
-      { name: 'Faculty & Staff Directory', slug: 'faculty', description: 'Teacher profiles, designations, qualifications and payroll' },
-    ];
-
-    for (const m of defaultModules) {
-      await queryDb(`
-        INSERT INTO website_modules (website_id, name, slug, description, is_enabled)
-        VALUES ($1, $2, $3, $4, TRUE)
-        ON CONFLICT (website_id, slug) DO NOTHING
-      `, [websiteId, m.name, m.slug, m.description]);
-    }
-
-    // 3. Default Roles
-    const defaultRoles = [
-      { name: 'Principal / Headmaster', slug: 'principal', description: 'Full institutional authority and operational oversight', is_system: true },
-      { name: 'Campus Administrator', slug: 'admin', description: 'Staff and system manager with administrative access', is_system: true },
-      { name: 'Faculty Member', slug: 'teacher', description: 'Teacher portal for attendance, marks and study materials', is_system: true },
-      { name: 'Academic Staff', slug: 'staff', description: 'Office executive for admissions and accounts', is_system: false },
-    ];
-
-    for (const r of defaultRoles) {
-      await queryDb(`
-        INSERT INTO website_roles (website_id, name, slug, description, is_system)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (website_id, slug) DO NOTHING
-      `, [websiteId, r.name, r.slug, r.description, r.is_system]);
-    }
-
-    // 4. Default Sample Notice
+    // 2. Default Sample Notice
     await queryDb(`
       INSERT INTO website_notices (website_id, title, content, is_published, published_at)
       VALUES ($1, $2, $3, TRUE, CURRENT_TIMESTAMP)

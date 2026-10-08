@@ -8,34 +8,7 @@ import Navbar from 'src/component/marketing/developer/Navbar';
 import Sidebar from 'src/component/marketing/developer/Sidebar';
 import LoadingScreen from 'src/component/common/LoadingScreen';
 
-export const ROLE_PERMISSIONS = {
-  admin: [
-    'overview', 'developers', 'roles', 'team', 'creators', 'users', 'websites',
-    'blogs', 'packages', 'features', 'modules', 'purchases', 'payments', 'subscriptions', 'payroll', 'my-salaries',
-    'live-chats', 'chats', 'contacts', 'support', 'reports', 'reviews', 'spams',
-    'facebook-messages', 'instagram-messages', 'whatsapp-messages',
-    'leads', 'subscribers', 'profile', 'settings', 'faqs', 'updates', 'tasks', 'notices', 'tutorials', 'policies'
-  ],
-  manager: [
-    'overview', 'creators', 'users', 'websites', 'packages', 'features',
-    'purchases', 'payments', 'subscriptions', 'live-chats', 'chats', 'contacts', 'support', 'my-salaries',
-    'facebook-messages', 'instagram-messages', 'whatsapp-messages',
-    'reports', 'reviews', 'leads', 'subscribers', 'profile', 'settings', 'faqs', 'updates', 'tasks', 'notices', 'tutorials', 'policies'
-  ],
-  developer: [
-    'overview', 'websites', 'packages', 'features',
-    'spams', 'reports', 'blogs', 'support', 'live-chats', 'contacts', 'reviews', 'profile', 'settings', 'chats', 'tasks', 'notices', 'my-salaries', 'tutorials', 'faqs', 'updates', 'policies'
-  ],
-  marketer: [
-    'overview', 'blogs', 'leads',
-    'packages', 'reviews', 'profile', 'settings', 'chats', 'tasks', 'notices', 'my-salaries', 'tutorials', 'faqs', 'updates', 'policies'
-  ],
-  support: [
-    'overview', 'live-chats', 'chats', 'contacts', 'support', 'reports',
-    'facebook-messages', 'instagram-messages', 'whatsapp-messages',
-    'reviews', 'users', 'creators', 'subscribers', 'profile', 'settings', 'tasks', 'notices', 'my-salaries', 'tutorials', 'faqs', 'updates', 'policies'
-  ]
-};
+export const ROLE_PERMISSIONS = {};
 
 export default function DeveloperLayout({ children }) {
   const { user, loading } = useContext(Context);
@@ -59,19 +32,17 @@ export default function DeveloperLayout({ children }) {
 
   const segments = pathname.split('/').filter(Boolean);
   const moduleName = segments[1] || 'overview';
-  const role = (user?.role || 'developer').toLowerCase();
 
   const userPerms = Array.isArray(user?.permissions) ? user.permissions : null;
-  const fallbackModules = ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS.developer || [];
-  const allowedModules = userPerms && userPerms.length > 0 ? userPerms : fallbackModules;
+  // If user has permissions list from module_permissions, use it; otherwise fallback to general pages
+  const allowedModules = userPerms && userPerms.length > 0 ? userPerms : ['overview', 'profile', 'settings'];
 
   const isAllowed =
     !segments[1] ||
     moduleName === 'overview' ||
     moduleName === 'profile' ||
     moduleName === 'settings' ||
-    allowedModules.includes(moduleName) ||
-    (moduleName === 'roles' && (allowedModules.includes('developers') || allowedModules.includes('roles')));
+    allowedModules.includes(moduleName);
 
   if (!isAllowed) {
     return (
@@ -90,7 +61,7 @@ export default function DeveloperLayout({ children }) {
             <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 text-center space-y-3">
               <h2 className="text-sm font-medium text-slate-900 dark:text-white">Access Restricted</h2>
               <p className="text-xs font-normal text-slate-600 dark:text-slate-400">
-                Your account ({user.roleName || user.role || 'Staff'}) does not have permission to access the module <span className="font-mono">/{moduleName}</span>.
+                Your account ({user.designation || 'Developer'}) does not have permission to access the module <span className="font-mono">/{moduleName}</span>.
               </p>
               <div className="pt-2">
                 <Link

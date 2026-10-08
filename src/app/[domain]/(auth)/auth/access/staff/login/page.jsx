@@ -42,7 +42,7 @@ const StaffLogin = () => {
         setStep('2fa');
       } else {
         toast.success(data.message || 'Logged in successfully!');
-        router.push('/staff');
+        router.push('/staff-panel');
       }
     } catch (err) {
       toast.error(err.message);
@@ -74,7 +74,7 @@ const StaffLogin = () => {
       }
 
       toast.success(data.message || 'Verification successful! Redirecting...');
-      router.push('/staff');
+      router.push('/staff-panel');
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -237,14 +237,6 @@ const StaffLogin = () => {
                   </>
                 )}
               </button>
-
-              {/* Registration setup link */}
-              <div className="text-center text-xs font-semibold text-slate-400 mt-2">
-                First time logging in?{' '}
-                <Link href="/auth/access/staff/register" className="text-primary hover:text-primary-dark transition-colors underline">
-                  Setup your account here
-                </Link>
-              </div>
             </form>
           )}
         </div>

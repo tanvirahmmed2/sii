@@ -15,9 +15,23 @@ export async function generateMetadata({ params }) {
   }
 
   const cleanName = website.name || resolvedParams?.domain || 'Academic Portal';
+  const faviconUrl = website.favicon || website.logo || '/favicon.ico';
+  const logoUrl = website.logo || faviconUrl;
+
   return {
-    title: `${cleanName} - Academic Portal`,
+    title: {
+      default: `${cleanName} - Academic Portal`,
+      template: `%s | ${cleanName}`,
+    },
     description: website.settings?.motto || `Official website and institutional management portal for ${cleanName}.`,
+    icons: {
+      icon: [
+        { url: faviconUrl },
+        ...(website.logo ? [{ url: website.logo, sizes: '192x192' }] : []),
+      ],
+      shortcut: faviconUrl,
+      apple: logoUrl,
+    },
   };
 }
 

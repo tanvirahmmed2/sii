@@ -37,11 +37,10 @@ export async function GET(request, { params }) {
         dp.*,
         d.name AS developer_name,
         d.email AS developer_email,
-        COALESCE(r.slug, 'developer') AS developer_role,
-        COALESCE(r.name, 'Developer') AS developer_role_name
+        'developer' AS developer_role,
+        COALESCE(d.designation, 'Developer') AS developer_role_name
        FROM developer_payrolls dp
        JOIN developers d ON dp.developer_id = d.id
-       LEFT JOIN developer_roles r ON d.role_id = r.id
        WHERE dp.payroll_id = $1
        ORDER BY d.name ASC`,
       [id]

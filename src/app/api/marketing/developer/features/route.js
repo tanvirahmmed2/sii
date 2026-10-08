@@ -29,15 +29,14 @@ export async function GET(request) {
                   ) FILTER (WHERE p.id IS NOT NULL),
                   '[]'::json
                 ) AS packages
-         FROM tenant_modules tm
-         LEFT JOIN package_modules pm ON tm.id = pm.tenant_module_id
+         FROM website_modules tm
+         LEFT JOIN package_modules pm ON tm.id = pm.website_module_id
          LEFT JOIN packages p ON pm.package_id = p.id
          WHERE tm.id = $1
          GROUP BY tm.id
          LIMIT 1`,
         [Number(id)]
       ).catch(async () => {
-        // Fallback to legacy feature table if tenant_modules query fails
         return await queryDb('SELECT id, name, key, description FROM feature WHERE id = $1', [Number(id)]).catch(() => ({ rows: [] }));
       });
 
@@ -50,16 +49,15 @@ export async function GET(request) {
     const res = await queryDb(
       `SELECT tm.id, tm.name, tm.slug AS key, tm.slug, tm.description, tm.icon, tm.is_active,
               COUNT(pm.package_id)::int AS packages_count
-       FROM tenant_modules tm
-       LEFT JOIN package_modules pm ON tm.id = pm.tenant_module_id
+       FROM website_modules tm
+       LEFT JOIN package_modules pm ON tm.id = pm.website_module_id
        GROUP BY tm.id
        ORDER BY tm.id ASC`
     ).catch(async () => {
-      // Fallback to legacy feature table if tenant_modules query fails
       return await queryDb('SELECT id, name, key, description FROM feature ORDER BY id ASC').catch(() => ({ rows: [] }));
     });
 
-    return NextResponse.json({ success: true, table: 'tenant_modules', records: res.rows });
+    return NextResponse.json({ success: true, table: 'website_modules', records: res.rows });
   } catch (error) {
     console.error('Error fetching features:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -87,7 +85,7 @@ export async function POST(request) {
     if (!slug) slug = `feat-${Date.now()}`;
 
     // Ensure unique slug
-    const keyCheck = await queryDb('SELECT id FROM tenant_modules WHERE LOWER(slug) = LOWER($1) LIMIT 1', [slug]);
+    const keyCheck = await queryDb('SELECT id FROM website_modules WHERE LOWER(slug) = LOWER($1) LIMIT 1', [slug]);
     if (keyCheck.rows.length > 0) {
       slug = `${slug}-${Date.now().toString().slice(-4)}`;
     }
@@ -96,7 +94,7 @@ export async function POST(request) {
     const icon = data.icon || 'BiCube';
 
     const res = await queryDb(
-      `INSERT INTO tenant_modules (name, slug, description, icon, is_active)
+      `INSERT INTO website_modules (name, slug, description, icon, is_active)
        VALUES ($1, $2, $3, $4, TRUE)
        RETURNING id, name, slug AS key, slug, description, icon, is_active`,
       [name, slug, description, icon]
@@ -134,7 +132,7 @@ export async function PUT(request) {
       return NextResponse.json({ success: false, error: 'Feature ID is required' }, { status: 400 });
     }
 
-    const existingRes = await queryDb('SELECT * FROM tenant_modules WHERE id = $1', [Number(id)]);
+    const existingRes = await queryDb('SELECT * FROM website_modules WHERE id = $1', [Number(id)]);
     if (existingRes.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Feature not found' }, { status: 404 });
     }
@@ -151,7 +149,7 @@ export async function PUT(request) {
       slug = generateFeatureKey(name) || `feat-${Date.now()}`;
     }
 
-    const keyConflict = await queryDb('SELECT id FROM tenant_modules WHERE LOWER(slug) = LOWER($1) AND id != $2 LIMIT 1', [slug, Number(id)]);
+    const keyConflict = await queryDb('SELECT id FROM website_modules WHERE LOWER(slug) = LOWER($1) AND id != $2 LIMIT 1', [slug, Number(id)]);
     if (keyConflict.rows.length > 0) {
       return NextResponse.json(
         { success: false, error: `Feature slug/key "${slug}" is already in use by another feature.` },
@@ -163,7 +161,7 @@ export async function PUT(request) {
     const icon = data.icon !== undefined ? data.icon : current.icon;
 
     const res = await queryDb(
-      `UPDATE tenant_modules
+      `UPDATE website_modules
        SET name = $1, slug = $2, description = $3, icon = $4, updated_at = CURRENT_TIMESTAMP
        WHERE id = $5
        RETURNING id, name, slug AS key, slug, description, icon, is_active`,
@@ -201,7 +199,7 @@ export async function DELETE(request) {
       return NextResponse.json({ success: false, error: 'Feature ID is required' }, { status: 400 });
     }
 
-    const res = await queryDb('DELETE FROM tenant_modules WHERE id = $1 RETURNING id, name, slug AS key, slug', [Number(id)]);
+    const res = await queryDb('DELETE FROM website_modules WHERE id = $1 RETURNING id, name, slug AS key, slug', [Number(id)]);
     if (res.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Feature not found or already deleted' }, { status: 404 });
     }

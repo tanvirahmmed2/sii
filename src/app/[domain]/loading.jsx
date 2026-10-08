@@ -1,10 +1,10 @@
 import React from 'react';
-import LoadingScreen from 'src/component/common/LoadingScreen';
+import TenantLoader from 'src/component/tenant/TenantLoader';
 
 export const metadata = {
-  title: 'Loading...',
+  title: 'Loading Campus Portal...',
 };
 
 export default function TenantLoading() {
-  return <LoadingScreen fullScreen={true} />;
+  return <TenantLoader fullScreen={true} label="Loading institutional portal..." />;
 }

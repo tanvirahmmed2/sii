@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db';
 import { isAdmin } from 'src/lib/middleware/developer';
+import { isStaff } from 'src/lib/middleware/staff';
 
-export async function GET() {
+export async function GET(request) {
   try {
-    const authenticated = await isAdmin();
+    const isStaffMember = await isStaff(request);
+    const authenticated = isStaffMember || (await isAdmin(request));
     if (!authenticated) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
     }

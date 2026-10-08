@@ -1,11 +1,22 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { cookies } from 'next/headers';
 import { JWT_SECRET, DEVELOPER_TOKEN } from '../database/secret.js';
 import { query, queryDb } from '../database/db.js';
 
 const DEFAULT_JWT_SECRET = JWT_SECRET || 'developer_superadmin_jwt_secret_key_2026';
 const ADMIN_COOKIE_NAME = DEVELOPER_TOKEN;
+
+async function getCookieStore() {
+  try {
+    const nextHeaders = await import('next/headers');
+    if (nextHeaders && typeof nextHeaders.cookies === 'function') {
+      return await nextHeaders.cookies();
+    }
+  } catch {
+    // Outside Next.js server runtime context
+  }
+  return null;
+}
 
 // ============================================================================
 // Password helpers (Always using bcrypt)
@@ -159,8 +170,10 @@ export async function getAdminSession(request) {
 
     if (!token) {
       try {
-        const cookieStore = await cookies();
-        token = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
+        const cookieStore = await getCookieStore();
+        if (cookieStore) {
+          token = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
+        }
       } catch (e) {
         // Not in server request context
       }
@@ -171,14 +184,11 @@ export async function getAdminSession(request) {
     const decoded = verifyJWT(token);
     if (!decoded || !decoded.id) return null;
 
-    // Verify against database adhering to schema.psql developers & developer_roles
+    // Verify against database developers table
     const res = await query(
       `SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url, d.bio,
-              d.github_profile, d.linkedin_profile, d.role_id, d.is_active, d.email_verified,
-              COALESCE(dr.slug, 'developer') as role, 
-              COALESCE(dr.name, 'Developer') as role_name
+              d.github_profile, d.linkedin_profile, d.is_active, d.email_verified
        FROM developers d
-       LEFT JOIN developer_roles dr ON d.role_id = dr.id
        WHERE d.id = $1 LIMIT 1`,
       [decoded.id]
     );
@@ -218,26 +228,35 @@ export async function getAdminSession(request) {
       console.warn('Notice verifying developer session against database:', e.message);
     }
 
-    // Fetch granular permissions from developer_role_permissions
-    let permissions = [];
-    if (dev.role_id) {
-      const permRes = await queryDb(
-        `SELECT DISTINCT dm.slug as module_slug, mp.permission_key
-         FROM developer_role_permissions drp
-         JOIN module_permissions mp ON drp.permission_id = mp.id
-         JOIN developer_modules dm ON mp.module_id = dm.id
-         WHERE drp.role_id = $1`,
-        [dev.role_id]
-      ).catch(() => ({ rows: [] }));
+    // Fetch granular permissions directly from module_permissions (combines developer with module)
+    const permRes = await queryDb(
+      `SELECT m.slug AS module_slug, mp.can_view, mp.can_create, mp.can_edit, mp.can_delete
+       FROM module_permissions mp
+       JOIN modules m ON mp.module_id = m.id
+       WHERE mp.developer_id = $1 AND m.is_active = TRUE`,
+      [dev.id]
+    ).catch(() => ({ rows: [] }));
 
-      permissions = permRes.rows
-        .map((r) => r.module_slug || r.permission_key)
-        .filter(Boolean);
+    let permissions = permRes.rows
+      .filter((r) => r.can_view)
+      .map((r) => r.module_slug);
+
+    // If superadmin (Tanvir) or empty, provide all platform modules
+    const isOwner = Number(dev.id) === 1 || String(dev.email).toLowerCase() === 'tanvir004006@gmail.com';
+    if (permissions.length === 0 || isOwner) {
+      const allMods = await queryDb(`SELECT slug FROM modules WHERE is_active = TRUE`).catch(() => ({ rows: [] }));
+      permissions = Array.from(new Set([...permissions, ...allMods.rows.map((r) => r.slug)]));
     }
 
-    const roleSlug = (dev.role || 'developer').toLowerCase();
-    const defaults = DEVELOPER_ROLE_PERMISSIONS[roleSlug] || DEVELOPER_ROLE_PERMISSIONS.developer || [];
-    const allPermissions = Array.from(new Set([...permissions, ...defaults]));
+    const permissionsMap = {};
+    for (const r of permRes.rows) {
+      permissionsMap[r.module_slug] = {
+        can_view: Boolean(r.can_view),
+        can_create: Boolean(r.can_create),
+        can_edit: Boolean(r.can_edit),
+        can_delete: Boolean(r.can_delete),
+      };
+    }
 
     return {
       id: dev.id,
@@ -249,16 +268,16 @@ export async function getAdminSession(request) {
       bio: dev.bio,
       githubProfile: dev.github_profile,
       linkedinProfile: dev.linkedin_profile,
-      roleId: dev.role_id,
-      role: roleSlug,
-      roleSlug,
-      roleName: dev.role_name || DEVELOPER_ROLE_LABELS[roleSlug] || 'Developer',
+      role: 'developer',
+      roleSlug: 'developer',
+      roleName: 'Developer',
       isActive: dev.is_active,
       isVerified: Boolean(dev.email_verified),
-      permissions: allPermissions,
-      isAdmin: ['admin', 'superadmin', 'manager', 'developer'].includes(roleSlug),
-      isSuperAdmin: ['admin', 'superadmin'].includes(roleSlug),
-      isPlatformAdmin: ['admin', 'superadmin'].includes(roleSlug),
+      permissions,
+      permissionsMap,
+      isAdmin: true,
+      isSuperAdmin: isOwner,
+      isPlatformAdmin: true,
       token,
     };
   } catch (error) {
@@ -384,20 +403,6 @@ export async function isDeveloperSupport(requestOrSession) {
 }
 
 export async function getDeveloperRoles() {
-  try {
-    const res = await queryDb(
-      `SELECT r.id, r.name, r.slug, r.description, r.created_at, r.updated_at,
-              COUNT(DISTINCT d.id)::int AS developers_count
-       FROM developer_roles r
-       LEFT JOIN developers d ON r.id = d.role_id
-       GROUP BY r.id
-       ORDER BY r.id ASC`
-    );
-    if (res.rows.length > 0) return res.rows;
-  } catch (e) {
-    console.warn('Notice querying developer_roles table:', e.message);
-  }
-
   return Object.keys(DEVELOPER_ROLE_LABELS).map((slug, idx) => ({
     id: idx + 1,
     slug,
@@ -436,15 +441,14 @@ export async function hasModulePermission(request, moduleSlug) {
       return { success: true, user: session, staff: session };
     }
 
-    // Dynamic role-based permission lookup
+    // Direct developer module_permissions lookup (developer combines directly with modules)
     const permRes = await queryDb(
-      `SELECT 1 FROM developer_role_permissions drp
-       JOIN module_permissions mp ON drp.permission_id = mp.id
-       JOIN developer_modules dm ON mp.module_id = dm.id
-       WHERE drp.role_id = $1 AND (LOWER(dm.slug) = ANY($2::text[]) OR LOWER(mp.permission_key) = ANY($2::text[]))
+      `SELECT 1 FROM module_permissions mp
+       JOIN modules m ON mp.module_id = m.id
+       WHERE mp.developer_id = $1 AND mp.can_view = TRUE AND LOWER(m.slug) = ANY($2::text[])
        LIMIT 1`,
-      [session.roleId, slugs]
-    );
+      [session.id, slugs]
+    ).catch(() => ({ rows: [] }));
 
     if (permRes.rows.length > 0) {
       return { success: true, user: session, staff: session };
@@ -487,9 +491,8 @@ export async function authenticateAdmin(email, password, { ip = '127.0.0.1', use
   const cleanPassword = String(password || '');
 
   const devRes = await queryDb(
-    `SELECT d.*, COALESCE(dr.slug, 'developer') as role, COALESCE(dr.name, 'Developer') as role_name
+    `SELECT d.*, 'developer' as role, 'Developer' as role_name
      FROM developers d
-     LEFT JOIN developer_roles dr ON d.role_id = dr.id
      WHERE LOWER(d.email) = $1 LIMIT 1`,
     [cleanEmail]
   );
@@ -542,8 +545,7 @@ export async function authenticateAdmin(email, password, { ip = '127.0.0.1', use
   const token = generateToken({
     id: dev.id,
     email: dev.email,
-    role: dev.role,
-    roleId: dev.role_id,
+    designation: dev.designation,
   });
 
   // Log successful activity and session adhering to schema.psql
@@ -610,9 +612,8 @@ export async function isAdmin(request) {
     if (!decoded || !decoded.id) return false;
 
     const devRes = await query(
-      `SELECT d.id, d.is_active, COALESCE(dr.slug, 'developer') as role
+      `SELECT d.id, d.is_active, 'developer' as role
        FROM developers d
-       LEFT JOIN developer_roles dr ON d.role_id = dr.id
        WHERE d.id = $1`,
       [decoded.id]
     ).catch(() => ({ rows: [] }));
@@ -728,44 +729,72 @@ export async function getStudentUser() {
   }
 }
 
-export async function getStaffUser() {
+export async function getStaffUser(request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('fit-staff')?.value;
+    let token = null;
+    if (request) {
+      const authHeader = request.headers?.get?.('authorization') || request.headers?.get?.('Authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      } else if (request.cookies?.get) {
+        token = request.cookies.get('fit-staff')?.value;
+      }
+    }
+    if (!token) {
+      const cookieStore = await cookies();
+      token = cookieStore.get('fit-staff')?.value;
+    }
     if (!token) return null;
 
     const decoded = verifyJWT(token);
     if (!decoded || !decoded.id) return null;
 
-    const result = await query('SELECT id, name, email, role, is_active, is_registered FROM staffs WHERE id = $1', [decoded.id]);
+    const result = await query(
+      `SELECT ws.id, ws.name, ws.email, ws.number, ws.address, ws.is_active, ws.is_registered, ws.website_id
+       FROM website_staffs ws
+       WHERE ws.id = $1`,
+      [decoded.id]
+    );
     if (result.rows.length === 0) return null;
 
     const staff = result.rows[0];
-    if (staff.is_active && staff.is_registered) return staff;
+    if (staff.is_active && staff.is_registered) {
+      const permsRes = await query(
+        `SELECT module_slug, can_view, can_create, can_edit, can_delete 
+         FROM staff_permissions 
+         WHERE staff_id = $1`,
+        [staff.id]
+      ).catch(() => ({ rows: [] }));
+      const permissions = {};
+      permsRes.rows.forEach(p => {
+        permissions[p.module_slug] = p;
+      });
+      return { ...staff, permissions };
+    }
     return null;
   } catch (error) {
     return null;
   }
 }
 
-export async function isCashier() {
-  const staff = await getStaffUser();
-  return staff?.role === 'cashier';
+export async function isCashier(request) {
+  const staff = await getStaffUser(request);
+  return Boolean(staff?.permissions?.fees?.can_view || staff?.permissions?.accounting?.can_view);
 }
 
-export async function isRegister() {
-  const staff = await getStaffUser();
-  return staff?.role === 'registrar';
+export async function isRegister(request) {
+  const staff = await getStaffUser(request);
+  return Boolean(staff?.permissions?.sis?.can_view || staff?.permissions?.routine?.can_view);
 }
 
-export async function isGeneralStaff() {
-  const staff = await getStaffUser();
-  return staff?.role === 'staff';
+export async function isGeneralStaff(request) {
+  const staff = await getStaffUser(request);
+  return Boolean(staff && staff.is_active);
 }
 
-export async function isStaffRole() {
-  const staff = await getStaffUser();
-  return staff?.role === 'staff';
+export async function isStaffRole(request) {
+  const staff = await getStaffUser(request);
+  return Boolean(staff && staff.is_active);
 }
 
 const DeveloperMiddleware = {

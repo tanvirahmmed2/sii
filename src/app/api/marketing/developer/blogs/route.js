@@ -67,7 +67,7 @@ const BLOG_SELECT_FIELDS = `
   b.updated_at,
   d.name AS author_name,
   d.email AS author_email,
-  COALESCE(dr.slug, 'developer') AS author_role,
+  'developer' AS author_role,
   COALESCE(
     (
       SELECT json_agg(
@@ -108,7 +108,6 @@ async function getFullBlog(blogId) {
     SELECT ${BLOG_SELECT_FIELDS}
     FROM blogs b
     LEFT JOIN developers d ON b.developer_id = d.id
-    LEFT JOIN developer_roles dr ON d.role_id = dr.id
     WHERE b.id = $1
     LIMIT 1
   `;
@@ -256,7 +255,6 @@ export async function GET(request) {
       SELECT ${BLOG_SELECT_FIELDS}
       FROM blogs b
       LEFT JOIN developers d ON b.developer_id = d.id
-      LEFT JOIN developer_roles dr ON d.role_id = dr.id
     `;
 
     const conditions = [];

@@ -30,11 +30,10 @@ export async function GET(request, context) {
         'General' AS category,
         d.name AS assigned_developer_name,
         d.email AS assigned_developer_email,
-        COALESCE(dr.slug, 'developer') AS assigned_developer_role
+        'developer' AS assigned_developer_role
       FROM supports s
       LEFT JOIN creators c ON s.creator_id = c.id
       LEFT JOIN developers d ON s.assigned_developer_id = d.id
-      LEFT JOIN developer_roles dr ON d.role_id = dr.id
       WHERE ${isNumeric ? '(s.id = $1::bigint OR s.ticket_number = $1::text)' : 's.ticket_number = $1'}
       LIMIT 1
     `, [id]);
@@ -62,11 +61,10 @@ export async function GET(request, context) {
         m.is_read,
         m.created_at,
         d.name AS developer_name,
-        COALESCE(mr.slug, 'developer') AS developer_role
+        'developer' AS developer_role
       FROM support_messages m
       LEFT JOIN creators c ON (m.sender_type = 'creator' AND m.sender_id = c.id)
       LEFT JOIN developers d ON (m.sender_type = 'developer' AND m.sender_id = d.id)
-      LEFT JOIN developer_roles mr ON d.role_id = mr.id
       WHERE m.support_id = $1
       ORDER BY m.created_at ASC
     `, [ticket.id]);
@@ -93,9 +91,8 @@ export async function GET(request, context) {
 
     // Fetch staff developers for assignment dropdown
     const devsRes = await queryDb(`
-      SELECT d.id, d.name, d.email, COALESCE(r.slug, 'developer') AS role, COALESCE(r.name, 'Developer') AS role_name 
+      SELECT d.id, d.name, d.email, 'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name 
       FROM developers d
-      LEFT JOIN developer_roles r ON d.role_id = r.id
       WHERE d.is_active = TRUE 
       ORDER BY d.name ASC
     `).catch(() => ({ rows: [] }));

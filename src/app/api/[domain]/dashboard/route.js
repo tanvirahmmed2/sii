@@ -22,7 +22,7 @@ export async function GET(request, context) {
       experiencesRes,
       galleryRes,
       servicesRes,
-      rolesRes,
+      staffsRes,
     ] = await Promise.all([
       queryDb('SELECT * FROM website_purchase WHERE website_id = $1 ORDER BY id DESC LIMIT 20', [websiteId]).catch(() => ({ rows: [] })),
       queryDb('SELECT * FROM website_appointments WHERE website_id = $1 ORDER BY appointment_date DESC, id DESC LIMIT 20', [websiteId]).catch(() => ({ rows: [] })),
@@ -33,7 +33,7 @@ export async function GET(request, context) {
       queryDb('SELECT * FROM website_experiences WHERE website_id = $1 ORDER BY sort_order ASC, id DESC', [websiteId]).catch(() => ({ rows: [] })),
       queryDb('SELECT * FROM website_gallery WHERE website_id = $1 ORDER BY sort_order ASC, id DESC', [websiteId]).catch(() => ({ rows: [] })),
       queryDb('SELECT * FROM website_services WHERE website_id = $1 ORDER BY sort_order ASC, id ASC', [websiteId]).catch(() => ({ rows: [] })),
-      queryDb('SELECT COUNT(*)::int AS count FROM website_roles WHERE website_id = $1', [websiteId]).catch(() => ({ rows: [{ count: 0 }] })),
+      queryDb('SELECT COUNT(*)::int AS count FROM website_staffs WHERE website_id = $1', [websiteId]).catch(() => ({ rows: [{ count: 0 }] })),
     ]);
 
     const orders = ordersRes.rows;
@@ -63,7 +63,7 @@ export async function GET(request, context) {
         openSupport,
         activeProducts: products.filter((p) => p.status === 'ACTIVE').length,
         publishedBlogs: blogs.filter((b) => b.is_published).length,
-        rolesCount: rolesRes.rows[0]?.count || 0,
+        staffsCount: staffsRes.rows[0]?.count || 0,
       },
       orders,
       appointments,

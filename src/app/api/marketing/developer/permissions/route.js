@@ -14,62 +14,50 @@ function slugify(text) {
 
 /**
  * GET /api/developer/permissions
- * List all available system module_permissions, grouped by developer_modules,
- * along with role assignment statistics.
+ * List all developer module_permissions, combining developer with module.
  */
 export async function GET(request) {
   try {
-    const auth = await hasModulePermission(request, ['roles', 'developers']);
+    const auth = await hasModulePermission(request, ['modules', 'developers']);
     if (!auth.success) {
       return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
     }
 
     const { searchParams } = new URL(request.url);
+    const developerId = searchParams.get('developerId');
     const search = (searchParams.get('search') || searchParams.get('q') || '').trim().toLowerCase();
-    const folder = (searchParams.get('folder') || '').trim().toLowerCase();
 
     let querySql = `
-      SELECT mp.id, mp.name, mp.permission_key AS slug, dm.slug AS folder, dm.name AS folder_name,
-             mp.description, mp.created_at,
-             COUNT(DISTINCT drp.role_id)::int AS roles_count,
-             COALESCE(
-               json_agg(
-                 DISTINCT jsonb_build_object('id', dr.id, 'name', dr.name, 'slug', dr.slug)
-               ) FILTER (WHERE dr.id IS NOT NULL), '[]'
-             ) AS assigned_roles
+      SELECT mp.id, mp.developer_id, d.name AS developer_name, d.email AS developer_email,
+             mp.module_id, m.name AS module_name, m.slug AS module_slug, m.description AS module_description,
+             mp.can_view, mp.can_create, mp.can_edit, mp.can_delete, mp.created_at, mp.updated_at
       FROM module_permissions mp
-      JOIN developer_modules dm ON mp.module_id = dm.id
-      LEFT JOIN developer_role_permissions drp ON mp.id = drp.permission_id
-      LEFT JOIN developer_roles dr ON drp.role_id = dr.id
+      JOIN modules m ON mp.module_id = m.id
+      JOIN developers d ON mp.developer_id = d.id
       WHERE 1=1
     `;
     const params = [];
 
+    if (developerId) {
+      params.push(developerId);
+      querySql += ` AND mp.developer_id = $${params.length}`;
+    }
+
     if (search) {
       params.push(`%${search}%`);
-      querySql += ` AND (LOWER(mp.name) LIKE $${params.length} OR LOWER(mp.permission_key) LIKE $${params.length} OR LOWER(mp.description) LIKE $${params.length})`;
+      querySql += ` AND (LOWER(m.name) LIKE $${params.length} OR LOWER(m.slug) LIKE $${params.length} OR LOWER(d.name) LIKE $${params.length} OR LOWER(d.email) LIKE $${params.length})`;
     }
 
-    if (folder && folder !== 'all') {
-      params.push(folder);
-      querySql += ` AND LOWER(dm.slug) = $${params.length}`;
-    }
-
-    querySql += `
-      GROUP BY mp.id, mp.name, mp.permission_key, dm.slug, dm.name, mp.description, mp.created_at
-      ORDER BY dm.slug ASC, mp.name ASC
-    `;
+    querySql += ` ORDER BY d.name ASC, m.name ASC`;
 
     const res = await queryDb(querySql, params).catch(() => ({ rows: [] }));
-
-    // Get unique folders for category filtering
-    const foldersRes = await queryDb('SELECT DISTINCT slug as folder FROM developer_modules ORDER BY slug ASC').catch(() => ({ rows: [] }));
+    const modulesRes = await queryDb('SELECT id, name, slug, description FROM modules WHERE is_active = TRUE ORDER BY name ASC').catch(() => ({ rows: [] }));
 
     return NextResponse.json({
       success: true,
       records: res.rows,
       permissions: res.rows,
-      folders: foldersRes.rows.map((r) => r.folder),
+      modules: modulesRes.rows,
       total: res.rows.length,
     });
   } catch (error) {
@@ -80,105 +68,53 @@ export async function GET(request) {
 
 /**
  * POST /api/developer/permissions
- * Register a new system module_permission.
+ * Grant or update a developer module_permission.
  */
 export async function POST(request) {
   try {
-    const auth = await hasModulePermission(request, ['roles', 'developers']);
+    const auth = await hasModulePermission(request, ['modules', 'developers']);
     if (!auth.success) {
       return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
     }
 
     const body = await request.json();
-    const name = (body.name || '').trim();
-    let slug = (body.slug || body.permission_key || '').trim().toLowerCase();
-    const folder = (body.folder || body.category || 'general').trim().toLowerCase();
-    const description = (body.description || '').trim();
+    const { developerId, moduleId, can_view = true, can_create = false, can_edit = false, can_delete = false } = body;
 
-    if (!name) {
-      return NextResponse.json({ success: false, error: 'Permission name is required.' }, { status: 400 });
+    if (!developerId || !moduleId) {
+      return NextResponse.json({ success: false, error: 'developerId and moduleId are required.' }, { status: 400 });
     }
 
-    if (!slug) {
-      slug = slugify(name);
-    } else {
-      slug = slugify(slug);
-    }
+    const insertRes = await queryDb(
+      `INSERT INTO module_permissions (developer_id, module_id, can_view, can_create, can_edit, can_delete)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (developer_id, module_id) DO UPDATE SET
+         can_view = EXCLUDED.can_view,
+         can_create = EXCLUDED.can_create,
+         can_edit = EXCLUDED.can_edit,
+         can_delete = EXCLUDED.can_delete,
+         updated_at = CURRENT_TIMESTAMP
+       RETURNING *`,
+      [developerId, moduleId, Boolean(can_view), Boolean(can_create), Boolean(can_edit), Boolean(can_delete)]
+    );
 
-    if (!slug) {
-      return NextResponse.json({ success: false, error: 'Valid permission slug is required.' }, { status: 400 });
-    }
-
-    // Check slug uniqueness in module_permissions
-    const checkSlug = await queryDb('SELECT id FROM module_permissions WHERE LOWER(permission_key) = LOWER($1)', [slug]);
-    if (checkSlug.rows.length > 0) {
-      return NextResponse.json(
-        { success: false, error: `Permission with key "${slug}" already exists.` },
-        { status: 400 }
-      );
-    }
-
-    // Ensure the module exists in developer_modules
-    let moduleRes = await queryDb('SELECT id FROM developer_modules WHERE LOWER(slug) = LOWER($1) LIMIT 1', [folder]);
-    let moduleId = moduleRes.rows[0]?.id;
-    if (!moduleId) {
-      const moduleInsert = await queryDb(
-        'INSERT INTO developer_modules (name, slug, description, is_active) VALUES ($1, $2, $3, TRUE) RETURNING id',
-        [folder.charAt(0).toUpperCase() + folder.slice(1), folder, `${folder} module permissions`]
-      );
-      moduleId = moduleInsert.rows[0].id;
-    }
-
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-
-      const insertRes = await client.query(
-        `INSERT INTO module_permissions (module_id, name, permission_key, description, created_at)
-         VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
-         RETURNING id, module_id, name, permission_key AS slug, description, created_at`,
-        [moduleId, name, slug, description]
-      );
-      const newPerm = { ...insertRes.rows[0], folder };
-
-      // Automatically grant newly created permission to the Admin role
-      const adminRoleRes = await client.query("SELECT id FROM developer_roles WHERE LOWER(slug) = 'admin' LIMIT 1");
-      const adminRoleId = adminRoleRes.rows[0]?.id;
-      if (adminRoleId) {
-        await client.query(
-          `INSERT INTO developer_role_permissions (role_id, permission_id, created_at)
-           VALUES ($1, $2, CURRENT_TIMESTAMP)
-           ON CONFLICT DO NOTHING`,
-          [adminRoleId, newPerm.id]
-        );
-      }
-
-      await client.query('COMMIT');
-
-      return NextResponse.json({
-        success: true,
-        permission: newPerm,
-        message: `Permission "${newPerm.name}" (${newPerm.slug}) created successfully and assigned to Admin role.`,
-      });
-    } catch (err) {
-      await client.query('ROLLBACK');
-      throw err;
-    } finally {
-      client.release();
-    }
+    return NextResponse.json({
+      success: true,
+      record: insertRes.rows[0],
+      message: 'Developer module permission saved successfully.',
+    });
   } catch (error) {
-    console.error('Error creating permission:', error);
+    console.error('Error saving developer permission:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 400 });
   }
 }
 
 /**
  * PUT /api/developer/permissions
- * Update an existing permission's name, folder/module, or description.
+ * Update an existing developer module permission.
  */
 export async function PUT(request) {
   try {
-    const auth = await hasModulePermission(request, ['roles', 'developers']);
+    const auth = await hasModulePermission(request, ['modules', 'developers']);
     if (!auth.success) {
       return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
     }
@@ -190,110 +126,55 @@ export async function PUT(request) {
       return NextResponse.json({ success: false, error: 'Permission ID is required.' }, { status: 400 });
     }
 
-    const permRes = await queryDb('SELECT * FROM module_permissions WHERE id = $1', [id]);
-    if (permRes.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Permission not found.' }, { status: 404 });
-    }
-
-    const currentPerm = permRes.rows[0];
-    const name = body.name !== undefined ? body.name.trim() : currentPerm.name;
-    const description = body.description !== undefined ? body.description.trim() : currentPerm.description;
-    let moduleId = currentPerm.module_id;
-
-    if (body.folder !== undefined) {
-      const folder = body.folder.trim().toLowerCase();
-      let moduleRes = await queryDb('SELECT id FROM developer_modules WHERE LOWER(slug) = LOWER($1) LIMIT 1', [folder]);
-      if (moduleRes.rows.length > 0) {
-        moduleId = moduleRes.rows[0].id;
-      } else {
-        const moduleInsert = await queryDb(
-          'INSERT INTO developer_modules (name, slug, description, is_active) VALUES ($1, $2, $3, TRUE) RETURNING id',
-          [folder.charAt(0).toUpperCase() + folder.slice(1), folder, `${folder} module permissions`]
-        );
-        moduleId = moduleInsert.rows[0].id;
-      }
-    }
-
-    if (!name) {
-      return NextResponse.json({ success: false, error: 'Permission name cannot be empty.' }, { status: 400 });
-    }
-
     const updateRes = await queryDb(
       `UPDATE module_permissions
-       SET name = $1, module_id = $2, description = $3
-       WHERE id = $4
-       RETURNING id, module_id, name, permission_key AS slug, description, created_at`,
-      [name, moduleId, description, id]
+       SET can_view = COALESCE($1, can_view),
+           can_create = COALESCE($2, can_create),
+           can_edit = COALESCE($3, can_edit),
+           can_delete = COALESCE($4, can_delete),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $5
+       RETURNING *`,
+      [body.can_view, body.can_create, body.can_edit, body.can_delete, id]
     );
 
     return NextResponse.json({
       success: true,
-      permission: updateRes.rows[0],
-      message: `Permission "${name}" updated successfully.`,
+      record: updateRes.rows[0],
+      message: 'Developer module permission updated successfully.',
     });
   } catch (error) {
-    console.error('Error updating permission:', error);
+    console.error('Error updating developer permission:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 400 });
   }
 }
 
 /**
  * DELETE /api/developer/permissions
- * Delete a permission module.
+ * Revoke a developer module permission.
  */
 export async function DELETE(request) {
   try {
-    const auth = await hasModulePermission(request, ['roles', 'developers']);
+    const auth = await hasModulePermission(request, ['modules', 'developers']);
     if (!auth.success) {
       return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
     }
 
     const { searchParams } = new URL(request.url);
-    let id = searchParams.get('id');
-    if (!id) {
-      const body = await request.json().catch(() => ({}));
-      id = body.id || body.permissionId;
-    }
+    const id = searchParams.get('id');
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Permission ID is required.' }, { status: 400 });
     }
 
-    const permRes = await queryDb('SELECT * FROM module_permissions WHERE id = $1', [id]);
-    if (permRes.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Permission not found.' }, { status: 404 });
-    }
+    await queryDb('DELETE FROM module_permissions WHERE id = $1', [id]);
 
-    const perm = permRes.rows[0];
-
-    // Protect core critical platform permissions
-    const protectedSlugs = ['overview', 'developers', 'settings', 'profile'];
-    if (protectedSlugs.includes(perm.permission_key)) {
-      return NextResponse.json(
-        { success: false, error: `Critical platform permission "${perm.permission_key}" cannot be deleted.` },
-        { status: 400 }
-      );
-    }
-
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      await client.query('DELETE FROM developer_role_permissions WHERE permission_id = $1', [id]);
-      await client.query('DELETE FROM module_permissions WHERE id = $1', [id]);
-      await client.query('COMMIT');
-
-      return NextResponse.json({
-        success: true,
-        message: `Permission "${perm.name}" (${perm.permission_key}) deleted successfully.`,
-      });
-    } catch (err) {
-      await client.query('ROLLBACK');
-      throw err;
-    } finally {
-      client.release();
-    }
+    return NextResponse.json({
+      success: true,
+      message: 'Developer module permission revoked successfully.',
+    });
   } catch (error) {
-    console.error('Error deleting permission:', error);
+    console.error('Error deleting developer permission:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

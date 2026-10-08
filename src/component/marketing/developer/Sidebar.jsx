@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ROLE_PERMISSIONS } from 'src/app/(developers)/developer/layout';
 
 export const ADMIN_NAV_SECTIONS = [
   {
@@ -67,7 +66,6 @@ export const ADMIN_NAV_SECTIONS = [
     title: 'Team & Organization',
     links: [
       { href: '/developer/developers', label: 'Developers Team' },
-      { href: '/developer/roles', label: 'Roles & Permissions' },
       { href: '/developer/payroll', label: 'Payroll & Salaries' },
       { href: '/developer/my-salaries', label: 'My Salaries' },
     ],
@@ -90,9 +88,7 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
   const router = useRouter();
 
   const userPerms = Array.isArray(currentUser?.permissions) ? currentUser.permissions : null;
-  const role = (currentUser?.role || 'developer').toLowerCase();
-  const fallbackModules = ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS.developer || [];
-  const allowedModules = userPerms && userPerms.length > 0 ? userPerms : fallbackModules;
+  const allowedModules = userPerms && userPerms.length > 0 ? userPerms : ['overview', 'profile', 'settings'];
 
   const isLinkAllowed = (link) => {
     const segments = link.href.split('/').filter(Boolean);
@@ -101,8 +97,7 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
       moduleName === 'overview' ||
       moduleName === 'profile' ||
       moduleName === 'settings' ||
-      allowedModules.includes(moduleName) ||
-      (moduleName === 'roles' && (allowedModules.includes('developers') || allowedModules.includes('roles')))
+      allowedModules.includes(moduleName)
     );
   };
 

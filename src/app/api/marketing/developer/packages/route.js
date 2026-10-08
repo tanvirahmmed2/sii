@@ -39,14 +39,14 @@ async function fetchPackageById(id) {
                   ) ORDER BY tm.id ASC
                 )
                 FROM package_modules pm
-                JOIN tenant_modules tm ON pm.tenant_module_id = tm.id
+                JOIN website_modules tm ON pm.website_module_id = tm.id
                 WHERE pm.package_id = p.id
               ),
               '[]'::json
             ) AS tenant_modules,
             COALESCE(
               (
-                SELECT json_agg(pm.tenant_module_id ORDER BY pm.tenant_module_id ASC)
+                SELECT json_agg(pm.website_module_id ORDER BY pm.website_module_id ASC)
                 FROM package_modules pm
                 WHERE pm.package_id = p.id
               ),
@@ -56,7 +56,7 @@ async function fetchPackageById(id) {
                (
                  SELECT json_agg(DISTINCT tm.name ORDER BY tm.name ASC)
                  FROM package_modules pm
-                 JOIN tenant_modules tm ON pm.tenant_module_id = tm.id
+                 JOIN website_modules tm ON pm.website_module_id = tm.id
                  WHERE pm.package_id = p.id
                ),
                '[]'::json
@@ -75,9 +75,9 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
-    // Also fetch all available tenant modules for quick UI consumption
+    // Also fetch all available website modules for quick UI consumption
     const allTenantMods = await queryDb(
-      'SELECT * FROM tenant_modules WHERE is_active = TRUE ORDER BY id ASC'
+      'SELECT * FROM website_modules WHERE is_active = TRUE ORDER BY id ASC'
     ).catch(() => ({ rows: [] }));
 
     if (id) {
@@ -108,14 +108,14 @@ export async function GET(request) {
                     ) ORDER BY tm.id ASC
                   )
                   FROM package_modules pm
-                  JOIN tenant_modules tm ON pm.tenant_module_id = tm.id
+                  JOIN website_modules tm ON pm.website_module_id = tm.id
                   WHERE pm.package_id = p.id
                 ),
                 '[]'::json
               ) AS tenant_modules,
               COALESCE(
                 (
-                  SELECT json_agg(pm.tenant_module_id ORDER BY pm.tenant_module_id ASC)
+                  SELECT json_agg(pm.website_module_id ORDER BY pm.website_module_id ASC)
                   FROM package_modules pm
                   WHERE pm.package_id = p.id
                 ),
@@ -125,7 +125,7 @@ export async function GET(request) {
                (
                  SELECT json_agg(DISTINCT tm.name ORDER BY tm.name ASC)
                  FROM package_modules pm
-                 JOIN tenant_modules tm ON pm.tenant_module_id = tm.id
+                 JOIN website_modules tm ON pm.website_module_id = tm.id
                  WHERE pm.package_id = p.id
                ),
                '[]'::json
@@ -248,7 +248,7 @@ export async function POST(request) {
       );
       if (rawNames.length > 0) {
         const resolved = await queryDb(
-          `SELECT id FROM tenant_modules WHERE LOWER(name) = ANY($1) OR LOWER(slug) = ANY($1)`,
+          `SELECT id FROM website_modules WHERE LOWER(name) = ANY($1) OR LOWER(slug) = ANY($1)`,
           [rawNames]
         ).catch(() => ({ rows: [] }));
         tenantModuleIds = resolved.rows.map((r) => r.id);
@@ -258,9 +258,9 @@ export async function POST(request) {
     // Insert into package_modules
     for (const modId of tenantModuleIds) {
       await queryDb(
-        `INSERT INTO package_modules (package_id, tenant_module_id)
+        `INSERT INTO package_modules (package_id, website_module_id)
          VALUES ($1, $2)
-         ON CONFLICT (package_id, tenant_module_id) DO NOTHING`,
+         ON CONFLICT (package_id, website_module_id) DO NOTHING`,
         [newPackage.id, modId]
       ).catch((e) => console.warn('Error linking package_module:', e.message));
     }
@@ -437,7 +437,7 @@ export async function PUT(request) {
       );
       if (rawNames.length > 0) {
         const resolved = await queryDb(
-          `SELECT id FROM tenant_modules WHERE LOWER(name) = ANY($1) OR LOWER(slug) = ANY($1)`,
+          `SELECT id FROM website_modules WHERE LOWER(name) = ANY($1) OR LOWER(slug) = ANY($1)`,
           [rawNames]
         ).catch(() => ({ rows: [] }));
         tenantModuleIds = resolved.rows.map((r) => r.id);
@@ -452,9 +452,9 @@ export async function PUT(request) {
 
       for (const modId of tenantModuleIds) {
         await queryDb(
-          `INSERT INTO package_modules (package_id, tenant_module_id)
+          `INSERT INTO package_modules (package_id, website_module_id)
            VALUES ($1, $2)
-           ON CONFLICT (package_id, tenant_module_id) DO NOTHING`,
+           ON CONFLICT (package_id, website_module_id) DO NOTHING`,
           [Number(id), modId]
         ).catch((e) => console.warn('Error syncing package_module:', e.message));
       }

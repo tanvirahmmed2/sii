@@ -225,8 +225,7 @@ export default function PlatformOverviewPage() {
     {
       category: 'Team & Governance',
       items: [
-        { label: 'Developers Team', path: '/developer/developers', desc: 'Engineering team directory and invites' },
-        { label: 'Roles & Permissions', path: '/developer/roles', desc: 'RBAC roles and access permissions' },
+        { label: 'Developers Team', path: '/developer/developers', desc: 'Engineering team directory and direct module permissions' },
         { label: 'Staff Payroll', path: '/developer/payroll', desc: 'Payroll disbursement and generation' },
         { label: 'My Salaries', path: '/developer/my-salaries', desc: 'Personal compensation history' },
       ],
@@ -249,7 +248,7 @@ export default function PlatformOverviewPage() {
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-              {developer?.roleName || developer?.role || 'Developer'}
+              {developer?.designation || 'Developer'}
             </span>
             <span className="text-xs text-slate-500 font-normal">{SITE_NAME} Operations Overview</span>
           </div>

@@ -58,12 +58,11 @@ export async function GET(request) {
         dt.developer_id,
         d.name AS assignee_name,
         d.email AS assignee_email,
-        COALESCE(dr.slug, 'developer') AS assignee_role,
+        'developer' AS assignee_role,
         d.name AS creator_name,
         0 AS comments_count
       FROM developer_tasks dt
       LEFT JOIN developers d ON dt.developer_id = d.id
-      LEFT JOIN developer_roles dr ON d.role_id = dr.id
       ${whereClause ? whereClause.replace(/\bt\./g, 'dt.') : ''}
       ORDER BY 
         CASE LOWER(dt.priority)
@@ -83,12 +82,11 @@ export async function GET(request) {
           COALESCE(t.assigned_to_developer_id, t.developer_id) AS assigned_to_developer_id,
           assignee.name AS assignee_name,
           assignee.email AS assignee_email,
-          COALESCE(ar.slug, 'developer') AS assignee_role,
+          'developer' AS assignee_role,
           creator.name AS creator_name,
           0 AS comments_count
         FROM tasks t
         LEFT JOIN developers assignee ON COALESCE(t.assigned_to_developer_id, t.developer_id) = assignee.id
-        LEFT JOIN developer_roles ar ON assignee.role_id = ar.id
         LEFT JOIN developers creator ON t.created_by_developer_id = creator.id
         ${whereClause}
         ORDER BY t.created_at DESC
@@ -97,9 +95,8 @@ export async function GET(request) {
 
     // List of active developers for assignee dropdown
     const devsRes = await queryDb(`
-      SELECT d.id, d.name, d.email, COALESCE(r.slug, 'developer') AS role, COALESCE(r.name, 'Developer') AS role_name 
+      SELECT d.id, d.name, d.email, 'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name 
       FROM developers d 
-      LEFT JOIN developer_roles r ON d.role_id = r.id 
       WHERE d.is_active = TRUE 
       ORDER BY d.name ASC
     `).catch(() => ({ rows: [] }));

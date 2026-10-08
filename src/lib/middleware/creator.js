@@ -324,6 +324,7 @@ export async function resolveWebsiteFromRequest(request, context) {
       `SELECT id, creator_id, name, slug, subdomain, subdomain AS domain, custom_domain,
               custom_domain_verified, institution_type, eiin_number, contact_email, contact_phone, address,
               primary_color, secondary_color, theme, status, is_maintenance_mode,
+              logo, logo_id, favicon, favicon_id,
               (status = 'active') AS is_active,
               (status = 'active' AND is_maintenance_mode = false) AS is_published
        FROM websites 
@@ -395,10 +396,10 @@ export async function getWebsiteUserSession(request) {
 export async function getUserRolesAndPermissions(userId, websiteId) {
   try {
     const res = await query(
-      `SELECT r.name as role, r.permissions
-       FROM website_user_roles ur
-       JOIN website_roles r ON r.id = ur.role_id
-       WHERE ur.user_id = $1 AND ur.website_id = $2`,
+      `SELECT wm.slug as module, wmp.can_view, wmp.can_create, wmp.can_edit, wmp.can_delete
+       FROM website_modules_permissions wmp
+       JOIN website_modules wm ON wm.id = wmp.website_module_id
+       WHERE wmp.staff_id = $1 AND wmp.website_id = $2`,
       [userId, websiteId]
     );
     return res.rows;
@@ -407,7 +408,7 @@ export async function getUserRolesAndPermissions(userId, websiteId) {
   }
 }
 
-export default {
+const CreatorMiddleware = {
   hashPassword,
   comparePassword,
   signJWT,
@@ -421,3 +422,5 @@ export default {
   getWebsiteUserSession,
   getUserRolesAndPermissions,
 };
+
+export default CreatorMiddleware;

@@ -57,11 +57,10 @@ export async function PUT(request) {
 
     const currentRes = await query(
       `SELECT d.id, d.name, d.email, d.phone, d.designation, d.bio, d.avatar_url,
-              d.github_profile, d.linkedin_profile, d.password, d.role_id,
-              COALESCE(dr.slug, 'developer') AS role, COALESCE(dr.name, 'Developer') AS role_name,
+              d.github_profile, d.linkedin_profile, d.password,
+              'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name,
               d.is_active
        FROM developers d
-       LEFT JOIN developer_roles dr ON d.role_id = dr.id
        WHERE d.id = $1 LIMIT 1`,
       [authUser.id]
     );
@@ -149,7 +148,7 @@ export async function PUT(request) {
       `UPDATE developers
        SET name = $1, email = $2, phone = $3, designation = $4, bio = $5, github_profile = $6, linkedin_profile = $7, avatar_url = $8, password = $9, updated_at = CURRENT_TIMESTAMP
        WHERE id = $10
-       RETURNING id, name, email, phone, designation, bio, avatar_url, github_profile, linkedin_profile, role_id, is_active, last_login_at, created_at, updated_at`,
+       RETURNING id, name, email, phone, designation, bio, avatar_url, github_profile, linkedin_profile, is_active, last_login_at, created_at, updated_at`,
       [newName, newEmail, newPhone, newDesignation, newBio, newGithub, newLinkedin, newAvatarUrl, newPasswordHash, authUser.id]
     );
 
@@ -184,7 +183,7 @@ export async function PUT(request) {
     if (emailChanged) {
       try {
         const refreshedToken = generateToken(
-          { id: updated.id, email: newEmail, role: updated.role, roleId: updated.role_id },
+          { id: updated.id, email: newEmail, designation: updated.designation },
           '7d'
         );
         await query(

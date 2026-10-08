@@ -86,7 +86,7 @@ export async function GET(request) {
     const search = searchParams.get('search');
     const includeInactive = searchParams.get('include_inactive') === 'true';
 
-    let sql = 'SELECT * FROM tenant_modules';
+    let sql = 'SELECT * FROM website_modules';
     const conditions = [];
     const params = [];
 
@@ -114,7 +114,7 @@ export async function GET(request) {
       total: res.rows.length,
     });
   } catch (error) {
-    console.error('Error fetching tenant modules:', error);
+    console.error('Error fetching website modules:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
@@ -138,7 +138,7 @@ export async function POST(request) {
     let slug = baseSlug;
     let counter = 1;
     while (true) {
-      const check = await queryDb('SELECT id FROM tenant_modules WHERE slug = $1 LIMIT 1', [slug]);
+      const check = await queryDb('SELECT id FROM website_modules WHERE slug = $1 LIMIT 1', [slug]);
       if (check.rows.length === 0) break;
       counter++;
       slug = `${baseSlug}-${counter}`;
@@ -149,7 +149,7 @@ export async function POST(request) {
     const isActive = data.is_active !== undefined ? Boolean(data.is_active) : true;
 
     const res = await queryDb(
-      `INSERT INTO tenant_modules (name, slug, description, icon, is_active)
+      `INSERT INTO website_modules (name, slug, description, icon, is_active)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
       [name, slug, description, icon, isActive]
@@ -157,7 +157,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Tenant module created successfully',
+      message: 'Website module created successfully',
       record: res.rows[0],
     }, { status: 201 });
   } catch (error) {

@@ -12,13 +12,12 @@ export async function GET(request) {
     if (!res || !res.rows) {
       res = await queryDb(
         `SELECT ws.id, ws.name, ws.email, ws.phone, ws.is_active, ws.created_at, 
-                w.name AS website_name, r.name AS role_name,
+                w.name AS website_name, COALESCE(ws.designation, 'Staff') AS role_name,
                 FALSE AS is_banned,
                 0 AS reviews_count,
                 0 AS comments_count
          FROM website_staffs ws
          LEFT JOIN websites w ON ws.website_id = w.id
-         LEFT JOIN website_staff_roles r ON ws.role_id = r.id
          ORDER BY ws.id DESC`
       ).catch(() => ({ rows: [] }));
     }

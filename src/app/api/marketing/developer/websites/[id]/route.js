@@ -89,24 +89,24 @@ export async function GET(request, { params }) {
     const [modulesRes, allTenantModsRes, packagesRes, purchasesRes, creatorsRes, subscriptionsRes] = await Promise.all([
       queryDb(
         `SELECT wm.id AS website_module_id,
-                wm.website_id,
-                wm.tenant_module_id,
-                wm.is_enabled,
-                wm.enabled_at,
-                tm.name AS module_name,
-                tm.slug AS module_slug,
-                tm.description AS module_description,
-                tm.icon AS module_icon,
-                tm.is_active AS module_is_active
+                wm.id,
+                wm.name AS module_name,
+                wm.slug AS module_slug,
+                wm.description AS module_description,
+                wm.icon AS module_icon,
+                wm.is_active,
+                TRUE AS is_enabled
          FROM website_modules wm
-         JOIN tenant_modules tm ON wm.tenant_module_id = tm.id
-         WHERE wm.website_id = $1
-         ORDER BY tm.id ASC`,
+         JOIN package_modules pm ON pm.website_module_id = wm.id
+         JOIN subscriptions s ON s.package_id = pm.package_id
+         JOIN websites w ON (w.subscription_id = s.id OR s.website_id = w.id)
+         WHERE w.id = $1 AND wm.is_active = TRUE
+         ORDER BY wm.id ASC`,
         [websiteId]
       ).catch(() => ({ rows: [] })),
 
       queryDb(
-        `SELECT id, name, slug, description, icon, is_active FROM tenant_modules WHERE is_active = TRUE ORDER BY id ASC`
+        `SELECT id, name, slug, description, icon, is_active FROM website_modules WHERE is_active = TRUE ORDER BY id ASC`
       ).catch(() => ({ rows: [] })),
 
       queryDb(

@@ -14,8 +14,6 @@ const AccessPortalSelectionPage = () => {
       router.push('/auth/access/teacher/login');
     } else if (selectedRole === 'staff') {
       router.push('/auth/access/staff/login');
-    } else if (selectedRole === 'admin') {
-      router.push('/auth/access/admin/login');
     }
   };
 
@@ -85,42 +83,12 @@ const AccessPortalSelectionPage = () => {
             </div>
             <div className="flex-1 text-left">
               <p className="text-sm font-bold text-slate-800">Staff Portal</p>
-              <p className="text-xs text-slate-400 mt-0.5">Cashier, registrar & help desk operations</p>
+              <p className="text-xs text-slate-400 mt-0.5">Cashier, registrar & assigned module management</p>
             </div>
             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
               selectedRole === 'staff' ? 'border-primary bg-primary' : 'border-slate-300'
             }`}>
               {selectedRole === 'staff' && <div className="w-1.5 h-1.5 rounded-full bg-white"></div>}
-            </div>
-          </label>
-
-          {/* Admin Option */}
-          <label className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer ${
-            selectedRole === 'admin'
-              ? 'border-primary bg-primary-light/20'
-              : 'border-slate-100 hover:border-slate-200 bg-slate-50/30'
-          }`}>
-            <input
-              type="radio"
-              name="accessRole"
-              value="admin"
-              checked={selectedRole === 'admin'}
-              onChange={() => setSelectedRole('admin')}
-              className="hidden"
-            />
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-              selectedRole === 'admin' ? 'bg-primary-light text-secondary' : 'bg-slate-100 text-slate-500'
-            }`}>
-              <FiShield className="text-lg" />
-            </div>
-            <div className="flex-1 text-left">
-              <p className="text-sm font-bold text-slate-800">System Admin</p>
-              <p className="text-xs text-slate-400 mt-0.5">Full school settings & staff credentials management</p>
-            </div>
-            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-              selectedRole === 'admin' ? 'border-primary bg-primary' : 'border-slate-300'
-            }`}>
-              {selectedRole === 'admin' && <div className="w-1.5 h-1.5 rounded-full bg-white"></div>}
             </div>
           </label>
         </div>

@@ -3,7 +3,6 @@
 import { useState, useEffect, useContext, useMemo } from 'react';
 import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
-import { ROLE_PERMISSIONS } from 'src/app/(developers)/developer/layout';
 import { SITE_NAME } from 'src/lib/database/secret';
 import LoadingScreen from 'src/component/common/LoadingScreen';
 
@@ -215,14 +214,7 @@ const ALL_MODULES = [
     label: 'Developers Team',
     path: '/developer/developers',
     category: 'Team',
-    desc: 'Platform engineering roster, role assignments, and team access.',
-  },
-  {
-    slug: 'roles',
-    label: 'Roles & Permissions',
-    path: '/developer/roles',
-    category: 'Team',
-    desc: 'Role-based access control, security roles, and permissions matrix.',
+    desc: 'Platform engineering roster, direct module permissions, and team access.',
   },
   {
     slug: 'payroll',
@@ -338,15 +330,11 @@ export default function DeveloperOverviewPage() {
     const dev = developer || contextUser;
     if (!dev) return [];
 
-    const role = (dev.role || 'developer').toLowerCase();
-    const userPerms = Array.isArray(dev.permissions) ? dev.permissions : null;
-    const fallbackModules = ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS.developer || [];
-    const permissionsList = userPerms && userPerms.length > 0 ? userPerms : fallbackModules;
+    const permissionsList = Array.isArray(dev.permissions) ? dev.permissions : [];
 
     const isAllowed = (slug) => {
-      if (slug === 'profile' || slug === 'settings') return true;
+      if (slug === 'overview' || slug === 'profile' || slug === 'settings') return true;
       if (permissionsList.includes(slug)) return true;
-      if (slug === 'roles' && (permissionsList.includes('developers') || permissionsList.includes('roles'))) return true;
       if (permissionsList.some((p) => p === slug || p.startsWith(`${slug}:`))) return true;
       return false;
     };

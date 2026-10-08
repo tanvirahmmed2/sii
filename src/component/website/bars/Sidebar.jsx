@@ -174,7 +174,7 @@ const Sidebar = () => {
                       </Link>
                     ))
                   ) : (
-                    <span className="text-xs text-white/70 italic py-1 px-2.5">No roles available</span>
+                    <span className="text-xs text-white/70 italic py-1 px-2.5">No designations available</span>
                   )}
                 </div>
               )}

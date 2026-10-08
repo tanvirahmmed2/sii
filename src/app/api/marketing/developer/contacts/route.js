@@ -32,10 +32,9 @@ export async function GET(request) {
           c.updated_at,
           d.name AS replied_by_name,
           d.email AS replied_by_email,
-          COALESCE(dr.slug, 'developer') AS replied_by_role
+          'developer' AS replied_by_role
         FROM contacts c
         LEFT JOIN developers d ON c.assigned_developer_id = d.id
-        LEFT JOIN developer_roles dr ON d.role_id = dr.id
         WHERE c.id = $1
         LIMIT 1
       `, [id]);
@@ -70,10 +69,9 @@ export async function GET(request) {
         c.updated_at,
         d.name AS replied_by_name,
         d.email AS replied_by_email,
-        COALESCE(dr.slug, 'developer') AS replied_by_role
+        'developer' AS replied_by_role
       FROM contacts c
       LEFT JOIN developers d ON c.assigned_developer_id = d.id
-      LEFT JOIN developer_roles dr ON d.role_id = dr.id
       ORDER BY c.id DESC
     `).catch(() => ({ rows: [] }));
 

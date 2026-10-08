@@ -27,9 +27,9 @@ $$ LANGUAGE plpgsql;
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- 1. DEVELOPER MODULES TABLE (Main Website System Modules for Permissions)
+-- 1. MODULES TABLE (Main SaaS Website System Modules for Platform)
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS developer_modules (
+CREATE TABLE IF NOT EXISTS modules (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL,
     slug VARCHAR(100) UNIQUE NOT NULL,
@@ -39,58 +39,16 @@ CREATE TABLE IF NOT EXISTS developer_modules (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TRIGGER IF EXISTS update_developer_modules_updated_at ON developer_modules;
-CREATE TRIGGER update_developer_modules_updated_at
-    BEFORE UPDATE ON developer_modules
+DROP TRIGGER IF EXISTS update_modules_updated_at ON modules;
+CREATE TRIGGER update_modules_updated_at
+    BEFORE UPDATE ON modules
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 2. MODULE PERMISSIONS TABLE (Granular Permissions inside Developer Modules)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS module_permissions (
-    id BIGSERIAL PRIMARY KEY,
-    module_id BIGINT NOT NULL REFERENCES developer_modules(id) ON DELETE CASCADE,
-    name VARCHAR(100) NOT NULL,
-    permission_key VARCHAR(100) NOT NULL,
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(module_id, permission_key)
-);
-
--- ----------------------------------------------------------------------------
--- 3. DEVELOPER ROLES TABLE (SaaS Platform Internal Roles)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS developer_roles (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL,
-    slug VARCHAR(100) UNIQUE NOT NULL,
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_developer_roles_updated_at ON developer_roles;
-CREATE TRIGGER update_developer_roles_updated_at
-    BEFORE UPDATE ON developer_roles
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 4. DEVELOPER ROLE PERMISSIONS TABLE (Role-to-Permission Mapping)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS developer_role_permissions (
-    id BIGSERIAL PRIMARY KEY,
-    role_id BIGINT NOT NULL REFERENCES developer_roles(id) ON DELETE CASCADE,
-    permission_id BIGINT NOT NULL REFERENCES module_permissions(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(role_id, permission_id)
-);
-
--- ----------------------------------------------------------------------------
--- 5. DEVELOPERS TABLE (SaaS Company Engineers, Admins & Staff)
+-- 2. DEVELOPERS TABLE (SaaS Company Engineers, Admins & Staff)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS developers (
     id BIGSERIAL PRIMARY KEY,
-    role_id BIGINT REFERENCES developer_roles(id) ON DELETE SET NULL,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     phone VARCHAR(50),
@@ -117,6 +75,31 @@ CREATE TABLE IF NOT EXISTS developers (
 DROP TRIGGER IF EXISTS update_developers_updated_at ON developers;
 CREATE TRIGGER update_developers_updated_at
     BEFORE UPDATE ON developers
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 3. MODULE PERMISSIONS TABLE (Combines Developers with Platform Modules)
+-- Direct granular access control per developer - no intermediate role table needed
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS module_permissions (
+    id BIGSERIAL PRIMARY KEY,
+    developer_id BIGINT NOT NULL REFERENCES developers(id) ON DELETE CASCADE,
+    module_id BIGINT NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
+    can_view BOOLEAN DEFAULT TRUE,
+    can_create BOOLEAN DEFAULT FALSE,
+    can_edit BOOLEAN DEFAULT FALSE,
+    can_delete BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(developer_id, module_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_module_permissions_dev ON module_permissions(developer_id);
+CREATE INDEX IF NOT EXISTS idx_module_permissions_mod ON module_permissions(module_id);
+
+DROP TRIGGER IF EXISTS update_module_permissions_updated_at ON module_permissions;
+CREATE TRIGGER update_module_permissions_updated_at
+    BEFORE UPDATE ON module_permissions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
@@ -203,10 +186,10 @@ CREATE TRIGGER update_packages_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 9. TENANT MODULES TABLE (Tenant Features / School System Modules Catalog)
+-- 9. WEBSITE MODULES TABLE (Tenant Features / School System Modules Catalog)
 -- e.g., Attendance, Exams, LMS, Hostel, Fees, Accounting, Inventory
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS tenant_modules (
+CREATE TABLE IF NOT EXISTS website_modules (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL,
     slug VARCHAR(100) UNIQUE NOT NULL,
@@ -217,22 +200,24 @@ CREATE TABLE IF NOT EXISTS tenant_modules (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TRIGGER IF EXISTS update_tenant_modules_updated_at ON tenant_modules;
-CREATE TRIGGER update_tenant_modules_updated_at
-    BEFORE UPDATE ON tenant_modules
+DROP TRIGGER IF EXISTS update_website_modules_updated_at ON website_modules;
+CREATE TRIGGER update_website_modules_updated_at
+    BEFORE UPDATE ON website_modules
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 
 -- ----------------------------------------------------------------------------
--- 10. PACKAGE MODULES TABLE (Tenant Modules included in Packages)
+-- 10. PACKAGE MODULES TABLE (Combines Package with Website Modules)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS package_modules (
     id BIGSERIAL PRIMARY KEY,
     package_id BIGINT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
-    tenant_module_id BIGINT NOT NULL REFERENCES tenant_modules(id) ON DELETE CASCADE,
+    website_module_id BIGINT NOT NULL REFERENCES website_modules(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(package_id, tenant_module_id)
+    UNIQUE(package_id, website_module_id)
 );
+
+CREATE OR REPLACE VIEW package_website_modules AS SELECT * FROM package_modules;
 
 -- ----------------------------------------------------------------------------
 -- 11. CREATORS TABLE (Clients / Educational Institution Owners / Customers)
@@ -339,17 +324,7 @@ CREATE TRIGGER update_websites_updated_at
     BEFORE UPDATE ON websites
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- ----------------------------------------------------------------------------
--- 14. WEBSITE MODULES TABLE (Tenant Modules activated per Website)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_modules (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    tenant_module_id BIGINT NOT NULL REFERENCES tenant_modules(id) ON DELETE CASCADE,
-    is_enabled BOOLEAN DEFAULT TRUE,
-    enabled_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, tenant_module_id)
-);
+
 
 -- ----------------------------------------------------------------------------
 -- 15. PURCHASES TABLE (Package Subscriptions & Module Purchases by Creators)

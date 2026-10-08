@@ -18,10 +18,9 @@ export async function GET(request, { params }) {
         tc.*,
         d.name AS author_name,
         d.email AS author_email,
-        COALESCE(r.slug, 'developer') AS author_role
+        'developer' AS author_role
       FROM task_comments tc
       JOIN developers d ON tc.developer_id = d.id
-      LEFT JOIN developer_roles r ON d.role_id = r.id
       WHERE tc.task_id = $1
       ORDER BY tc.created_at ASC
     `, [id]).catch(() => ({ rows: [] }));

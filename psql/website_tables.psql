@@ -161,7 +161,6 @@ CREATE TABLE IF NOT EXISTS website_staffs (
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
     number VARCHAR(50) NOT NULL,
-    role VARCHAR(100) NOT NULL DEFAULT 'staff',
     address TEXT,
     password VARCHAR(255) NOT NULL,
     recovery_token VARCHAR(255),
@@ -173,8 +172,6 @@ CREATE TABLE IF NOT EXISTS website_staffs (
     is_two_factor_enabled BOOLEAN DEFAULT FALSE,
     verification_token VARCHAR(255),
     verification_token_expires TIMESTAMPTZ,
-    image TEXT,
-    image_id VARCHAR(255),
     grade_id BIGINT REFERENCES website_staff_pay_scale(id) ON DELETE SET NULL,
     date_of_birth DATE,
     nationality VARCHAR(100),
@@ -214,6 +211,60 @@ CREATE TABLE IF NOT EXISTS website_staff_experiences (
 DROP TRIGGER IF EXISTS update_website_staff_experiences_updated_at ON website_staff_experiences;
 CREATE TRIGGER update_website_staff_experiences_updated_at
     BEFORE UPDATE ON website_staff_experiences
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 32A. WEBSITE MODULES PERMISSIONS TABLE (Granular Module Access for Tenant Staff Only)
+-- (Must check if available for the website via its subscription package)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_modules_permissions (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    staff_id BIGINT NOT NULL REFERENCES website_staffs(id) ON DELETE CASCADE,
+    website_module_id BIGINT NOT NULL REFERENCES website_modules(id) ON DELETE CASCADE,
+    can_view BOOLEAN DEFAULT TRUE,
+    can_create BOOLEAN DEFAULT FALSE,
+    can_edit BOOLEAN DEFAULT FALSE,
+    can_delete BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(staff_id, website_module_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_modules_permissions_staff_id ON website_modules_permissions(staff_id);
+CREATE INDEX IF NOT EXISTS idx_website_modules_permissions_website_id ON website_modules_permissions(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_modules_permissions_module_id ON website_modules_permissions(website_module_id);
+
+DROP TRIGGER IF EXISTS update_website_modules_permissions_updated_at ON website_modules_permissions;
+CREATE TRIGGER update_website_modules_permissions_updated_at
+    BEFORE UPDATE ON website_modules_permissions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 32B. STAFF SESSIONS TABLE (Active Multi-Device Sessions for Tenant Staff)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS staff_sessions (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    staff_id BIGINT NOT NULL REFERENCES website_staffs(id) ON DELETE CASCADE,
+    token TEXT UNIQUE NOT NULL,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    device_info TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    last_active_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_staff_sessions_staff_id ON staff_sessions(staff_id);
+CREATE INDEX IF NOT EXISTS idx_staff_sessions_website_id ON staff_sessions(website_id);
+CREATE INDEX IF NOT EXISTS idx_staff_sessions_token ON staff_sessions(token);
+
+DROP TRIGGER IF EXISTS update_staff_sessions_updated_at ON staff_sessions;
+CREATE TRIGGER update_staff_sessions_updated_at
+    BEFORE UPDATE ON staff_sessions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------

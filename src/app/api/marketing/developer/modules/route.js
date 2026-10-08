@@ -93,7 +93,7 @@ function formatTableToModuleTitle(tableName) {
     payment: 'Payment Ledger',
     creators: 'Creator Accounts',
     developers: 'Developers Engineering Team',
-    developer_roles: 'Developer Staff Roles',
+    module_permissions: 'Developer Module Permissions',
     developer_payrolls: 'Developer Payroll Profiles',
     payrolls: 'Monthly Payrolls',
     payroll_payments: 'Payroll Disbursals',

@@ -25,11 +25,10 @@ export async function GET(request) {
 
     const devRes = await queryDb(
       `SELECT d.id, d.name, d.email, d.phone, d.designation, d.bio, d.avatar_url, d.avatar_id,
-              d.github_profile, d.linkedin_profile, d.role_id,
-              COALESCE(dr.slug, 'developer') AS role, COALESCE(dr.name, 'Developer') AS role_name,
+              d.github_profile, d.linkedin_profile,
+              'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name,
               d.is_active, d.email_verified, d.last_login_at, d.created_at, d.updated_at
        FROM developers d
-       LEFT JOIN developer_roles dr ON d.role_id = dr.id
        WHERE d.id = $1
        LIMIT 1`,
       [authUser.id]
@@ -67,20 +66,17 @@ export async function GET(request) {
       [developer.id]
     ).catch(() => ({ rows: [] }));
 
-    // Fetch granular permissions with module details
+    // Fetch granular permissions with module details directly from module_permissions
     let rolePermissions = [];
-    if (developer.role_id) {
-      const permRes = await queryDb(
-        `SELECT dm.name AS module_name, dm.slug AS module_slug, mp.name AS permission_name, mp.permission_key, mp.description
-         FROM developer_role_permissions drp
-         JOIN module_permissions mp ON drp.permission_id = mp.id
-         JOIN developer_modules dm ON mp.module_id = dm.id
-         WHERE drp.role_id = $1
-         ORDER BY dm.name ASC, mp.name ASC`,
-        [developer.role_id]
-      ).catch(() => ({ rows: [] }));
-      rolePermissions = permRes.rows || [];
-    }
+    const permRes = await queryDb(
+      `SELECT m.name AS module_name, m.slug AS module_slug, mp.can_view, mp.can_create, mp.can_edit, mp.can_delete
+       FROM module_permissions mp
+       JOIN modules m ON mp.module_id = m.id
+       WHERE mp.developer_id = $1 AND m.is_active = TRUE
+       ORDER BY m.name ASC`,
+      [developer.id]
+    ).catch(() => ({ rows: [] }));
+    rolePermissions = permRes.rows || [];
 
     // Fetch operational stats (assigned tickets, ticket replies)
     const statsRes = await queryDb(
@@ -133,11 +129,10 @@ export async function PUT(request) {
     // Load current developer record including password hash
     const currentRes = await queryDb(
       `SELECT d.id, d.name, d.email, d.phone, d.designation, d.bio, d.avatar_url, d.avatar_id,
-              d.github_profile, d.linkedin_profile, d.password, d.role_id,
-              COALESCE(dr.slug, 'developer') AS role, COALESCE(dr.name, 'Developer') AS role_name,
+              d.github_profile, d.linkedin_profile, d.password,
+              'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name,
               d.is_active, d.email_verified
        FROM developers d
-       LEFT JOIN developer_roles dr ON d.role_id = dr.id
        WHERE d.id = $1 LIMIT 1`,
       [authUser.id]
     );
@@ -235,7 +230,7 @@ export async function PUT(request) {
            password = $9,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $10
-       RETURNING id, name, email, phone, designation, bio, avatar_url, avatar_id, github_profile, linkedin_profile, role_id, is_active, email_verified, last_login_at, created_at, updated_at`,
+       RETURNING id, name, email, phone, designation, bio, avatar_url, avatar_id, github_profile, linkedin_profile, is_active, email_verified, last_login_at, created_at, updated_at`,
       [newName, newEmail, newPhone, newDesignation, newBio, newGithub, newLinkedin, newAvatarUrl, newPasswordHash, authUser.id]
     );
 
@@ -278,7 +273,7 @@ export async function PUT(request) {
     if (emailChanged) {
       try {
         const refreshedToken = generateToken(
-          { id: updatedDev.id, email: newEmail, role: updatedDev.role, roleId: updatedDev.role_id },
+          { id: updatedDev.id, email: newEmail, designation: updatedDev.designation },
           '7d'
         );
         await queryDb('UPDATE developer_login_sessions SET token = $1 WHERE developer_id = $2 AND is_active = TRUE', [

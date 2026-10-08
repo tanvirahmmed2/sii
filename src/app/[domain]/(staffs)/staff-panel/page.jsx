@@ -60,7 +60,7 @@ const AdminHomePage = () => {
             <span className="text-xs text-slate-400">• {todayDate}</span>
           </div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
-            System Administrator Control
+            Staff Operations Control
           </h1>
           <p className="text-slate-400 text-xs md:text-sm max-w-xl">
             Monitor active campus metrics, admissions, financial ledgers, and operational activity.
@@ -69,14 +69,14 @@ const AdminHomePage = () => {
 
         <div className="flex flex-wrap items-center gap-3 z-10 w-full md:w-auto">
           <Link
-            href="/admin/students/lists"
+            href="/staff-panel/students/lists"
             className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors shadow-xs"
           >
             <FiUserPlus className="text-sm" />
             <span>Manage Students</span>
           </Link>
           <Link
-            href="/admin/settings"
+            href="/staff-panel/settings"
             className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-white border border-white/10 px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors"
           >
             <FiSettings className="text-sm" />
@@ -174,7 +174,7 @@ const AdminHomePage = () => {
               </div>
               <h3 className="font-bold text-slate-800 text-sm">Admissions Overview</h3>
             </div>
-            <Link href="/admin/students/admissions" className="text-xs font-semibold text-primary hover:text-primary-dark flex items-center gap-1">
+            <Link href="/staff-panel/students/admissions" className="text-xs font-semibold text-primary hover:text-primary-dark flex items-center gap-1">
               View Admissions <FiArrowRight />
             </Link>
           </div>
@@ -221,7 +221,7 @@ const AdminHomePage = () => {
               </div>
               <h3 className="font-bold text-slate-800 text-sm">Financial Overview</h3>
             </div>
-            <Link href="/admin/finance" className="text-xs font-semibold text-primary hover:text-primary-dark flex items-center gap-1">
+            <Link href="/staff-panel/finance" className="text-xs font-semibold text-primary hover:text-primary-dark flex items-center gap-1">
               General Finance <FiArrowRight />
             </Link>
           </div>
@@ -258,12 +258,12 @@ const AdminHomePage = () => {
       {/* Quick Action Navigation Tiles */}
       <div className="flex flex-col gap-3">
         <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-          <FiLayers className="text-primary" /> Admin Shortcuts
+          <FiLayers className="text-primary" /> Shortcuts
         </h3>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <Link
-            href="/admin/classes/class"
+            href="/staff-panel/classes/class"
             className="p-3.5 bg-white border border-slate-200/80 hover:border-emerald-500 rounded-xl flex flex-col items-center justify-center text-center gap-2 transition-all group cursor-pointer"
           >
             <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-600 group-hover:bg-secondary group-hover:text-primary-dark flex items-center justify-center text-sm transition-colors">
@@ -273,7 +273,7 @@ const AdminHomePage = () => {
           </Link>
 
           <Link
-            href="/admin/teachers/list"
+            href="/staff-panel/teachers/list"
             className="p-3.5 bg-white border border-slate-200/80 hover:border-emerald-500 rounded-xl flex flex-col items-center justify-center text-center gap-2 transition-all group cursor-pointer"
           >
             <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-600 group-hover:bg-secondary group-hover:text-primary-dark flex items-center justify-center text-sm transition-colors">
@@ -283,7 +283,7 @@ const AdminHomePage = () => {
           </Link>
 
           <Link
-            href="/admin/students/admissions"
+            href="/staff-panel/students/admissions"
             className="p-3.5 bg-white border border-slate-200/80 hover:border-emerald-500 rounded-xl flex flex-col items-center justify-center text-center gap-2 transition-all group cursor-pointer"
           >
             <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-600 group-hover:bg-secondary group-hover:text-primary-dark flex items-center justify-center text-sm transition-colors">
@@ -293,7 +293,7 @@ const AdminHomePage = () => {
           </Link>
 
           <Link
-            href="/admin/events"
+            href="/staff-panel/events"
             className="p-3.5 bg-white border border-slate-200/80 hover:border-emerald-500 rounded-xl flex flex-col items-center justify-center text-center gap-2 transition-all group cursor-pointer"
           >
             <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-600 group-hover:bg-secondary group-hover:text-primary-dark flex items-center justify-center text-sm transition-colors">
@@ -303,7 +303,7 @@ const AdminHomePage = () => {
           </Link>
 
           <Link
-            href="/admin/finance"
+            href="/staff-panel/finance"
             className="p-3.5 bg-white border border-slate-200/80 hover:border-emerald-500 rounded-xl flex flex-col items-center justify-center text-center gap-2 transition-all group cursor-pointer"
           >
             <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-600 group-hover:bg-secondary group-hover:text-primary-dark flex items-center justify-center text-sm transition-colors">
@@ -313,7 +313,7 @@ const AdminHomePage = () => {
           </Link>
 
           <Link
-            href="/admin/settings"
+            href="/staff-panel/settings"
             className="p-3.5 bg-white border border-slate-200/80 hover:border-emerald-500 rounded-xl flex flex-col items-center justify-center text-center gap-2 transition-all group cursor-pointer"
           >
             <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-600 group-hover:bg-secondary group-hover:text-primary-dark flex items-center justify-center text-sm transition-colors">
@@ -333,7 +333,7 @@ const AdminHomePage = () => {
             <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
               <FiUserPlus className="text-primary" /> Recent Admission Applications
             </h3>
-            <Link href="/admin/students/admissions" className="text-xs font-semibold text-primary hover:text-primary-dark">
+            <Link href="/staff-panel/students/admissions" className="text-xs font-semibold text-primary hover:text-primary-dark">
               View All
             </Link>
           </div>
