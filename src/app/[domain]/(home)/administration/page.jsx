@@ -1,17 +1,18 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { FiUsers, FiAward } from 'react-icons/fi';
+import React, { useEffect, useState, useContext } from 'react';
 import AuthorityCard from 'src/component/website/cards/AuthorityCard';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 const AdministrationPage = () => {
+  const { getApiEndpoint } = useContext(TenantWebsiteContext);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchAuthorities = async () => {
       try {
-        const res = await fetch('/api/authorities');
+        const res = await fetch(getApiEndpoint('authorities'));
         if (res.ok) {
           const data = await res.json();
           const list = data.payload?.authorities || data.paylod?.authorities || [];
@@ -24,9 +25,8 @@ const AdministrationPage = () => {
       }
     };
     fetchAuthorities();
-  }, []);
+  }, [getApiEndpoint]);
 
-  // Filter ONLY Chairman and Principal roles
   const filteredMembers = members.filter((m) => {
     const slug = (m.designation || '').toLowerCase();
     const title = (m.designation_title || '').toLowerCase();
@@ -55,44 +55,54 @@ const AdministrationPage = () => {
   });
 
   return (
-    <div className="w-full min-h-screen bg-slate-50/50 py-16 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto flex flex-col gap-12">
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-6xl mx-auto space-y-6">
 
-        <div className="text-center">
-          
-          <h1 className="text-3xl md:text-4xl font-semibold text-slate-900 mt-3 tracking-tight">
-            Executive Leadership & Administration
+        {/* Header */}
+        <div className="border-b border-slate-200 dark:border-slate-800 pb-5">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-medium tracking-wide uppercase px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              Institutional Leadership
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+            Executive Governance & Administration
           </h1>
-          <p className="text-slate-500 mt-2 max-w-xl mx-auto text-xs sm:text-sm md:text-base leading-relaxed">
-            Leading the academic vision, institutional governance, and administrative direction.
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
+            Governing board leaders and principal executive officers guiding academic policy and operations.
           </p>
         </div>
 
         {loading ? (
-          <div className="flex flex-wrap justify-center gap-6">
-            {[1, 2].map((i) => (
-              <div key={i} className="bg-white w-80 h-96 rounded-xl border border-slate-100 p-4 animate-pulse flex flex-col gap-4">
-                <div className="w-full aspect-square bg-slate-200 rounded-lg"></div>
-                <div className="w-3/4 h-5 bg-slate-200 rounded"></div>
-                <div className="w-1/2 h-4 bg-slate-200 rounded"></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 p-4 animate-pulse space-y-3">
+                <div className="w-full aspect-square bg-slate-200 dark:bg-slate-800 rounded"></div>
+                <div className="w-3/4 h-4 bg-slate-200 dark:bg-slate-800 rounded"></div>
+                <div className="w-1/2 h-3 bg-slate-200 dark:bg-slate-800 rounded"></div>
               </div>
             ))}
           </div>
         ) : filteredMembers.length === 0 ? (
-          <div className="w-full text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-xs flex flex-col items-center justify-center gap-3">
-            <FiUsers className="text-4xl text-slate-300" />
-            <p className="text-sm font-semibold text-slate-500">No Chairman or Principal authorities listed yet.</p>
+          <div className="w-full text-center py-12 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              No Executive Leadership Listed
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Chairman and principal authority profiles will appear here once registered.
+            </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-12">
+          <div className="space-y-8">
             {/* Chairman Section */}
             {chairmanMembers.length > 0 && (
-              <div className="flex flex-col items-center gap-6">
-                <div className="flex items-center gap-2 pb-2 border-b border-slate-200 w-full justify-center">
-                  <FiAward className="text-xl text-primary" />
-                  <h2 className="text-xl font-bold text-slate-800 tracking-tight">Chairman</h2>
+              <div className="space-y-4">
+                <div className="border-b border-slate-200 dark:border-slate-800 pb-2">
+                  <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+                    Governing Board Chairman
+                  </h2>
                 </div>
-                <div className="flex flex-wrap justify-center gap-8 w-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {chairmanMembers.map((member) => (
                     <AuthorityCard key={member.id} authority={member} />
                   ))}
@@ -102,12 +112,13 @@ const AdministrationPage = () => {
 
             {/* Principal Section */}
             {principalMembers.length > 0 && (
-              <div className="flex flex-col items-center gap-6">
-                <div className="flex items-center gap-2 pb-2 border-b border-slate-200 w-full justify-center">
-                  <FiUsers className="text-xl text-primary" />
-                  <h2 className="text-xl font-bold text-slate-800 tracking-tight">Principal Leadership</h2>
+              <div className="space-y-4">
+                <div className="border-b border-slate-200 dark:border-slate-800 pb-2">
+                  <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+                    Principal & Academic Executives
+                  </h2>
                 </div>
-                <div className="flex flex-wrap justify-center gap-8 w-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {principalMembers.map((member) => (
                     <AuthorityCard key={member.id} authority={member} />
                   ))}

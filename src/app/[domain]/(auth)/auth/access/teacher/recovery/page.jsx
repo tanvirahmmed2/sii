@@ -4,11 +4,12 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-import { FiMail, FiKey, FiLock, FiArrowLeft, FiRefreshCw, FiAlertTriangle, FiArrowRight } from 'react-icons/fi';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
-const TeacherRecovery = () => {
+export default function TeacherRecoveryPage() {
   const router = useRouter();
-  const [step, setStep] = useState(1); // 1 = Request, 2 = Reset
+  const { website, getApiEndpoint, tenantUrl } = useTenantWebsite();
+  const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [recoveryToken, setRecoveryToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -17,17 +18,18 @@ const TeacherRecovery = () => {
 
   const handleRequestToken = async (e) => {
     e.preventDefault();
-    if (!email) {
+    if (!email.trim()) {
       toast.error('Email is required.');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch('/api/teachers/recovery', {
+      const endpoint = getApiEndpoint('teachers/recovery');
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: email.trim() }),
       });
 
       const data = await response.json();
@@ -36,7 +38,7 @@ const TeacherRecovery = () => {
         throw new Error(data.error || 'Failed to send token.');
       }
 
-      toast.success(data.message || 'Recovery token sent to your email!');
+      toast.success(data.message || 'Recovery token sent to your email.');
       setStep(2);
     } catch (err) {
       toast.error(err.message);
@@ -48,7 +50,7 @@ const TeacherRecovery = () => {
   const handleResetPassword = async (e) => {
     e.preventDefault();
     
-    if (!recoveryToken || !newPassword || !confirmPassword) {
+    if (!recoveryToken.trim() || !newPassword || !confirmPassword) {
       toast.error('All fields are required.');
       return;
     }
@@ -60,13 +62,14 @@ const TeacherRecovery = () => {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/teachers/recovery', {
+      const endpoint = getApiEndpoint('teachers/recovery');
+      const response = await fetch(endpoint, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email,
-          recovery_token: recoveryToken,
-          new_password: newPassword
+          email: email.trim(),
+          recovery_token: recoveryToken.trim(),
+          new_password: newPassword,
         }),
       });
 
@@ -77,8 +80,7 @@ const TeacherRecovery = () => {
       }
 
       toast.success(data.message || 'Password reset successfully!');
-      
-      router.push('/auth/access/teacher/login');
+      router.push(tenantUrl('/auth/access/teacher/login'));
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -87,155 +89,126 @@ const TeacherRecovery = () => {
   };
 
   return (
-    <div className="w-full min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-900 relative px-4 py-12 overflow-hidden bg-slate-55 bg-slate-50">
-      {/* Subtle light background decorations */}
-      <div className="absolute top-[-20%] left-[-20%] w-[60%] aspect-square rounded-full bg-primary/5 blur-[100px] pointer-events-none"></div>
-      <div className="absolute bottom-[-20%] right-[-20%] w-[60%] aspect-square rounded-full bg-primary/5 blur-[100px] pointer-events-none"></div>
-
-      <div className="w-full max-w-[440px] z-10">
+    <div className="w-full min-h-[80vh] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-6 sm:p-8 shadow-xs space-y-6">
         
+        {/* Header */}
+        <div className="text-center space-y-1.5 border-b border-slate-100 dark:border-slate-800 pb-5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block">
+            {website?.name || 'Faculty Security'}
+          </span>
+          <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            Teacher Password Recovery
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {step === 1
+              ? 'Enter your registered faculty email to receive a password reset token.'
+              : `Enter the 6-digit token sent to ${email} to set a new password.`}
+          </p>
+        </div>
+
         {step === 1 ? (
-          <>
-            {/* Step 1 Header */}
-            <div className="flex flex-col items-center mb-8 text-center">
-              <div className="w-14 h-14 bg-amber-55 border border-amber-100 rounded-2xl flex items-center justify-center mb-4 shadow-sm bg-amber-50">
-                <FiAlertTriangle className="text-2xl text-amber-600" />
-              </div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 mb-2">Account Recovery</h1>
-              <p className="text-sm text-slate-500 max-w-[320px]">Enter your registered email to request a secure 6-digit recovery token.</p>
+          <form onSubmit={handleRequestToken} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                Faculty Email Address *
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+                placeholder="teacher@institution.edu"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-sm text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors"
+              />
             </div>
 
-            {/* Step 1 Form */}
-            <div className="w-full bg-white border border-slate-100 rounded-3xl p-8 shadow-[0_10px_40px_rgba(0,0,0,0.03)]">
-              <form onSubmit={handleRequestToken} className="w-full flex flex-col gap-4">
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <FiMail className="text-sm" /> Registered Email
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={loading}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-350 border-slate-300 rounded-xl text-sm text-slate-900 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white text-sm font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
-                >
-                  {loading ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  ) : (
-                    <>
-                      Request Recovery Token <FiArrowRight className="text-lg" />
-                    </>
-                  )}
-                </button>
-              </form>
-            </div>
-
-            {/* Return Link */}
-            <div className="w-full text-center mt-6">
-              <Link
-                href="/auth/access/teacher/login"
-                className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-655 transition-colors py-1.5 px-3 rounded-full hover:bg-slate-100"
-              >
-                <FiArrowLeft className="text-sm" /> Return to Login
-              </Link>
-            </div>
-          </>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 rounded bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-60 text-center"
+            >
+              {loading ? 'Sending Code...' : 'Request Recovery Token →'}
+            </button>
+          </form>
         ) : (
-          <>
-            {/* Step 2 Header */}
-            <div className="flex flex-col items-center mb-8 text-center">
-              <div className="w-14 h-14 bg-primary-light border border-primary-light rounded-2xl flex items-center justify-center mb-4 shadow-sm">
-                <FiKey className="text-2xl text-primary" />
-              </div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 mb-2">Reset Password</h1>
-              <p className="text-sm text-slate-500 max-w-[320px]">Enter the 6-digit token sent to {email} and set your new password.</p>
+          <form onSubmit={handleResetPassword} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                6-Digit Verification Token *
+              </label>
+              <input
+                type="text"
+                required
+                maxLength={6}
+                value={recoveryToken}
+                onChange={(e) => setRecoveryToken(e.target.value)}
+                disabled={loading}
+                placeholder="123456"
+                className="w-full text-center px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-base font-mono text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors"
+              />
             </div>
 
-            {/* Step 2 Form */}
-            <div className="w-full bg-white border border-slate-100 rounded-3xl p-8 shadow-[0_10px_40px_rgba(0,0,0,0.03)]">
-              <form onSubmit={handleResetPassword} className="w-full flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <FiKey className="text-sm" /> 6-Digit Token
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={6}
-                    value={recoveryToken}
-                    onChange={(e) => setRecoveryToken(e.target.value)}
-                    disabled={loading}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-center tracking-[0.2em] font-bold text-lg text-slate-900 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <FiLock className="text-sm" /> New Password
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    disabled={loading}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <FiLock className="text-sm" /> Confirm Password
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    disabled={loading}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-indigo-650 bg-primary hover:bg-primary-dark text-white text-sm font-semibold transition-all duration-200"
-                >
-                  {loading ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  ) : (
-                    <>
-                      <FiRefreshCw className="text-lg" /> Reset Password
-                    </>
-                  )}
-                </button>
-              </form>
+            <div>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                New Password *
+              </label>
+              <input
+                type="password"
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                disabled={loading}
+                placeholder="••••••••"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-sm text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors"
+              />
             </div>
 
-            {/* Back to Step 1 */}
-            <div className="w-full text-center mt-6 flex justify-center gap-4">
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="inline-flex items-center gap-2 text-xs font-semibold text-slate-455 hover:text-slate-655 transition-colors py-1.5 px-3 rounded-full hover:bg-slate-100"
-              >
-                <FiArrowLeft className="text-sm" /> Request New Token
-              </button>
+            <div>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                Confirm New Password *
+              </label>
+              <input
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={loading}
+                placeholder="••••••••"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-sm text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors"
+              />
             </div>
-          </>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 rounded bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-60 text-center"
+            >
+              {loading ? 'Updating Password...' : 'Reset Password →'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              disabled={loading}
+              className="w-full text-center text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+            >
+              Request a new token
+            </button>
+          </form>
         )}
+
+        <div className="pt-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
+          <Link href={tenantUrl('/auth/access/teacher/login')} className="hover:underline font-medium text-primary">
+            ← Back to Teacher Login
+          </Link>
+          <Link href={tenantUrl('/')} className="hover:text-slate-800 dark:hover:text-slate-200">
+            Homepage
+          </Link>
+        </div>
+
       </div>
     </div>
   );
-};
-
-export default TeacherRecovery;
+}

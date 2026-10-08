@@ -3,9 +3,10 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { FiHome, FiMapPin, FiLayers, FiCheckCircle, FiArrowRight } from 'react-icons/fi';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
 const HostelCard = ({ hostel, className = '', showApply = true }) => {
+  const { tenantUrl } = useTenantWebsite();
   if (!hostel) return null;
 
   const {
@@ -18,92 +19,91 @@ const HostelCard = ({ hostel, className = '', showApply = true }) => {
     gender,
     image,
     total_seats,
-    allocated_seats
+    allocated_seats,
   } = hostel;
 
-  const genderTagClass = 
-    gender === 'Male'
-      ? 'bg-sky-100 text-sky-800 border-sky-200'
-      : gender === 'Female'
-      ? 'bg-pink-100 text-pink-800 border-pink-200'
-      : 'bg-slate-100 text-slate-800 border-slate-200';
+  const seatsLeft = Math.max(0, (total_seats || 0) - (allocated_seats || 0));
+  const targetUrl = tenantUrl(`/facilities/hostels/${slug || id}`);
+  const applyUrl = tenantUrl(`/facilities/hostels/apply?hostel_id=${id}`);
 
   return (
-    <div className={`bg-white border border-slate-100 hover:border-primary rounded-3xl p-6 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between gap-5 group ${className}`}>
-      
-      {/* Top Banner Image or Icon Placeholder */}
-      <div className="w-full h-44 rounded-2xl overflow-hidden bg-slate-50 relative shrink-0 border border-slate-100">
-        {image ? (
-          <Image
-            src={image}
-            alt={name || 'Hostel Banner'}
-            width={600}
-            height={300}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-slate-100 to-sky-50 flex items-center justify-center text-primary">
-            <FiHome className="text-5xl opacity-40 group-hover:scale-110 transition-transform duration-300" />
+    <div
+      className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 flex flex-col justify-between gap-3 group transition-colors ${className}`}
+    >
+      <div className="space-y-3">
+        {image && (
+          <div className="w-full aspect-[16/9] rounded overflow-hidden bg-slate-100 dark:bg-slate-800 relative">
+            <Image
+              src={image}
+              alt={name || 'Hostel'}
+              width={500}
+              height={300}
+              className="w-full h-full object-cover"
+              unoptimized={image.startsWith('http')}
+            />
           </div>
         )}
 
-        {/* Gender Badge on top of image */}
-        <div className="absolute top-3 right-3">
-          <span className={`px-3 py-1 text-[10px] font-extrabold uppercase rounded-full border shadow-xs tracking-wider ${genderTagClass}`}>
-            {gender ? `${gender} Hall` : 'Co-ed / Both'}
-          </span>
-        </div>
-      </div>
-
-      {/* Hostel Body Info */}
-      <div className="flex flex-col gap-2 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="font-bold text-slate-900 text-lg group-hover:text-primary transition-colors leading-snug">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-semibold text-slate-900 dark:text-white text-sm sm:text-base">
             {name}
           </h3>
-        </div>
-
-        <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-          <span className="flex items-center gap-1">
-            <FiMapPin className="text-primary" /> {location || 'Campus Main Block'}
-          </span>
-          <span>•</span>
-          <span className="flex items-center gap-1">
-            <FiLayers className="text-slate-400" /> {total_room || 0} Rooms
+          <span className="text-[10px] font-medium px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase tracking-wider shrink-0">
+            {gender ? `${gender} Residence` : 'Co-ed Hall'}
           </span>
         </div>
 
-        {/* Description Rich HTML or text */}
-        {description && (
-          <div 
-            className="text-slate-600 text-xs leading-relaxed line-clamp-3 mt-1 prose prose-sm max-w-none text-slate-500"
-            dangerouslySetInnerHTML={{ __html: description }}
-          />
+        {location && (
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+            Campus Wing: {location}
+          </p>
         )}
+
+        {description && (
+          <p className="text-xs text-slate-600 dark:text-slate-400 font-normal line-clamp-2 leading-relaxed">
+            {description}
+          </p>
+        )}
+
+        <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-100 dark:border-slate-800">
+          <div>
+            <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-mono">
+              Total Rooms
+            </span>
+            <span className="font-semibold text-slate-800 dark:text-slate-200">
+              {total_room || 0} Rooms
+            </span>
+          </div>
+          <div>
+            <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-mono">
+              Available Seats
+            </span>
+            <span className="font-semibold text-slate-800 dark:text-slate-200">
+              {seatsLeft} / {total_seats || 0}
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Footer Info & Application Link */}
-      <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto text-xs">
-        <div className="flex items-center gap-1.5 font-bold text-slate-700">
-          <FiCheckCircle className="text-emerald-500 text-sm" />
-          <span>Active Residential Hall</span>
-        </div>
-
+      <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
+        <Link
+          href={targetUrl}
+          className="flex-1 text-center px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+        >
+          Hall Details
+        </Link>
         {showApply && (
           <Link
-            href="/student/hostels"
-            className="px-4 py-2 bg-primary-light hover:bg-primary text-primary hover:text-white rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
+            href={applyUrl}
+            className="flex-1 text-center px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 text-xs font-medium transition-colors"
           >
-            <span>Apply for Seat</span>
-            <FiArrowRight className="text-xs" />
+            Apply Seat
           </Link>
         )}
       </div>
-
     </div>
   );
 };
 
-// Export as both HostelCard and HostelsCard for convenience
-export const HostelsCard = HostelCard;
+export { HostelCard, HostelCard as HostelsCard };
 export default HostelCard;

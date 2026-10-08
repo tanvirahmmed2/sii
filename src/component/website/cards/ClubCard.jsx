@@ -2,8 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { FiUsers, FiArrowRight } from 'react-icons/fi';
 import Image from 'next/image';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
 const stripHtml = (html) => {
   if (!html) return '';
@@ -11,62 +11,60 @@ const stripHtml = (html) => {
 };
 
 const ClubCard = ({ club, className = '' }) => {
+  const { tenantUrl } = useTenantWebsite();
   if (!club) return null;
 
   const { id, name, slug, motto, description, image } = club;
   const cleanDescription = stripHtml(description);
+  const targetUrl = tenantUrl(`/clubs/${slug || id}`);
 
   return (
-    <div
-      className={`bg-white rounded-2xl  overflow-hidden flex flex-col justify-between hover:border-primary hover:shadow-md transition-all duration-200 group ${className}`}
+    <Link
+      href={targetUrl}
+      className={`bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-600 transition-colors flex flex-col justify-between overflow-hidden group ${className}`}
     >
       <div>
         {image ? (
-          <div className="w-full h-44 bg-slate-100 overflow-hidden relative border-b border-slate-100">
-            <Image width={500} height={500}
+          <div className="w-full aspect-[16/9] bg-slate-100 dark:bg-slate-800 relative overflow-hidden">
+            <Image
               src={image}
               alt={name}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              width={500}
+              height={300}
+              className="w-full h-full object-cover"
+              unoptimized={image.startsWith('http')}
             />
           </div>
         ) : (
-          <div className="w-full h-32 bg-primary-light border-b border-primary-light flex items-center justify-center relative">
-            <div className="w-12 h-12 rounded-xl bg-white border border-primary-light flex items-center justify-center text-primary text-xl shadow-xs group-hover:scale-110 transition-transform duration-200">
-              <FiUsers />
-            </div>
+          <div className="w-full h-24 bg-slate-100 dark:bg-slate-800 flex items-center justify-center p-3">
+            <span className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+              {name?.slice(0, 3) || 'CLB'}
+            </span>
           </div>
         )}
 
-        <div className="p-5 space-y-2">
-          
-
-          <h3 className="font-bold text-slate-900 text-lg group-hover:text-primary transition-colors">
+        <div className="p-3.5 space-y-1.5">
+          <h3 className="font-semibold text-slate-900 dark:text-white text-xs sm:text-sm group-hover:underline">
             {name}
           </h3>
 
           {motto && (
-            <p className="text-xs italic text-primary font-medium line-clamp-1">
-              "{motto}"
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono italic line-clamp-1">
+              &ldquo;{motto}&rdquo;
             </p>
           )}
 
-          <p className="text-xs text-slate-600 leading-relaxed line-clamp-3 pt-1">
-            {cleanDescription || 'Welcome to our student activity club.'}
+          <p className="text-xs text-slate-600 dark:text-slate-400 font-normal line-clamp-2 leading-relaxed">
+            {cleanDescription || 'Student activity and enrichment organization.'}
           </p>
         </div>
       </div>
 
-      {/* Footer Action Link */}
-      <div className="px-5 pb-5 pt-2">
-        <Link
-          href={`/clubs/${slug || id}`}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary transition-colors group/link cursor-pointer"
-        >
-          <span>View Club Details</span>
-          <FiArrowRight className="text-sm group-hover/link:translate-x-0.5 transition-transform" />
-        </Link>
+      <div className="px-3.5 pb-3.5 pt-1 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-medium text-slate-700 dark:text-slate-300">
+        <span>Club Activities</span>
+        <span className="font-mono text-[10px] text-slate-400">&rarr;</span>
       </div>
-    </div>
+    </Link>
   );
 };
 

@@ -1,177 +1,135 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { 
-  FiClock, 
-  FiStar, 
-  FiFlag, 
-  FiBookmark, 
-  FiAward,
-  FiTrendingUp,
-  FiInfo,
-  FiAlertCircle
-} from 'react-icons/fi';
-
-import Image from 'next/image';
-import { LOGO_URL } from 'src/lib/database/secret';
-
-const iconList = [FiFlag, FiAward, FiBookmark, FiStar, FiTrendingUp];
-const colorStyles = [
-  'text-primary bg-primary-light border-primary-light',
-  'text-amber-600 bg-amber-50 border-amber-100',
-  'text-primary bg-primary-light border-primary-light',
-  'text-rose-600 bg-rose-50 border-rose-100',
-  'text-primary bg-primary-light border-primary-light'
-];
+import React, { useEffect, useState, useContext } from 'react';
+import Link from 'next/link';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 const HistoryPage = () => {
+  const { website, getApiEndpoint, tenantUrl } = useContext(TenantWebsiteContext);
   const [histories, setHistories] = useState([]);
-  const [websiteSettings, setWebsiteSettings] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+
+  const formatDate = (dateVal) => {
+    if (!dateVal) return '';
+    try {
+      return new Date(dateVal).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch {
+      return String(dateVal);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      setError(null);
       try {
-        const [histRes, setRes] = await Promise.all([
-          fetch('/api/histories').catch(() => null),
-          fetch('/api/website-settings').catch(() => null)
-        ]);
-
-        if (histRes && histRes.ok) {
-          const hData = await histRes.json();
-          setHistories(hData.payload?.histories || hData.paylod?.histories || hData.histories || []);
-        }
-
-        if (setRes && setRes.ok) {
-          const sData = await setRes.json();
-          setWebsiteSettings(sData.payload?.settings || sData.paylod?.settings || sData.settings || null);
+        const res = await fetch(getApiEndpoint('histories'));
+        if (res.ok) {
+          const data = await res.json();
+          setHistories(data.payload?.histories || data.paylod?.histories || data.histories || []);
         }
       } catch (err) {
         console.error('Error fetching history page data:', err);
-        setError(err.message);
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
-
-  const logoSrc = websiteSettings?.logo_url || LOGO_URL;
+  }, [getApiEndpoint]);
 
   return (
-    <div className="w-full min-h-screen bg-slate-50/50 py-16 px-4 sm:px-6 lg:px-8">
-      <div className="w-full flex flex-col gap-10 max-w-5xl mx-auto">
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-4xl mx-auto space-y-6">
         
-        {/* Page Header */}
-        <div className="text-center flex flex-col items-center gap-4">
-          {logoSrc && (
-            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white border border-slate-200 rounded-2xl p-2 shadow-xs flex items-center justify-center">
-              <Image
-                src={logoSrc}
-                alt="Institutional Logo"
-                width={80}
-                height={80}
-                className="w-full h-full object-contain"
-              />
-            </div>
-          )}
-          <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
-            Our Historic Journey
+        {/* Header */}
+        <div className="border-b border-slate-200 dark:border-slate-800 pb-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Link
+              href={tenantUrl('/about')}
+              className="text-xs text-primary font-medium hover:underline"
+            >
+              ← Back to About
+            </Link>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+            Institutional History & Heritage
           </h1>
-          <p className="text-slate-500 max-w-xl mx-auto text-xs sm:text-sm md:text-base leading-relaxed">
-            Discover the key milestones, founding background, and achievements in our institutional growth.
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
+            A chronological timeline of founding events, infrastructural expansions, and academic accomplishments of {website?.name || 'our institution'}.
           </p>
         </div>
 
-        {/* Dynamic Rich Text History from Website Settings */}
-        {websiteSettings?.history && (
-          <div className="bg-white border border-slate-100 rounded-3xl p-6 sm:p-10 shadow-xs flex flex-col gap-4">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-              <FiClock className="text-primary text-xl" />
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                Institutional Founding & Heritage
-              </h2>
-            </div>
+        {/* Dynamic Rich Text from Website record */}
+        {website?.history && (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 sm:p-6 shadow-xs space-y-2">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Founding Background
+            </h2>
             <div 
-              className="prose prose-slate max-w-none text-slate-700 text-sm md:text-base leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: websiteSettings.history }}
+              className="prose dark:prose-invert max-w-none text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: website.history }}
             />
           </div>
         )}
 
-      
+        {/* Timeline */}
         {loading ? (
-          <div className="bg-white border border-slate-100 rounded-3xl p-12 shadow-xs flex flex-col items-center justify-center gap-3">
-            <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-sm font-semibold text-slate-500">Loading historical milestones...</p>
-          </div>
-        ) : error ? (
-          <div className="bg-rose-50 border border-rose-100 rounded-3xl p-8 text-center flex flex-col items-center gap-3">
-            <FiAlertCircle className="text-3xl text-rose-600" />
-            <p className="text-sm font-semibold text-rose-700">{error}</p>
-            <button
-              onClick={fetchHistories}
-              className="px-4 py-2 bg-rose-600 text-white text-xs font-bold rounded-xl hover:bg-rose-700 transition-colors"
-            >
-              Retry Loading
-            </button>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-8 text-center">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              Loading historical archive records...
+            </span>
           </div>
         ) : histories.length === 0 ? (
-          <div className="bg-white border border-slate-100 rounded-3xl p-12 text-center flex flex-col items-center justify-center gap-3">
-            <FiClock className="text-4xl text-slate-300" />
-            <h3 className="text-base font-bold text-slate-700">No History Records Available</h3>
-            <p className="text-xs text-slate-500 max-w-md">
-              No historical milestones have been published yet. Please check back later or add records in the admin console.
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-8 text-center space-y-1">
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              No Timeline Milestones Documented
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Historical milestone records will appear here as they are published by the administration.
             </p>
           </div>
         ) : (
-          <div className="relative bg-white border border-slate-100 rounded-3xl p-6 sm:p-10 shadow-xs flex flex-col gap-8">
-            {/* Vertical central bar */}
-            <div className="absolute left-[39px] sm:left-[47px] top-12 bottom-12 w-0.5 bg-slate-100" />
-            
-            <div className="flex flex-col gap-10 relative z-10">
-              {histories.map((item, idx) => {
-                const Icon = iconList[idx % iconList.length];
-                const colorStyle = colorStyles[idx % colorStyles.length];
-                return (
-                  <div key={item.id || idx} className="flex gap-4 sm:gap-6 items-start group">
-                    
-                    {/* Badge Timeline circle */}
-                    <div className={`w-12 h-12 rounded-full border-2 border-white flex items-center justify-center shrink-0 shadow-xs relative transition-transform group-hover:scale-105 ${colorStyle}`}>
-                      <Icon className="text-base" />
-                    </div>
+          <div className="space-y-4">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Chronological Milestones
+            </h2>
 
-                    {/* Content block */}
-                    <div className="flex flex-col gap-2 mt-1 w-full">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4">
-                        <h3 className="font-semibold text-slate-900 text-sm sm:text-base group-hover:text-primary transition-colors">
-                          {item.title}
-                        </h3>
-                        <span className="text-xs font-semibold text-primary tracking-wider bg-primary-light px-2.5 py-0.5 rounded-full w-fit shrink-0">
-                          {formatDate(item.date)}
-                        </span>
-                      </div>
-                      
-                      <div 
-                        className="text-slate-600 text-xs sm:text-sm leading-relaxed max-w-3xl prose prose-slate"
-                        dangerouslySetInnerHTML={{ __html: item.description }}
-                      />
-
-                      {item.infor && item.infor.trim() !== '' && (
-                        <div className="mt-1 bg-slate-50 border border-slate-100 p-3 rounded-xl text-xs font-semibold text-slate-600 max-w-2xl flex items-start gap-2">
-                          <FiInfo className="text-primary text-sm shrink-0 mt-0.5" />
-                          <span className="whitespace-pre-line">{item.infor}</span>
-                        </div>
-                      )}
-                    </div>
-
+            <div className="space-y-3">
+              {histories.map((item, idx) => (
+                <div
+                  key={item.id || idx}
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-2"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                      {item.title}
+                    </h3>
+                    {item.date && (
+                      <span className="text-[11px] font-medium text-primary px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 w-fit">
+                        {formatDate(item.date)}
+                      </span>
+                    )}
                   </div>
-                );
-              })}
+
+                  {item.description && (
+                    <div 
+                      className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed prose dark:prose-invert max-w-none"
+                      dangerouslySetInnerHTML={{ __html: item.description }}
+                    />
+                  )}
+
+                  {item.infor && item.infor.trim() !== '' && (
+                    <div className="p-2.5 rounded bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-400">
+                      <span className="font-medium text-slate-700 dark:text-slate-300 block mb-0.5">Notes:</span>
+                      <span className="whitespace-pre-line">{item.infor}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         )}

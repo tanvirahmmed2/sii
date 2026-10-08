@@ -2,7 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { FiAward, FiStar, FiArrowRight } from 'react-icons/fi';
+import Image from 'next/image';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
 const stripHtml = (html) => {
   if (!html) return '';
@@ -10,53 +11,53 @@ const stripHtml = (html) => {
 };
 
 const AchievementCard = ({ achievement, href, className = '' }) => {
+  const { tenantUrl } = useTenantWebsite();
   if (!achievement) return null;
 
   const { title, description, image_url, image } = achievement;
   const coverImage = image_url || image;
   const cleanDescription = stripHtml(description);
-  const targetHref = href || `/achievements/${achievement.slug || achievement.id}`;
+  const targetHref = tenantUrl(href || `/achievements/${achievement.slug || achievement.id}`);
 
   return (
-    <Link href={targetHref} className="block h-full">
-      <div
-        className={`bg-white rounded-3xl border border-slate-100 overflow-hidden flex flex-col hover:border-primary hover:shadow-md transition-all duration-250 group h-full ${className}`}
-      >
-        {coverImage ? (
-          <div className="w-full h-48 bg-slate-100 overflow-hidden relative">
-            <img
+    <Link
+      href={targetHref}
+      className={`bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-600 transition-colors flex flex-col justify-between overflow-hidden group h-full ${className}`}
+    >
+      <div>
+        {coverImage && (
+          <div className="w-full aspect-[16/9] bg-slate-100 dark:bg-slate-800 relative overflow-hidden">
+            <Image
               src={coverImage}
               alt={title}
-              className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
+              width={500}
+              height={300}
+              className="w-full h-full object-cover"
+              unoptimized={coverImage.startsWith('http')}
             />
-          </div>
-        ) : (
-          <div className="w-full h-36 bg-primary-light flex items-center justify-center relative">
-            <div className="w-16 h-16 rounded-2xl bg-white border border-primary-border flex items-center justify-center text-primary text-3xl group-hover:scale-110 transition-transform duration-300 shadow-xs">
-              <FiAward />
-            </div>
           </div>
         )}
 
-        <div className="p-6 flex flex-col gap-2 flex-1">
-          <div className="flex items-center gap-1.5 text-primary text-xs font-bold uppercase tracking-wider">
-            <FiAward className="text-sm shrink-0" />
-            <span>Campus Milestone</span>
-          </div>
+        <div className="p-3.5 space-y-1.5">
+          <span className="text-[10px] font-medium px-1.5 py-0.2 rounded border bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 uppercase tracking-wider">
+            Campus Milestone
+          </span>
 
-          <h3 className="font-semibold text-slate-900 text-base leading-snug group-hover:text-primary transition-colors">
+          <h3 className="font-semibold text-slate-900 dark:text-white text-xs sm:text-sm group-hover:underline line-clamp-2">
             {title}
           </h3>
 
-          <p className="text-slate-500 text-xs md:text-sm leading-relaxed mt-1 line-clamp-4 flex-1">
-            {cleanDescription}
-          </p>
-
-          <div className="pt-3 border-t border-slate-50 flex items-center gap-1 text-xs font-bold text-primary group-hover:text-primary mt-auto">
-            <span>View Milestone</span>
-            <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
-          </div>
+          {cleanDescription && (
+            <p className="text-xs text-slate-600 dark:text-slate-400 font-normal line-clamp-3 leading-relaxed">
+              {cleanDescription}
+            </p>
+          )}
         </div>
+      </div>
+
+      <div className="px-3.5 pb-3.5 pt-1 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-medium text-slate-700 dark:text-slate-300">
+        <span>View Full Milestone</span>
+        <span className="font-mono text-[10px] text-slate-400">&rarr;</span>
       </div>
     </Link>
   );

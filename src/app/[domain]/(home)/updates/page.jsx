@@ -2,13 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import {
-  BiSearch,
-  BiBell,
-  BiRefresh,
-  BiRightArrowAlt,
-  BiCalendar,
-} from 'react-icons/bi';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
 function stripHtml(html) {
   if (!html) return '';
@@ -16,6 +10,7 @@ function stripHtml(html) {
 }
 
 export default function UpdatesPage() {
+  const { website, tenantUrl } = useTenantWebsite();
   const [updates, setUpdates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -25,43 +20,22 @@ export default function UpdatesPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/updates');
+      const res = await fetch('/api/marketing/updates');
       const data = await res.json();
       if (data?.success && Array.isArray(data?.updates)) {
         setUpdates(data.updates);
       } else {
-        setError(data?.error || 'Failed to load platform updates.');
+        setError(data?.error || 'Failed to load updates.');
       }
     } catch (err) {
-      setError(err.message || 'Error fetching changelog updates.');
+      setError(err.message || 'Error fetching updates.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    let isMounted = true;
-    fetch('/api/updates')
-      .then((res) => res.json())
-      .then((data) => {
-        if (!isMounted) return;
-        if (data?.success && Array.isArray(data?.updates)) {
-          setUpdates(data.updates);
-        } else {
-          setError(data?.error || 'Failed to load platform updates.');
-        }
-      })
-      .catch((err) => {
-        if (!isMounted) return;
-        setError(err.message || 'Error fetching changelog updates.');
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
+    fetchPublishedUpdates();
   }, []);
 
   const filteredUpdates = updates.filter((item) => {
@@ -75,52 +49,50 @@ export default function UpdatesPage() {
   });
 
   return (
-    <main className="min-h-screen bg-slate-50/60 pb-24">
-      {/* Hero Header */}
-      <section className="relative overflow-hidden bg-primary text-white pt-20 pb-20 px-4 lg:px-8 border-b border-white/10">
-        <div className="absolute inset-0 bg-linear-to-b from-primary/10 via-transparent to-transparent pointer-events-none" />
-        <div className="max-w-6xl mx-auto text-center relative z-10 space-y-4">
-          <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight max-w-3xl mx-auto leading-tight">
-            Product Updates &amp; Changelog
-          </h1>
+    <div className="w-full min-h-screen py-8 md:py-12 px-4 sm:px-6 lg:px-8 space-y-8">
+      {/* Header */}
+      <div className="border-b border-slate-200 dark:border-slate-800 pb-6 max-w-4xl mx-auto text-center space-y-2">
+        <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block">
+          System Changelog &amp; Releases
+        </span>
+        <h1 className="text-2xl sm:text-4xl font-semibold text-slate-900 dark:text-white tracking-tight">
+          Campus Portal Releases &amp; Updates
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-xl mx-auto leading-relaxed">
+          Recent software enhancements, administrative module rollouts, security upgrades, and new capabilities deployed for {website?.name || 'the campus'} portal.
+        </p>
 
-          <p className="text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
-            Follow our journey as we continuously enhance the portfolio builder. Discover our latest feature releases, performance boosts, and design studio tools.
-          </p>
-
-          {/* Search Bar */}
-          <div className="pt-6 max-w-xl mx-auto">
-            <div className="relative">
-              <BiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-lg" />
-              <input
-                type="text"
-                placeholder="Search updates by feature, release, or topic..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-white/10 border border-white/15 rounded-2xl pl-11 pr-4 py-3 text-sm text-white focus:outline-none focus:border-primary focus:bg-white/15 transition-all shadow-lg backdrop-blur-md"
-              />
-              {search && (
-                <button
-                  type="button"
-                  onClick={() => setSearch('')}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold hover:text-white px-2 py-1 rounded-md bg-white/10 cursor-pointer"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
+        {/* Search Bar */}
+        <div className="pt-4 max-w-md mx-auto">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Search release notes or features..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="flex-1 px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-900 dark:text-white outline-none focus:border-primary transition-colors"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded text-xs font-medium cursor-pointer"
+              >
+                Clear
+              </button>
+            )}
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* Main Updates Directory Section */}
-      <section className="w-full px-4 lg:px-8 pt-12">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-6 border-b border-slate-200">
+      {/* Main Directory */}
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div>
-            <h2 className="text-xl font-semibold text-slate-900 flex items-center gap-2">
-              <BiBell className="text-primary text-2xl" /> Product Changelog
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+              Release Changelog
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-400">
               Showing {filteredUpdates.length} release update{filteredUpdates.length === 1 ? '' : 's'}
             </p>
           </div>
@@ -129,78 +101,58 @@ export default function UpdatesPage() {
             type="button"
             onClick={fetchPublishedUpdates}
             disabled={loading}
-            className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-white text-xs font-semibold transition-colors cursor-pointer"
+            className="self-start sm:self-auto px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium transition-colors cursor-pointer"
           >
-            <BiRefresh className={`text-sm ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
+            {loading ? 'Refreshing...' : 'Refresh List'}
           </button>
         </div>
 
         {error && (
-          <div className="mt-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center justify-between">
+          <div className="p-3.5 rounded bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs font-medium flex items-center justify-between">
             <span>{error}</span>
             <button
               type="button"
               onClick={fetchPublishedUpdates}
-              className="text-rose-600 hover:underline font-semibold cursor-pointer"
+              className="underline font-semibold cursor-pointer"
             >
               Retry
             </button>
           </div>
         )}
 
-        {/* Loading Skeleton */}
+        {/* Loading State */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-8">
-            {[1, 2, 3, 4, 5, 6].map((idx) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[1, 2, 3].map((idx) => (
               <div
                 key={idx}
-                className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs animate-pulse space-y-4"
+                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-5 space-y-3 animate-pulse"
               >
-                <div className="flex items-center justify-between">
-                  <div className="h-4 bg-slate-200 rounded-md w-24" />
-                  <div className="h-4 bg-slate-100 rounded-full w-16" />
-                </div>
-                <div className="h-5 bg-slate-200 rounded-md w-3/4 pt-2" />
-                <div className="space-y-2 pt-2">
-                  <div className="h-3 bg-slate-100 rounded-md w-full" />
-                  <div className="h-3 bg-slate-100 rounded-md w-5/6" />
-                  <div className="h-3 bg-slate-100 rounded-md w-2/3" />
-                </div>
-                <div className="h-4 bg-slate-100 rounded-md w-28 pt-4" />
+                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/3" />
+                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4" />
+                <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-full" />
               </div>
             ))}
           </div>
         ) : filteredUpdates.length === 0 ? (
-          /* Empty State */
-          <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center my-8 shadow-xs max-w-lg mx-auto">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-3xl mx-auto mb-4">
-              <BiBell />
-            </div>
-            <h3 className="text-base font-semibold text-slate-800">
-              {search ? 'No Matching Updates Found' : 'No Changelog Updates Published Yet'}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-10 text-center max-w-md mx-auto space-y-2">
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider block">
+              [No Releases Published]
+            </span>
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-white">
+              {search ? 'No Matching Releases' : 'No Changelog Updates Available'}
             </h3>
-            <p className="text-xs text-slate-500 mt-1.5 max-w-sm mx-auto leading-relaxed">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               {search
-                ? `No updates matched "${search}". Try checking for typos or searching a different keyword.`
-                : 'Stay tuned! Exciting features and platform upgrades will be announced here soon.'}
+                ? `No updates matched "${search}". Try searching a different term.`
+                : 'Platform upgrade notes will be posted here as new versions roll out.'}
             </p>
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                className="mt-4 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
-              >
-                Clear Search Filter
-              </button>
-            )}
           </div>
         ) : (
-          /* Updates Grid */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredUpdates.map((item) => {
-              const formattedDate = item.created_at
-                ? new Date(item.created_at).toLocaleDateString('en-US', {
+              const formattedDate = item.release_date || item.created_at
+                ? new Date(item.release_date || item.created_at).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric',
@@ -211,45 +163,36 @@ export default function UpdatesPage() {
               return (
                 <div
                   key={item.id}
-                  className="group rounded-3xl bg-white border border-slate-200/80 hover:border-secondary/40 transition-all duration-300 shadow-xs hover:shadow-xl hover:-translate-y-1 flex flex-col justify-between overflow-hidden p-6 sm:p-7 space-y-4"
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-5 shadow-xs hover:border-primary/50 transition-colors flex flex-col justify-between space-y-4"
                 >
                   <div className="space-y-3">
-                    {/* Header Row: Date & Release Badge */}
-                    <div className="flex items-center justify-between gap-2">
-                      {formattedDate ? (
-                        <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
-                          <BiCalendar className="text-secondary text-sm" />
-                          <span>{formattedDate}</span>
-                        </div>
-                      ) : (
-                        <div />
-                      )}
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-secondary/10 text-secondary border border-secondary/20">
-                        Release
+                    <div className="flex items-center justify-between gap-2 text-[11px] text-slate-400">
+                      {formattedDate && <span>{formattedDate}</span>}
+                      <span className="px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 text-[10px] font-medium">
+                        {item.version ? `v${item.version}` : 'Release'}
                       </span>
                     </div>
 
-                    {/* Title */}
-                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 group-hover:text-secondary transition-colors tracking-tight line-clamp-2">
-                      <Link href={`/updates/${item.slug}`}>
+                    <h3 className="text-base font-semibold text-slate-900 dark:text-white line-clamp-2">
+                      <Link href={tenantUrl(`/updates/${item.slug || item.id}`)} className="hover:text-primary transition-colors">
                         {item.title}
                       </Link>
                     </h3>
 
-                    {/* Summary Snippet */}
-                    <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
+                    <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed">
                       {plainSnippet || 'Explore newly published updates and feature improvements in this release.'}
                     </p>
                   </div>
 
-                  {/* Read More Link */}
-                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+                    <span className="text-[11px] text-slate-400">
+                      {website?.name || 'Engineering'}
+                    </span>
                     <Link
-                      href={`/updates/${item.slug}`}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-secondary group-hover:text-secondary-dark transition-colors"
+                      href={tenantUrl(`/updates/${item.slug || item.id}`)}
+                      className="font-medium text-primary hover:underline text-xs"
                     >
-                      <span>Read Full Update</span>
-                      <BiRightArrowAlt className="text-base group-hover:translate-x-1 transition-transform" />
+                      Read Full Notes →
                     </Link>
                   </div>
                 </div>
@@ -257,28 +200,7 @@ export default function UpdatesPage() {
             })}
           </div>
         )}
-      </section>
-
-      {/* Creator Call To Action */}
-      <section className="w-full px-4 lg:px-8 mt-20">
-        <div className="bg-linear-to-r from-slate-900 to-slate-950 rounded-3xl p-8 sm:p-12 text-white border border-white/10 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="space-y-2 max-w-xl text-center md:text-left">
-            <h3 className="text-2xl font-semibold tracking-tight">
-              Ready to build with the latest tools?
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Create your account in seconds, connect your custom domain, and launch a complete online presence with all our newest features.
-            </p>
-          </div>
-          <Link
-            href="/creator/login"
-            className="px-6 py-3.5 rounded-2xl bg-secondary hover:bg-secondary-dark text-white font-semibold text-sm shadow-xl flex items-center gap-2 shrink-0 transition-all hover:scale-105 cursor-pointer"
-          >
-            <span>Get Started Now</span>
-            <BiRightArrowAlt className="text-lg" />
-          </Link>
-        </div>
-      </section>
-    </main>
+      </div>
+    </div>
   );
 }

@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { FiArrowLeft, FiCalendar, FiUsers, FiFileText } from 'react-icons/fi';
 import Image from 'next/image';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 const ClubNewsDetailPage = () => {
   const { slug } = useParams();
+  const { getApiEndpoint, tenantUrl } = useContext(TenantWebsiteContext);
   const [clubNews, setClubNews] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -15,14 +16,14 @@ const ClubNewsDetailPage = () => {
     const fetchClubNews = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/club-news/${slug}`);
+        const res = await fetch(getApiEndpoint(`club-news/${slug}`));
         if (res.ok) {
           const data = await res.json();
           const item = data.payload?.clubNews || data.paylod?.clubNews || null;
           setClubNews(item);
 
           if (item?.slug && typeof window !== 'undefined' && slug !== item.slug) {
-            window.history.replaceState(null, '', `/club-news/${item.slug}`);
+            window.history.replaceState(null, '', tenantUrl(`/club-news/${item.slug}`));
           }
         }
       } catch (err) {
@@ -33,34 +34,28 @@ const ClubNewsDetailPage = () => {
     };
 
     if (slug) fetchClubNews();
-  }, [slug]);
+  }, [slug, getApiEndpoint, tenantUrl]);
 
   if (loading) {
     return (
-      <div className="w-full min-h-screen bg-slate-50/50 py-16 px-4 flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-slate-500 text-xs font-semibold">Loading club announcement...</p>
-        </div>
+      <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-12 px-4 flex items-center justify-center">
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Loading club announcement...</span>
       </div>
     );
   }
 
   if (!clubNews) {
     return (
-      <div className="w-full min-h-screen bg-slate-50/50 py-16 px-4">
-        <div className="max-w-md mx-auto bg-white p-8 rounded-3xl border border-slate-100 shadow-xs text-center space-y-4">
-          <FiFileText className="text-4xl text-slate-300 mx-auto" />
-          <h2 className="text-xl font-bold text-slate-900">Club Article Not Found</h2>
-          <p className="text-slate-500 text-xs">The requested club announcement or news article could not be loaded.</p>
-          <div className="flex justify-center gap-3 pt-2">
-            <Link
-              href="/club-news"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark text-white font-bold text-xs rounded-xl transition-all"
-            >
-              <FiArrowLeft /> Back to Club News
-            </Link>
-          </div>
+      <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-12 px-4">
+        <div className="max-w-md mx-auto bg-white dark:bg-slate-900 p-6 rounded border border-slate-200 dark:border-slate-800 shadow-xs text-center space-y-3">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Article Not Found</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">The requested society article could not be located.</p>
+          <Link
+            href={tenantUrl('/club-news')}
+            className="inline-block px-3 py-1.5 bg-primary text-white rounded text-xs font-medium hover:bg-primary-dark transition-colors"
+          >
+            ← Back to Club News
+          </Link>
         </div>
       </div>
     );
@@ -70,64 +65,62 @@ const ClubNewsDetailPage = () => {
   const newsDate = clubNews.created_at ? new Date(clubNews.created_at) : null;
 
   return (
-    <div className="w-full min-h-screen bg-slate-50/50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto space-y-6">
         
         <div className="flex items-center justify-between gap-4">
           <Link
-            href="/club-news"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl shadow-2xs transition-colors"
+            href={tenantUrl('/club-news')}
+            className="text-xs font-medium text-primary hover:underline"
           >
-            <FiArrowLeft />
-            <span>All Club News</span>
+            ← Back to All Club News
           </Link>
 
           {clubNews.club_slug && (
             <Link
-              href={`/clubs/${clubNews.club_slug}`}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary-light text-primary hover:bg-primary-light/80 font-bold text-xs rounded-xl transition-colors border border-primary-light"
+              href={tenantUrl(`/clubs/${clubNews.club_slug}`)}
+              className="text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-primary transition-colors"
             >
-              <FiUsers />
-              <span>{clubNews.club_name || 'Club'}</span>
+              Society: {clubNews.club_name || 'View Club'} →
             </Link>
           )}
         </div>
 
-        <article className="bg-white rounded-3xl border border-slate-100 shadow-xs overflow-hidden">
+        <article className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
           {coverImage && (
-            <div className="w-full bg-slate-100 overflow-hidden relative">
-              <Image width={1000} height={1000}
+            <div className="w-full h-64 sm:h-80 bg-slate-100 dark:bg-slate-800 relative">
+              <Image
+                fill
                 src={coverImage}
-                alt={clubNews.title || 'Club news cover image'}
-                className="w-full h-full object-cover"
+                alt={clubNews.title || 'Club news'}
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 896px"
               />
             </div>
           )}
 
-          <div className="p-6 md:p-10 space-y-6">
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center gap-3">
+          <div className="p-6 sm:p-8 space-y-4">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
                 {clubNews.club_name && (
-                  <span className="text-xs font-bold text-primary bg-primary-light border border-primary-light px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5">
-                    <FiUsers /> {clubNews.club_name}
+                  <span className="text-[10px] font-medium text-primary bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded uppercase tracking-wider">
+                    {clubNews.club_name}
                   </span>
                 )}
                 {newsDate && (
-                  <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-400">
-                    <FiCalendar className="text-primary" />
+                  <span className="text-xs text-slate-400 dark:text-slate-500">
                     {newsDate.toLocaleDateString(undefined, { dateStyle: 'long' })}
                   </span>
                 )}
               </div>
 
-              <h1 className="text-2xl md:text-4xl font-semibold text-slate-900 tracking-tight leading-snug">
+              <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight leading-snug">
                 {clubNews.title}
               </h1>
             </div>
 
-            {/* Rich HTML Content */}
             <div 
-              className="prose prose-slate max-w-none text-slate-700 text-sm md:text-base leading-relaxed border-t border-slate-100 pt-6"
+              className="prose dark:prose-invert max-w-none text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-slate-800 pt-4"
               dangerouslySetInnerHTML={{ __html: clubNews.content || '' }}
             />
           </div>

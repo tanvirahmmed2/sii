@@ -81,7 +81,7 @@ export default function TenantLoader({
       container: 'w-20 h-20',
       emblem: 'w-14 h-14',
       text: 'text-sm font-semibold',
-      fontSize: 'text-base font-bold',
+      fontSize: 'text-base font-semibold',
       label: 'text-xs font-medium mt-3',
       sublabel: 'text-[10px]',
     },
@@ -89,7 +89,7 @@ export default function TenantLoader({
       container: 'w-28 h-28',
       emblem: 'w-20 h-20',
       text: 'text-base font-semibold',
-      fontSize: 'text-xl font-bold',
+      fontSize: 'text-xl font-semibold',
       label: 'text-sm font-semibold mt-4',
       sublabel: 'text-xs',
     },
@@ -97,7 +97,7 @@ export default function TenantLoader({
     container: 'w-20 h-20',
     emblem: 'w-14 h-14',
     text: 'text-sm font-semibold',
-    fontSize: 'text-base font-bold',
+    fontSize: 'text-base font-semibold',
     label: 'text-xs font-medium mt-3',
     sublabel: 'text-[10px]',
   };
@@ -105,12 +105,12 @@ export default function TenantLoader({
   const hasLogo = Boolean(logoUrl) && !imageError;
 
   const containerLayout = fullScreen
-    ? 'fixed inset-0 z-50 min-h-screen w-full bg-slate-50/95 backdrop-blur-xs flex flex-col items-center justify-center p-6'
+    ? 'fixed inset-0 z-50 min-h-screen w-full bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-xs flex flex-col items-center justify-center p-6'
     : 'w-full min-h-[220px] py-10 bg-transparent flex flex-col items-center justify-center p-4';
 
   return (
     <div
-      className={`${containerLayout} text-slate-800 transition-all ${className}`}
+      className={`${containerLayout} text-slate-800 dark:text-slate-200 transition-all ${className}`}
       role="status"
       aria-live="polite"
       aria-label={label || `${siteName} Loading`}

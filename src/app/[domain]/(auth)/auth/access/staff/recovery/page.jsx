@@ -1,15 +1,16 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-import { FiMail, FiLock, FiKey, FiArrowRight, FiCheckCircle } from 'react-icons/fi';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
-const RecoveryInner = () => {
+function StaffRecoveryInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
+  const { website, getApiEndpoint, tenantUrl } = useTenantWebsite();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,14 +20,15 @@ const RecoveryInner = () => {
 
   const handleRequestLink = async (e) => {
     e.preventDefault();
-    if (!email) {
+    if (!email.trim()) {
       toast.error('Email is required.');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch('/api/staff/recovery', {
+      const endpoint = getApiEndpoint('staff/recovery');
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim() })
@@ -59,7 +61,8 @@ const RecoveryInner = () => {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/staff/recovery', {
+      const endpoint = getApiEndpoint('staff/recovery');
+      const response = await fetch(endpoint, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password })
@@ -72,7 +75,7 @@ const RecoveryInner = () => {
 
       toast.success('Password updated successfully!');
       setSuccess(true);
-      setTimeout(() => router.push('/auth/access/staff/login'), 2500);
+      setTimeout(() => router.push(tenantUrl('/auth/access/staff/login')), 2000);
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -82,28 +85,28 @@ const RecoveryInner = () => {
 
   if (success) {
     return (
-      <div className="w-full flex flex-col items-center gap-5 text-center py-6 animate-fade-up">
-        <div className="w-16 h-16 rounded-full bg-primary-light border border-primary-light flex items-center justify-center">
-          <FiCheckCircle className="text-primary text-2xl" />
-        </div>
-        <div>
-          <h2 className="text-lg font-bold text-slate-800">Success!</h2>
-          <p className="text-sm text-slate-500 mt-2">
-            {token 
-              ? 'Your password has been reset successfully. Redirecting to login…' 
-              : `A password reset link has been emailed to you. Please check your inbox.`}
-          </p>
-        </div>
+      <div className="space-y-3 text-center py-6">
+        <span className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 inline-block">
+          [Success]
+        </span>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+          {token ? 'Password Reset Complete' : 'Reset Link Dispatched'}
+        </h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
+          {token 
+            ? 'Your credentials have been updated. Redirecting to staff login...' 
+            : 'A password recovery link has been emailed to you. Please check your inbox and follow the instructions.'}
+        </p>
       </div>
     );
   }
 
   if (token) {
     return (
-      <form onSubmit={handleResetPassword} className="w-full flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-            <FiLock className="text-slate-400" /> New Password
+      <form onSubmit={handleResetPassword} className="space-y-4">
+        <div>
+          <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+            New Password *
           </label>
           <input
             type="password"
@@ -111,13 +114,14 @@ const RecoveryInner = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={loading}
-            className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5"
+            placeholder="Minimum 6 characters"
+            className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-sm text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors"
           />
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-            <FiLock className="text-slate-400" /> Confirm Password
+        <div>
+          <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+            Confirm New Password *
           </label>
           <input
             type="password"
@@ -125,34 +129,27 @@ const RecoveryInner = () => {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             disabled={loading}
-            className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl text-sm text-slate-900 outline-none transition-all ${
-              confirmPassword && password !== confirmPassword 
-                ? 'border-red-300 focus:border-red-400 focus:ring-red-400/10' 
-                : 'border-slate-200 focus:border-primary focus:ring-primary/5'
-            }`}
+            placeholder="Repeat password"
+            className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-sm text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors"
           />
         </div>
 
         <button
           type="submit"
           disabled={loading || (confirmPassword !== '' && password !== confirmPassword)}
-          className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white text-sm font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 cursor-pointer mt-1"
+          className="w-full py-2.5 rounded bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-60 text-center"
         >
-          {loading ? (
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-          ) : (
-            'Reset Password'
-          )}
+          {loading ? 'Updating Password...' : 'Reset Password →'}
         </button>
       </form>
     );
   }
 
   return (
-    <form onSubmit={handleRequestLink} className="w-full flex flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-          <FiMail className="text-sm" /> Enter Registered Email
+    <form onSubmit={handleRequestLink} className="space-y-4">
+      <div>
+        <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+          Registered Staff Email *
         </label>
         <input
           type="email"
@@ -160,67 +157,52 @@ const RecoveryInner = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={loading}
-          className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
+          placeholder="staff@institution.edu"
+          className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-sm text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors"
         />
       </div>
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white text-sm font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+        className="w-full py-2.5 rounded bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-60 text-center"
       >
-        {loading ? (
-          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-        ) : (
-          <>
-            Send Reset Link <FiArrowRight />
-          </>
-        )}
+        {loading ? 'Sending Link...' : 'Send Password Reset Link →'}
       </button>
     </form>
   );
-};
+}
 
-const StaffRecoveryPage = () => {
+export default function StaffRecoveryPage() {
+  const { website, tenantUrl } = useTenantWebsite();
+
   return (
-    <div className="w-full min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-900 relative px-4 py-12 overflow-hidden bg-slate-55 bg-slate-50">
-      {/* Background blobs */}
-      <div className="absolute top-[-20%] left-[-20%] w-[60%] aspect-square rounded-full bg-primary/5 blur-[100px] pointer-events-none"></div>
-      <div className="absolute bottom-[-20%] right-[-20%] w-[60%] aspect-square rounded-full bg-cyan-500/5 blur-[100px] pointer-events-none"></div>
-
-      <div className="w-full max-w-[500px] animate-fade-up z-10">
-        <div className="flex flex-col items-center mb-8 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mb-4 shadow-[0_10px_30px_rgba(2,132,199,0.3)]">
-            <FiKey className="text-white text-xl" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 mb-2">Password Recovery</h1>
-          <p className="text-sm text-slate-500 max-w-xs leading-relaxed">
-            Enter your email to request a secure password reset link, or verify your recovery token to choose a new password.
+    <div className="w-full min-h-[80vh] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-6 sm:p-8 shadow-xs space-y-6">
+        
+        <div className="text-center space-y-1.5 border-b border-slate-100 dark:border-slate-800 pb-5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block">
+            {website?.name || 'Staff Security'}
+          </span>
+          <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            Staff Password Recovery
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Request an authorized password recovery link or enter your reset token.
           </p>
         </div>
 
-        <div className="w-full bg-white border border-slate-100 rounded-3xl p-6 md:p-8 shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
-          <Suspense fallback={
-            <div className="w-full flex flex-col items-center justify-center gap-5 min-h-[200px]">
-              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-sm text-slate-400">Loading...</p>
-            </div>
-          }>
-            <RecoveryInner />
-          </Suspense>
-        </div>
+        <Suspense fallback={<div className="py-12 text-center text-xs text-slate-400">Loading...</div>}>
+          <StaffRecoveryInner />
+        </Suspense>
 
-        <div className="w-full text-center mt-6">
-          <Link
-            href="/auth/access/staff/login"
-            className="text-xs font-semibold hover:text-sky-605 transition-colors py-1.5 px-3 rounded-full hover:bg-primary-light text-primary"
-          >
-            Back to Staff Login
+        <div className="pt-2 text-center text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
+          <Link href={tenantUrl('/auth/access/staff/login')} className="hover:underline font-medium text-primary">
+            ← Back to Staff Login
           </Link>
         </div>
+
       </div>
     </div>
   );
-};
-
-export default StaffRecoveryPage;
+}

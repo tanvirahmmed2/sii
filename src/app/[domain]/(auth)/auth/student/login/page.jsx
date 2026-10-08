@@ -4,27 +4,29 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-import { FiLock, FiUser, FiArrowRight, FiBookOpen, FiHome } from 'react-icons/fi';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
-const StudentLogin = () => {
+export default function StudentLoginPage() {
   const router = useRouter();
+  const { website, getApiEndpoint, tenantUrl } = useTenantWebsite();
   const [regNo, setRegNo] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!regNo || !password) {
+    if (!regNo.trim() || !password) {
       toast.error('Registration number and password are required.');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch('/api/student/login', {
+      const endpoint = getApiEndpoint('student/login');
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ registration_number: regNo, password }),
+        body: JSON.stringify({ registration_number: regNo.trim(), password }),
       });
 
       const data = await response.json();
@@ -34,9 +36,7 @@ const StudentLogin = () => {
       }
 
       toast.success(data.message || 'Logged in successfully!');
-      
-      // Redirect to student dashboard (e.g. /student or main portal)
-      router.push('/student');
+      router.push(tenantUrl('/student'));
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -45,93 +45,91 @@ const StudentLogin = () => {
   };
 
   return (
-    <div className="w-full min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-900 relative px-4 py-12 overflow-hidden">
-      {/* Background blobs */}
-      <div className="absolute top-[-20%] left-[-20%] w-[60%] aspect-square rounded-full bg-primary/5 blur-[100px] pointer-events-none"></div>
-      <div className="absolute bottom-[-20%] right-[-20%] w-[60%] aspect-square rounded-full bg-primary/5 blur-[100px] pointer-events-none"></div>
-
-      <div className="w-full max-w-110 animate-fade-up z-10">
-        <div className="flex flex-col items-center mb-8 text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 mb-2">Student Portal</h1>
-          <p className="text-sm text-slate-500 max-w-80">Log in to view your routine, attendance, syllabus, and fees.</p>
+    <div className="w-full min-h-[80vh] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-6 sm:p-8 shadow-xs space-y-6">
+        
+        {/* Header */}
+        <div className="text-center space-y-1.5 border-b border-slate-100 dark:border-slate-800 pb-5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block">
+            {website?.name || 'Institutional Portal'}
+          </span>
+          <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            Student Login
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Enter your registration number and password to access your dashboard.
+          </p>
         </div>
 
-        <div className="w-full bg-white border border-slate-100 rounded-3xl p-8 shadow-[0_10px_40px_rgba(0,0,0,0.03)]">
-          <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
-            {/* Registration Number */}
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                <FiUser className="text-sm" /> Registration Number
-              </label>
-              <input
-                type="text"
-                required
-                value={regNo}
-                onChange={(e) => setRegNo(e.target.value)}
-                disabled={loading}
-                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-primary focus:ring-4 focus:ring-primary/10"
-              />
-            </div>
-
-            {/* Password */}
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-between items-center">
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <FiLock className="text-sm" /> Password
-                </label>
-                <Link
-                  href="/auth/student/recovery"
-                  className="text-xs font-medium text-primary hover:text-primary transition-colors"
-                >
-                  Forgot Password?
-                </Link>
-              </div>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-primary focus:ring-4 focus:ring-primary/10"
-              />
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+              Registration Number *
+            </label>
+            <input
+              type="text"
+              required
+              value={regNo}
+              onChange={(e) => setRegNo(e.target.value)}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white text-sm font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-            >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <>
-                  <FiBookOpen className="text-lg" /> Student Login <FiArrowRight className="text-lg" />
-                </>
-              )}
-            </button>
+              placeholder="e.g. 2026-REG-001"
+              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-sm text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors"
+            />
+          </div>
 
-            {/* Registration setup link */}
-            <div className="text-center text-xs font-semibold text-slate-400 mt-2">
-              First time logging in?{' '}
-              <Link href="/auth/student/registration" className="text-primary hover:text-primary transition-colors underline">
-                Setup your account here
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Password *
+              </label>
+              <Link
+                href={tenantUrl('/auth/student/recovery')}
+                className="text-xs font-medium text-primary hover:underline"
+              >
+                Forgot Password?
               </Link>
             </div>
-          </form>
-        </div>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+              placeholder="••••••••"
+              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-sm text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors"
+            />
+          </div>
 
-        <div className="w-full text-center mt-6">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-600 transition-colors py-1.5 px-3 rounded-full hover:bg-slate-100"
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2.5 rounded bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-60 text-center"
           >
-            <FiHome className="text-sm" /> Return to Home
+            {loading ? 'Authenticating...' : 'Sign In to Student Portal →'}
+          </button>
+
+          <div className="text-center text-xs text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+            First time logging in?{' '}
+            <Link
+              href={tenantUrl('/auth/student/registration')}
+              className="font-semibold text-primary hover:underline"
+            >
+              Setup your account here
+            </Link>
+          </div>
+        </form>
+
+        <div className="pt-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+          <Link href={tenantUrl('/auth')} className="hover:text-slate-800 dark:hover:text-slate-200">
+            ← Switch Portal
+          </Link>
+          <Link href={tenantUrl('/')} className="hover:text-slate-800 dark:hover:text-slate-200">
+            Homepage
           </Link>
         </div>
+
       </div>
     </div>
   );
-};
-
-export default StudentLogin;
+}

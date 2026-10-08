@@ -1,25 +1,32 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { FiX, FiMapPin, FiClock } from 'react-icons/fi';
+import React, { useState, useEffect, useContext } from 'react';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 const AnnouncementPopup = () => {
+  const tenantCtx = useContext(TenantWebsiteContext);
   const [announcement, setAnnouncement] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     const fetchActiveAnnouncement = async () => {
       try {
-        const response = await axios.get('/api/announcements');
-        const active = response.data?.payload?.announcement || response.data?.paylod?.announcement || response.data?.announcement;
-        
-        if (active && (!active.expires_at || new Date(active.expires_at) > new Date())) {
-          setAnnouncement(active);
-          const timer = setTimeout(() => {
-            setIsOpen(true);
-          }, 1000);
-          return () => clearTimeout(timer);
+        const url = tenantCtx?.getApiEndpoint ? tenantCtx.getApiEndpoint('announcements') : '/api/announcements';
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          const active =
+            data.payload?.announcement ||
+            data.paylod?.announcement ||
+            data.announcement;
+
+          if (active && (!active.expires_at || new Date(active.expires_at) > new Date())) {
+            setAnnouncement(active);
+            const timer = setTimeout(() => {
+              setIsOpen(true);
+            }, 800);
+            return () => clearTimeout(timer);
+          }
         }
       } catch (error) {
         console.error('Failed to load website announcement:', error);
@@ -27,7 +34,7 @@ const AnnouncementPopup = () => {
     };
 
     fetchActiveAnnouncement();
-  }, []);
+  }, [tenantCtx]);
 
   const handleClose = () => {
     setIsOpen(false);
@@ -36,44 +43,41 @@ const AnnouncementPopup = () => {
   if (!announcement || !isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-9999 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs animate-fade-in transition-opacity duration-300">
-      <div 
-        className="relative w-full max-w-md bg-white rounded-sm p-6 shadow-2xl border border-slate-100 flex flex-col gap-4 transform scale-100 animate-zoom-in transition-all duration-300"
-      >
-        <button
-          onClick={handleClose}
-          className="absolute top-4 right-4 p-1.5 text-tertiary-dark hover:text-secondary hover:bg-primary-light rounded-full transition-colors cursor-pointer"
-          aria-label="Close Announcement"
-        >
-          <FiX className="text-lg" />
-        </button>
-
-
-        <div className="flex flex-col gap-2">
-          <h2 className="text-base font-semibold text-tertiary tracking-tight leading-snug">
-            {announcement.name}
-          </h2>
-          <div 
-            className="text-sm leading-relaxed max-h-50 overflow-y-auto pr-1.5 prose prose-slate max-w-none text-left"
-            dangerouslySetInnerHTML={{ __html: announcement.description }}
-          />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+      <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 p-5 shadow-2xl flex flex-col gap-3">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] font-medium px-1.5 py-0.2 rounded border bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800 uppercase tracking-wider">
+              Announcement
+            </span>
+            <h2 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white leading-snug">
+              {announcement.name}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+            aria-label="Close Announcement"
+          >
+            Dismiss
+          </button>
         </div>
 
-        {(announcement.location || announcement.expires_at) && (
-          <div className="flex flex-col gap-1.5 border-t border-slate-50 pt-3 text-[10px] text-slate-400 font-semibold">
-            {announcement.location && (
-              <div className="flex items-center gap-1.5">
-                <FiMapPin className="text-slate-400 shrink-0" />
-                <span>Location: <strong className="text-slate-600">{announcement.location}</strong></span>
-              </div>
-            )}
-            {announcement.expires_at && (
-              <div className="flex items-center gap-1.5 text-primary">
-                <span className='w-full flex flex-row gap-2'>Active until: {new Date(announcement.expires_at).toLocaleString()}</span>
-              </div>
-            )}
-          </div>
-        )}
+        <div
+          className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-h-56 overflow-y-auto prose dark:prose-invert prose-xs max-w-none text-left"
+          dangerouslySetInnerHTML={{ __html: announcement.description }}
+        />
+
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="px-3 py-1 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 text-xs font-medium rounded transition-colors cursor-pointer"
+          >
+            Understood
+          </button>
+        </div>
       </div>
     </div>
   );

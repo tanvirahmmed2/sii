@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
 export const TenantWebsiteContext = createContext(null);
@@ -12,6 +12,20 @@ export function useTenantWebsite() {
   }
   return context;
 }
+
+import { hexToRgb, mixColor, calculateColorShades } from 'src/lib/utils/colors';
+
+export { calculateColorShades };
+
+export const SUPPORTED_TENANT_LANGUAGES = [
+  { value: 'en|en', short: 'en', label: 'English', native: 'English' },
+  { value: 'en|bn', short: 'bn', label: 'Bangla', native: 'বাংলা' },
+  { value: 'en|es', short: 'es', label: 'Spanish', native: 'Español' },
+  { value: 'en|hi', short: 'hi', label: 'Hindi', native: 'हिन्दी' },
+  { value: 'en|de', short: 'de', label: 'German', native: 'Deutsch' },
+  { value: 'en|fr', short: 'fr', label: 'French', native: 'Français' },
+  { value: 'en|ar', short: 'ar', label: 'Arabic', native: 'العربية' },
+];
 
 export function TenantWebsiteProvider({ children, initialWebsite = null, slug: propSlug }) {
   const params = useParams();
@@ -57,30 +71,156 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
   const [loading, setLoading] = useState(!initialWebsite && !!activeSlug);
   const [error, setError] = useState(null);
 
+  // Theme / Mode Management (Light vs Dark)
+  const [theme, setThemeState] = useState('light');
+
+  useEffect(() => {
+    try {
+      const storedTheme = localStorage.getItem('tenant_theme') || localStorage.getItem('theme');
+      if (
+        storedTheme === 'dark' ||
+        (!storedTheme && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ) {
+        setThemeState('dark');
+        document.documentElement.classList.add('dark');
+      } else {
+        setThemeState('light');
+        document.documentElement.classList.remove('dark');
+      }
+    } catch (_) {}
+  }, []);
+
+  const setTheme = useCallback((newTheme) => {
+    setThemeState(newTheme);
+    try {
+      localStorage.setItem('tenant_theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      if (newTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch (_) {}
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setThemeState((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      try {
+        localStorage.setItem('tenant_theme', next);
+        localStorage.setItem('theme', next);
+        if (next === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch (_) {}
+      return next;
+    });
+  }, []);
+
+  // Language Management (English, Bangla, etc.)
+  const [language, setLanguageState] = useState('en');
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('ngt_lang') || localStorage.getItem('tenant_lang');
+      if (stored) {
+        setLanguageState(stored);
+      }
+    } catch (_) {}
+  }, []);
+
+  const setLanguage = useCallback((langCode) => {
+    const short = langCode.includes('|') ? langCode.split('|')[1] : langCode;
+    if (short === language) return;
+    setLanguageState(short);
+
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('tenant_lang', short);
+        localStorage.setItem('ngt_lang', short);
+
+        // Reset and apply googtrans cookie exactly like next-google-translate-widget
+        document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+        document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=${window.location.hostname}; path=/`;
+
+        if (short && short !== 'en') {
+          const cookieValue = `/auto/${short}`;
+          document.cookie = `googtrans=${cookieValue}; path=/;`;
+          document.cookie = `googtrans=${cookieValue}; domain=${window.location.hostname}; path=/;`;
+        }
+
+        window.location.reload();
+      }
+    } catch (_) {}
+  }, [language]);
+
+  const toggleLanguage = useCallback(() => {
+    const next = language === 'en' ? 'bn' : 'en';
+    setLanguage(next);
+  }, [language, setLanguage]);
+
+  // Color Theme Application directly from websites table (primary_color, secondary_color)
+  const colorTheme = useMemo(() => {
+    const primaryShades = calculateColorShades(website?.primary_color, '#1e40af');
+    const secondaryShades = calculateColorShades(website?.secondary_color, '#0ea5e9');
+    return {
+      primary: primaryShades.base,
+      primaryLight: primaryShades.light,
+      primaryDark: primaryShades.dark,
+      secondary: secondaryShades.base,
+      secondaryLight: secondaryShades.light,
+      secondaryDark: secondaryShades.dark,
+      themeName: website?.theme || 'default',
+    };
+  }, [website?.primary_color, website?.secondary_color, website?.theme]);
+
+  // Injects dynamic CSS color variables into :root
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const root = document.documentElement;
+    root.style.setProperty('--primary', colorTheme.primary);
+    root.style.setProperty('--primary-light', colorTheme.primaryLight);
+    root.style.setProperty('--primary-dark', colorTheme.primaryDark);
+    root.style.setProperty('--secondary', colorTheme.secondary);
+    root.style.setProperty('--secondary-light', colorTheme.secondaryLight);
+    root.style.setProperty('--secondary-dark', colorTheme.secondaryDark);
+
+    return () => {
+      // Keep or restore defaults when unmounting
+    };
+  }, [colorTheme]);
+
   // Tenant sidebar toggles (admin, teacher, student, staff, public)
   const [sidebar, setSidebar] = useState(false);
   const [adminSidebar, setAdminSidebar] = useState(false);
-  const [TeacherSidebar, setTeacherSidebar] = useState(false);
+  const [teacherSidebar, setTeacherSidebar] = useState(false);
   const [studentSidebar, setStudentSidebar] = useState(false);
   const [staffSidebar, setStaffSidebar] = useState(false);
 
-  // Tenant shared data (classes, clubs, designations, websiteSettings)
+  // Tenant shared data
   const [classes, setClasses] = useState([]);
   const [clubs, setClubs] = useState([]);
   const [designations, setDesignations] = useState([]);
-  const [websiteSettings, setWebsiteSettings] = useState(initialWebsite?.settings || initialWebsite?.website_settings || null);
+  const [websiteSettings, setWebsiteSettings] = useState(
+    initialWebsite?.settings || initialWebsite?.website_settings || null
+  );
 
   const goBack = () => {
     router.back();
   };
 
-  const getApiEndpoint = useCallback((endpoint) => {
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-    if (activeSlug) {
-      return `/api/${encodeURIComponent(activeSlug)}/${cleanEndpoint}`;
-    }
-    return `/api/${cleanEndpoint}`;
-  }, [activeSlug]);
+  const getApiEndpoint = useCallback(
+    (endpoint) => {
+      const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+      if (activeSlug) {
+        return `/api/${encodeURIComponent(activeSlug)}/${cleanEndpoint}`;
+      }
+      return `/api/${cleanEndpoint}`;
+    },
+    [activeSlug]
+  );
 
   const fetchWebsiteData = useCallback(async () => {
     if (!activeSlug) return;
@@ -171,16 +311,28 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
   }, [fetchWebsiteSettings, fetchDesignations, fetchClasses, fetchClubs]);
 
   // Dynamic path helper to keep internal links scoped to this tenant
-  const tenantUrl = useCallback((path = '') => {
-    const cleanPath = path.startsWith('/') ? path : `/${path}`;
-    if (typeof window !== 'undefined') {
-      const host = window.location.host.toLowerCase();
-      if (host === 'localhost:3000' || host === '127.0.0.1:3000') {
-        return `/${activeSlug}${cleanPath === '/' ? '' : cleanPath}`;
+  const tenantUrl = useCallback(
+    (path = '') => {
+      const cleanPath = path.startsWith('/') ? path : `/${path}`;
+      if (typeof window !== 'undefined') {
+        const host = window.location.host.toLowerCase();
+        // If accessed through path routing (e.g. localhost or main domain preview)
+        const isPathMode =
+          host.includes('localhost') ||
+          host.includes('127.0.0.1') ||
+          window.location.pathname.startsWith(`/${activeSlug}`);
+        if (isPathMode && activeSlug) {
+          if (cleanPath === '/') return `/${activeSlug}`;
+          return `/${activeSlug}${cleanPath}`;
+        }
+      } else if (activeSlug) {
+        if (cleanPath === '/') return `/${activeSlug}`;
+        return `/${activeSlug}${cleanPath}`;
       }
-    }
-    return cleanPath;
-  }, [activeSlug]);
+      return cleanPath;
+    },
+    [activeSlug]
+  );
 
   const value = {
     // Tenant website metadata
@@ -192,6 +344,24 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
     tenantUrl,
     refetch: fetchWebsiteData,
 
+    // Color theme tokens from websites table
+    colorTheme,
+    primaryColor: colorTheme.primary,
+    secondaryColor: colorTheme.secondary,
+    themeVariant: colorTheme.themeName,
+
+    // Mode management (Light / Dark)
+    theme,
+    isDark: theme === 'dark',
+    setTheme,
+    toggleTheme,
+
+    // Language management (English, Bangla, etc.)
+    language,
+    setLanguage,
+    toggleLanguage,
+    availableLanguages: SUPPORTED_TENANT_LANGUAGES,
+
     // Navigation
     goBack,
 
@@ -200,7 +370,8 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
     setSidebar,
     adminSidebar,
     setAdminSidebar,
-    TeacherSidebar,
+    teacherSidebar,
+    TeacherSidebar: teacherSidebar, // Backwards compatibility
     setTeacherSidebar,
     studentSidebar,
     setStudentSidebar,
@@ -220,11 +391,7 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
     getApiEndpoint,
   };
 
-  return (
-    <TenantWebsiteContext.Provider value={value}>
-      {children}
-    </TenantWebsiteContext.Provider>
-  );
+  return <TenantWebsiteContext.Provider value={value}>{children}</TenantWebsiteContext.Provider>;
 }
 
 export default TenantWebsiteContext;

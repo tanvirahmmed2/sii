@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server.js';
 import { queryDb } from '../../../../../lib/database/db.js';
 import { getCreatorSession } from '../../../../../lib/middleware/creator.js';
 import { BASE_DOMAIN, getBaseUrl } from '../../../../../lib/database/secret.js';
+import { uploadImage, deleteImage } from '../../../../../lib/database/cloudinary.js';
 import { checkDomainAvailability, checkCustomDomainAvailability } from './check-domain/route.js';
 
 export const dynamic = 'force-dynamic';
@@ -413,6 +414,111 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     });
   }
 
+  // Dedicated Action: Upload Brand Asset (Logo or Favicon) to Cloudinary and delete old one
+  if (action === 'upload_branding') {
+    const websiteId = Number(body.websiteId || body.id);
+    const type = body.type; // 'logo' | 'favicon'
+    const imageInput = body.image || body.file || body.data;
+
+    if (!websiteId || !type || !imageInput) {
+      return NextResponse.json({ success: false, error: 'websiteId, type (logo or favicon), and image data are required.' }, { status: 400 });
+    }
+
+    const siteRes = await queryDb(
+      `SELECT id, creator_id, logo, logo_id, favicon, favicon_id FROM websites WHERE id = $1 AND creator_id = $2 LIMIT 1`,
+      [websiteId, creatorId]
+    );
+    if (siteRes.rows.length === 0) {
+      return NextResponse.json({ success: false, error: 'Website not found or unauthorized.' }, { status: 404 });
+    }
+    const currentSite = siteRes.rows[0];
+
+    const folder = type === 'logo' ? 'website_logos' : 'website_favicons';
+    const oldPublicId = type === 'logo' ? currentSite.logo_id : currentSite.favicon_id;
+
+    // Delete previous asset from Cloudinary
+    if (oldPublicId) {
+      try {
+        await deleteImage(oldPublicId);
+      } catch (delErr) {
+        console.warn(`Notice deleting old Cloudinary ${type}:`, delErr.message);
+      }
+    }
+
+    // Upload new image to Cloudinary
+    let uploadRes;
+    try {
+      uploadRes = await uploadImage(imageInput, folder);
+    } catch (upErr) {
+      console.error(`Cloudinary ${type} upload error:`, upErr);
+      return NextResponse.json({ success: false, error: `Failed to upload ${type} to Cloudinary: ${upErr.message}` }, { status: 500 });
+    }
+
+    const colUrl = type === 'logo' ? 'logo' : 'favicon';
+    const colId = type === 'logo' ? 'logo_id' : 'favicon_id';
+
+    const updRes = await queryDb(
+      `UPDATE websites
+       SET ${colUrl} = $1, ${colId} = $2, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3 AND creator_id = $4
+       RETURNING *`,
+      [uploadRes.url, uploadRes.publicId, websiteId, creatorId]
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: `${type === 'logo' ? 'Logo' : 'Favicon'} uploaded successfully.`,
+      url: uploadRes.url,
+      publicId: uploadRes.publicId,
+      website: updRes.rows[0],
+    });
+  }
+
+  // Dedicated Action: Remove Brand Asset (Logo or Favicon) from Cloudinary and database
+  if (action === 'remove_branding') {
+    const websiteId = Number(body.websiteId || body.id);
+    const type = body.type; // 'logo' | 'favicon'
+
+    if (!websiteId || !type) {
+      return NextResponse.json({ success: false, error: 'websiteId and type are required.' }, { status: 400 });
+    }
+
+    const siteRes = await queryDb(
+      `SELECT id, creator_id, logo, logo_id, favicon, favicon_id FROM websites WHERE id = $1 AND creator_id = $2 LIMIT 1`,
+      [websiteId, creatorId]
+    );
+    if (siteRes.rows.length === 0) {
+      return NextResponse.json({ success: false, error: 'Website not found or unauthorized.' }, { status: 404 });
+    }
+    const currentSite = siteRes.rows[0];
+    const oldPublicId = type === 'logo' ? currentSite.logo_id : currentSite.favicon_id;
+
+    if (oldPublicId) {
+      try {
+        await deleteImage(oldPublicId);
+      } catch (delErr) {
+        console.warn(`Notice deleting Cloudinary ${type} on remove:`, delErr.message);
+      }
+    }
+
+    const colUrl = type === 'logo' ? 'logo' : 'favicon';
+    const colId = type === 'logo' ? 'logo_id' : 'favicon_id';
+
+    const updRes = await queryDb(
+      `UPDATE websites
+       SET ${colUrl} = NULL, ${colId} = NULL, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND creator_id = $2
+       RETURNING *`,
+      [websiteId, creatorId]
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: `${type === 'logo' ? 'Logo' : 'Favicon'} removed successfully.`,
+      website: updRes.rows[0],
+    });
+  }
+
   // 2. Update Website (Data, Subdomain, or Custom Domain)
   if (action === 'update_website') {
     const id = Number(body.id || body.websiteId);
@@ -530,14 +636,93 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       values.push(body.theme);
     }
 
-    if (body.logo !== undefined) {
-      updates.push(`logo = $${idx++}`);
-      values.push(body.logo);
+    // Fetch current site details if logo or favicon is being updated or removed
+    let currentSiteForBranding = null;
+    if (
+      body.logo !== undefined ||
+      body.removeLogo ||
+      body.favicon !== undefined ||
+      body.removeFavicon
+    ) {
+      const siteCheck = await queryDb(
+        `SELECT id, logo, logo_id, favicon, favicon_id FROM websites WHERE id = $1 AND creator_id = $2 LIMIT 1`,
+        [id, creatorId]
+      );
+      currentSiteForBranding = siteCheck.rows[0] || null;
     }
 
-    if (body.favicon !== undefined) {
-      updates.push(`favicon = $${idx++}`);
-      values.push(body.favicon);
+    // 1. Logo Handling (Cloudinary upload & delete old)
+    if (body.removeLogo || body.logo === '' || body.logo === null) {
+      if (currentSiteForBranding?.logo_id) {
+        try { await deleteImage(currentSiteForBranding.logo_id); } catch (_) {}
+      }
+      updates.push(`logo = NULL`);
+      updates.push(`logo_id = NULL`);
+    } else if (body.logo !== undefined) {
+      const logoInput = String(body.logo).trim();
+      if (logoInput.startsWith('data:image')) {
+        // Upload base64 to Cloudinary & delete old
+        if (currentSiteForBranding?.logo_id) {
+          try { await deleteImage(currentSiteForBranding.logo_id); } catch (_) {}
+        }
+        try {
+          const uploadRes = await uploadImage(logoInput, 'website_logos');
+          updates.push(`logo = $${idx++}`);
+          values.push(uploadRes.url);
+          updates.push(`logo_id = $${idx++}`);
+          values.push(uploadRes.publicId);
+        } catch (logoErr) {
+          console.error('Cloudinary logo upload error during website update:', logoErr);
+        }
+      } else if (logoInput) {
+        // Plain URL
+        if (body.logo_id !== undefined && body.logo_id !== currentSiteForBranding?.logo_id && currentSiteForBranding?.logo_id) {
+          try { await deleteImage(currentSiteForBranding.logo_id); } catch (_) {}
+        }
+        updates.push(`logo = $${idx++}`);
+        values.push(logoInput);
+        if (body.logo_id !== undefined) {
+          updates.push(`logo_id = $${idx++}`);
+          values.push(body.logo_id);
+        }
+      }
+    }
+
+    // 2. Favicon Handling (Cloudinary upload & delete old)
+    if (body.removeFavicon || body.favicon === '' || body.favicon === null) {
+      if (currentSiteForBranding?.favicon_id) {
+        try { await deleteImage(currentSiteForBranding.favicon_id); } catch (_) {}
+      }
+      updates.push(`favicon = NULL`);
+      updates.push(`favicon_id = NULL`);
+    } else if (body.favicon !== undefined) {
+      const faviconInput = String(body.favicon).trim();
+      if (faviconInput.startsWith('data:image') || faviconInput.startsWith('data:')) {
+        // Upload base64 to Cloudinary & delete old
+        if (currentSiteForBranding?.favicon_id) {
+          try { await deleteImage(currentSiteForBranding.favicon_id); } catch (_) {}
+        }
+        try {
+          const uploadRes = await uploadImage(faviconInput, 'website_favicons');
+          updates.push(`favicon = $${idx++}`);
+          values.push(uploadRes.url);
+          updates.push(`favicon_id = $${idx++}`);
+          values.push(uploadRes.publicId);
+        } catch (favErr) {
+          console.error('Cloudinary favicon upload error during website update:', favErr);
+        }
+      } else if (faviconInput) {
+        // Plain URL
+        if (body.favicon_id !== undefined && body.favicon_id !== currentSiteForBranding?.favicon_id && currentSiteForBranding?.favicon_id) {
+          try { await deleteImage(currentSiteForBranding.favicon_id); } catch (_) {}
+        }
+        updates.push(`favicon = $${idx++}`);
+        values.push(faviconInput);
+        if (body.favicon_id !== undefined) {
+          updates.push(`favicon_id = $${idx++}`);
+          values.push(body.favicon_id);
+        }
+      }
     }
 
     if (body.status !== undefined) {

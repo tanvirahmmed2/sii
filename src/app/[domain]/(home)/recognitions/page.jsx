@@ -1,18 +1,19 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import Link from 'next/link';
-import { FiAward, FiArrowLeft } from 'react-icons/fi';
 import RecognitionCard from 'src/component/website/cards/RecognitionCard';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 const RecognitionsPage = () => {
+  const { getApiEndpoint, tenantUrl, website } = useContext(TenantWebsiteContext);
   const [recognitions, setRecognitions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchRecognitions = async () => {
       try {
-        const res = await fetch('/api/recognitions');
+        const res = await fetch(getApiEndpoint('recognitions'));
         if (res.ok) {
           const data = await res.json();
           const list = data.paylod?.recognitions || data.payload?.recognitions || data.recognitions || [];
@@ -25,48 +26,44 @@ const RecognitionsPage = () => {
       }
     };
     fetchRecognitions();
-  }, []);
+  }, [getApiEndpoint]);
 
   return (
-    <div className="w-full min-h-screen bg-slate-50/50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors mb-8"
-        >
-          <FiArrowLeft />
-          Back to Home
-        </Link>
-
-        <div className="text-center mb-12">
-         
-          <h1 className="text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight">
-            All Recognitions
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto space-y-6">
+        
+        {/* Header */}
+        <div className="border-b border-slate-200 dark:border-slate-800 pb-5">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-medium tracking-wide uppercase px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              Institutional Distinctions
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+            Accreditations & Recognitions
           </h1>
-          <p className="text-slate-500 mt-3 max-w-xl mx-auto text-sm">
-            A full record of honours and awards received by our institution.
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
+            National educational board approvals, academic honors, and quality certifications granted to {website?.name || 'our institution'}.
           </p>
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-16">
-            <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-8 text-center">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Loading recognitions record...</span>
           </div>
         ) : recognitions.length > 0 ? (
-          <div className="w-full flex flex-wrap items-center justify-center gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {recognitions.map((item) => (
               <RecognitionCard key={item.id} recognition={item} />
             ))}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mx-auto text-2xl mb-4">
-              <FiAward />
-            </div>
-            <h3 className="font-bold text-slate-800 text-lg">No recognitions recorded yet</h3>
-            <p className="text-slate-500 text-sm mt-1">Check back later for updates.</p>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 text-center space-y-1">
+            <h3 className="font-semibold text-slate-800 dark:text-slate-200 text-sm">No Recognitions Documented</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-xs">Accreditation certificates will be published here upon archival verification.</p>
           </div>
         )}
+
       </div>
     </div>
   );

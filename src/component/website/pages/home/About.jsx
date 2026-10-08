@@ -1,62 +1,74 @@
 'use client';
 
+import React, { useContext } from 'react';
+import Link from 'next/link';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import { SCHOOL_NAME } from 'src/lib/database/secret';
-import React from 'react';
-import { FiAward, FiBook, FiCheckCircle } from 'react-icons/fi';
-import { GiCreditsCurrency } from 'react-icons/gi';
 
 const About = () => {
+  const { website, websiteSettings, tenantUrl } = useContext(TenantWebsiteContext);
+  const schoolName = website?.name || websiteSettings?.school_name || SCHOOL_NAME;
+
   return (
-    <section className="w-full py-20 px-4 sm:px-6 lg:px-8 bg-white">
-      <div className="mx-auto max-w-7xl w-full">
-        <div className="w-full flex flex-col items-center justify-center gap-20">
+    <section className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 py-12 px-4 sm:px-6 lg:px-8 transition-colors">
+      <div className="w-full space-y-8">
+        <div className="text-center max-w-2xl mx-auto space-y-2">
+          <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
+            Institutional Legacy
+          </span>
+          <h2 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            Commitment to Character, Scholarship &amp; Community
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-normal">
+            Founded on the pillars of holistic growth, scholarship, and integrity, {schoolName} is dedicated to preparing students for global career success through rigorous academics and progressive teaching methods.
+          </p>
+        </div>
 
-          <div className="w-full flex flex-col gap-4 items-center justify-center">
-
-            <h2 className="text-3xl md:text-5xl text-center font-semibold text-slate-900 tracking-tight leading-tight">
-              A Legacy of Academic and Personal Excellence
-            </h2>
-            <p className="text-center text-sm leading-relaxed">
-              Founded on the pillars of character, scholarship, and community, {SCHOOL_NAME} is dedicated to preparing students for global career success. Our state-of-the-art facilities and progressive teaching methods cultivate a dynamic environment where potential is transformed into achievement.
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded p-4 space-y-2">
+            <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
+              01 &bull; Academic Infrastructure
+            </span>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+              Smart Classrooms &amp; Laboratories
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-normal">
+              Digital multimedia connectivity, comprehensive STEM experimental laboratories, and modern learning aids supporting student engagement.
             </p>
-
           </div>
 
-          <div className="w-full flex flex-col items-center justify-center gap-8">
-            <div className='w-full flex flex-col md:flex-row items-center justify-center gap-6'>
-              <div className="w-full flex flex-col bg-slate-50 rounded-2xl gap-4 p-5">
-                <div className="w-10 h-10 bg-tertiary text-secondary rounded-xl flex items-center justify-center font-bold">
-                  <FiBook />
-                </div>
-                <h3 className="font-bold text-slate-800 text-sm">Modern Classrooms</h3>
-                <p className="text-slate-500 text-xs leading-relaxed">
-                  Smart displays, stable connectivity, and modern teaching aids for high quality learning experiences.
-                </p>
-              </div>
-
-              <div className="w-full flex flex-col bg-slate-50 rounded-2xl gap-4 p-5">
-                <div className="w-10 h-10 bg-tertiary text-secondary rounded-xl flex items-center justify-center font-bold">
-                  <FiAward />
-                </div>
-                <h3 className="font-bold text-slate-800 text-sm">Research Labs</h3>
-                <p className="text-slate-500 text-xs leading-relaxed">
-                  Fully equipped engineering, physics, and computer science modules for hands-on research.
-                </p>
-              </div>
-            </div>
-
-            <div className="w-full flex flex-col bg-slate-50 rounded-2xl gap-4 p-5">
-              <div className="w-10 h-10 bg-tertiary text-secondary rounded-xl flex items-center justify-center font-bold">
-                  <GiCreditsCurrency />
-                </div>
-              <h3 className="font-bold text-slate-800 text-sm">{SCHOOL_NAME.split(" ")[0]} Accreditation</h3>
-              <p className="text-slate-500 text-xs leading-relaxed">
-                {SCHOOL_NAME.split(" ").map((w) => w[0]).join('')} is fully accredited by regional academic senates, ensuring global recognition of transcripts, courses, and certifications.
-              </p>
-            </div>
-
+          <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded p-4 space-y-2">
+            <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
+              02 &bull; Research &amp; Innovation
+            </span>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+              Library &amp; Computing Resources
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-normal">
+              High-speed internet laboratories, curated research archives, and specialized literature supporting exploratory curiosity.
+            </p>
           </div>
 
+          <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded p-4 space-y-2">
+            <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
+              03 &bull; Recognized Standards
+            </span>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+              Board Accreditation &amp; Standing
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-normal">
+              Fully approved curriculum recognized across regional examination boards, guaranteeing seamless credit transfer and credentials.
+            </p>
+          </div>
+        </div>
+
+        <div className="text-center pt-2">
+          <Link
+            href={tenantUrl('/about')}
+            className="inline-flex items-center px-4 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium transition-colors"
+          >
+            Learn More About Our Campus &rarr;
+          </Link>
         </div>
       </div>
     </section>

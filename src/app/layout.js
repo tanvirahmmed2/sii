@@ -1,4 +1,5 @@
 import "./globals.css";
+import "next-google-translate-widget/styles";
 import { ContextProvider } from "src/component/helper/Context";
 import ToastProvider from "src/component/helper/ToastProvider";
 import { SCHOOL_NAME, META_TITLE, META_DESCRIPTION } from "src/lib/database/secret";

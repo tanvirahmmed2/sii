@@ -1,19 +1,23 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { FiUsers, FiBriefcase } from 'react-icons/fi';
+import Link from 'next/link';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
-const CollaborationsPage = () => {
+export default function CollaborationsPage() {
+  const { website, getApiEndpoint, tenantUrl } = useTenantWebsite();
   const [partners, setPartners] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchCollaborations = async () => {
       try {
-        const res = await fetch('/api/collaborations');
+        const endpoint = getApiEndpoint('collaborations');
+        const res = await fetch(endpoint);
         if (res.ok) {
           const data = await res.json();
-          setPartners(data.paylod.collaborations || []);
+          const list = data.payload?.collaborations || data.paylod?.collaborations || [];
+          setPartners(Array.isArray(list) ? list : []);
         }
       } catch (err) {
         console.error('Error fetching collaborations:', err);
@@ -22,111 +26,113 @@ const CollaborationsPage = () => {
       }
     };
     fetchCollaborations();
-  }, []);
-
-  const gradients = [
-    'bg-primary text-secondary',
-    'from-blue-500 to-sky-650',
-    'from-orange-500 to-amber-600',
-    'from-emerald-500 to-teal-650',
-  ];
+  }, [getApiEndpoint]);
 
   return (
-    <div className="w-full min-h-screen bg-slate-50/50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <span className="text-xs font-bold text-primary bg-primary-light px-3 py-1 rounded-full uppercase tracking-widest">
-            Global Network
-          </span>
-          <h1 className="text-3xl md:text-4xl font-semibold text-slate-900 mt-3 tracking-tight">
-            Our Collaborations
-          </h1>
-          <p className="text-slate-500 mt-2 max-w-xl mx-auto text-sm md:text-base">
-            We partner with leading universities, tech giants, and global research institutions to offer world-class exposure to our faculty and students.
-          </p>
-        </div>
+    <div className="w-full min-h-screen py-8 md:py-12 px-4 sm:px-6 lg:px-8 space-y-8">
+      {/* Page Header */}
+      <div className="border-b border-slate-200 dark:border-slate-800 pb-6 max-w-4xl mx-auto text-center space-y-2">
+        <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block">
+          Global Academic &amp; Industry Network
+        </span>
+        <h1 className="text-2xl sm:text-4xl font-semibold text-slate-900 dark:text-white tracking-tight">
+          Institutional Collaborations
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-xl mx-auto leading-relaxed">
+          {website?.name || 'Our institution'} partners with accredited universities, educational foundations, research consortia, and industry organizations to foster academic excellence.
+        </p>
+      </div>
 
-        {/* Dynamic Partner Grid */}
+      {/* Partners Grid */}
+      <div className="max-w-5xl mx-auto">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-3">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-xs font-semibold text-slate-400">Loading collaborations...</span>
+          <div className="flex flex-col items-center justify-center py-20 gap-2">
+            <span className="text-xs font-medium text-slate-400">Loading collaborations...</span>
           </div>
         ) : partners.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 animate-fade-up">
-            {partners.map((partner, idx) => {
-              const color = gradients[idx % gradients.length];
-              return (
-                <div
-                  key={partner.id}
-                  className="bg-white rounded-3xl border border-slate-100 hover:border-primary-light hover:shadow-lg transition-all duration-300 p-8 flex flex-col justify-between group relative overflow-hidden"
-                >
-                  {/* Visual gradient accent on hover */}
-                  <div className={`absolute top-0 left-0 w-2 h-full bg-primary ${color} opacity-80`}></div>
-
-                  <div className="flex gap-5 items-start pl-2">
-                    {partner.logo ? (
-                      <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 p-2 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-105 transition-transform">
-                        <img src={partner.logo} alt={partner.institution_name} className="max-w-full max-h-full object-contain" />
-                      </div>
-                    ) : (
-                      <div className="w-16 h-16 rounded-2xl bg-primary-light text-primary flex items-center justify-center text-2xl shrink-0 shadow-inner group-hover:scale-105 transition-transform">
-                        <FiBriefcase />
-                      </div>
-                    )}
-                    <div className="flex flex-col gap-1.5 w-full">
-                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
-                        Academic Partner
-                      </span>
-                      <h3 className="font-semibold text-slate-900 text-lg group-hover:text-primary transition-colors">
-                        {partner.institution_name}
-                      </h3>
-                      
-                      <div
-                        className="text-slate-500 text-xs md:text-sm leading-relaxed mt-2.5 tiptap-content"
-                        dangerouslySetInnerHTML={{ __html: partner.description || '' }}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {partners.map((partner) => (
+              <div
+                key={partner.id}
+                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-5 sm:p-6 shadow-xs hover:border-primary/50 transition-colors flex flex-col justify-between"
+              >
+                <div className="flex gap-4 items-start">
+                  {partner.logo ? (
+                    <div className="w-14 h-14 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2 flex items-center justify-center shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={partner.logo}
+                        alt={partner.institution_name}
+                        className="max-w-full max-h-full object-contain"
                       />
                     </div>
+                  ) : (
+                    <div className="w-14 h-14 rounded bg-primary/10 text-primary border border-primary/20 flex items-center justify-center text-xs font-semibold shrink-0">
+                      [Logo]
+                    </div>
+                  )}
+
+                  <div className="space-y-1 flex-1">
+                    <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+                      Academic Partner
+                    </span>
+                    <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                      {partner.institution_name}
+                    </h2>
+                    {partner.description && (
+                      <div
+                        className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed pt-1"
+                        dangerouslySetInnerHTML={{ __html: partner.description }}
+                      />
+                    )}
                   </div>
                 </div>
-              );
-            })}
+
+                <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+                  <span>Authorized Partnership</span>
+                  <span className="font-mono">Ref #{partner.id}</span>
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
-          <div className="text-center py-20 bg-white border border-slate-100 rounded-3xl p-8 mb-12 shadow-xs">
-            <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 mx-auto text-2xl mb-4">
-              <FiBriefcase />
-            </div>
-            <h3 className="font-semibold text-slate-800 text-lg">No collaborations to display</h3>
-            <p className="text-slate-500 text-sm mt-1 max-w-sm mx-auto">
-              We are currently finalizing our network partnerships. Please check back later.
+          <div className="text-center py-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-8 shadow-xs max-w-md mx-auto space-y-2">
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider block">
+              [No Partners Registered]
+            </span>
+            <h3 className="text-base font-semibold text-slate-800 dark:text-white">
+              No Collaborations on Record
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Active institutional partnerships will appear here once officially logged in the system.
             </p>
           </div>
         )}
+      </div>
 
-        {/* Global Network Section */}
-        <div className="bg-primaryr from-slate-900 to-sky-950 text-white rounded-3xl p-8 md:p-12 text-center flex flex-col items-center gap-6 relative overflow-hidden shadow-xl">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-indigo-500/10 via-transparent to-transparent"></div>
-          <div className="flex flex-col gap-3 relative z-10">
-            <h2 className="text-xl md:text-2xl font-semibold tracking-tight">
-              Interested in Partnering with FIT?
-            </h2>
-            <p className="text-secondary text-xs md:text-sm max-w-xl mx-auto leading-relaxed">
-              We are constantly seeking innovative researchers, corporate trainers, and universities to join our collaborative networks. Contact our external relations office to initiate joint ventures.
-            </p>
-          </div>
-          <a
-            href="mailto:collaborations@fit.edu.bd"
-            className="inline-flex items-center justify-center gap-2 bg-amber-400 hover:bg-amber-500 text-slate-950 font-semibold px-6 py-3 rounded-xl shadow-md hover:scale-[1.02] transition-all relative z-10 text-sm"
+      {/* External Relations Inquiry Callout */}
+      <div className="max-w-5xl mx-auto bg-slate-900 text-white rounded-md p-6 sm:p-8 border border-slate-800 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="space-y-1.5 text-center md:text-left">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            External Relations &amp; Linkages
+          </span>
+          <h2 className="text-lg sm:text-xl font-semibold text-white tracking-tight">
+            Interested in Partnering with {website?.name || 'Our Institution'}?
+          </h2>
+          <p className="text-xs text-slate-300 max-w-xl leading-relaxed">
+            We welcome academic faculty exchange programs, student internships, curriculum co-development, and joint research initiatives.
+          </p>
+        </div>
+
+        <div className="shrink-0">
+          <Link
+            href={tenantUrl('/contact?subject=Partnership+Inquiry')}
+            className="inline-block px-5 py-2.5 bg-white text-slate-900 hover:bg-slate-100 rounded text-xs font-semibold transition-colors text-center"
           >
-            <FiUsers />
-            <span>Connect with External Relations</span>
-          </a>
+            Contact External Relations →
+          </Link>
         </div>
       </div>
     </div>
   );
-};
-
-export default CollaborationsPage;
+}

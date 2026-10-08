@@ -18,7 +18,7 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Staff ID is required.' }, { status: 400 });
     }
 
-    const staffRes = await query('SELECT id, name, email, role, is_registered FROM staffs WHERE id = $1', [parseInt(staff_id, 10)]);
+    const staffRes = await query('SELECT id, name, email, is_registered FROM website_staffs WHERE id = $1', [parseInt(staff_id, 10)]);
 
     if (staffRes.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Staff member not found.' }, { status: 404 });
@@ -31,11 +31,11 @@ export async function POST(request) {
     }
 
     // Re-generate token
-    const verificationToken = generateToken(12);
-    const verificationExpires = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72 hours
+    const verificationToken = generateToken(32);
+    const verificationExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
     await query(`
-      UPDATE staffs
+      UPDATE website_staffs
       SET verification_token = $1, verification_token_expires = $2
       WHERE id = $3
     `, [verificationToken, verificationExpires, staff.id]);

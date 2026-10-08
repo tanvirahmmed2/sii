@@ -1,54 +1,56 @@
 'use client';
 
-import React from 'react';
+import React, { useContext } from 'react';
 import Link from 'next/link';
-import { FiCheckCircle, FiArrowRight } from 'react-icons/fi';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import { SCHOOL_NAME } from 'src/lib/database/secret';
 
 const Admission = () => {
+  const { website, websiteSettings, tenantUrl } = useContext(TenantWebsiteContext);
+  const schoolName = website?.name || websiteSettings?.school_name || SCHOOL_NAME;
+
   return (
-    <section className="w-full py-20 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-100">
-      <div className="w-full">
-        <div className="bg-linear-to-br from-primary to-primary-light text-white rounded-3xl p-8 md:p-12 relative overflow-hidden flex flex-col md:flex-row gap-8 items-center justify-between">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(14,165,233,0.1),transparent_35%)]" />
-          
-          <div className="max-w-xl z-10 flex flex-col gap-4">
-            
-            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight leading-tight">
-              Begin Your Educational Journey With  {SCHOOL_NAME.split(" ").map((w)=>w[0]).join('')} Today
-            </h2>
-            <p className="text-secondary text-xs md:text-sm leading-relaxed">
-              If your academic registration code has been pre-created by the FIT campus registrar, you can finalize your profile details and complete registration setup online.
-            </p>
-            
-            <div className="flex flex-col gap-2 mt-2">
-              <div className="flex items-center gap-2 text-xs  text-secondary">
-                <FiCheckCircle className="text-emerald-400" />
-                <span>Auto-allocation of classroom subjects and sections</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-secondary">
-                <FiCheckCircle className="text-emerald-400" />
-                <span>Hostel allocation validation (Male/Female designated rooms)</span>
-              </div>
-            </div>
-          </div>
+    <section className="w-full bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 py-12 px-4 sm:px-6 lg:px-8 transition-colors">
+      <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div className="space-y-3 max-w-2xl">
+          <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
+            Admissions Enrollment
+          </span>
 
-          <div className="shrink-0 z-10 flex flex-col sm:flex-row gap-4 w-full md:w-auto justify-center">
-            <Link
-              href="/auth/student/registration"
-              className="inline-flex items-center justify-center gap-2 bg-tertiary hover:bg-primary-dark text-secondary font-bold px-6 py-3 rounded-xl text-xs transition-colors cursor-pointer"
-            >
-              <span>Complete Setup</span>
-              <FiArrowRight />
-            </Link>
-            <Link
-              href="/admission"
-              className="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-6 py-3 rounded-xl text-xs border border-slate-700 transition-colors cursor-pointer"
-            >
-              <span>Admissions Info</span>
-            </Link>
-          </div>
+          <h2 className="text-lg sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            Begin Your Educational Journey With {schoolName}
+          </h2>
 
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-normal">
+            Applications for regular terms and specialized academic programs are evaluated transparently. Submit admission forms online or verify pre-registered student codes directly with the admissions registry.
+          </p>
+
+          <div className="flex flex-wrap gap-2 pt-1 text-xs text-slate-500 dark:text-slate-400">
+            <span className="px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+              Verified Merit Evaluation
+            </span>
+            <span className="px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+              Automated Section Placement
+            </span>
+            <span className="px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+              Digital Payment &amp; Invoicing
+            </span>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto">
+          <Link
+            href={tenantUrl('/apply')}
+            className="px-4 py-2 rounded bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 text-xs font-medium text-center transition-colors"
+          >
+            Apply Online &rarr;
+          </Link>
+          <Link
+            href={tenantUrl('/admission')}
+            className="px-4 py-2 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium text-center transition-colors"
+          >
+            Admission Circulars
+          </Link>
         </div>
       </div>
     </section>

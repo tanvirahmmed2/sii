@@ -2,29 +2,12 @@
 
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import {
-  BiArrowBack,
-  BiBriefcase,
-  BiMapPin,
-  BiTime,
-  BiDollarCircle,
-  BiCalendar,
-  BiUpload,
-  BiCheckCircle,
-  BiLink,
-  BiFile,
-  BiUser,
-  BiEnvelope,
-  BiPhone,
-  BiCheckShield,
-  BiStar,
-} from 'react-icons/bi';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
 export default function CareerDetailPage({ params }) {
   const unwrappedParams = use(params);
   const slug = unwrappedParams.slug;
-  const router = useRouter();
+  const { website, tenantUrl } = useTenantWebsite();
 
   const [career, setCareer] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -50,7 +33,7 @@ export default function CareerDetailPage({ params }) {
     async function loadJob() {
       try {
         setLoading(true);
-        const res = await fetch(`/api/careers/${slug}`);
+        const res = await fetch(`/api/marketing/careers/${slug}`);
         const data = await res.json();
         if (data.success && data.career) {
           setCareer(data.career);
@@ -72,7 +55,6 @@ export default function CareerDetailPage({ params }) {
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file size (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
         alert('File size must be under 10MB');
         return;
@@ -112,7 +94,7 @@ export default function CareerDetailPage({ params }) {
         formData.append('resume_url', form.resume_url.trim());
       }
 
-      const res = await fetch(`/api/careers/${slug}/apply`, {
+      const res = await fetch(`/api/marketing/careers/${slug}/apply`, {
         method: 'POST',
         body: formData,
       });
@@ -133,34 +115,33 @@ export default function CareerDetailPage({ params }) {
 
   if (loading) {
     return (
-      <div className="w-full min-h-screen flex items-center justify-center bg-slate-50/50 dark:bg-slate-950 py-24">
-        <div className="text-center space-y-3">
-          <div className="inline-block animate-spin rounded-full h-9 w-9 border-3 border-slate-200 border-t-indigo-600" />
-          <p className="text-sm font-semibold text-slate-500">Loading position details...</p>
-        </div>
+      <div className="w-full min-h-[60vh] flex items-center justify-center py-20">
+        <span className="text-xs font-medium text-slate-400">Loading position details...</span>
       </div>
     );
   }
 
   if (notFound || !career) {
     return (
-      <div className="w-full min-h-[70vh] flex items-center justify-center bg-slate-50/50 dark:bg-slate-950 py-24 px-4">
-        <div className="max-w-md w-full bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 text-center space-y-4 shadow-sm">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-rose-50 dark:bg-rose-950/50 flex items-center justify-center text-rose-500 text-2xl">
-            <BiBriefcase />
-          </div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+      <div className="w-full min-h-[60vh] flex items-center justify-center py-20 px-4">
+        <div className="max-w-md w-full bg-white dark:bg-slate-900 p-6 rounded-md border border-slate-200 dark:border-slate-800 text-center space-y-3 shadow-xs">
+          <span className="text-xs font-medium text-slate-400 uppercase tracking-wider block">
+            [Position Unavailable]
+          </span>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">
             Position Not Found
           </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            This job posting may have been closed, fulfilled, or the URL may be incorrect.
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            This vacancy may have been fulfilled, expired, or removed from the active registry.
           </p>
-          <Link
-            href="/careers"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
-          >
-            <BiArrowBack /> View All Openings
-          </Link>
+          <div className="pt-2">
+            <Link
+              href={tenantUrl('/careers')}
+              className="inline-block px-4 py-2 rounded bg-primary hover:bg-primary-dark text-white text-xs font-medium transition-colors"
+            >
+              ← View All Openings
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -179,88 +160,78 @@ export default function CareerDetailPage({ params }) {
   const benefits = parseLines(career.benefits);
 
   return (
-    <div className="w-full min-h-screen bg-slate-50/50 dark:bg-slate-950 py-10 md:py-16 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto space-y-10">
-        {/* Back Link */}
-        <Link
-          href="/careers"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-        >
-          <BiArrowBack className="text-lg" /> Back to All Openings
-        </Link>
+    <div className="w-full min-h-screen py-8 md:py-12 px-4 sm:px-6 lg:px-8 space-y-8">
+      <div className="max-w-5xl mx-auto space-y-6">
+        
+        {/* Navigation Breadcrumb */}
+        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 pb-3">
+          <Link
+            href={tenantUrl('/careers')}
+            className="hover:text-primary transition-colors font-medium"
+          >
+            ← Back to Open Positions
+          </Link>
+          <span className="text-[11px] font-mono text-slate-400">{career.slug}</span>
+        </div>
 
-        {/* Job Header Card */}
-        <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-6">
+        {/* Position Header Card */}
+        <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-md border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="px-3 py-1 rounded-xl text-xs font-bold uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900">
+            <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
               {career.department}
             </span>
-            <span className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-              {career.job_type.replace('_', ' ')}
+            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              {(career.job_type || '').replace('_', ' ')}
             </span>
-            <span className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-1">
-              <BiMapPin className="text-slate-400" />
+            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
               {career.location} ({career.workplace_type})
             </span>
-            <span className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-              {career.experience_level.replace('_', ' ')}
+            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              {(career.experience_level || '').replace('_', ' ')}
             </span>
           </div>
 
-          <div>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              {career.title}
-            </h1>
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            {career.title}
+          </h1>
 
-          <div className="flex flex-wrap items-center gap-6 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+          <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
             {career.salary_range && (
-              <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white">
-                <BiDollarCircle className="text-indigo-600 text-base" />
-                <span>{career.salary_range}</span>
-              </div>
+              <span className="font-semibold text-slate-900 dark:text-white">
+                Scale: {career.salary_range}
+              </span>
             )}
             {career.deadline && (
-              <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 font-semibold">
-                <BiTime className="text-base" />
-                <span>Deadline: {new Date(career.deadline).toLocaleDateString()}</span>
-              </div>
+              <span className="text-rose-600 dark:text-rose-400 font-medium">
+                Deadline: {new Date(career.deadline).toLocaleDateString()}
+              </span>
             )}
-            <div className="flex items-center gap-1.5">
-              <BiCalendar className="text-base text-slate-400" />
-              <span>Posted on {new Date(career.created_at).toLocaleDateString()}</span>
-            </div>
+            <span>Posted: {new Date(career.created_at).toLocaleDateString()}</span>
           </div>
         </div>
 
-        {/* Content & Application Form Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+        {/* Content & Form Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Column: Job Details */}
-          <div className="lg:col-span-7 space-y-8">
-            {/* Overview */}
-            <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <BiStar className="text-indigo-600" />
-                Role Overview
+          <div className="lg:col-span-7 space-y-6">
+            <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-md border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+              <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                Role Description &amp; Scope
               </h2>
-              <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">
+              <div className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">
                 {career.description}
               </div>
             </div>
 
-            {/* Responsibilities */}
             {responsibilities.length > 0 && (
-              <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                  What You’ll Do
+              <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-md border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+                <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                  Key Responsibilities
                 </h2>
-                <ul className="space-y-2.5">
+                <ul className="space-y-2 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
                   {responsibilities.map((resp, idx) => (
-                    <li
-                      key={idx}
-                      className="flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300 leading-relaxed"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 mt-2 shrink-0" />
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="text-primary font-bold mt-0.5">•</span>
                       <span>{resp}</span>
                     </li>
                   ))}
@@ -268,19 +239,15 @@ export default function CareerDetailPage({ params }) {
               </div>
             )}
 
-            {/* Requirements */}
             {requirements.length > 0 && (
-              <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                  What We’re Looking For
+              <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-md border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+                <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                  Qualifications &amp; Requirements
                 </h2>
-                <ul className="space-y-2.5">
+                <ul className="space-y-2 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
                   {requirements.map((req, idx) => (
-                    <li
-                      key={idx}
-                      className="flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300 leading-relaxed"
-                    >
-                      <BiCheckCircle className="text-indigo-600 text-lg mt-0.5 shrink-0" />
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="text-primary font-bold mt-0.5">•</span>
                       <span>{req}</span>
                     </li>
                   ))}
@@ -288,19 +255,15 @@ export default function CareerDetailPage({ params }) {
               </div>
             )}
 
-            {/* Benefits & Perks */}
             {benefits.length > 0 && (
-              <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                  Benefits & Perks
+              <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-md border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+                <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                  Benefits &amp; Institutional Perks
                 </h2>
-                <ul className="space-y-2.5">
+                <ul className="space-y-2 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
                   {benefits.map((ben, idx) => (
-                    <li
-                      key={idx}
-                      className="flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300 leading-relaxed"
-                    >
-                      <span className="w-2 h-2 rounded-md bg-emerald-500 mt-2 shrink-0" />
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="text-emerald-600 font-bold mt-0.5">•</span>
                       <span>{ben}</span>
                     </li>
                   ))}
@@ -311,213 +274,143 @@ export default function CareerDetailPage({ params }) {
 
           {/* Right Column: Application Form */}
           <div className="lg:col-span-5 sticky top-6">
-            <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-lg space-y-6">
+            <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-md border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
               {submitSuccess ? (
-                <div className="text-center py-8 space-y-4">
-                  <div className="w-16 h-16 mx-auto rounded-full bg-emerald-50 dark:bg-emerald-950 flex items-center justify-center text-emerald-600 text-3xl">
-                    <BiCheckCircle />
-                  </div>
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
-                    Application Received!
+                <div className="text-center py-6 space-y-3">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                    [Submission Received]
+                  </span>
+                  <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                    Application Logged Successfully
                   </h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                    Thank you for applying to join our team. Our hiring managers review every submission and will get in touch with you shortly.
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Thank you for applying. The human resources and academic recruitment committee will review your submission and contact shortlisted candidates.
                   </p>
-                  <Link
-                    href="/careers"
-                    className="inline-block px-5 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold hover:opacity-90 transition-opacity"
-                  >
-                    Explore Other Openings
-                  </Link>
+                  <div className="pt-2">
+                    <Link
+                      href={tenantUrl('/careers')}
+                      className="inline-block px-4 py-2 rounded bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-medium"
+                    >
+                      Browse Other Openings
+                    </Link>
+                  </div>
                 </div>
               ) : (
                 <>
-                  <div>
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                      Apply For This Role
+                  <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
+                    <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                      Submit Candidacy
                     </h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      Fill out the form below. Takes less than 2 minutes.
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Direct application to {website?.name || 'institution'} hiring board.
                     </p>
                   </div>
 
                   {errorMessage && (
-                    <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900 text-xs font-semibold text-rose-700 dark:text-rose-300">
+                    <div className="p-3 rounded bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-300">
                       {errorMessage}
                     </div>
                   )}
 
-                  <form onSubmit={handleSubmitApplication} className="space-y-4">
-                    {/* Full Name */}
+                  <form onSubmit={handleSubmitApplication} className="space-y-3 text-xs">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                        Full Name <span className="text-rose-500">*</span>
+                      <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                        Full Name *
                       </label>
-                      <div className="relative">
-                        <BiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
-                        <input
-                          type="text"
-                          required
-                          placeholder="e.g. Alex Morgan"
-                          value={form.applicant_name}
-                          onChange={(e) =>
-                            setForm({ ...form, applicant_name: e.target.value })
-                          }
-                          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 text-sm text-slate-800 dark:text-slate-200 focus:outline-hidden focus:border-indigo-500"
-                        />
-                      </div>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Dr. Jane Doe"
+                        value={form.applicant_name}
+                        onChange={(e) => setForm({ ...form, applicant_name: e.target.value })}
+                        className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
+                      />
                     </div>
 
-                    {/* Email */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                        Email Address <span className="text-rose-500">*</span>
+                      <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                        Email Address *
                       </label>
-                      <div className="relative">
-                        <BiEnvelope className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
-                        <input
-                          type="email"
-                          required
-                          placeholder="alex@example.com"
-                          value={form.applicant_email}
-                          onChange={(e) =>
-                            setForm({ ...form, applicant_email: e.target.value })
-                          }
-                          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 text-sm text-slate-800 dark:text-slate-200 focus:outline-hidden focus:border-indigo-500"
-                        />
-                      </div>
+                      <input
+                        type="email"
+                        required
+                        placeholder="jane.doe@example.com"
+                        value={form.applicant_email}
+                        onChange={(e) => setForm({ ...form, applicant_email: e.target.value })}
+                        className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
+                      />
                     </div>
 
-                    {/* Phone */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                         Phone Number
                       </label>
-                      <div className="relative">
-                        <BiPhone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
-                        <input
-                          type="tel"
-                          placeholder="+1 (555) 000-0000"
-                          value={form.applicant_phone}
-                          onChange={(e) =>
-                            setForm({ ...form, applicant_phone: e.target.value })
-                          }
-                          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 text-sm text-slate-800 dark:text-slate-200 focus:outline-hidden focus:border-indigo-500"
-                        />
-                      </div>
+                      <input
+                        type="tel"
+                        placeholder="+880 1XXXXXXXXX"
+                        value={form.applicant_phone}
+                        onChange={(e) => setForm({ ...form, applicant_phone: e.target.value })}
+                        className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
+                      />
                     </div>
 
-                    {/* Resume Upload / Link */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                        Resume / CV (PDF or DOC) <span className="text-rose-500">*</span>
+                      <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                        Resume / CV File *
                       </label>
-                      <div className="space-y-2">
-                        <label className="flex flex-col items-center justify-center p-4 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 bg-slate-50/50 dark:bg-slate-950/50 transition-colors cursor-pointer text-center">
-                          <BiUpload className="text-2xl text-indigo-600 dark:text-indigo-400 mb-1" />
-                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                            {resumeFileName ? resumeFileName : 'Click to upload your resume'}
-                          </span>
-                          <span className="text-[11px] text-slate-400 mt-0.5">
-                            PDF, DOC, DOCX up to 10MB
+                      <div className="space-y-1.5">
+                        <label className="block p-3 rounded border border-dashed border-slate-300 dark:border-slate-700 hover:border-primary text-center cursor-pointer bg-slate-50 dark:bg-slate-950">
+                          <span className="text-xs text-slate-700 dark:text-slate-300 font-medium block">
+                            {resumeFileName || 'Select PDF or DOC file (Max 10MB)'}
                           </span>
                           <input
                             type="file"
-                            accept=".pdf,.doc,.docx,application/pdf,application/msword"
+                            accept=".pdf,.doc,.docx"
                             onChange={handleFileChange}
                             className="hidden"
                           />
                         </label>
-
-                        <div className="text-center text-[11px] text-slate-400">or link</div>
-
-                        <div className="relative">
-                          <BiLink className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
-                          <input
-                            type="url"
-                            placeholder="Direct resume link (Google Drive, Dropbox, etc.)"
-                            value={form.resume_url}
-                            onChange={(e) => setForm({ ...form, resume_url: e.target.value })}
-                            className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 text-xs text-slate-800 dark:text-slate-200 focus:outline-hidden focus:border-indigo-500"
-                          />
-                        </div>
+                        <input
+                          type="url"
+                          placeholder="Or paste cloud link (Drive, Dropbox)..."
+                          value={form.resume_url}
+                          onChange={(e) => setForm({ ...form, resume_url: e.target.value })}
+                          className="w-full px-3 py-1.5 rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary text-xs"
+                        />
                       </div>
                     </div>
 
-                    {/* Portfolio / GitHub */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                        Portfolio / GitHub Profile
-                      </label>
-                      <input
-                        type="url"
-                        placeholder="https://github.com/yourhandle or portfolio URL"
-                        value={form.portfolio_url}
-                        onChange={(e) =>
-                          setForm({ ...form, portfolio_url: e.target.value })
-                        }
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 text-sm text-slate-800 dark:text-slate-200 focus:outline-hidden focus:border-indigo-500"
-                      />
-                    </div>
-
-                    {/* LinkedIn */}
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                        LinkedIn Profile
-                      </label>
-                      <input
-                        type="url"
-                        placeholder="https://linkedin.com/in/yourprofile"
-                        value={form.linkedin_url}
-                        onChange={(e) =>
-                          setForm({ ...form, linkedin_url: e.target.value })
-                        }
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 text-sm text-slate-800 dark:text-slate-200 focus:outline-hidden focus:border-indigo-500"
-                      />
-                    </div>
-
-                    {/* Cover Letter */}
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                        Cover Letter / Why You?
+                      <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                        Cover Letter / Statement of Purpose
                       </label>
                       <textarea
                         rows={3}
-                        placeholder="Share a short note about why you are passionate about this role..."
+                        placeholder="Brief summary of your academic background and teaching philosophy..."
                         value={form.cover_letter}
-                        onChange={(e) =>
-                          setForm({ ...form, cover_letter: e.target.value })
-                        }
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 text-xs text-slate-800 dark:text-slate-200 focus:outline-hidden focus:border-indigo-500"
+                        onChange={(e) => setForm({ ...form, cover_letter: e.target.value })}
+                        className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary resize-none"
                       />
                     </div>
 
-                    {/* Submit Button */}
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md shadow-indigo-200 dark:shadow-none transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                      className="w-full py-2.5 rounded bg-primary hover:bg-primary-dark text-white font-medium transition-colors cursor-pointer disabled:opacity-60"
                     >
-                      {submitting ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          <span>Submitting Application...</span>
-                        </>
-                      ) : (
-                        <span>Submit Application</span>
-                      )}
+                      {submitting ? 'Submitting Application...' : 'Submit Application'}
                     </button>
 
-                    <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 pt-1">
-                      <BiCheckShield className="text-sm text-emerald-500" />
-                      <span>Your information is encrypted & kept strictly confidential.</span>
-                    </div>
+                    <p className="text-[10px] text-slate-400 text-center">
+                      Applications are processed in accordance with institution confidentiality guidelines.
+                    </p>
                   </form>
                 </>
               )}
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

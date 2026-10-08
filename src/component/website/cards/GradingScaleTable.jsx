@@ -1,19 +1,23 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { FiAward, FiInfo } from 'react-icons/fi';
+import React, { useEffect, useState, useContext } from 'react';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
-const GradingScaleTable = ({ title = "Institutional Grading Scale", subtitle = "Official breakdown of letter grades, mark range thresholds, and grade points." }) => {
+const GradingScaleTable = ({
+  title = 'Institutional Grading Scale',
+  subtitle = 'Official breakdown of letter grades, mark range thresholds, and grade points.',
+}) => {
+  const { getApiEndpoint } = useContext(TenantWebsiteContext);
   const [grades, setGrades] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchGrades = async () => {
       try {
-        const response = await fetch('/api/grades');
+        const response = await fetch(getApiEndpoint('grades'));
         if (response.ok) {
           const data = await response.json();
-          setGrades(data.paylod?.grades || []);
+          setGrades(data.payload?.grades || data.paylod?.grades || []);
         }
       } catch (error) {
         console.error('Failed to load grades scale:', error);
@@ -22,73 +26,58 @@ const GradingScaleTable = ({ title = "Institutional Grading Scale", subtitle = "
       }
     };
     fetchGrades();
-  }, []);
+  }, [getApiEndpoint]);
 
   return (
-    <div className="w-full bg-white border border-slate-100 rounded-3xl shadow-[0_10px_30px_rgba(0,0,0,0.02)] overflow-hidden">
-      <div className="p-6 md:p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden transition-colors">
+      <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2 tracking-tight">
-            <FiAward className="text-secondary" /> {title}
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+            {title}
           </h2>
-          <p className="text-xs md:text-sm text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {subtitle}
           </p>
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 rounded-xl text-xs font-semibold text-slate-600 border border-slate-100 shrink-0">
-          <FiInfo className="text-secondary text-sm" />
-          <span>{grades.length} Grade Standard{grades.length === 1 ? '' : 's'}</span>
-        </div>
+        <span className="text-[10px] font-mono px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
+          {grades.length} Grade Standard{grades.length === 1 ? '' : 's'}
+        </span>
       </div>
 
       {loading ? (
-        <div className="py-12 flex flex-col items-center justify-center gap-3">
-          <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-xs font-medium text-slate-400">Loading grading system...</span>
+        <div className="py-8 text-center text-xs text-slate-400">
+          Loading grading system...
         </div>
       ) : grades.length === 0 ? (
-        <div className="py-12 text-center text-slate-400 text-xs">
-          No grade scale standard configured.
+        <div className="py-8 text-center text-xs text-slate-400">
+          No grade scale standards configured.
         </div>
       ) : (
         <div className="w-full overflow-x-auto">
-          <table className="w-full border-collapse text-left">
+          <table className="w-full text-left text-xs">
             <thead>
-              <tr className="bg-slate-50/60 border-b border-slate-100">
-                <th className="px-6 py-3.5 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  Letter Grade
-                </th>
-                <th className="px-6 py-3.5 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  Min Mark (%)
-                </th>
-                <th className="px-6 py-3.5 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  Max Mark (%)
-                </th>
-                <th className="px-6 py-3.5 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  Grade Point
-                </th>
+              <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 text-[10px] uppercase font-semibold">
+                <th className="px-4 py-2.5">Letter Grade</th>
+                <th className="px-4 py-2.5">Grade Point (GPA)</th>
+                <th className="px-4 py-2.5">Mark Range (%)</th>
+                <th className="px-4 py-2.5">Academic Remark</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal text-slate-700 dark:text-slate-300">
               {grades.map((grade) => (
-                <tr key={grade.grade_id} className="hover:bg-slate-50/40 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      
-                      <span className="text-sm font-bold text-slate-800">
-                        {grade.letter_grade}
-                      </span>
-                    </div>
+                <tr key={grade.id || grade.grade_name} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td className="px-4 py-2.5 font-semibold text-slate-900 dark:text-white font-mono">
+                    {grade.grade_name || grade.name}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-700">
-                    {parseFloat(grade.min_mark).toFixed(2)}%
+                  <td className="px-4 py-2.5 font-mono">
+                    {parseFloat(grade.grade_point || grade.point || 0).toFixed(2)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-700">
-                    {parseFloat(grade.max_mark).toFixed(2)}%
+                  <td className="px-4 py-2.5 font-mono text-slate-600 dark:text-slate-400">
+                    {grade.min_mark}% &ndash; {grade.max_mark}%
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-extrabold bg-primary-light text-secondary border border-primary-light">
-                      {grade.point !== undefined && grade.point !== null ? parseFloat(grade.point).toFixed(2) : '0.00'}
+                  <td className="px-4 py-2.5">
+                    <span className="text-[10px] font-medium px-1.5 py-0.2 rounded border bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700">
+                      {grade.comment || grade.remarks || 'Standard'}
                     </span>
                   </td>
                 </tr>

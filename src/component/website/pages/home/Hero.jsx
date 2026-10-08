@@ -1,32 +1,29 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import Link from 'next/link';
-import { FiArrowRight, FiBookOpen, FiUsers, FiLayers, FiShield } from 'react-icons/fi';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import { SCHOOL_NAME } from 'src/lib/database/secret';
 
-import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
-
 const Hero = () => {
-  const tenantCtx = React.useContext(TenantWebsiteContext);
-  const website = tenantCtx?.website;
-  const [schoolName, setSchoolName] = useState(website?.name || SCHOOL_NAME);
+  const { website, websiteSettings, tenantUrl, getApiEndpoint } = useContext(TenantWebsiteContext);
   const [stats, setStats] = useState({
     totalStudents: 0,
     totalTeachers: 0,
-    totalClasses: 0
+    totalClasses: 0,
   });
 
-  useEffect(() => {
-    if (website?.name) {
-      setSchoolName(website.name);
-    }
-  }, [website?.name]);
+  const schoolName = website?.name || websiteSettings?.school_name || SCHOOL_NAME;
+  const eiin = website?.eiin_number || websiteSettings?.eiin || null;
+  const institutionType = website?.institution_type || 'Educational Institution';
+  const motto =
+    websiteSettings?.motto ||
+    'Dedicated to academic excellence, leadership development, and character building.';
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchStats = async () => {
       try {
-        const statsRes = await fetch('/api/public/stats');
+        const statsRes = await fetch(getApiEndpoint('public/stats'));
         if (statsRes.ok) {
           const statsData = await statsRes.json();
           const payload = statsData.payload || statsData.paylod;
@@ -34,113 +31,103 @@ const Hero = () => {
             setStats({
               totalStudents: payload.totalStudents || 0,
               totalTeachers: payload.totalTeachers || 0,
-              totalClasses: payload.totalClasses || 0
+              totalClasses: payload.totalClasses || 0,
             });
           }
         }
       } catch (err) {
-        console.error('Error fetching public stats:', err);
-      }
-
-      try {
-        const settingsRes = await fetch('/api/website-settings');
-        if (settingsRes.ok) {
-          const settingsData = await settingsRes.json();
-          const settings = settingsData.payload?.settings || settingsData.paylod?.settings || settingsData.settings;
-          if (settingsData.success && (settings?.school_name || settings?.name)) {
-            setSchoolName(settings.school_name || settings.name);
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching website settings:', err);
+        console.error('Error fetching public stats in Hero:', err);
       }
     };
 
-    fetchData();
-  }, []);
+    fetchStats();
+  }, [getApiEndpoint]);
 
   return (
-    <section className="relative w-full min-h-[85vh] flex items-center justify-center overflow-hidden bg-slate-50 py-16 sm:py-24 px-4 sm:px-6 lg:px-8 border-b border-slate-100">
+    <section className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 transition-colors">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 flex flex-col items-center text-center space-y-6">
+        {/* Meta badges */}
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <span className="text-[10px] font-medium px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+            {institutionType}
+          </span>
+          {eiin && (
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+              Govt. EIIN: {eiin}
+            </span>
+          )}
+        </div>
 
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
-        suppressHydrationWarning
-        className="absolute inset-0 w-full h-full object-cover z-0 blur-[2px] scale-110 select-none pointer-events-none"
-      >
-        <source src="/campus.mp4" type="video/mp4" />
-      </video>
-
-      <div className="mx-auto w-full max-w-5xl relative z-10 flex flex-col items-center text-center space-y-6">
-
-
-
-        <h1 className="text-4xl sm:text-6xl md:text-7xl font-semibold tracking-tight leading-tight text-white max-w-4xl">
-          {schoolName || SCHOOL_NAME}
+        {/* Institution Headline */}
+        <h1 className="text-2xl sm:text-4xl lg:text-5xl font-semibold text-slate-900 dark:text-white tracking-tight max-w-4xl leading-tight">
+          {schoolName}
         </h1>
 
-        <p className="text-white text-base sm:text-lg md:text-xl max-w-2xl leading-relaxed font-normal">
-          Welcome to a community dedicated to academic rigor, creative innovation, and global leadership. We provide students the resources and support to excel in their chosen fields.
+        {/* Institution Motto / Subtitle */}
+        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed font-normal">
+          {motto}
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-4 pt-4 w-full sm:w-auto px-4 justify-center">
+        {/* Primary Action Buttons */}
+        <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
           <Link
-            href="/apply"
-            className="group relative inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-secondary font-bold px-8 py-4 rounded-xl text-sm transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5"
+            href={tenantUrl('/apply')}
+            className="px-4 py-2 rounded bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-medium text-xs transition-colors cursor-pointer"
           >
-            <span>Apply for Admission</span>
-            <FiArrowRight className="group-hover:translate-x-1 transition-transform duration-300" />
+            Apply for Admission
           </Link>
           <Link
-            href="/auth/student/login"
-            className="inline-flex items-center justify-center gap-2 bg-white/90 hover:bg-white text-slate-800 font-bold px-8 py-4 rounded-xl text-sm border border-slate-200 hover:border-slate-300 shadow-xs transition-all duration-300 hover:-translate-y-0.5"
+            href={tenantUrl('/auth/student')}
+            className="px-4 py-2 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium text-xs transition-colors cursor-pointer"
           >
-            <span>Student Portal</span>
+            Student Portal
+          </Link>
+          <Link
+            href={tenantUrl('/notices')}
+            className="px-4 py-2 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium text-xs transition-colors cursor-pointer"
+          >
+            Notice Board
           </Link>
         </div>
 
-        <div className="hidden md:grid grid-cols-1 sm:grid-cols-3 gap-6 pt-12 border-t border-slate-300/60 w-full">
-
-          <div className="flex items-center gap-4 bg-white/90 border border-secondary hover:border-tertiary p-5 rounded-2xl shadow-xs hover:shadow-md hover:shadow-tertiary-light group transition-all duration-300 backdrop-blur-xs">
-            <div className="w-12 h-12 bg-primary-light rounded-xl flex items-center justify-center text-secondary shrink-0 group-hover:scale-110 transition-transform duration-300">
-              <FiUsers className="w-6 h-6" />
-            </div>
-            <div className="text-left">
-              <p className="text-3xl font-semibold text-secondary-dark tracking-tight">
-                {stats.totalStudents ? `${stats.totalStudents.toLocaleString()}+` : '0'}
-              </p>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-0.5">Total Students</p>
-            </div>
+        {/* High-Density Statistical KPI Strip */}
+        <div className="w-full max-w-4xl pt-8 sm:pt-10 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded p-4 text-center space-y-1">
+            <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
+              Enrolled Students
+            </span>
+            <p className="font-mono text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white">
+              {stats.totalStudents ? stats.totalStudents.toLocaleString() : '0'}
+            </p>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              Active Academic Cohort
+            </span>
           </div>
 
-          <div className="flex items-center gap-4 bg-white/90 border border-secondary hover:border-tertiary p-5 rounded-2xl shadow-xs hover:shadow-md hover:shadow-tertiary-light group transition-all duration-300 backdrop-blur-xs">
-            <div className="w-12 h-12 bg-primary-light  rounded-xl flex items-center justify-center text-secondary shrink-0 group-hover:scale-110 transition-transform duration-300">
-              <FiBookOpen className="w-6 h-6" />
-            </div>
-            <div className="text-left">
-              <p className="text-3xl font-semibold text-secondary-dark tracking-tight">
-                {stats.totalTeachers ? `${stats.totalTeachers}+` : '0'}
-              </p>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-0.5">Expert Faculty</p>
-            </div>
+          <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded p-4 text-center space-y-1">
+            <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
+              Faculty Members
+            </span>
+            <p className="font-mono text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white">
+              {stats.totalTeachers ? stats.totalTeachers.toLocaleString() : '0'}
+            </p>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              Dedicated Instructors
+            </span>
           </div>
 
-          <div className="flex items-center gap-4 bg-white/90 border border-secondary hover:border-tertiary p-5 rounded-2xl shadow-xs hover:shadow-md hover:shadow-tertiary-light group transition-all duration-300 backdrop-blur-xs">
-            <div className="w-12 h-12 bg-primary-light rounded-xl flex items-center justify-center text-secondary shrink-0 group-hover:scale-110 transition-transform duration-300">
-              <FiLayers className="w-6 h-6" />
-            </div>
-            <div className="text-left">
-              <p className="text-3xl font-semibold text-secondary-dark tracking-tight">
-                {stats.totalClasses || '0'}
-              </p>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-0.5">Academic Classes</p>
-            </div>
+          <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded p-4 text-center space-y-1">
+            <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
+              Class Programs
+            </span>
+            <p className="font-mono text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white">
+              {stats.totalClasses ? stats.totalClasses.toLocaleString() : '0'}
+            </p>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              Academic Curriculums
+            </span>
           </div>
-
         </div>
-
       </div>
     </section>
   );

@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCreator } from '../../layout';
@@ -35,7 +35,8 @@ export default function WebsiteManagePage() {
   const creatorId = routeParams?.id || contextCreatorId;
   const domainParam = routeParams?.domain;
 
-  const [activeTab, setActiveTab] = useState('domains'); // 'domains' | 'general' | 'branding' | 'portals' | 'danger'
+  // Active Tab: 'domains' | 'staffs' | 'general' | 'branding' | 'portals' | 'danger'
+  const [activeTab, setActiveTab] = useState('domains');
 
   const [baseDomain, setBaseDomain] = useState(
     typeof window !== 'undefined' && window.location?.host ? window.location.host : 'localhost:3000'
@@ -65,19 +66,34 @@ export default function WebsiteManagePage() {
   const [secondaryColor, setSecondaryColor] = useState('#0ea5e9');
   const [theme, setTheme] = useState('default');
   const [logo, setLogo] = useState('');
+  const [logoId, setLogoId] = useState('');
   const [favicon, setFavicon] = useState('');
+  const [faviconId, setFaviconId] = useState('');
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
+
+  // Brand Asset Upload states
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState('');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  const [faviconFile, setFaviconFile] = useState(null);
+  const [faviconPreview, setFaviconPreview] = useState('');
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
+
+  const [brandingMsg, setBrandingMsg] = useState({ type: '', text: '' });
+  const logoInputRef = useRef(null);
+  const faviconInputRef = useRef(null);
 
   // Subdomain Management
   const [subdomain, setSubdomain] = useState('');
   const [subdomainStatus, setSubdomainStatus] = useState({ state: 'idle', message: '' });
 
-  // Custom Domain Management (WordPress / Webflow style)
+  // Custom Domain Management
   const [customDomainInput, setCustomDomainInput] = useState('');
   const [customDomainStatus, setCustomDomainStatus] = useState({ state: 'idle', message: '' });
   const [verifyingDns, setVerifyingDns] = useState(false);
 
-  // Save / Update states
+  // Save / Action states
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState('');
   const [saveError, setSaveError] = useState('');
@@ -89,6 +105,7 @@ export default function WebsiteManagePage() {
   const [payScalesList, setPayScalesList] = useState([]);
   const [loadingStaffs, setLoadingStaffs] = useState(false);
   const [staffActionMsg, setStaffActionMsg] = useState({ type: '', text: '' });
+  const [resendingStaffId, setResendingStaffId] = useState(null);
 
   // Staff Modals
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
@@ -145,248 +162,21 @@ export default function WebsiteManagePage() {
     }
   }, [creatorId]);
 
-  // Handle Add Staff
-  const handleAddStaff = async (e) => {
-    e.preventDefault();
-    if (!website?.id) return;
-    if (!staffForm.name || !staffForm.email || !staffForm.number) {
-      setStaffActionMsg({ type: 'error', text: 'Name, email, and phone number are required.' });
-      return;
-    }
-    try {
-      setSubmittingStaff(true);
-      setStaffActionMsg({ type: '', text: '' });
-      const payload = {
-        websiteId: website.id,
-        creatorId,
-        name: staffForm.name,
-        email: staffForm.email,
-        number: staffForm.number,
-        address: staffForm.address,
-        gradeId: staffForm.gradeId,
-        bio: staffForm.bio,
-        permissions: staffForm.permissions,
-        sendInvite: staffForm.passwordMode === 'invite',
-        password: staffForm.passwordMode === 'manual' ? staffForm.password : undefined,
-      };
-
-      const res = await fetch('/api/marketing/creator/websites/staffs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to add staff member.');
-      }
-
-      setStaffActionMsg({
-        type: 'success',
-        text: `Staff member "${staffForm.name}" created successfully.${data.inviteSent ? ' Setup email invitation sent.' : ''}`,
-      });
-      setShowAddStaffModal(false);
-      setStaffForm({
-        name: '',
-        email: '',
-        number: '',
-        address: '',
-        password: '',
-        passwordMode: 'invite',
-        gradeId: '',
-        bio: '',
-        sendInvite: true,
-        permissions: {},
-      });
-      await fetchStaffs(website.id);
-    } catch (err) {
-      setStaffActionMsg({ type: 'error', text: err.message });
-    } finally {
-      setSubmittingStaff(false);
-    }
-  };
-
-  // Handle Toggle Active
-  const handleToggleStaffActive = async (staffId) => {
-    if (!website?.id) return;
-    try {
-      setStaffActionMsg({ type: '', text: '' });
-      const res = await fetch('/api/marketing/creator/websites/staffs', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'toggle_active',
-          staffId,
-          websiteId: website.id,
-          creatorId,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to toggle status.');
-      setStaffActionMsg({ type: 'success', text: data.message });
-      await fetchStaffs(website.id);
-    } catch (err) {
-      setStaffActionMsg({ type: 'error', text: err.message });
-    }
-  };
-
-  // Handle Revoke Sessions
-  const handleRevokeStaffSessions = async (staffId) => {
-    if (!website?.id) return;
-    try {
-      setStaffActionMsg({ type: '', text: '' });
-      const res = await fetch('/api/marketing/creator/websites/staffs', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'revoke_sessions',
-          staffId,
-          websiteId: website.id,
-          creatorId,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to terminate sessions.');
-      setStaffActionMsg({ type: 'success', text: data.message });
-      await fetchStaffs(website.id);
-    } catch (err) {
-      setStaffActionMsg({ type: 'error', text: err.message });
-    }
-  };
-
-  // Handle Open Edit Perms
-  const handleOpenEditPerms = (staff) => {
-    setTargetStaff(staff);
-    const existing = {};
-    if (staff.permissions) {
-      for (const [slug, p] of Object.entries(staff.permissions)) {
-        existing[slug] = {
-          can_view: Boolean(p.can_view),
-          can_create: Boolean(p.can_create),
-          can_edit: Boolean(p.can_edit),
-          can_delete: Boolean(p.can_delete),
-        };
-      }
-    }
-    setEditPermsMap(existing);
-    setShowEditPermsModal(true);
-  };
-
-  // Handle Save Permissions
-  const handleSavePermissions = async (e) => {
-    e.preventDefault();
-    if (!targetStaff || !website?.id) return;
-    try {
-      setSavingPerms(true);
-      setStaffActionMsg({ type: '', text: '' });
-      const res = await fetch('/api/marketing/creator/websites/staffs', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'update_permissions',
-          staffId: targetStaff.id,
-          websiteId: website.id,
-          creatorId,
-          permissions: editPermsMap,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to update permissions.');
-      setStaffActionMsg({ type: 'success', text: 'Module permissions updated successfully.' });
-      setShowEditPermsModal(false);
-      await fetchStaffs(website.id);
-    } catch (err) {
-      setStaffActionMsg({ type: 'error', text: err.message });
-    } finally {
-      setSavingPerms(false);
-    }
-  };
-
-  // Handle Open Edit Profile
-  const handleOpenEditProfile = (staff) => {
-    setTargetStaff(staff);
-    setEditProfileForm({
-      name: staff.name || '',
-      email: staff.email || '',
-      number: staff.number || '',
-      address: staff.address || '',
-      gradeId: staff.grade_id ? String(staff.grade_id) : '',
-      bio: staff.bio || '',
-    });
-    setShowEditProfileModal(true);
-  };
-
-  // Handle Save Profile
-  const handleSaveProfile = async (e) => {
-    e.preventDefault();
-    if (!targetStaff || !website?.id) return;
-    try {
-      setSavingProfile(true);
-      setStaffActionMsg({ type: '', text: '' });
-      const res = await fetch('/api/marketing/creator/websites/staffs', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'update_profile',
-          staffId: targetStaff.id,
-          websiteId: website.id,
-          creatorId,
-          ...editProfileForm,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to update profile.');
-      setStaffActionMsg({ type: 'success', text: 'Staff profile updated successfully.' });
-      setShowEditProfileModal(false);
-      await fetchStaffs(website.id);
-    } catch (err) {
-      setStaffActionMsg({ type: 'error', text: err.message });
-    } finally {
-      setSavingProfile(false);
-    }
-  };
-
-  // Handle Delete Staff
-  const handleDeleteStaff = async (staffId, staffName) => {
-    if (!website?.id) return;
-    if (!confirm(`Are you sure you want to permanently remove "${staffName}"? This will revoke all their access.`)) {
-      return;
-    }
-    try {
-      setStaffActionMsg({ type: '', text: '' });
-      const res = await fetch(
-        `/api/marketing/creator/websites/staffs?staffId=${staffId}&websiteId=${website.id}&creatorId=${creatorId}`,
-        { method: 'DELETE' }
-      );
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to delete staff member.');
-      setStaffActionMsg({ type: 'success', text: data.message });
-      await fetchStaffs(website.id);
-    } catch (err) {
-      setStaffActionMsg({ type: 'error', text: err.message });
-    }
-  };
-
-  // Fetch website data
+  // Fetch Website Data
   const fetchWebsite = useCallback(async () => {
-    if (!domainParam || domainParam === 'new') return;
+    if (!creatorId || !domainParam) return;
     try {
       setLoading(true);
       setLoadError('');
-      const res = await fetch(
-        `/api/marketing/creator/websites?creatorId=${creatorId}&domain=${encodeURIComponent(domainParam)}`
-      );
+      const res = await fetch(`/api/marketing/creator/websites?creatorId=${creatorId}&domain=${encodeURIComponent(domainParam)}`);
       const data = await res.json();
-
-      if (data.baseDomain) {
-        setBaseDomain(data.baseDomain);
-      }
-
       if (data.success && data.website) {
         const w = data.website;
         setWebsite(w);
-        fetchStaffs(w.id);
+        if (data.baseDomain) setBaseDomain(data.baseDomain);
+
         setName(w.name || '');
-        setInstitutionType(w.institution_type || 'school');
+        setInstitutionType((w.institution_type || 'school').toLowerCase());
         setEeinNumber(w.eiin_number || '');
         setTagline(w.tagline || w.motto || '');
         setMission(w.mission || '');
@@ -404,7 +194,9 @@ export default function WebsiteManagePage() {
         setSecondaryColor(w.secondary_color || '#0ea5e9');
         setTheme(w.theme || 'default');
         setLogo(w.logo || '');
+        setLogoId(w.logo_id || '');
         setFavicon(w.favicon || '');
+        setFaviconId(w.favicon_id || '');
         setIsMaintenanceMode(Boolean(w.is_maintenance_mode));
 
         // Subdomain
@@ -416,6 +208,9 @@ export default function WebsiteManagePage() {
 
         // Custom Domain
         setCustomDomainInput(w.custom_domain || '');
+
+        // Fetch staff members
+        fetchStaffs(w.id);
       } else {
         setLoadError(data.error || 'Website not found or access denied.');
       }
@@ -468,7 +263,7 @@ export default function WebsiteManagePage() {
       } catch {
         setSubdomainStatus({ state: 'error', message: 'Error checking availability.' });
       }
-    }, 220);
+    }, 250);
 
     return () => clearTimeout(timer);
   }, [subdomain, website, baseDomain]);
@@ -477,25 +272,19 @@ export default function WebsiteManagePage() {
   useEffect(() => {
     if (!website) return;
     const clean = customDomainInput.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-    const currentCustom = (website.custom_domain || '').toLowerCase();
+    const originalCustom = (website.custom_domain || '').toLowerCase();
 
-    if (!clean || clean === currentCustom) {
-      setCustomDomainStatus({
-        state: 'idle',
-        message: currentCustom ? 'Current connected domain' : '',
-      });
+    if (!clean || clean === originalCustom) {
+      setCustomDomainStatus({ state: 'idle', message: '' });
       return;
     }
 
-    if (!clean.includes('.')) {
-      setCustomDomainStatus({
-        state: 'invalid',
-        message: 'Enter a valid domain name with extension (e.g. school.edu).',
-      });
+    if (!clean.includes('.') || clean.length < 4) {
+      setCustomDomainStatus({ state: 'invalid', message: 'Enter a valid domain name (e.g. school.edu or academy.org)' });
       return;
     }
 
-    setCustomDomainStatus({ state: 'checking', message: 'Verifying domain availability...' });
+    setCustomDomainStatus({ state: 'checking', message: 'Checking availability...' });
 
     const timer = setTimeout(async () => {
       try {
@@ -522,7 +311,178 @@ export default function WebsiteManagePage() {
     return () => clearTimeout(timer);
   }, [customDomainInput, website]);
 
-  // Handle Save
+  // ---------------------------------------------------------------------------
+  // BRAND ASSETS (LOGO & FAVICON) WITH CLOUDINARY
+  // ---------------------------------------------------------------------------
+
+  const handleLogoFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setLogoPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUploadLogoToCloudinary = async () => {
+    if (!logoPreview || !website?.id) return;
+    try {
+      setUploadingLogo(true);
+      setBrandingMsg({ type: '', text: '' });
+      const res = await fetch('/api/marketing/creator/websites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'upload_branding',
+          type: 'logo',
+          websiteId: website.id,
+          creatorId: Number(creatorId),
+          image: logoPreview,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to upload logo to Cloudinary.');
+      }
+      setLogo(data.url);
+      setLogoId(data.publicId || '');
+      setLogoFile(null);
+      setLogoPreview('');
+      if (data.website) setWebsite(data.website);
+      setBrandingMsg({
+        type: 'success',
+        text: 'Logo uploaded to Cloudinary successfully. Previous asset was automatically deleted.',
+      });
+      setTimeout(() => setBrandingMsg({ type: '', text: '' }), 5000);
+    } catch (err) {
+      setBrandingMsg({ type: 'error', text: err.message });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    if (!website?.id) return;
+    if (!confirm('Remove this official logo? The file will be permanently deleted from Cloudinary.')) return;
+    try {
+      setUploadingLogo(true);
+      setBrandingMsg({ type: '', text: '' });
+      const res = await fetch('/api/marketing/creator/websites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'remove_branding',
+          type: 'logo',
+          websiteId: website.id,
+          creatorId: Number(creatorId),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to remove logo.');
+      }
+      setLogo('');
+      setLogoId('');
+      setLogoFile(null);
+      setLogoPreview('');
+      if (data.website) setWebsite(data.website);
+      setBrandingMsg({ type: 'success', text: 'Logo removed and deleted from Cloudinary.' });
+      setTimeout(() => setBrandingMsg({ type: '', text: '' }), 4000);
+    } catch (err) {
+      setBrandingMsg({ type: 'error', text: err.message });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleFaviconFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFaviconFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFaviconPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUploadFaviconToCloudinary = async () => {
+    if (!faviconPreview || !website?.id) return;
+    try {
+      setUploadingFavicon(true);
+      setBrandingMsg({ type: '', text: '' });
+      const res = await fetch('/api/marketing/creator/websites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'upload_branding',
+          type: 'favicon',
+          websiteId: website.id,
+          creatorId: Number(creatorId),
+          image: faviconPreview,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to upload favicon to Cloudinary.');
+      }
+      setFavicon(data.url);
+      setFaviconId(data.publicId || '');
+      setFaviconFile(null);
+      setFaviconPreview('');
+      if (data.website) setWebsite(data.website);
+      setBrandingMsg({
+        type: 'success',
+        text: 'Favicon uploaded to Cloudinary successfully. Previous asset was automatically deleted.',
+      });
+      setTimeout(() => setBrandingMsg({ type: '', text: '' }), 5000);
+    } catch (err) {
+      setBrandingMsg({ type: 'error', text: err.message });
+    } finally {
+      setUploadingFavicon(false);
+    }
+  };
+
+  const handleRemoveFavicon = async () => {
+    if (!website?.id) return;
+    if (!confirm('Remove this favicon? The file will be permanently deleted from Cloudinary.')) return;
+    try {
+      setUploadingFavicon(true);
+      setBrandingMsg({ type: '', text: '' });
+      const res = await fetch('/api/marketing/creator/websites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'remove_branding',
+          type: 'favicon',
+          websiteId: website.id,
+          creatorId: Number(creatorId),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to remove favicon.');
+      }
+      setFavicon('');
+      setFaviconId('');
+      setFaviconFile(null);
+      setFaviconPreview('');
+      if (data.website) setWebsite(data.website);
+      setBrandingMsg({ type: 'success', text: 'Favicon removed and deleted from Cloudinary.' });
+      setTimeout(() => setBrandingMsg({ type: '', text: '' }), 4000);
+    } catch (err) {
+      setBrandingMsg({ type: 'error', text: err.message });
+    } finally {
+      setUploadingFavicon(false);
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // MAIN SAVE HANDLER
+  // ---------------------------------------------------------------------------
+
   const handleSave = async (e) => {
     if (e) e.preventDefault();
     if (!website) return;
@@ -557,16 +517,15 @@ export default function WebsiteManagePage() {
         primary_color: primaryColor,
         secondary_color: secondaryColor,
         theme: theme,
-        logo: logo.trim(),
-        favicon: favicon.trim(),
+        logo: logoPreview || logo.trim(),
+        logo_id: logoId,
+        favicon: faviconPreview || favicon.trim(),
+        favicon_id: faviconId,
         is_maintenance_mode: isMaintenanceMode,
         is_published: !isMaintenanceMode,
       };
 
-      if (cleanSub) {
-        payload.subdomain = cleanSub;
-      }
-
+      if (cleanSub) payload.subdomain = cleanSub;
       payload.custom_domain = cleanCustom || '';
 
       const res = await fetch('/api/marketing/creator/websites', {
@@ -580,9 +539,14 @@ export default function WebsiteManagePage() {
         setSaveSuccess('Website changes saved successfully!');
         if (data.website) {
           setWebsite(data.website);
+          setLogo(data.website.logo || '');
+          setLogoId(data.website.logo_id || '');
+          setFavicon(data.website.favicon || '');
+          setFaviconId(data.website.favicon_id || '');
+          setLogoPreview('');
+          setFaviconPreview('');
         }
         if (refetchCreator) refetchCreator();
-        // If subdomain changed, update URL without reload
         if (cleanSub && cleanSub !== domainParam) {
           router.replace(`/creator/${creatorId}/workspace/${cleanSub}`);
         }
@@ -597,67 +561,334 @@ export default function WebsiteManagePage() {
     }
   };
 
-  // Verify Custom Domain DNS
-  const handleVerifyDns = async () => {
-    if (!website) return;
-    setVerifyingDns(true);
-    setSaveError('');
-    setSaveSuccess('');
+  // ---------------------------------------------------------------------------
+  // CUSTOM DOMAIN ACTIONS
+  // ---------------------------------------------------------------------------
 
+  const handleConnectCustomDomain = async (e) => {
+    e.preventDefault();
+    const clean = customDomainInput.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    if (!clean || !clean.includes('.')) {
+      alert('Please enter a valid custom domain (e.g. school.edu or myacademy.org).');
+      return;
+    }
+    setSaving(true);
     try {
       const res = await fetch('/api/marketing/creator/websites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'verify_custom_domain',
+          action: 'connect_custom_domain',
+          id: website.id,
+          creatorId: Number(creatorId),
+          custom_domain: clean,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSaveSuccess(`Custom domain "${clean}" saved! Follow DNS setup instructions.`);
+        setWebsite((prev) => ({ ...prev, custom_domain: clean, custom_domain_verified: false }));
+        if (refetchCreator) refetchCreator();
+        setTimeout(() => setSaveSuccess(''), 4000);
+      } else {
+        alert(data.error || 'Failed to connect custom domain.');
+      }
+    } catch {
+      alert('Network error connecting custom domain.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleVerifyDns = async () => {
+    if (!website?.custom_domain) return;
+    setVerifyingDns(true);
+    try {
+      const res = await fetch('/api/marketing/creator/websites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'verify_dns',
           id: website.id,
           creatorId: Number(creatorId),
         }),
       });
-
       const data = await res.json();
-      if (data.success) {
-        setSaveSuccess(data.message || 'Custom domain verified and activated successfully!');
+      if (data.verified) {
+        setSaveSuccess('DNS Verified! Your custom domain is now live.');
         setWebsite((prev) => ({ ...prev, custom_domain_verified: true }));
         if (refetchCreator) refetchCreator();
         setTimeout(() => setSaveSuccess(''), 4000);
       } else {
-        setSaveError(data.error || 'Failed to verify custom domain.');
+        alert(`DNS Verification Notice: ${data.message || 'CNAME record was not detected yet. DNS changes can take up to 24 hours to propagate.'}`);
       }
     } catch {
-      setSaveError('Network error verifying custom domain.');
+      alert('Network error verifying DNS.');
     } finally {
       setVerifyingDns(false);
     }
   };
 
-  // Disconnect Custom Domain
   const handleDisconnectCustomDomain = async () => {
-    if (!confirm('Are you sure you want to disconnect this custom domain? Your website will still be accessible via its subdomain.')) {
-      return;
-    }
-    setCustomDomainInput('');
+    if (!confirm('Disconnect your custom domain? Traffic will revert to the default platform subdomain.')) return;
     try {
       const res = await fetch('/api/marketing/creator/websites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'update_website',
+          action: 'disconnect_custom_domain',
           id: website.id,
           creatorId: Number(creatorId),
-          custom_domain: '',
-          custom_domain_verified: false,
         }),
       });
       const data = await res.json();
       if (data.success) {
         setSaveSuccess('Custom domain disconnected successfully.');
         setWebsite((prev) => ({ ...prev, custom_domain: null, custom_domain_verified: false }));
+        setCustomDomainInput('');
         if (refetchCreator) refetchCreator();
         setTimeout(() => setSaveSuccess(''), 3000);
       }
     } catch {
       setSaveError('Failed to disconnect custom domain.');
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // STAFF ACTIONS
+  // ---------------------------------------------------------------------------
+
+  const handleAddStaff = async (e) => {
+    e.preventDefault();
+    if (!website?.id) return;
+    if (!staffForm.name || !staffForm.email || !staffForm.number) {
+      setStaffActionMsg({ type: 'error', text: 'Name, email, and phone number are required.' });
+      return;
+    }
+    try {
+      setSubmittingStaff(true);
+      setStaffActionMsg({ type: '', text: '' });
+      const payload = {
+        websiteId: website.id,
+        creatorId: Number(creatorId),
+        name: staffForm.name,
+        email: staffForm.email,
+        number: staffForm.number,
+        address: staffForm.address,
+        gradeId: staffForm.gradeId,
+        bio: staffForm.bio,
+        permissions: staffForm.permissions,
+        sendInvite: staffForm.passwordMode === 'invite' || staffForm.sendInvite,
+        password: staffForm.passwordMode === 'manual' ? staffForm.password : undefined,
+        markAsRegistered: staffForm.passwordMode === 'manual' && staffForm.password?.length >= 6,
+      };
+
+      const res = await fetch('/api/marketing/creator/websites/staffs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to add staff member.');
+      }
+
+      setStaffActionMsg({
+        type: 'success',
+        text: `Staff member "${staffForm.name}" created successfully.${data.emailSent ? ' Verification email sent.' : ' Note: Verification token generated.'}${data.setupUrl ? ` Link: ${data.setupUrl}` : ''}`,
+      });
+      setShowAddStaffModal(false);
+      setStaffForm({
+        name: '',
+        email: '',
+        number: '',
+        address: '',
+        password: '',
+        passwordMode: 'invite',
+        gradeId: '',
+        bio: '',
+        sendInvite: true,
+        permissions: {},
+      });
+      await fetchStaffs(website.id);
+    } catch (err) {
+      setStaffActionMsg({ type: 'error', text: err.message });
+    } finally {
+      setSubmittingStaff(false);
+    }
+  };
+
+  const handleResendVerification = async (staffId, staffName, staffEmail) => {
+    if (!website?.id) return;
+    try {
+      setResendingStaffId(staffId);
+      setStaffActionMsg({ type: '', text: '' });
+      const res = await fetch('/api/marketing/creator/websites/staffs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'resend_verification',
+          staffId,
+          websiteId: website.id,
+          creatorId: Number(creatorId),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to resend verification email.');
+      }
+      setStaffActionMsg({
+        type: 'success',
+        text: `${data.message || `Verification link sent to ${staffEmail}.`}${data.setupUrl ? ` Link: ${data.setupUrl}` : ''}`,
+      });
+      await fetchStaffs(website.id);
+    } catch (err) {
+      setStaffActionMsg({ type: 'error', text: err.message });
+    } finally {
+      setResendingStaffId(null);
+    }
+  };
+
+  const handleToggleStaffActive = async (staffId) => {
+    if (!website?.id) return;
+    try {
+      setStaffActionMsg({ type: '', text: '' });
+      const res = await fetch('/api/marketing/creator/websites/staffs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'toggle_active',
+          staffId,
+          websiteId: website.id,
+          creatorId: Number(creatorId),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to toggle status.');
+      setStaffActionMsg({ type: 'success', text: data.message });
+      await fetchStaffs(website.id);
+    } catch (err) {
+      setStaffActionMsg({ type: 'error', text: err.message });
+    }
+  };
+
+  const handleRevokeStaffSessions = async (staffId) => {
+    if (!website?.id) return;
+    try {
+      setStaffActionMsg({ type: '', text: '' });
+      const res = await fetch('/api/marketing/creator/websites/staffs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'revoke_sessions',
+          staffId,
+          websiteId: website.id,
+          creatorId: Number(creatorId),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to terminate sessions.');
+      setStaffActionMsg({ type: 'success', text: data.message });
+      await fetchStaffs(website.id);
+    } catch (err) {
+      setStaffActionMsg({ type: 'error', text: err.message });
+    }
+  };
+
+  const handleDeleteStaff = async (staffId, staffName) => {
+    if (!confirm(`Are you sure you want to remove staff member "${staffName}"? This action cannot be undone.`)) return;
+    try {
+      setStaffActionMsg({ type: '', text: '' });
+      const res = await fetch(
+        `/api/marketing/creator/websites/staffs?staffId=${staffId}&websiteId=${website.id}&creatorId=${creatorId}`,
+        { method: 'DELETE' }
+      );
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to remove staff member.');
+      setStaffActionMsg({ type: 'success', text: `Staff member "${staffName}" removed successfully.` });
+      await fetchStaffs(website.id);
+    } catch (err) {
+      setStaffActionMsg({ type: 'error', text: err.message });
+    }
+  };
+
+  const handleOpenEditPerms = (staff) => {
+    setTargetStaff(staff);
+    setEditPermsMap(staff.permissions || {});
+    setShowEditPermsModal(true);
+  };
+
+  const handleSavePermissions = async (e) => {
+    e.preventDefault();
+    if (!targetStaff || !website?.id) return;
+    try {
+      setSavingPerms(true);
+      const res = await fetch('/api/marketing/creator/websites/staffs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_permissions',
+          staffId: targetStaff.id,
+          websiteId: website.id,
+          permissions: editPermsMap,
+          creatorId: Number(creatorId),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to update permissions.');
+      setStaffActionMsg({ type: 'success', text: 'Module permissions updated successfully.' });
+      setShowEditPermsModal(false);
+      await fetchStaffs(website.id);
+    } catch (err) {
+      setStaffActionMsg({ type: 'error', text: err.message });
+    } finally {
+      setSavingPerms(false);
+    }
+  };
+
+  const handleOpenEditProfile = (staff) => {
+    setTargetStaff(staff);
+    setEditProfileForm({
+      name: staff.name || '',
+      email: staff.email || '',
+      number: staff.number || '',
+      address: staff.address || '',
+      gradeId: staff.grade_id || '',
+      bio: staff.bio || '',
+    });
+    setShowEditProfileModal(true);
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    if (!targetStaff || !website?.id) return;
+    try {
+      setSavingProfile(true);
+      const res = await fetch('/api/marketing/creator/websites/staffs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_profile',
+          staffId: targetStaff.id,
+          websiteId: website.id,
+          name: editProfileForm.name,
+          email: editProfileForm.email,
+          number: editProfileForm.number,
+          address: editProfileForm.address,
+          gradeId: editProfileForm.gradeId,
+          bio: editProfileForm.bio,
+          creatorId: Number(creatorId),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to update staff profile.');
+      setStaffActionMsg({ type: 'success', text: 'Staff profile updated successfully.' });
+      setShowEditProfileModal(false);
+      await fetchStaffs(website.id);
+    } catch (err) {
+      setStaffActionMsg({ type: 'error', text: err.message });
+    } finally {
+      setSavingProfile(false);
     }
   };
 
@@ -692,26 +923,19 @@ export default function WebsiteManagePage() {
   };
 
   if (loading) {
-    return (
-      <LoadingScreen fullScreen={false} label="Loading website configuration..." />
-    );
+    return <LoadingScreen fullScreen={false} label="Loading website configuration..." />;
   }
 
   if (loadError || !website) {
     return (
-      <div className="py-16 text-center max-w-md mx-auto space-y-4">
-        <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-        </div>
-        <h2 className="text-base font-bold text-slate-900">Website Not Found</h2>
+      <div className="w-full py-12 text-center max-w-md mx-auto space-y-3">
+        <h2 className="text-sm font-semibold text-slate-900">Website Not Found</h2>
         <p className="text-xs text-slate-500">{loadError || 'The requested website could not be found.'}</p>
         <Link
           href={`/creator/${creatorId}/workspace`}
-          className="inline-block px-4 py-2 rounded-lg bg-blue-600 text-white font-medium text-xs hover:bg-blue-700"
+          className="inline-block px-3 py-1.5 rounded bg-slate-900 text-white font-medium text-xs hover:bg-slate-800"
         >
-          &larr; Return to Workspace
+          Return to Workspace
         </Link>
       </div>
     );
@@ -724,62 +948,45 @@ export default function WebsiteManagePage() {
   const localPreviewPath = `/${cleanSub}`;
 
   return (
-    <div className="w-full space-y-6 text-slate-800 text-xs pb-20">
-      {/* Top Breadcrumb & Actions Bar */}
-      <div className="bg-white border border-slate-200/80 rounded-xl p-4 sm:p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="w-full space-y-4 text-slate-800 text-xs pb-16">
+      {/* Top Header & Global Actions Bar */}
+      <div className="bg-white border border-slate-200 rounded p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-xs">
             <Link
               href={`/creator/${creatorId}/workspace`}
-              className="text-slate-400 hover:text-slate-700 transition-colors inline-flex items-center gap-1 font-semibold"
+              className="text-slate-500 hover:text-slate-800 font-medium"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
               Websites
             </Link>
             <span className="text-slate-300">/</span>
             <span className="font-semibold text-slate-900">{website.name}</span>
             <span
-              className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+              className={`text-[9px] font-medium px-1.5 py-0.5 rounded border ${
                 !isMaintenanceMode
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                   : 'bg-amber-50 text-amber-700 border-amber-200'
               }`}
             >
-              <span className={`w-1.5 h-1.5 rounded-full ${!isMaintenanceMode ? 'bg-emerald-500' : 'bg-amber-500'}`} />
               {!isMaintenanceMode ? 'Live' : 'Maintenance Mode'}
             </span>
           </div>
 
-          <h1 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <div className="flex items-center -space-x-1 shrink-0" title={`Primary: ${primaryColor} | Secondary: ${secondaryColor}`}>
-              <span
-                className="w-3 h-3 rounded-full inline-block border border-white shadow-xs"
-                style={{ backgroundColor: primaryColor }}
-              />
-              <span
-                className="w-3 h-3 rounded-full inline-block border border-white shadow-xs"
-                style={{ backgroundColor: secondaryColor }}
-              />
-            </div>
-            {website.name}
-            <span className="text-xs font-normal text-slate-400 font-mono">
+          <h1 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+            <span>{website.name}</span>
+            <span className="text-xs font-mono text-slate-500 font-normal">
               ({cleanSub}.{baseDomain})
             </span>
           </h1>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <a
             href={liveUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition-colors"
+            className="px-3 py-1.5 rounded border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs transition-colors"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
             Visit Live Site
           </a>
 
@@ -787,62 +994,41 @@ export default function WebsiteManagePage() {
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-all cursor-pointer disabled:opacity-50"
+            className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-colors cursor-pointer disabled:opacity-50"
           >
-            {saving ? (
-              <>
-                <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
-                Saving...
-              </>
-            ) : (
-              <>
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                </svg>
-                Save Changes
-              </>
-            )}
+            {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>
 
-      {/* Save Notifications */}
+      {/* Global Notifications */}
       {saveSuccess && (
-        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-            </svg>
-            {saveSuccess}
-          </span>
-          <button onClick={() => setSaveSuccess('')} className="text-emerald-600 hover:text-emerald-900">&times;</button>
+        <div className="p-3 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center justify-between">
+          <span>{saveSuccess}</span>
+          <button type="button" onClick={() => setSaveSuccess('')} className="text-emerald-700 hover:underline">
+            Dismiss
+          </button>
         </div>
       )}
 
       {saveError && (
-        <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs font-semibold flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {saveError}
-          </span>
-          <button onClick={() => setSaveError('')} className="text-red-600 hover:text-red-900">&times;</button>
+        <div className="p-3 rounded bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-center justify-between">
+          <span>{saveError}</span>
+          <button type="button" onClick={() => setSaveError('')} className="text-rose-700 hover:underline">
+            Dismiss
+          </button>
         </div>
       )}
 
-      {/* Tabs Navigation */}
+      {/* Navigation Tabs (Zero Icons, Strict Style Guide) */}
       <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto pb-px">
         {[
-          { id: 'domains', label: 'Domains & DNS (Custom Domain)', icon: 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9' },
-          { id: 'staffs', label: 'Staff & Permissions', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
-          { id: 'general', label: 'Institutional Profile', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
-          { id: 'branding', label: 'Appearance & Themes', icon: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01' },
-          { id: 'portals', label: 'Direct Portal Links', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
-          { id: 'danger', label: 'Danger Zone', icon: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' },
+          { id: 'domains', label: 'Domains & DNS' },
+          { id: 'staffs', label: `Staff Members (${staffsList.length})` },
+          { id: 'general', label: 'Institutional Profile' },
+          { id: 'branding', label: 'Appearance & Themes' },
+          { id: 'portals', label: 'Direct Portals' },
+          { id: 'danger', label: 'Danger Zone' },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -851,63 +1037,58 @@ export default function WebsiteManagePage() {
               setActiveTab(tab.id);
               if (tab.id === 'staffs' && website?.id) fetchStaffs(website.id);
             }}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 font-semibold text-xs border-b-2 whitespace-nowrap transition-colors cursor-pointer ${
+            className={`px-3.5 py-2 font-medium text-xs border-b-2 whitespace-nowrap transition-colors cursor-pointer ${
               activeTab === tab.id
-                ? 'border-blue-600 text-blue-600 bg-blue-50/40 rounded-t-lg'
-                : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
+                ? 'border-slate-900 text-slate-900 bg-white font-semibold'
+                : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
             }`}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={tab.icon} />
-            </svg>
             {tab.label}
           </button>
         ))}
       </div>
 
-      {/* TAB 1: DOMAINS & CUSTOM DOMAIN (CORE FEATURE) */}
+      {/* --------------------------------------------------------------------- */}
+      {/* TAB 1: DOMAINS & CUSTOM DOMAIN                                        */}
+      {/* --------------------------------------------------------------------- */}
       {activeTab === 'domains' && (
-        <div className="space-y-6">
-          {/* Subdomain Management */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
-            <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+        <div className="space-y-4">
+          {/* Subdomain Card */}
+          <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
+            <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  Institutional Subdomain
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
-                    Active & Routing
-                  </span>
-                </h2>
-                <p className="text-[11px] text-slate-500">
-                  Your website is provisioned on the shared SaaS platform domain.
-                </p>
+                <h2 className="text-sm font-semibold text-slate-900">Institutional Subdomain</h2>
+                <p className="text-xs text-slate-500">Shared multi-tenant subdomain route on the SaaS host.</p>
               </div>
+              <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-200">
+                Active & Routing
+              </span>
             </div>
 
-            <div className="space-y-3 max-w-xl">
-              <label className="block font-semibold text-slate-700">Subdomain Prefix</label>
+            <div className="space-y-2 max-w-lg">
+              <label className="block text-xs font-medium text-slate-700">Subdomain Prefix</label>
               <div className="flex items-center">
                 <input
                   type="text"
                   value={subdomain}
                   onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-'))}
-                  className="flex-1 px-3.5 py-2.5 rounded-l-lg border border-slate-300 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 bg-white border border-slate-300 rounded-l px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
                 />
-                <span className="px-3.5 py-2.5 rounded-r-lg bg-slate-100 border border-l-0 border-slate-300 text-slate-600 font-mono text-xs select-none">
+                <span className="px-3 py-1.5 rounded-r bg-slate-100 border border-l-0 border-slate-300 text-slate-600 font-mono text-xs select-none">
                   .{baseDomain}
                 </span>
               </div>
 
               {subdomainStatus.message && (
-                <div className="text-[11px] font-medium pt-1">
+                <div className="text-[11px] font-medium">
                   {subdomainStatus.state === 'available' && (
-                    <span className="text-emerald-700 font-semibold">✓ {subdomainStatus.message}</span>
+                    <span className="text-emerald-700">{subdomainStatus.message}</span>
                   )}
                   {subdomainStatus.state === 'taken' && (
-                    <span className="text-red-600 font-semibold">✗ {subdomainStatus.message}</span>
+                    <span className="text-rose-600">{subdomainStatus.message}</span>
                   )}
                   {subdomainStatus.state === 'checking' && (
-                    <span className="text-blue-600">Checking availability...</span>
+                    <span className="text-slate-500">Checking availability...</span>
                   )}
                   {subdomainStatus.state === 'idle' && (
                     <span className="text-slate-400">{subdomainStatus.message}</span>
@@ -915,13 +1096,13 @@ export default function WebsiteManagePage() {
                 </div>
               )}
 
-              <div className="p-3 bg-slate-50 rounded-lg text-slate-600 flex items-center justify-between">
-                <span className="text-[11px]">Live Subdomain URL:</span>
+              <div className="p-2.5 bg-slate-50 border border-slate-200 rounded text-slate-600 flex items-center justify-between">
+                <span className="text-[11px]">Direct Address:</span>
                 <a
                   href={`https://${cleanSub}.${baseDomain}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-mono font-bold text-blue-600 hover:underline"
+                  className="font-mono text-xs text-slate-900 hover:underline font-medium"
                 >
                   https://{cleanSub}.{baseDomain}
                 </a>
@@ -929,166 +1110,114 @@ export default function WebsiteManagePage() {
             </div>
           </div>
 
-          {/* Custom Domain Management (WordPress / Webflow style) */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6">
-            <div className="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          {/* Custom Domain Card */}
+          <div className="bg-white border border-slate-200 rounded p-4 space-y-4">
+            <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  Custom Domain Configuration
-                  <span className="text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded">
-                    WordPress / Webflow Style
-                  </span>
-                </h2>
-                <p className="text-[11px] text-slate-500">
-                  Connect your school or university’s own branded domain (e.g. <code>yourschool.edu</code> or <code>academy.org</code>).
+                <h2 className="text-sm font-semibold text-slate-900">Custom Domain Configuration</h2>
+                <p className="text-xs text-slate-500">
+                  Connect your institution&apos;s apex or branded domain (e.g. <code>yourschool.edu</code> or <code>campus.org</code>).
                 </p>
               </div>
 
               {website.custom_domain && (
                 <span
-                  className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${
+                  className={`text-[9px] font-medium px-1.5 py-0.5 rounded border ${
                     website.custom_domain_verified
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                       : 'bg-amber-50 text-amber-700 border-amber-200'
                   }`}
                 >
-                  <span className={`w-2 h-2 rounded-full ${website.custom_domain_verified ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                  {website.custom_domain_verified ? 'Verified & Active' : 'DNS Setup Pending'}
+                  {website.custom_domain_verified ? 'DNS Verified & Connected' : 'DNS Propagation Pending'}
                 </span>
               )}
             </div>
 
-            {/* Custom Domain Input & Actions */}
-            <div className="space-y-4 max-w-xl">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Custom Domain Name
-                </label>
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  <input
-                    type="text"
-                    placeholder="e.g. oxford-academy.edu"
-                    value={customDomainInput}
-                    onChange={(e) => setCustomDomainInput(e.target.value.toLowerCase().trim())}
-                    className="flex-1 px-3.5 py-2.5 rounded-lg border border-slate-300 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={saving || !customDomainInput || customDomainStatus.state === 'taken'}
-                    className="px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    Save Domain
-                  </button>
-                </div>
-
-                {customDomainStatus.message && (
-                  <div className="text-[11px] font-medium pt-1">
-                    {customDomainStatus.state === 'available' && (
-                      <span className="text-emerald-700 font-semibold">✓ {customDomainStatus.message}</span>
-                    )}
-                    {customDomainStatus.state === 'taken' && (
-                      <span className="text-red-600 font-semibold">✗ {customDomainStatus.message}</span>
-                    )}
-                    {customDomainStatus.state === 'invalid' && (
-                      <span className="text-amber-700 font-medium">{customDomainStatus.message}</span>
-                    )}
-                    {customDomainStatus.state === 'checking' && (
-                      <span className="text-blue-600">Verifying domain...</span>
-                    )}
-                  </div>
-                )}
+            <form onSubmit={handleConnectCustomDomain} className="space-y-3 max-w-lg">
+              <label className="block text-xs font-medium text-slate-700">Custom Domain Host</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="e.g. portal.oxford.edu"
+                  value={customDomainInput}
+                  onChange={(e) => setCustomDomainInput(e.target.value)}
+                  className="flex-1 bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
+                />
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
+                >
+                  Connect
+                </button>
               </div>
 
-              {/* If Custom Domain Is Set */}
-              {website.custom_domain && (
-                <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400">Connected Domain</span>
-                      <p className="font-mono text-sm font-bold text-slate-900 mt-0.5">
-                        https://{website.custom_domain}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={handleVerifyDns}
-                        disabled={verifyingDns}
-                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition-colors cursor-pointer flex items-center gap-1.5"
-                      >
-                        {verifyingDns ? 'Verifying...' : 'Verify DNS'}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleDisconnectCustomDomain}
-                        className="px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 font-medium text-xs transition-colors cursor-pointer"
-                      >
-                        Disconnect
-                      </button>
-                    </div>
-                  </div>
+              {customDomainStatus.message && (
+                <div className="text-[11px] font-medium">
+                  {customDomainStatus.state === 'available' && (
+                    <span className="text-emerald-700">{customDomainStatus.message}</span>
+                  )}
+                  {customDomainStatus.state === 'taken' && (
+                    <span className="text-rose-600">{customDomainStatus.message}</span>
+                  )}
                 </div>
               )}
-            </div>
+            </form>
 
-            {/* DNS Instructions Card */}
-            <div className="p-5 rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-blue-50/30 space-y-4">
-              <div className="flex items-center gap-2 text-slate-900 font-bold text-xs">
-                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>DNS Configuration Instructions (GoDaddy, Namecheap, Cloudflare, Route53)</span>
+            {website.custom_domain && (
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <div className="bg-slate-50 border border-slate-200 rounded p-3 space-y-2">
+                  <div className="text-xs font-medium text-slate-800">Required DNS Records:</div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs font-mono">
+                      <thead>
+                        <tr className="text-slate-500 border-b border-slate-200 text-[10px] uppercase font-semibold">
+                          <th className="pb-1.5">Type</th>
+                          <th className="pb-1.5">Name / Host</th>
+                          <th className="pb-1.5">Target Value</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 text-slate-800">
+                        <tr>
+                          <td className="py-1.5 font-semibold">CNAME</td>
+                          <td className="py-1.5">{website.custom_domain}</td>
+                          <td className="py-1.5 text-slate-900">{baseDomain}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleVerifyDns}
+                    disabled={verifyingDns}
+                    className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
+                  >
+                    {verifyingDns ? 'Checking DNS...' : 'Verify DNS Records'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDisconnectCustomDomain}
+                    className="px-3 py-1.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 font-medium text-xs cursor-pointer"
+                  >
+                    Disconnect Domain
+                  </button>
+                </div>
               </div>
-
-              <p className="text-[11px] text-slate-600 leading-relaxed">
-                To connect your custom domain, log into your domain registrar and create a <strong>CNAME record</strong> pointing to our platform router.
-              </p>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs bg-white rounded-lg border border-slate-200/80 overflow-hidden">
-                  <thead className="bg-slate-100/75 text-slate-600 font-bold text-[10px] uppercase">
-                    <tr>
-                      <th className="py-2.5 px-3">Type</th>
-                      <th className="py-2.5 px-3">Name / Host</th>
-                      <th className="py-2.5 px-3">Value / Target</th>
-                      <th className="py-2.5 px-3">TTL</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-mono text-[11px] text-slate-800">
-                    <tr>
-                      <td className="py-2.5 px-3 font-bold text-blue-700">CNAME</td>
-                      <td className="py-2.5 px-3">@ or www</td>
-                      <td className="py-2.5 px-3 font-bold text-slate-900">{baseDomain}</td>
-                      <td className="py-2.5 px-3 text-slate-500">Automatic / 3600</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2.5 px-3 font-bold text-indigo-700">CNAME (Subdomain)</td>
-                      <td className="py-2.5 px-3">portal or school</td>
-                      <td className="py-2.5 px-3 font-bold text-slate-900">{baseDomain}</td>
-                      <td className="py-2.5 px-3 text-slate-500">Automatic / 3600</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>DNS changes usually take between 2 to 60 minutes to propagate worldwide.</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* TAB: STAFF & PERMISSIONS */}
+      {/* --------------------------------------------------------------------- */}
+      {/* TAB 2: STAFF MEMBERS & PERMISSIONS                                    */}
+      {/* --------------------------------------------------------------------- */}
       {activeTab === 'staffs' && (
         <div className="space-y-4">
-          {/* Notifications */}
+          {/* Action notification banner */}
           {staffActionMsg.text && (
             <div
               className={`p-3 rounded border text-xs font-medium flex items-center justify-between ${
@@ -1101,7 +1230,7 @@ export default function WebsiteManagePage() {
               <button
                 type="button"
                 onClick={() => setStaffActionMsg({ type: '', text: '' })}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                className="hover:underline"
               >
                 Dismiss
               </button>
@@ -1112,10 +1241,10 @@ export default function WebsiteManagePage() {
           <div className="bg-white border border-slate-200 rounded p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold text-slate-900">
-                Staff Members & Module Permissions
+                Staff Members & Module Access
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Manage operational staff, assign granular module access (SIS, Attendance, Fees, LMS, Exams, etc.), and oversee multi-device sessions.
+                Onboard institutional administrators, assign module permissions (SIS, Attendance, Fees, Exams), and dispatch verification invitations.
               </p>
             </div>
 
@@ -1143,64 +1272,71 @@ export default function WebsiteManagePage() {
             <div className="bg-white border border-slate-200 rounded p-3">
               <span className="text-[10px] uppercase font-semibold text-slate-400 block">Total Staff</span>
               <span className="text-base font-semibold text-slate-900 block mt-0.5">{staffsList.length}</span>
-              <span className="text-[10px] text-slate-500">Registered on roster</span>
+              <span className="text-[10px] text-slate-500">Registered members</span>
             </div>
             <div className="bg-white border border-slate-200 rounded p-3">
               <span className="text-[10px] uppercase font-semibold text-slate-400 block">Active Status</span>
               <span className="text-base font-semibold text-emerald-700 block mt-0.5">
                 {staffsList.filter((s) => s.is_active).length}
               </span>
-              <span className="text-[10px] text-slate-500">Granted login access</span>
+              <span className="text-[10px] text-slate-500">Allowed system login</span>
             </div>
             <div className="bg-white border border-slate-200 rounded p-3">
-              <span className="text-[10px] uppercase font-semibold text-slate-400 block">Account Setup</span>
+              <span className="text-[10px] uppercase font-semibold text-slate-400 block">Setup Complete</span>
               <span className="text-base font-semibold text-slate-900 block mt-0.5">
                 {staffsList.filter((s) => s.is_registered).length} of {staffsList.length}
               </span>
-              <span className="text-[10px] text-slate-500">Completed credential setup</span>
+              <span className="text-[10px] text-slate-500">Verified credentials</span>
             </div>
             <div className="bg-white border border-slate-200 rounded p-3">
               <span className="text-[10px] uppercase font-semibold text-slate-400 block">Active Sessions</span>
               <span className="text-base font-semibold text-slate-900 block mt-0.5">
                 {staffsList.reduce((acc, s) => acc + (s.activeSessions || 0), 0)}
               </span>
-              <span className="text-[10px] text-slate-500">Live devices signed in</span>
+              <span className="text-[10px] text-slate-500">Concurrent logged-in devices</span>
             </div>
           </div>
 
           {/* Staff Roster Table */}
-          <div className="bg-white border border-slate-200 rounded overflow-hidden">
+          <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h3 className="text-sm font-semibold text-slate-900">Institutional Staff Roster</h3>
+              <span className="text-xs text-slate-500">{staffsList.length} total staff</span>
+            </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold text-[10px] uppercase tracking-wider">
-                  <tr>
-                    <th className="py-2.5 px-3">Staff Member</th>
-                    <th className="py-2.5 px-3">Pay Grade</th>
-                    <th className="py-2.5 px-3">Account Status</th>
-                    <th className="py-2.5 px-3">Active Sessions</th>
-                    <th className="py-2.5 px-3">Permitted Modules</th>
-                    <th className="py-2.5 px-3 text-right">Actions</th>
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-500 text-[10px] uppercase font-semibold">
+                    <th className="pb-2">Staff Member</th>
+                    <th className="pb-2">Pay Grade</th>
+                    <th className="pb-2">Account Status</th>
+                    <th className="pb-2">Active Sessions</th>
+                    <th className="pb-2">Module Access</th>
+                    <th className="pb-2 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 font-normal text-slate-700">
                   {staffsList.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-slate-500">
-                        {loadingStaffs ? 'Loading staff roster...' : 'No staff members added yet. Click "+ Add Staff Member" to onboard.'}
+                      <td colSpan={6} className="py-6 text-center text-slate-500">
+                        {loadingStaffs
+                          ? 'Loading staff members...'
+                          : 'No staff members onboarded yet. Click "+ Add Staff Member" to add one and send a verification email.'}
                       </td>
                     </tr>
                   ) : (
                     staffsList.map((s) => {
                       const allowedPerms = Object.entries(s.permissions || {}).filter(([_, p]) => p.can_view);
                       return (
-                        <tr key={s.id} className="hover:bg-slate-50/60 transition-colors">
-                          <td className="py-3 px-3">
+                        <tr key={s.id} className="hover:bg-slate-50">
+                          <td className="py-2.5">
                             <div className="font-medium text-slate-900">{s.name}</div>
                             <div className="text-[11px] text-slate-500">{s.email}</div>
                             <div className="text-[11px] text-slate-400 font-mono">{s.number}</div>
                           </td>
 
-                          <td className="py-3 px-3">
+                          <td className="py-2.5">
                             {s.grade_name ? (
                               <span className="text-xs font-medium text-slate-800">{s.grade_name}</span>
                             ) : (
@@ -1208,7 +1344,7 @@ export default function WebsiteManagePage() {
                             )}
                           </td>
 
-                          <td className="py-3 px-3">
+                          <td className="py-2.5">
                             <div className="flex flex-col gap-1 items-start">
                               <span
                                 className={`text-[9px] font-medium px-1.5 py-0.5 rounded border ${
@@ -1227,12 +1363,12 @@ export default function WebsiteManagePage() {
                                     : 'bg-amber-50 text-amber-700 border-amber-200'
                                 }`}
                               >
-                                {s.is_registered ? 'Setup Complete' : 'Pending Invite'}
+                                {s.is_registered ? 'Setup Complete' : 'Pending Verification'}
                               </span>
                             </div>
                           </td>
 
-                          <td className="py-3 px-3">
+                          <td className="py-2.5">
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-medium text-slate-700">
                                 {s.activeSessions || 0} device(s)
@@ -1242,7 +1378,6 @@ export default function WebsiteManagePage() {
                                   type="button"
                                   onClick={() => handleRevokeStaffSessions(s.id)}
                                   className="text-[10px] text-rose-600 hover:text-rose-800 font-medium underline cursor-pointer"
-                                  title="Terminate all active sessions"
                                 >
                                   Revoke
                                 </button>
@@ -1250,12 +1385,12 @@ export default function WebsiteManagePage() {
                             </div>
                           </td>
 
-                          <td className="py-3 px-3">
+                          <td className="py-2.5">
                             {allowedPerms.length === 0 ? (
-                              <span className="text-xs text-slate-400 italic">No modules granted</span>
+                              <span className="text-xs text-slate-400 italic">No modules assigned</span>
                             ) : (
                               <div className="flex flex-wrap gap-1 max-w-xs">
-                                {allowedPerms.slice(0, 4).map(([slug, p]) => (
+                                {allowedPerms.slice(0, 4).map(([slug]) => (
                                   <span
                                     key={slug}
                                     className="bg-slate-100 text-slate-700 border border-slate-200 px-1.5 py-0.5 rounded text-[9px] font-mono"
@@ -1272,8 +1407,19 @@ export default function WebsiteManagePage() {
                             )}
                           </td>
 
-                          <td className="py-3 px-3 text-right">
+                          <td className="py-2.5 text-right">
                             <div className="inline-flex items-center gap-1.5">
+                              {!s.is_registered && (
+                                <button
+                                  type="button"
+                                  disabled={resendingStaffId === s.id}
+                                  onClick={() => handleResendVerification(s.id, s.name, s.email)}
+                                  className="px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-[11px] cursor-pointer disabled:opacity-50"
+                                >
+                                  {resendingStaffId === s.id ? 'Sending...' : 'Resend Email'}
+                                </button>
+                              )}
+
                               <button
                                 type="button"
                                 onClick={() => handleOpenEditPerms(s)}
@@ -1323,22 +1469,22 @@ export default function WebsiteManagePage() {
           {/* ADD STAFF MODAL */}
           {showAddStaffModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
-              <div className="bg-white rounded border border-slate-200 max-w-2xl w-full p-5 max-h-[90vh] overflow-y-auto space-y-4 shadow-lg">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="bg-white rounded border border-slate-200 max-w-2xl w-full p-4 max-h-[90vh] overflow-y-auto space-y-3 shadow-md">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                   <div>
                     <h3 className="text-sm font-semibold text-slate-900">Add Staff Member</h3>
-                    <p className="text-xs text-slate-500">Provide personal credentials and configure initial module permissions.</p>
+                    <p className="text-xs text-slate-500">Provide staff credentials and send verification setup email.</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowAddStaffModal(false)}
-                    className="text-slate-400 hover:text-slate-600 text-lg leading-none cursor-pointer"
+                    className="text-slate-400 hover:text-slate-600 text-sm font-medium cursor-pointer"
                   >
-                    &times;
+                    Close
                   </button>
                 </div>
 
-                <form onSubmit={handleAddStaff} className="space-y-4">
+                <form onSubmit={handleAddStaff} className="space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-slate-700 mb-1">Full Name *</label>
@@ -1347,7 +1493,7 @@ export default function WebsiteManagePage() {
                         required
                         value={staffForm.name}
                         onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}
-                        className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs focus:outline-none focus:border-slate-500"
+                        className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                         placeholder="e.g. John Doe"
                       />
                     </div>
@@ -1359,8 +1505,8 @@ export default function WebsiteManagePage() {
                         required
                         value={staffForm.email}
                         onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
-                        className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs focus:outline-none focus:border-slate-500"
-                        placeholder="staff@campus.edu"
+                        className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                        placeholder="staff@institution.edu"
                       />
                     </div>
 
@@ -1371,22 +1517,22 @@ export default function WebsiteManagePage() {
                         required
                         value={staffForm.number}
                         onChange={(e) => setStaffForm({ ...staffForm, number: e.target.value })}
-                        className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs focus:outline-none focus:border-slate-500"
-                        placeholder="+880 1712 345678"
+                        className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                        placeholder="+880 1700 000000"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Pay Scale Grade (Optional)</label>
+                      <label className="block text-xs font-medium text-slate-700 mb-1">Pay Grade Scale</label>
                       <select
                         value={staffForm.gradeId}
                         onChange={(e) => setStaffForm({ ...staffForm, gradeId: e.target.value })}
-                        className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs focus:outline-none focus:border-slate-500 bg-white"
+                        className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                       >
                         <option value="">Unassigned / Default</option>
                         {payScalesList.map((g) => (
                           <option key={g.id} value={g.id}>
-                            {g.name} (Base: ৳{g.basic_salary})
+                            {g.name} (Basic: ৳{g.basic_salary})
                           </option>
                         ))}
                       </select>
@@ -1398,81 +1544,86 @@ export default function WebsiteManagePage() {
                         type="text"
                         value={staffForm.address}
                         onChange={(e) => setStaffForm({ ...staffForm, address: e.target.value })}
-                        className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs focus:outline-none focus:border-slate-500"
-                        placeholder="Address details"
+                        className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                        placeholder="Campus quarter or residential address"
                       />
                     </div>
-                  </div>
 
-                  {/* Password Onboarding Mode */}
-                  <div className="p-3 rounded border border-slate-200 bg-slate-50 space-y-2">
-                    <label className="block text-xs font-medium text-slate-800">Account Onboarding Method</label>
-                    <div className="flex items-center gap-4 text-xs text-slate-700">
-                      <label className="inline-flex items-center gap-1.5 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="pwdMode"
-                          checked={staffForm.passwordMode === 'invite'}
-                          onChange={() => setStaffForm({ ...staffForm, passwordMode: 'invite' })}
-                        />
-                        Send Email Invitation (Staff creates password)
-                      </label>
-                      <label className="inline-flex items-center gap-1.5 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="pwdMode"
-                          checked={staffForm.passwordMode === 'manual'}
-                          onChange={() => setStaffForm({ ...staffForm, passwordMode: 'manual' })}
-                        />
-                        Set Manual Password
-                      </label>
-                    </div>
-
-                    {staffForm.passwordMode === 'manual' && (
-                      <div className="pt-2">
-                        <label className="block text-[11px] font-medium text-slate-600 mb-1">Temporary Password (min 6 chars)</label>
-                        <input
-                          type="password"
-                          value={staffForm.password}
-                          onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}
-                          className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs bg-white focus:outline-none focus:border-slate-500"
-                          placeholder="••••••••"
-                        />
+                    <div className="sm:col-span-2 space-y-2 border-t border-slate-100 pt-2">
+                      <label className="block text-xs font-medium text-slate-700">Password & Invitation Mode</label>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <label className="inline-flex items-center gap-2 cursor-pointer text-xs">
+                          <input
+                            type="radio"
+                            name="passwordMode"
+                            value="invite"
+                            checked={staffForm.passwordMode === 'invite'}
+                            onChange={() => setStaffForm({ ...staffForm, passwordMode: 'invite' })}
+                          />
+                          <span>Send verification email invitation (Staff creates password via email link)</span>
+                        </label>
+                        <label className="inline-flex items-center gap-2 cursor-pointer text-xs">
+                          <input
+                            type="radio"
+                            name="passwordMode"
+                            value="manual"
+                            checked={staffForm.passwordMode === 'manual'}
+                            onChange={() => setStaffForm({ ...staffForm, passwordMode: 'manual' })}
+                          />
+                          <span>Set initial password manually (Staff still receives verification email)</span>
+                        </label>
                       </div>
-                    )}
+
+                      {staffForm.passwordMode === 'manual' && (
+                        <div className="mt-2">
+                          <label className="block text-xs font-medium text-slate-700 mb-1">Initial Password *</label>
+                          <input
+                            type="password"
+                            required={staffForm.passwordMode === 'manual'}
+                            minLength={6}
+                            value={staffForm.password}
+                            onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}
+                            className="w-full max-w-sm bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                            placeholder="At least 6 characters"
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Module Permissions Matrix */}
-                  <div className="space-y-2">
+                  <div className="space-y-2 border-t border-slate-100 pt-2">
                     <div className="flex items-center justify-between">
-                      <label className="block text-xs font-semibold text-slate-900">Module Access Permissions</label>
+                      <label className="block text-xs font-semibold text-slate-900">
+                        Initial Module Access Permissions
+                      </label>
                       <div className="flex items-center gap-2 text-[11px]">
                         <button
                           type="button"
                           onClick={() => {
-                            const all = {};
+                            const full = {};
                             modulesList.forEach((m) => {
-                              all[m.slug] = { can_view: true, can_create: false, can_edit: false, can_delete: false };
+                              full[m.slug] = { can_view: true, can_create: true, can_edit: true, can_delete: true };
                             });
-                            setStaffForm({ ...staffForm, permissions: all });
+                            setStaffForm({ ...staffForm, permissions: full });
                           }}
                           className="text-slate-600 hover:text-slate-900 underline cursor-pointer"
                         >
-                          View Only All
+                          All Access
                         </button>
                         <span>|</span>
                         <button
                           type="button"
                           onClick={() => {
-                            const all = {};
+                            const viewOnly = {};
                             modulesList.forEach((m) => {
-                              all[m.slug] = { can_view: true, can_create: true, can_edit: true, can_delete: true };
+                              viewOnly[m.slug] = { can_view: true, can_create: false, can_edit: false, can_delete: false };
                             });
-                            setStaffForm({ ...staffForm, permissions: all });
+                            setStaffForm({ ...staffForm, permissions: viewOnly });
                           }}
                           className="text-slate-600 hover:text-slate-900 underline cursor-pointer"
                         >
-                          Full Access All
+                          View Only
                         </button>
                         <span>|</span>
                         <button
@@ -1485,11 +1636,11 @@ export default function WebsiteManagePage() {
                       </div>
                     </div>
 
-                    <div className="border border-slate-200 rounded divide-y divide-slate-100 max-h-56 overflow-y-auto">
+                    <div className="border border-slate-200 rounded divide-y divide-slate-100 max-h-48 overflow-y-auto">
                       {modulesList.map((m) => {
                         const perm = staffForm.permissions[m.slug] || {};
                         return (
-                          <div key={m.slug} className="p-2.5 flex items-center justify-between gap-3 text-xs hover:bg-slate-50">
+                          <div key={m.slug} className="p-2 flex items-center justify-between gap-2 text-xs hover:bg-slate-50">
                             <div>
                               <span className="font-medium text-slate-800">{m.name}</span>
                               <span className="text-[10px] text-slate-400 font-mono block">slug: {m.slug}</span>
@@ -1573,9 +1724,9 @@ export default function WebsiteManagePage() {
                     <button
                       type="submit"
                       disabled={submittingStaff}
-                      className="px-4 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
+                      className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
                     >
-                      {submittingStaff ? 'Saving...' : 'Save Staff Member'}
+                      {submittingStaff ? 'Creating & Sending Verification...' : 'Create Staff & Send Verification Email'}
                     </button>
                   </div>
                 </form>
@@ -1586,24 +1737,24 @@ export default function WebsiteManagePage() {
           {/* EDIT PERMISSIONS MODAL */}
           {showEditPermsModal && targetStaff && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
-              <div className="bg-white rounded border border-slate-200 max-w-xl w-full p-5 max-h-[90vh] overflow-y-auto space-y-4 shadow-lg">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="bg-white rounded border border-slate-200 max-w-xl w-full p-4 max-h-[90vh] overflow-y-auto space-y-3 shadow-md">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                   <div>
                     <h3 className="text-sm font-semibold text-slate-900">
                       Module Permissions: {targetStaff.name}
                     </h3>
-                    <p className="text-xs text-slate-500">Configure CRUD operations for each school module.</p>
+                    <p className="text-xs text-slate-500">Configure access rights for institutional modules.</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowEditPermsModal(false)}
-                    className="text-slate-400 hover:text-slate-600 text-lg leading-none cursor-pointer"
+                    className="text-slate-400 hover:text-slate-600 text-sm font-medium cursor-pointer"
                   >
-                    &times;
+                    Close
                   </button>
                 </div>
 
-                <form onSubmit={handleSavePermissions} className="space-y-4">
+                <form onSubmit={handleSavePermissions} className="space-y-3">
                   <div className="flex items-center justify-end gap-2 text-[11px]">
                     <button
                       type="button"
@@ -1642,11 +1793,11 @@ export default function WebsiteManagePage() {
                     </button>
                   </div>
 
-                  <div className="border border-slate-200 rounded divide-y divide-slate-100 max-h-72 overflow-y-auto">
+                  <div className="border border-slate-200 rounded divide-y divide-slate-100 max-h-64 overflow-y-auto">
                     {modulesList.map((m) => {
                       const perm = editPermsMap[m.slug] || {};
                       return (
-                        <div key={m.slug} className="p-2.5 flex items-center justify-between gap-3 text-xs hover:bg-slate-50">
+                        <div key={m.slug} className="p-2 flex items-center justify-between gap-2 text-xs hover:bg-slate-50">
                           <div>
                             <span className="font-medium text-slate-800">{m.name}</span>
                             <span className="text-[10px] text-slate-400 font-mono block">slug: {m.slug}</span>
@@ -1717,7 +1868,7 @@ export default function WebsiteManagePage() {
                     <button
                       type="submit"
                       disabled={savingPerms}
-                      className="px-4 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
+                      className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
                     >
                       {savingPerms ? 'Saving...' : 'Save Permissions'}
                     </button>
@@ -1730,20 +1881,20 @@ export default function WebsiteManagePage() {
           {/* EDIT PROFILE MODAL */}
           {showEditProfileModal && targetStaff && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
-              <div className="bg-white rounded border border-slate-200 max-w-lg w-full p-5 space-y-4 shadow-lg">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="bg-white rounded border border-slate-200 max-w-md w-full p-4 space-y-3 shadow-md">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                   <div>
                     <h3 className="text-sm font-semibold text-slate-900">
                       Edit Profile: {targetStaff.name}
                     </h3>
-                    <p className="text-xs text-slate-500">Update contact and employment details.</p>
+                    <p className="text-xs text-slate-500">Update staff contact and employment details.</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowEditProfileModal(false)}
-                    className="text-slate-400 hover:text-slate-600 text-lg leading-none cursor-pointer"
+                    className="text-slate-400 hover:text-slate-600 text-sm font-medium cursor-pointer"
                   >
-                    &times;
+                    Close
                   </button>
                 </div>
 
@@ -1755,7 +1906,7 @@ export default function WebsiteManagePage() {
                       required
                       value={editProfileForm.name}
                       onChange={(e) => setEditProfileForm({ ...editProfileForm, name: e.target.value })}
-                      className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs focus:outline-none focus:border-slate-500"
+                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                     />
                   </div>
 
@@ -1766,7 +1917,7 @@ export default function WebsiteManagePage() {
                       required
                       value={editProfileForm.email}
                       onChange={(e) => setEditProfileForm({ ...editProfileForm, email: e.target.value })}
-                      className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs focus:outline-none focus:border-slate-500"
+                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                     />
                   </div>
 
@@ -1777,16 +1928,16 @@ export default function WebsiteManagePage() {
                       required
                       value={editProfileForm.number}
                       onChange={(e) => setEditProfileForm({ ...editProfileForm, number: e.target.value })}
-                      className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs focus:outline-none focus:border-slate-500"
+                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Pay Scale Grade</label>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Pay Grade Scale</label>
                     <select
                       value={editProfileForm.gradeId}
                       onChange={(e) => setEditProfileForm({ ...editProfileForm, gradeId: e.target.value })}
-                      className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs focus:outline-none focus:border-slate-500 bg-white"
+                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                     >
                       <option value="">Unassigned</option>
                       {payScalesList.map((g) => (
@@ -1798,12 +1949,12 @@ export default function WebsiteManagePage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Address</label>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Residential Address</label>
                     <input
                       type="text"
                       value={editProfileForm.address}
                       onChange={(e) => setEditProfileForm({ ...editProfileForm, address: e.target.value })}
-                      className="w-full px-3 py-1.5 border border-slate-300 rounded text-xs focus:outline-none focus:border-slate-500"
+                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                     />
                   </div>
 
@@ -1818,7 +1969,7 @@ export default function WebsiteManagePage() {
                     <button
                       type="submit"
                       disabled={savingProfile}
-                      className="px-4 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
+                      className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
                     >
                       {savingProfile ? 'Saving...' : 'Save Profile'}
                     </button>
@@ -1830,194 +1981,470 @@ export default function WebsiteManagePage() {
         </div>
       )}
 
-      {/* TAB 2: GENERAL & INSTITUTIONAL PROFILE */}
+      {/* --------------------------------------------------------------------- */}
+      {/* TAB 3: INSTITUTIONAL PROFILE (WITH CLOUDINARY LOGO & FAVICON)        */}
+      {/* --------------------------------------------------------------------- */}
       {activeTab === 'general' && (
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6">
-          <div className="border-b border-slate-100 pb-3">
-            <h2 className="text-sm font-bold text-slate-900">Institutional Profile & Contact Details</h2>
-            <p className="text-[11px] text-slate-500">Official registry information, institutional vision, and communication channels.</p>
+        <div className="space-y-4">
+          {/* Notification for logo/favicon action */}
+          {brandingMsg.text && (
+            <div
+              className={`p-3 rounded border text-xs font-medium flex items-center justify-between ${
+                brandingMsg.type === 'error'
+                  ? 'bg-rose-50 border-rose-200 text-rose-800'
+                  : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              }`}
+            >
+              <span>{brandingMsg.text}</span>
+              <button
+                type="button"
+                onClick={() => setBrandingMsg({ type: '', text: '' })}
+                className="hover:underline"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
+          {/* CARD 1: BRAND ASSETS (LOGO & FAVICON VIA CLOUDINARY) */}
+          <div className="bg-white border border-slate-200 rounded p-4 space-y-4">
+            <div className="border-b border-slate-100 pb-2">
+              <h2 className="text-sm font-semibold text-slate-900">Brand Identity Assets (Logo & Favicon)</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Upload and manage your institution&apos;s official logo and favicon using Cloudinary. When replacing or updating an asset, the previous version is deleted automatically from Cloudinary storage.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* LOGO MANAGER */}
+              <div className="border border-slate-200 rounded p-3 space-y-3 bg-white">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-900">Official Institution Logo</span>
+                  {logoId && (
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      Cloudinary ID: {logoId}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-start gap-3">
+                  {/* Current / Preview Box */}
+                  <div className="w-20 h-20 bg-slate-50 border border-slate-200 rounded flex items-center justify-center p-1.5 shrink-0 overflow-hidden">
+                    {logoPreview || logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={logoPreview || logo}
+                        alt="Institution Logo"
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    ) : (
+                      <span className="text-[10px] text-slate-400 text-center">No Logo Set</span>
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-2">
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                      onChange={handleLogoFileChange}
+                      className="hidden"
+                      id="logo-file-input"
+                    />
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => logoInputRef.current?.click()}
+                        className="px-2.5 py-1.5 rounded border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs cursor-pointer"
+                      >
+                        {logo ? 'Change Logo Image' : 'Select Logo Image'}
+                      </button>
+
+                      {logoPreview && (
+                        <button
+                          type="button"
+                          onClick={handleUploadLogoToCloudinary}
+                          disabled={uploadingLogo}
+                          className="px-2.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
+                        >
+                          {uploadingLogo ? 'Uploading to Cloudinary...' : 'Upload Now'}
+                        </button>
+                      )}
+
+                      {logo && !logoPreview && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveLogo}
+                          disabled={uploadingLogo}
+                          className="px-2.5 py-1.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 font-medium text-xs cursor-pointer disabled:opacity-50"
+                        >
+                          Remove Logo
+                        </button>
+                      )}
+                    </div>
+
+                    {logoFile && (
+                      <div className="text-[11px] text-slate-500 font-mono">
+                        Selected: {logoFile.name} ({(logoFile.size / 1024).toFixed(1)} KB)
+                      </div>
+                    )}
+
+                    <div className="text-[10px] text-slate-400">
+                      Recommended: Transparent PNG or SVG. Minimum 200x200 px.
+                    </div>
+                  </div>
+                </div>
+
+                {/* Direct Logo URL field */}
+                <div className="pt-2 border-t border-slate-100">
+                  <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                    Or Enter Hosted Logo URL
+                  </label>
+                  <input
+                    type="text"
+                    value={logo}
+                    onChange={(e) => setLogo(e.target.value)}
+                    placeholder="https://res.cloudinary.com/.../logo.png"
+                    className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
+                  />
+                </div>
+              </div>
+
+              {/* FAVICON MANAGER */}
+              <div className="border border-slate-200 rounded p-3 space-y-3 bg-white">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-900">Website Favicon</span>
+                  {faviconId && (
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      Cloudinary ID: {faviconId}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-start gap-3">
+                  {/* Current / Preview Box */}
+                  <div className="w-14 h-14 bg-slate-50 border border-slate-200 rounded flex items-center justify-center p-1 shrink-0 overflow-hidden">
+                    {faviconPreview || favicon ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={faviconPreview || favicon}
+                        alt="Favicon"
+                        className="w-8 h-8 object-contain"
+                      />
+                    ) : (
+                      <span className="text-[10px] text-slate-400 text-center">No Favicon</span>
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-2">
+                    <input
+                      ref={faviconInputRef}
+                      type="file"
+                      accept="image/x-icon,image/png,image/svg+xml,image/jpeg"
+                      onChange={handleFaviconFileChange}
+                      className="hidden"
+                      id="favicon-file-input"
+                    />
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => faviconInputRef.current?.click()}
+                        className="px-2.5 py-1.5 rounded border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs cursor-pointer"
+                      >
+                        {favicon ? 'Change Favicon' : 'Select Favicon'}
+                      </button>
+
+                      {faviconPreview && (
+                        <button
+                          type="button"
+                          onClick={handleUploadFaviconToCloudinary}
+                          disabled={uploadingFavicon}
+                          className="px-2.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
+                        >
+                          {uploadingFavicon ? 'Uploading to Cloudinary...' : 'Upload Now'}
+                        </button>
+                      )}
+
+                      {favicon && !faviconPreview && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveFavicon}
+                          disabled={uploadingFavicon}
+                          className="px-2.5 py-1.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 font-medium text-xs cursor-pointer disabled:opacity-50"
+                        >
+                          Remove Favicon
+                        </button>
+                      )}
+                    </div>
+
+                    {faviconFile && (
+                      <div className="text-[11px] text-slate-500 font-mono">
+                        Selected: {faviconFile.name} ({(faviconFile.size / 1024).toFixed(1)} KB)
+                      </div>
+                    )}
+
+                    <div className="text-[10px] text-slate-400">
+                      Standard square icon: .ico, .png, or .svg (32x32 px).
+                    </div>
+                  </div>
+                </div>
+
+                {/* Direct Favicon URL field */}
+                <div className="pt-2 border-t border-slate-100">
+                  <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                    Or Enter Hosted Favicon URL
+                  </label>
+                  <input
+                    type="text"
+                    value={favicon}
+                    onChange={(e) => setFavicon(e.target.value)}
+                    placeholder="https://res.cloudinary.com/.../favicon.ico"
+                    className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
-              <label className="block font-semibold text-slate-700 mb-1">Institution Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500"
-              />
+          {/* CARD 2: INSTITUTION GENERAL INFORMATION */}
+          <div className="bg-white border border-slate-200 rounded p-4 space-y-4">
+            <div className="border-b border-slate-100 pb-2">
+              <h2 className="text-sm font-semibold text-slate-900">Institutional Identity & Contact Information</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Core registry details presented on public directories, transcripts, and invoices.</p>
             </div>
 
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Institution Type</label>
-              <select
-                value={institutionType}
-                onChange={(e) => setInstitutionType(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-blue-500"
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-slate-700 mb-1">Institution Legal Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Institution Category Type</label>
+                <select
+                  value={institutionType}
+                  onChange={(e) => setInstitutionType(e.target.value)}
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                >
+                  {INSTITUTION_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">EIIN / Government Registration Number</label>
+                <input
+                  type="text"
+                  value={eeinNumber}
+                  onChange={(e) => setEeinNumber(e.target.value)}
+                  placeholder="e.g. 108342"
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-slate-700 mb-1">Motto / Tagline Statement</label>
+                <input
+                  type="text"
+                  value={tagline}
+                  onChange={(e) => setTagline(e.target.value)}
+                  placeholder="e.g. Inspiring Excellence, Cultivating Leadership"
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Official Contact Email</label>
+                <input
+                  type="email"
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  placeholder="info@institution.edu"
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Official Contact Phone</label>
+                <input
+                  type="tel"
+                  value={contactPhone}
+                  onChange={(e) => setContactPhone(e.target.value)}
+                  placeholder="+880 2 9876543"
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-slate-700 mb-1">Physical Campus Address</label>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Road, Sector, City, Country"
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-slate-700 mb-1">Google Maps Embed URL</label>
+                <input
+                  type="url"
+                  value={mapUrl}
+                  onChange={(e) => setMapUrl(e.target.value)}
+                  placeholder="https://maps.google.com/..."
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* CARD 3: MISSION, VISION & HISTORY */}
+          <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
+            <div className="border-b border-slate-100 pb-2">
+              <h2 className="text-sm font-semibold text-slate-900">Statements & Institutional Narrative</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Foundational statements rendered on the public About page.</p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Mission Statement</label>
+                <textarea
+                  rows={2}
+                  value={mission}
+                  onChange={(e) => setMission(e.target.value)}
+                  placeholder="Educational mission and pedagogical goals..."
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Vision Statement</label>
+                <textarea
+                  rows={2}
+                  value={vision}
+                  onChange={(e) => setVision(e.target.value)}
+                  placeholder="Long-term institution vision..."
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Institutional History</label>
+                <textarea
+                  rows={3}
+                  value={history}
+                  onChange={(e) => setHistory(e.target.value)}
+                  placeholder="Founding background, founding year, milestones..."
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* CARD 4: SOCIAL MEDIA CHANNELS */}
+          <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
+            <div className="border-b border-slate-100 pb-2">
+              <h2 className="text-sm font-semibold text-slate-900">Official Social Media Links</h2>
+              <p className="text-xs text-slate-500 mt-0.5">External social media channel links displayed in tenant header & footer.</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Facebook URL</label>
+                <input
+                  type="url"
+                  value={facebookUrl}
+                  onChange={(e) => setFacebookUrl(e.target.value)}
+                  placeholder="https://facebook.com/yourschool"
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Twitter / X URL</label>
+                <input
+                  type="url"
+                  value={twitterUrl}
+                  onChange={(e) => setTwitterUrl(e.target.value)}
+                  placeholder="https://twitter.com/yourschool"
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Instagram URL</label>
+                <input
+                  type="url"
+                  value={instagramUrl}
+                  onChange={(e) => setInstagramUrl(e.target.value)}
+                  placeholder="https://instagram.com/yourschool"
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">YouTube URL</label>
+                <input
+                  type="url"
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                  placeholder="https://youtube.com/@yourschool"
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                />
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
               >
-                {INSTITUTION_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">EIIN / Registration Number</label>
-              <input
-                type="text"
-                value={eeinNumber}
-                onChange={(e) => setEeinNumber(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-xs font-mono focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block font-semibold text-slate-700 mb-1">Tagline / Motto</label>
-              <input
-                type="text"
-                value={tagline}
-                onChange={(e) => setTagline(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Official Contact Email</label>
-              <input
-                type="email"
-                value={contactEmail}
-                onChange={(e) => setContactEmail(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Official Contact Phone</label>
-              <input
-                type="text"
-                value={contactPhone}
-                onChange={(e) => setContactPhone(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-xs font-mono focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block font-semibold text-slate-700 mb-1">Campus Physical Address</label>
-              <input
-                type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block font-semibold text-slate-700 mb-1">Mission Statement</label>
-              <textarea
-                rows={3}
-                value={mission}
-                onChange={(e) => setMission(e.target.value)}
-                placeholder="Institutional educational mission..."
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block font-semibold text-slate-700 mb-1">Vision Statement</label>
-              <textarea
-                rows={3}
-                value={vision}
-                onChange={(e) => setVision(e.target.value)}
-                placeholder="Long-term vision for student development..."
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block font-semibold text-slate-700 mb-1">Institutional History</label>
-              <textarea
-                rows={3}
-                value={history}
-                onChange={(e) => setHistory(e.target.value)}
-                placeholder="Background, foundation year, and key milestones..."
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {/* Social Media Links */}
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Facebook Page URL</label>
-              <input
-                type="url"
-                value={facebookUrl}
-                onChange={(e) => setFacebookUrl(e.target.value)}
-                placeholder="https://facebook.com/yourschool"
-                className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-xs"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Twitter / X URL</label>
-              <input
-                type="url"
-                value={twitterUrl}
-                onChange={(e) => setTwitterUrl(e.target.value)}
-                placeholder="https://twitter.com/yourschool"
-                className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-xs"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Instagram URL</label>
-              <input
-                type="url"
-                value={instagramUrl}
-                onChange={(e) => setInstagramUrl(e.target.value)}
-                placeholder="https://instagram.com/yourschool"
-                className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-xs"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">YouTube Channel URL</label>
-              <input
-                type="url"
-                value={youtubeUrl}
-                onChange={(e) => setYoutubeUrl(e.target.value)}
-                placeholder="https://youtube.com/@yourschool"
-                className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-xs"
-              />
+                {saving ? 'Saving...' : 'Save Institutional Profile'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* TAB 3: BRANDING & APPEARANCE */}
+      {/* --------------------------------------------------------------------- */}
+      {/* TAB 4: APPEARANCE & THEMES                                            */}
+      {/* --------------------------------------------------------------------- */}
       {activeTab === 'branding' && (
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6">
-          <div className="border-b border-slate-100 pb-3">
-            <h2 className="text-sm font-bold text-slate-900">Branding, Colors & Assets</h2>
-            <p className="text-[11px] text-slate-500">Configure visual themes and brand assets for tenant frontends.</p>
+        <div className="bg-white border border-slate-200 rounded p-4 space-y-4">
+          <div className="border-b border-slate-100 pb-2">
+            <h2 className="text-sm font-semibold text-slate-900">Visual Styling & Accent Colors</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Configure institutional primary and secondary palette tokens.</p>
           </div>
 
-          <div className="space-y-5 max-w-xl">
-            {/* Color Presets */}
-            <div className="space-y-3">
-              <label className="block font-semibold text-slate-700">Primary Brand Accent Color</label>
-              <div className="flex flex-wrap items-center gap-3">
+          <div className="space-y-4 max-w-xl">
+            {/* Primary Color */}
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-slate-700">Primary Brand Accent</label>
+              <div className="flex flex-wrap items-center gap-2">
                 {PRESET_COLORS.map((c) => (
                   <button
                     key={c.hex}
                     type="button"
                     onClick={() => setPrimaryColor(c.hex)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium cursor-pointer transition-all ${
+                    className={`flex items-center gap-2 px-2.5 py-1 rounded border text-xs font-medium cursor-pointer ${
                       primaryColor.toLowerCase() === c.hex.toLowerCase()
-                        ? 'border-blue-600 bg-blue-50/60 ring-2 ring-blue-500/20 shadow-sm'
-                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                        ? 'border-slate-900 bg-slate-100 text-slate-900 font-semibold'
+                        : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700'
                     }`}
                   >
-                    <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: c.hex }} />
+                    <span className="w-3 h-3 rounded-xs border border-black/10 inline-block" style={{ backgroundColor: c.hex }} />
                     <span>{c.name}</span>
                   </button>
                 ))}
@@ -2027,29 +2454,29 @@ export default function WebsiteManagePage() {
                     type="color"
                     value={primaryColor}
                     onChange={(e) => setPrimaryColor(e.target.value)}
-                    className="w-8 h-8 rounded border border-slate-200 cursor-pointer p-0.5"
+                    className="w-7 h-7 rounded border border-slate-200 cursor-pointer p-0.5"
                   />
-                  <span className="font-mono text-[11px] text-slate-500">{primaryColor}</span>
+                  <span className="font-mono text-xs text-slate-600">{primaryColor}</span>
                 </div>
               </div>
             </div>
 
-            {/* Secondary Color Presets */}
-            <div className="space-y-3">
-              <label className="block font-semibold text-slate-700">Secondary Brand Accent Color</label>
-              <div className="flex flex-wrap items-center gap-3">
+            {/* Secondary Color */}
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-slate-700">Secondary Brand Accent</label>
+              <div className="flex flex-wrap items-center gap-2">
                 {PRESET_COLORS.map((c) => (
                   <button
                     key={`sec-${c.hex}`}
                     type="button"
                     onClick={() => setSecondaryColor(c.hex)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium cursor-pointer transition-all ${
+                    className={`flex items-center gap-2 px-2.5 py-1 rounded border text-xs font-medium cursor-pointer ${
                       secondaryColor.toLowerCase() === c.hex.toLowerCase()
-                        ? 'border-blue-600 bg-blue-50/60 ring-2 ring-blue-500/20 shadow-sm'
-                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                        ? 'border-slate-900 bg-slate-100 text-slate-900 font-semibold'
+                        : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700'
                     }`}
                   >
-                    <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: c.hex }} />
+                    <span className="w-3 h-3 rounded-xs border border-black/10 inline-block" style={{ backgroundColor: c.hex }} />
                     <span>{c.name}</span>
                   </button>
                 ))}
@@ -2059,20 +2486,20 @@ export default function WebsiteManagePage() {
                     type="color"
                     value={secondaryColor}
                     onChange={(e) => setSecondaryColor(e.target.value)}
-                    className="w-8 h-8 rounded border border-slate-200 cursor-pointer p-0.5"
+                    className="w-7 h-7 rounded border border-slate-200 cursor-pointer p-0.5"
                   />
-                  <span className="font-mono text-[11px] text-slate-500">{secondaryColor}</span>
+                  <span className="font-mono text-xs text-slate-600">{secondaryColor}</span>
                 </div>
               </div>
             </div>
 
             {/* Theme Selector */}
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Portal Theme Mode</label>
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-slate-700 mb-1">Theme Layout Mode</label>
               <select
                 value={theme}
                 onChange={(e) => setTheme(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
               >
                 <option value="default">Default Academic Clean</option>
                 <option value="modern">Modern Campus Grid</option>
@@ -2081,161 +2508,142 @@ export default function WebsiteManagePage() {
               </select>
             </div>
 
-            {/* Logo URL */}
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Official Logo URL</label>
-              <input
-                type="text"
-                placeholder="https://example.com/logo.png"
-                value={logo}
-                onChange={(e) => setLogo(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-xs"
-              />
-            </div>
-
-            {/* Favicon URL */}
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Favicon URL</label>
-              <input
-                type="text"
-                placeholder="https://example.com/favicon.ico"
-                value={favicon}
-                onChange={(e) => setFavicon(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-xs"
-              />
+            <div className="pt-2 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : 'Save Appearance'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* TAB 4: DIRECT PORTALS */}
+      {/* --------------------------------------------------------------------- */}
+      {/* TAB 5: DIRECT PORTALS                                                 */}
+      {/* --------------------------------------------------------------------- */}
       {activeTab === 'portals' && (
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6">
-          <div className="border-b border-slate-100 pb-3">
-            <h2 className="text-sm font-bold text-slate-900">Tenant Portals & Live Navigation</h2>
-            <p className="text-[11px] text-slate-500">
-              Direct access endpoints for students, teachers, administrators, and visitors.
-            </p>
+        <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
+          <div className="border-b border-slate-100 pb-2">
+            <h2 className="text-sm font-semibold text-slate-900">Direct Tenant Portal Endpoints</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Quick access links to all student, faculty, and administrative portals.</p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {[
               {
-                title: 'Public Institution Front',
-                desc: 'Main public homepage with notice board, events, and campus news.',
-                path: localPreviewPath,
+                title: 'Public Portal Front',
+                desc: 'Main public homepage with circulars, events, and campus news.',
                 subPath: '/',
-                color: 'text-blue-600 bg-blue-50',
               },
               {
                 title: 'Student Academic Portal',
-                desc: 'Student timetable, grade sheets, attendance records, and fees.',
-                path: `${localPreviewPath}/student`,
+                desc: 'Timetable, grade sheets, attendance tracking, and dues.',
                 subPath: '/student',
-                color: 'text-emerald-600 bg-emerald-50',
               },
               {
                 title: 'Faculty / Teacher Portal',
-                desc: 'Teacher routine, attendance entry, grade submission, and lessons.',
-                path: `${localPreviewPath}/teacher`,
+                desc: 'Teacher routine, attendance marking, and grade submission.',
                 subPath: '/teacher',
-                color: 'text-indigo-600 bg-indigo-50',
               },
               {
                 title: 'Staff Management Panel',
-                desc: 'Authorized staff portal for admissions, records, and module operations.',
-                path: `${localPreviewPath}/staff-panel`,
+                desc: 'Operational portal for admissions, records, and module operations.',
                 subPath: '/staff-panel',
-                color: 'text-purple-600 bg-purple-50',
               },
               {
                 title: 'Public Notice Bulletin',
-                desc: 'Campus circulars, official decrees, and exam schedules.',
-                path: `${localPreviewPath}/notices`,
+                desc: 'Campus circulars, official decrees, and exam notices.',
                 subPath: '/notices',
-                color: 'text-amber-600 bg-amber-50',
               },
               {
                 title: 'Online Student Admission',
                 desc: 'Public admission registration portal and form submissions.',
-                path: `${localPreviewPath}/apply`,
                 subPath: '/apply',
-                color: 'text-rose-600 bg-rose-50',
               },
-            ].map((p) => (
-              <div key={p.title} className="p-4 rounded-xl border border-slate-200/80 hover:border-slate-300 transition-all flex flex-col justify-between space-y-3">
-                <div className="space-y-1">
-                  <div className={`w-8 h-8 rounded-lg ${p.color} flex items-center justify-center font-bold text-xs`}>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
+            ].map((p) => {
+              const fullPortUrl = `${localPreviewPath}${p.subPath === '/' ? '' : p.subPath}`;
+              return (
+                <div key={p.title} className="p-3 border border-slate-200 rounded hover:border-slate-300 flex flex-col justify-between space-y-2">
+                  <div className="space-y-1">
+                    <div className="font-semibold text-slate-900 text-xs">{p.title}</div>
+                    <p className="text-[11px] text-slate-500">{p.desc}</p>
                   </div>
-                  <h3 className="font-bold text-slate-900 text-xs mt-2">{p.title}</h3>
-                  <p className="text-[11px] text-slate-500 leading-normal">{p.desc}</p>
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                    <span className="font-mono text-[10px] text-slate-400">{p.subPath}</span>
+                    <a
+                      href={fullPortUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-slate-900 hover:underline font-medium text-xs"
+                    >
+                      Open Portal &rarr;
+                    </a>
+                  </div>
                 </div>
-
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                  <span className="font-mono text-[10px] text-slate-400 truncate max-w-[120px]">
-                    {p.subPath}
-                  </span>
-                  <a
-                    href={website.custom_domain && website.custom_domain_verified ? `https://${website.custom_domain}${p.subPath}` : p.path}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-800 text-[11px]"
-                  >
-                    Open Portal &rarr;
-                  </a>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* TAB 5: DANGER ZONE */}
+      {/* --------------------------------------------------------------------- */}
+      {/* TAB 6: DANGER ZONE                                                    */}
+      {/* --------------------------------------------------------------------- */}
       {activeTab === 'danger' && (
-        <div className="bg-white border border-red-200/80 rounded-2xl p-6 shadow-sm space-y-6">
-          <div className="border-b border-red-100 pb-3">
-            <h2 className="text-sm font-bold text-red-700">Maintenance & Deletion Controls</h2>
-            <p className="text-[11px] text-slate-500">High-risk actions for this educational institution.</p>
-          </div>
-
-          <div className="space-y-6 max-w-xl">
-            {/* Maintenance Mode Toggle */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
-              <div>
-                <p className="font-bold text-slate-900">Maintenance Mode</p>
-                <p className="text-[11px] text-slate-500">
-                  When enabled, visitors will see a maintenance notice instead of the live campus site.
-                </p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isMaintenanceMode}
-                  onChange={(e) => setIsMaintenanceMode(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500" />
-              </label>
+        <div className="space-y-4">
+          <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
+            <div className="border-b border-slate-100 pb-2">
+              <h2 className="text-sm font-semibold text-slate-900">Maintenance Mode</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                When maintenance mode is active, public visitors will see a temporary maintenance notice.
+              </p>
             </div>
 
-            {/* Permanent Deletion */}
-            <div className="p-4 rounded-xl border border-red-200 bg-red-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="font-bold text-red-900">Delete This Website</p>
-                <p className="text-[11px] text-red-700">
-                  Permanently remove this institution, subdomains, student databases, and custom domain connections.
-                </p>
+                <span className="font-medium text-slate-800 block text-xs">Enable Maintenance Mode</span>
+                <span className="text-[11px] text-slate-500">
+                  Status: {isMaintenanceMode ? 'Website is currently in Maintenance' : 'Website is Live & Operational'}
+                </span>
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMaintenanceMode(!isMaintenanceMode);
+                  handleSave();
+                }}
+                className={`px-3 py-1.5 rounded font-medium text-xs cursor-pointer border ${
+                  isMaintenanceMode
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                    : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                }`}
+              >
+                {isMaintenanceMode ? 'Switch to Live' : 'Enable Maintenance'}
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white border border-rose-200 rounded p-4 space-y-3">
+            <div className="border-b border-rose-100 pb-2">
+              <h2 className="text-sm font-semibold text-rose-900">Permanently Delete Website</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Permanently delete this institution website, student records, notices, modules, and domain bindings. This action is irreversible.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-600">Delete website {website.name} ({cleanSub})</span>
               <button
                 type="button"
                 onClick={handleDeleteWebsite}
                 disabled={deleting}
-                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold text-xs whitespace-nowrap transition-colors cursor-pointer disabled:opacity-50"
+                className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
               >
-                {deleting ? 'Deleting...' : 'Delete Website'}
+                {deleting ? 'Deleting...' : 'Delete Website Permanently'}
               </button>
             </div>
           </div>

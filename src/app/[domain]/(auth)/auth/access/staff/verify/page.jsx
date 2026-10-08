@@ -4,16 +4,17 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-import { FiShield, FiCheckCircle, FiAlertTriangle, FiClock, FiLock, FiMapPin, FiArrowRight } from 'react-icons/fi';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
-const VerifyInner = () => {
+function StaffVerifyInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
+  const { website, getApiEndpoint, tenantUrl } = useTenantWebsite();
 
   const [status, setStatus] = useState(() => (!token ? 'invalid' : 'loading'));
   const [errorMessage, setErrorMessage] = useState(() =>
-    !token ? 'No verification token found in the URL. Please use the link from your email.' : ''
+    !token ? 'No verification token found in URL. Please use the link from your email.' : ''
   );
   const [staff, setStaff] = useState(null);
 
@@ -27,7 +28,8 @@ const VerifyInner = () => {
 
     const validateToken = async () => {
       try {
-        const response = await fetch('/api/staff/register', {
+        const endpoint = getApiEndpoint('staff/register');
+        const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token })
@@ -36,13 +38,13 @@ const VerifyInner = () => {
 
         if (response.status === 410) {
           setStatus('expired');
-          setErrorMessage(data.error);
+          setErrorMessage(data.error || 'Verification link has expired.');
           return;
         }
 
         if (response.status === 400 && data.error?.includes('already')) {
           setStatus('used');
-          setErrorMessage(data.error);
+          setErrorMessage(data.error || 'Account has already been configured.');
           return;
         }
 
@@ -52,16 +54,17 @@ const VerifyInner = () => {
           return;
         }
 
-        setStaff(data.paylod.staff);
+        const s = data.paylod?.staff || data.payload?.staff || {};
+        setStaff(s);
         setStatus('valid');
       } catch {
         setStatus('invalid');
-        setErrorMessage('An unexpected error occurred while validating your link. Please try again.');
+        setErrorMessage('An unexpected error occurred while validating your link.');
       }
     };
 
     validateToken();
-  }, [token]);
+  }, [token, getApiEndpoint]);
 
   const handleCompleteSetup = async (e) => {
     e.preventDefault();
@@ -77,7 +80,8 @@ const VerifyInner = () => {
 
     setSubmitting(true);
     try {
-      const response = await fetch('/api/staff/register', {
+      const endpoint = getApiEndpoint('staff/register');
+      const response = await fetch(endpoint, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, address: address.trim(), password })
@@ -91,7 +95,7 @@ const VerifyInner = () => {
 
       setStatus('success');
       toast.success('Account setup complete! Redirecting to login...');
-      setTimeout(() => router.push('/auth/access/staff/login'), 2500);
+      setTimeout(() => router.push(tenantUrl('/auth/access/staff/login')), 2000);
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -101,63 +105,36 @@ const VerifyInner = () => {
 
   if (status === 'loading') {
     return (
-      <div className="w-full flex flex-col items-center justify-center gap-5 min-h-[280px]">
-        <div className="relative w-16 h-16">
-          <div className="absolute inset-0 rounded-full border-4 border-primary-light"></div>
-          <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <FiShield className="text-primary text-xl" />
-          </div>
-        </div>
-        <div className="text-center">
-          <h2 className="text-base font-bold text-slate-800">Validating Your Link</h2>
-          <p className="text-sm text-slate-400 mt-1">Please wait while we verify your identity…</p>
-        </div>
+      <div className="py-12 text-center space-y-2">
+        <span className="text-xs font-medium text-slate-400">Validating staff invitation...</span>
       </div>
     );
   }
 
   if (status === 'invalid' || status === 'expired' || status === 'used') {
-    const isExpired = status === 'expired';
-    const isUsed = status === 'used';
-
     return (
-      <div className="w-full flex flex-col items-center gap-6 text-center">
-        <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-          isExpired ? 'bg-amber-50 border border-amber-100' : 
-          isUsed ? 'bg-primary-light border border-primary-light' :
-          'bg-red-50 border border-red-100'
-        }`}>
-          {isExpired ? (
-            <FiClock className="text-amber-500 text-2xl" />
-          ) : isUsed ? (
-            <FiCheckCircle className="text-primary text-2xl" />
-          ) : (
-            <FiAlertTriangle className="text-red-500 text-2xl" />
-          )}
-        </div>
-
-        <div>
-          <h2 className={`text-lg font-bold ${
-            isExpired ? 'text-amber-700' : isUsed ? 'text-primary' : 'text-red-700'
-          }`}>
-            {isExpired ? 'Verification Link Expired' : isUsed ? 'Account Already Set Up' : 'Invalid Verification Link'}
-          </h2>
-          <p className="text-sm text-slate-500 mt-2 max-w-sm leading-relaxed">{errorMessage}</p>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
-          {isUsed ? (
+      <div className="space-y-4 text-center py-6">
+        <span className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 uppercase tracking-wider px-2 py-0.5 rounded bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 inline-block">
+          [{status.toUpperCase()}]
+        </span>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+          {status === 'expired' ? 'Invitation Expired' : status === 'used' ? 'Account Already Configured' : 'Invalid Link'}
+        </h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-sm mx-auto">
+          {errorMessage}
+        </p>
+        <div className="pt-2">
+          {status === 'used' ? (
             <Link
-              href="/auth/access/staff/login"
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-5 bg-primary hover:bg-primary-dark text-white text-sm font-semibold rounded-xl transition-all"
+              href={tenantUrl('/auth/access/staff/login')}
+              className="inline-block px-4 py-2 rounded bg-primary text-white text-xs font-semibold"
             >
-              Go to Login <FiArrowRight />
+              Go to Staff Login →
             </Link>
           ) : (
-            <div className="flex-1 py-3 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-500 text-center leading-relaxed">
-              Please contact your <strong>school administrator</strong> to resend your verification link.
-            </div>
+            <p className="text-xs text-slate-400">
+              Please contact your campus administration to request a new invitation.
+            </p>
           )}
         </div>
       </div>
@@ -166,56 +143,54 @@ const VerifyInner = () => {
 
   if (status === 'success') {
     return (
-      <div className="w-full flex flex-col items-center gap-6 text-center">
-        <div className="w-16 h-16 rounded-full bg-primary-light border border-primary-light flex items-center justify-center">
-          <FiCheckCircle className="text-primary text-2xl" />
-        </div>
-        <div>
-          <h2 className="text-lg font-bold text-slate-800">Account Setup Complete!</h2>
-          <p className="text-sm text-slate-500 mt-2">Redirecting you to the Staff Login page…</p>
-        </div>
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+      <div className="space-y-3 text-center py-6">
+        <span className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 inline-block">
+          [Success]
+        </span>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+          Account Setup Completed
+        </h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Redirecting to Staff Login...
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="w-full flex flex-col gap-6">
-      <div className="flex items-center gap-3 p-3.5 bg-primary-light border border-primary-light rounded-2xl">
-        <div className="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center shrink-0">
-          <FiCheckCircle className="text-primary text-sm" />
+    <div className="space-y-5">
+      <div className="p-3 bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded space-y-1">
+        <span className="text-[10px] font-semibold text-primary uppercase tracking-wider block">
+          [Identity Authenticated]
+        </span>
+        <p className="text-xs text-slate-600 dark:text-slate-400">
+          Welcome, <strong className="text-slate-900 dark:text-white">{staff?.name}</strong>. Configure your credentials below.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-950 p-3.5 rounded border border-slate-200 dark:border-slate-800 text-xs">
+        <div>
+          <span className="text-[10px] text-slate-400 uppercase block">Full Name</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-200">{staff?.name}</span>
         </div>
         <div>
-          <p className="text-xs font-bold text-primary">Identity Verified</p>
-          <p className="text-[11px] text-primary">
-            Welcome, <strong>{staff?.name}</strong>. Complete your credentials below.
-          </p>
+          <span className="text-[10px] text-slate-400 uppercase block">Email</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-200">{staff?.email}</span>
+        </div>
+        <div>
+          <span className="text-[10px] text-slate-400 uppercase block">Contact</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-200">{staff?.number || 'N/A'}</span>
+        </div>
+        <div>
+          <span className="text-[10px] text-slate-400 uppercase block">Role</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-200 capitalize">{staff?.designation || 'Staff Member'}</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 bg-slate-55 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+      <form onSubmit={handleCompleteSetup} className="space-y-3 text-xs">
         <div>
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Full Name</span>
-          <p className="text-xs font-bold text-slate-700 mt-0.5">{staff?.name}</p>
-        </div>
-        <div>
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Email</span>
-          <p className="text-xs font-bold text-slate-700 mt-0.5">{staff?.email}</p>
-        </div>
-        <div>
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Phone</span>
-          <p className="text-xs font-bold text-slate-700 mt-0.5">{staff?.number}</p>
-        </div>
-        <div>
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Staff Member</span>
-          <p className="text-xs font-bold text-slate-700 mt-0.5 capitalize">{staff?.designation || 'Institutional Staff'}</p>
-        </div>
-      </div>
-
-      <form onSubmit={handleCompleteSetup} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-            <FiMapPin className="text-slate-400" /> Residential Address
+          <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+            Residential Address *
           </label>
           <textarea
             required
@@ -223,13 +198,13 @@ const VerifyInner = () => {
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             disabled={submitting}
-            className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 resize-none"
+            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-primary resize-none"
           />
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-            <FiLock className="text-slate-400" /> Choose Password
+        <div>
+          <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+            Create Password *
           </label>
           <input
             type="password"
@@ -237,13 +212,14 @@ const VerifyInner = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={submitting}
-            className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5"
+            placeholder="Minimum 6 characters"
+            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-primary"
           />
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-            <FiLock className="text-slate-400" /> Confirm Password
+        <div>
+          <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+            Confirm Password *
           </label>
           <input
             type="password"
@@ -251,75 +227,54 @@ const VerifyInner = () => {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             disabled={submitting}
-            className={`w-full px-3.5 py-2.5 bg-slate-55 border rounded-xl text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:bg-white focus:ring-4 ${
-              confirmPassword && password !== confirmPassword 
-                ? 'border-red-300 focus:border-red-400 focus:ring-red-400/10' 
-                : 'border-slate-200 focus:border-primary focus:ring-primary/5'
-            }`}
+            placeholder="Repeat password"
+            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-primary"
           />
-          {confirmPassword && password !== confirmPassword && (
-            <p className="text-[11px] text-red-500 font-semibold">Passwords do not match.</p>
-          )}
         </div>
 
         <button
           type="submit"
-          disabled={submitting || (confirmPassword !== '' && password !== confirmPassword)}
-          className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white text-sm font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 cursor-pointer mt-1"
+          disabled={submitting}
+          className="w-full py-2.5 rounded bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-60 text-center"
         >
-          {submitting ? (
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-          ) : (
-            <>
-              <FiCheckCircle className="text-lg" /> Complete Account Setup
-            </>
-          )}
+          {submitting ? 'Finalizing Profile...' : 'Complete Staff Setup →'}
         </button>
       </form>
     </div>
   );
-};
+}
 
-const StaffVerifyPage = () => {
+export default function StaffVerifyPage() {
+  const { website, tenantUrl } = useTenantWebsite();
+
   return (
-    <div className="w-full min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-900 relative px-4 py-12 overflow-hidden bg-slate-55 bg-slate-50">
-      {/* Background blobs */}
-      <div className="absolute top-[-20%] left-[-20%] w-[60%] aspect-square rounded-full bg-primary/5 blur-[100px] pointer-events-none"></div>
-      <div className="absolute bottom-[-20%] right-[-20%] w-[60%] aspect-square rounded-full bg-cyan-500/5 blur-[100px] pointer-events-none"></div>
-
-      <div className="w-full max-w-[520px] animate-fade-up z-10">
-        <div className="flex flex-col items-center mb-8 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mb-4 shadow-[0_10px_30px_rgba(2,132,199,0.3)]">
-            <FiShield className="text-white text-2xl" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 mb-2">Staff Profile Verification</h1>
-          <p className="text-sm text-slate-500 max-w-xs leading-relaxed">
-            You&apos;ve been invited to set up your staff account. Verify your identity using the secure link sent to your email.
+    <div className="w-full min-h-[80vh] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-6 sm:p-8 shadow-xs space-y-6">
+        
+        <div className="text-center space-y-1.5 border-b border-slate-100 dark:border-slate-800 pb-5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block">
+            {website?.name || 'Staff Onboarding'}
+          </span>
+          <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            Staff Profile Verification
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Verify your operations invitation credentials and set up your login password.
           </p>
         </div>
 
-        <div className="w-full bg-white border border-slate-100 rounded-3xl p-6 md:p-8 shadow-[0_10px_40px_rgba(0,0,0,0.04)]">
-          <Suspense fallback={
-            <div className="w-full flex flex-col items-center justify-center gap-5 min-h-[280px]">
-              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-sm text-slate-400">Loading verification page…</p>
-            </div>
-          }>
-            <VerifyInner />
-          </Suspense>
-        </div>
+        <Suspense fallback={<div className="py-12 text-center text-xs text-slate-400">Loading...</div>}>
+          <StaffVerifyInner />
+        </Suspense>
 
-        <div className="w-full text-center mt-6">
-          <Link
-            href="/auth/access/staff/login"
-            className="text-xs font-semibold hover:text-sky-605 transition-colors py-1.5 px-3 rounded-full hover:bg-primary-light text-primary"
-          >
-            Already have an account? Go to Login
+        <div className="pt-2 text-center text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
+          Already configured?{' '}
+          <Link href={tenantUrl('/auth/access/staff/login')} className="font-semibold text-primary hover:underline">
+            Go to Staff Login
           </Link>
         </div>
+
       </div>
     </div>
   );
-};
-
-export default StaffVerifyPage;
+}

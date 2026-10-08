@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FiFileText, FiSearch, FiCheckCircle, FiAlertCircle, FiShield, FiUser } from 'react-icons/fi';
-import axios from 'axios';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
-const VerifyTCPage = () => {
+export default function VerifyTCPage() {
+  const { website, getApiEndpoint } = useTenantWebsite();
   const [queryStr, setQueryStr] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -21,117 +21,139 @@ const VerifyTCPage = () => {
     setSearched(true);
 
     try {
-      const res = await axios.get(`/api/public/verify/tc?q=${encodeURIComponent(queryStr.trim())}`);
-      if (res.data.success) {
-        setResult(res.data.paylod.certificate);
+      const endpoint = getApiEndpoint(`public/verify/tc?q=${encodeURIComponent(queryStr.trim())}`);
+      const res = await fetch(endpoint);
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setResult(data.paylod?.certificate || data.certificate || data.payload?.certificate);
+      } else {
+        setErrorMsg(data.error || 'Verification failed. Please check the Transfer Certificate Number or Registration Number.');
       }
     } catch (err) {
-      setErrorMsg(err.response?.data?.error || 'Verification failed. Please check the TC Number.');
+      setErrorMsg('A network error occurred while verifying the Transfer Certificate.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-12 space-y-8 animate-fade-up">
-      {/* Header */}
-      <div className="bg-white border border-slate-200/80 rounded-3xl p-8 text-center space-y-3 shadow-2xs">
-        <div className="inline-flex items-center justify-center p-3 bg-emerald-50 text-emerald-600 rounded-2xl mb-1">
-          <FiShield className="text-3xl" />
-        </div>
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Transfer Certificate Verification</h1>
-        <p className="text-slate-500 text-xs sm:text-sm max-w-lg mx-auto">
-          Verify the authenticity of an officially issued Transfer Certificate (TC) by entering the TC Reference Number or Student Registration Number.
-        </p>
-      </div>
-
-      {/* Search Input Box */}
-      <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-2xs">
-        <form onSubmit={handleVerify} className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              value={queryStr}
-              onChange={(e) => setQueryStr(e.target.value)}
-              placeholder="Enter TC Number (e.g. TC-123456-1) or Reg No..."
-              className="w-full border border-slate-200 rounded-2xl px-4 py-3.5 pl-11 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-              required
-            />
-            <FiSearch className="absolute left-4 top-4 text-slate-400 text-lg" />
+    <div className="w-full min-h-[75vh] py-8 md:py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto space-y-6">
+        
+        {/* Header */}
+        <div className="border-b border-slate-200 dark:border-slate-800 pb-5">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+              Registrar Archive
+            </span>
+            <span className="text-xs text-slate-400">Transfer Records</span>
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-sm transition-all cursor-pointer shrink-0 disabled:opacity-50"
-          >
-            {loading ? 'Verifying...' : 'Verify Certificate'}
-          </button>
-        </form>
-      </div>
-
-      {/* Error Output */}
-      {searched && errorMsg && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-700 p-6 rounded-3xl flex items-center gap-3">
-          <FiAlertCircle className="text-xl shrink-0 text-rose-600" />
-          <p className="text-xs font-semibold">{errorMsg}</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            Transfer Certificate (TC) Verification
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
+            Verify the authenticity of an officially issued Transfer Certificate by entering the TC Reference Number or Student Registration Number.
+          </p>
         </div>
-      )}
 
-      {/* Verification Result Card */}
-      {result && (
-        <div className="bg-white border border-emerald-200 rounded-3xl p-8 space-y-6 shadow-2xs animate-fade-up">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-emerald-100 text-emerald-700 rounded-2xl font-bold">
-                <FiCheckCircle className="text-xl" />
+        {/* Search Input Box */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-5 sm:p-6 shadow-xs">
+          <form onSubmit={handleVerify} className="space-y-4">
+            <div>
+              <label htmlFor="queryStr" className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                TC Reference Number or Registration Number *
+              </label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  id="queryStr"
+                  type="text"
+                  value={queryStr}
+                  onChange={(e) => setQueryStr(e.target.value)}
+                  placeholder="e.g. TC-2026-0012 or REG-1092"
+                  className="flex-1 px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-sm text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors"
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-5 py-2.5 bg-primary hover:bg-primary-dark text-white rounded text-xs font-medium transition-colors cursor-pointer shrink-0 disabled:opacity-60"
+                >
+                  {loading ? 'Verifying...' : 'Verify Certificate'}
+                </button>
               </div>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Validates certificates authorized by {website?.name || 'the institution'} administration.
+            </p>
+          </form>
+        </div>
+
+        {/* Error Output */}
+        {searched && errorMsg && (
+          <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 p-4 rounded-md text-xs font-medium">
+            <span className="font-semibold mr-1.5">[Notice]</span>
+            {errorMsg}
+          </div>
+        )}
+
+        {/* Verification Result Card */}
+        {result && (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-5 sm:p-6 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
               <div>
-                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Status: Officially Verified</span>
-                <h2 className="text-xl font-bold text-slate-900">{result.tc_number}</h2>
+                <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                  [Status: Officially Verified]
+                </span>
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-white mt-0.5">
+                  {result.tc_number || 'Transfer Certificate'}
+                </h2>
+              </div>
+              <div className="text-left sm:text-right">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Issue Date</span>
+                <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  {result.issue_date ? new Date(result.issue_date).toLocaleDateString('en-GB') : 'N/A'}
+                </p>
               </div>
             </div>
-            <div className="text-right">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Issue Date</span>
-              <p className="text-sm font-bold text-slate-700">
-                {result.issue_date ? new Date(result.issue_date).toLocaleDateString('en-GB') : 'N/A'}
-              </p>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-            <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Student Name</span>
-              <p className="text-sm font-bold text-slate-900">{result.student_name}</p>
-            </div>
-            <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registration Number</span>
-              <p className="text-sm font-bold text-slate-900 font-mono">{result.registration_number}</p>
-            </div>
-            <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reason for Leaving</span>
-              <p className="text-xs font-semibold text-slate-800">{result.reason_for_leaving}</p>
-            </div>
-            <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Destination School</span>
-              <p className="text-xs font-semibold text-slate-800">{result.destination_school || 'N/A'}</p>
-            </div>
-            <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Last Class Attended</span>
-              <p className="text-xs font-semibold text-slate-800">{result.last_class_attended}</p>
-            </div>
-            <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Promoted Status</span>
-              <p className="text-xs font-semibold text-slate-800">{result.promoted_to_class || 'Promoted'}</p>
-            </div>
-          </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded space-y-1">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Student Name</span>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">{result.student_name || 'N/A'}</p>
+              </div>
 
-          <div className="text-[11px] text-slate-400 text-center border-t border-slate-100 pt-4">
-            Official record authenticated by institutional administration archive.
+              <div className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded space-y-1">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Registration Number</span>
+                <p className="text-sm font-medium font-mono text-slate-900 dark:text-white">{result.registration_number || 'N/A'}</p>
+              </div>
+
+              <div className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded space-y-1">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Last Class Attended</span>
+                <p className="text-xs font-medium text-slate-800 dark:text-slate-200">{result.last_class_attended || 'N/A'}</p>
+              </div>
+
+              <div className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded space-y-1">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Promoted Status</span>
+                <p className="text-xs font-medium text-slate-800 dark:text-slate-200">{result.promoted_to_class || 'Promoted'}</p>
+              </div>
+
+              <div className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded space-y-1">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Reason for Leaving</span>
+                <p className="text-xs font-medium text-slate-800 dark:text-slate-200">{result.reason_for_leaving || 'Transfer / Personal'}</p>
+              </div>
+
+              <div className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded space-y-1">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Destination School</span>
+                <p className="text-xs font-medium text-slate-800 dark:text-slate-200">{result.destination_school || 'Not Specified'}</p>
+              </div>
+            </div>
+
+            <div className="text-[11px] text-slate-400 text-center border-t border-slate-100 dark:border-slate-800 pt-3">
+              Official record authenticated by institutional administration archive.
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
-};
-
-export default VerifyTCPage;
+}

@@ -2,18 +2,12 @@
 
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
-import { SITE_NAME } from 'src/lib/database/secret';
-import {
-  BiArrowBack,
-  BiCalendar,
-  BiBell,
-  BiCheckCircle,
-  BiLoaderAlt,
-} from 'react-icons/bi';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
 export default function SingleUpdatePage({ params }) {
   const unwrappedParams = use(params);
   const slug = unwrappedParams?.slug;
+  const { website, tenantUrl } = useTenantWebsite();
 
   const [update, setUpdate] = useState(null);
   const [recentUpdates, setRecentUpdates] = useState([]);
@@ -27,7 +21,7 @@ export default function SingleUpdatePage({ params }) {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`/api/updates?slug=${encodeURIComponent(slug)}`);
+        const res = await fetch(`/api/marketing/updates?slug=${encodeURIComponent(slug)}`);
         const data = await res.json();
         if (data.success && data.update) {
           setUpdate(data.update);
@@ -47,129 +41,123 @@ export default function SingleUpdatePage({ params }) {
 
   if (loading) {
     return (
-      <div className="w-full min-h-[60vh] flex flex-col items-center justify-center gap-3 text-slate-400">
-        <BiLoaderAlt className="animate-spin text-4xl text-emerald-600" />
-        <p className="text-xs font-semibold">Loading product update...</p>
+      <div className="w-full min-h-[60vh] flex items-center justify-center py-20">
+        <span className="text-xs font-medium text-slate-400">Loading release details...</span>
       </div>
     );
   }
 
   if (error || !update) {
     return (
-      <div className="w-full min-h-[60vh] flex flex-col items-center justify-center gap-4 text-center px-4">
-        <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center text-3xl">
-          <BiBell />
+      <div className="w-full min-h-[60vh] flex items-center justify-center py-20 px-4">
+        <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-6 text-center space-y-3 shadow-xs">
+          <span className="text-xs font-medium text-slate-400 uppercase tracking-wider block">
+            [Release Unavailable]
+          </span>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+            Release Notes Not Found
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {error || 'The requested changelog announcement could not be located.'}
+          </p>
+          <div className="pt-2">
+            <Link
+              href={tenantUrl('/updates')}
+              className="inline-block px-4 py-2 rounded bg-primary hover:bg-primary-dark text-white text-xs font-medium transition-colors"
+            >
+              ← Back to All Releases
+            </Link>
+          </div>
         </div>
-        <h2 className="text-xl font-bold text-slate-800">Update Not Found</h2>
-        <p className="text-xs text-slate-500 max-w-sm">
-          {error || 'The requested product announcement could not be found.'}
-        </p>
-        <Link
-          href="/updates"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors"
-        >
-          <BiArrowBack />
-          <span>Back to All Updates</span>
-        </Link>
       </div>
     );
   }
 
-  const formattedDate = new Date(update.created_at).toLocaleDateString('en-US', {
+  const formattedDate = new Date(update.release_date || update.created_at).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 py-12 px-4 sm:px-6 lg:px-8 transition-colors">
-      <div className="max-w-3xl mx-auto space-y-8">
+    <div className="w-full min-h-screen py-8 md:py-12 px-4 sm:px-6 lg:px-8 space-y-8">
+      <div className="max-w-3xl mx-auto space-y-6">
+        
         {/* Navigation Breadcrumb */}
-        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 pb-3">
           <Link
-            href="/updates"
-            className="inline-flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
+            href={tenantUrl('/updates')}
+            className="hover:text-primary transition-colors font-medium"
           >
-            <BiArrowBack className="text-base" />
-            <span>Back to all updates</span>
+            ← Back to All Releases
           </Link>
-
-          <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-400">
-            <span>Updates</span>
-            <span>/</span>
-            <span className="text-slate-600 dark:text-slate-400 truncate max-w-[150px]">{update.slug}</span>
-          </div>
+          <span className="text-[11px] font-mono text-slate-400 truncate max-w-[150px]">
+            {update.slug || update.version}
+          </span>
         </div>
 
-        {/* Article Main Card */}
-        <article className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-10 shadow-xs space-y-8">
-          {/* Header Info */}
-          <div className="space-y-4 border-b border-slate-100 dark:border-slate-800 pb-8">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold border border-emerald-200 dark:border-emerald-800">
-                <BiBell className="text-sm" /> Product Update
+        {/* Article Card */}
+        <article className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-6 sm:p-8 shadow-xs space-y-6">
+          <div className="space-y-3 border-b border-slate-100 dark:border-slate-800 pb-5">
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <span className="px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 text-[10px] font-medium">
+                {update.version ? `v${update.version}` : 'Portal Release'}
               </span>
-              <span className="text-xs text-slate-400">•</span>
-              <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 font-medium">
-                <BiCalendar className="text-sm text-slate-400" />
-                {formattedDate}
-              </span>
+              <span>•</span>
+              <span>{formattedDate}</span>
             </div>
 
-            <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white tracking-tight leading-tight">
               {update.title}
             </h1>
           </div>
 
-          {/* Description Content with TipTap Rich Typography */}
+          {/* Description Content */}
           <div
-            className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-p:text-slate-600 dark:prose-p:text-slate-300 prose-p:leading-relaxed prose-li:text-slate-600 dark:prose-li:text-slate-300 prose-code:text-emerald-700 dark:prose-code:text-emerald-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-pre:bg-slate-900 prose-pre:text-slate-100 prose-pre:rounded-xl prose-blockquote:border-emerald-600 prose-blockquote:text-slate-700 dark:prose-blockquote:text-slate-300"
+            className="prose prose-slate dark:prose-invert max-w-none text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-sans [&_p]:mb-3 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:text-sm [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
             dangerouslySetInnerHTML={{ __html: update.description }}
           />
 
           {/* Footer Callout */}
-          <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
-            <div className="flex items-center gap-2">
-              <BiCheckCircle className="text-emerald-600 text-base" />
-              <span>Published by {SITE_NAME} Engineering Team</span>
-            </div>
-
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-400">
+            <span>Verified deployment for {website?.name || 'campus registry'}</span>
             <Link
-              href="/updates"
-              className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold transition-colors"
+              href={tenantUrl('/updates')}
+              className="text-primary hover:underline font-medium"
             >
-              View All Releases
+              All Releases →
             </Link>
           </div>
         </article>
 
-        {/* Other Recent Updates */}
+        {/* Recent Announcements */}
         {recentUpdates.length > 0 && (
-          <div className="space-y-4 pt-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Recent Announcements
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="space-y-3 pt-2">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Other Recent Releases
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {recentUpdates.map((rec) => (
                 <Link
                   key={rec.id}
-                  href={`/updates/${rec.slug}`}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-sm transition-all block group"
+                  href={tenantUrl(`/updates/${rec.slug || rec.id}`)}
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-xs hover:border-primary/50 transition-colors block"
                 >
-                  <p className="text-[11px] text-slate-400 mb-1">
-                    {new Date(rec.created_at).toLocaleDateString('en-US', {
+                  <p className="text-[10px] text-slate-400 mb-1">
+                    {new Date(rec.release_date || rec.created_at).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
                     })}
                   </p>
-                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors line-clamp-2">
+                  <h3 className="text-xs font-semibold text-slate-800 dark:text-slate-200 line-clamp-2">
                     {rec.title}
-                  </h4>
+                  </h3>
                 </Link>
               ))}
             </div>
           </div>
         )}
+
       </div>
     </div>
   );

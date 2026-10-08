@@ -1,149 +1,110 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useContext } from 'react';
 import Link from 'next/link';
-import { 
-  FiTarget, 
-  FiHeart, 
-  FiCpu, 
-  FiAward, 
-  FiArrowLeft, 
-  FiCheckCircle, 
-  FiBookOpen,
-  FiGlobe
-} from 'react-icons/fi';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 const VisionPage = () => {
-  const [settings, setSettings] = useState(null);
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const res = await fetch('/api/website-settings');
-        if (res.ok) {
-          const data = await res.json();
-          const loaded = data.payload?.settings || data.paylod?.settings || data.settings;
-          if (loaded) setSettings(loaded);
-        }
-      } catch (err) {
-        console.error('Failed to fetch settings in VisionPage:', err);
-      }
-    };
-    fetchSettings();
-  }, []);
+  const { website, tenantUrl } = useContext(TenantWebsiteContext);
+  const schoolName = website?.name || 'Our Institution';
 
   const values = [
     {
-      title: 'Academic Excellence',
-      desc: 'We enforce high curriculum standards, invite leading tech executives to audit courses, and structure grading registers to encourage pure technical mastery.',
-      icon: FiBookOpen,
-      color: 'text-primary bg-primary-light border-primary-light'
+      title: 'Academic Integrity & Rigor',
+      desc: 'Transparent examination grading, comprehensive coursework, and zero tolerance for academic dishonesty.'
     },
     {
-      title: 'Ethical Responsibility',
-      desc: 'Nurturing a culture of transparency, digital fairness, and academic integrity. We prepare graduates to be socially responsible leaders.',
-      icon: FiHeart,
-      color: 'text-rose-600 bg-rose-50 border-rose-100'
+      title: 'Ethical Leadership',
+      desc: 'Instilling accountability, social concern, and civic responsibility among all enrolled scholars.'
     },
     {
-      title: 'Sustainable Innovation',
-      desc: 'Fostering practical solutions. Our students build microgrid software, solar charging models, and clean tech architectures in our hardware engineering labs.',
-      icon: FiCpu,
-      color: 'text-primary bg-primary-light border-primary-light'
+      title: 'Scientific & Technological Enquiry',
+      desc: 'Encouraging experimentation, hands-on laboratory discovery, and creative problem solving.'
     },
     {
-      title: 'Global Inclusivity',
-      desc: 'Fostering a campus open to diverse ideas and backgrounds, supported by active clubs, scholarship schemes, and mental health counseling.',
-      icon: FiGlobe,
-      color: 'text-amber-600 bg-amber-50 border-amber-100'
+      title: 'Equality & Mutual Respect',
+      desc: 'Maintaining an inclusive academic environment celebrating student diversity and providing equitable support.'
     }
   ];
 
-  const vissionText = settings?.vission || '';
+  const visionText = website?.vision || website?.vission || '';
 
   return (
-    <div className="w-full min-h-screen bg-slate-50/50 py-16 px-4 sm:px-6 lg:px-8">
-      <div className="w-full flex flex-col gap-10">
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-4xl mx-auto space-y-6">
         
-       
-        <div className="text-center">
-          <h1 className="text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight leading-tight">
-            Our Vision & Core Values
+        {/* Header */}
+        <div className="border-b border-slate-200 dark:border-slate-800 pb-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Link
+              href={tenantUrl('/about')}
+              className="text-xs text-primary font-medium hover:underline"
+            >
+              ← Back to About
+            </Link>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+            Institutional Vision & Core Values
           </h1>
-          <p className="text-slate-500 mt-3 max-w-xl mx-auto text-xs sm:text-sm md:text-base leading-relaxed">
-            Explore our foundational roadmap and core principles for academic development.
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
+            Strategic direction and non-negotiable principles that shape the operations of {schoolName}.
           </p>
         </div>
 
-        {vissionText && (
-          <div className="relative bg-slate-900 text-white rounded-3xl p-8 overflow-hidden shadow-md border border-slate-800 flex flex-col gap-4">
-            <div className="absolute inset-0 bg-linear-to-br from-indigo-950 via-slate-900 to-sky-950/80 z-0" />
-            <div className="relative z-10 flex flex-col sm:flex-row gap-6 items-start">
-              <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-sky-400/20 text-sky-400 flex items-center justify-center shrink-0">
-                <FiTarget className="text-xl" />
-              </div>
-              <div className="flex flex-col gap-2">
-                <span className="text-[10px] font-bold text-sky-400 uppercase tracking-wider">
-                  The Long-Term Aim
-                </span>
-                <h3 className="font-semibold text-white text-base sm:text-lg">
-                  To stand at the global forefront of technical and administrative education.
-                </h3>
-                <div 
-                  className="text-slate-300 text-xs sm:text-sm leading-relaxed mt-1 prose prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: vissionText }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Core Values Section */}
-        <div className="flex flex-col gap-6">
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight text-center sm:text-left">
-            Our 4 Core Values
+        {/* Vision Statement */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 sm:p-6 shadow-xs space-y-2">
+          <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">
+            Institutional Vision
+          </span>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            Aspiration for Long-Term Educational Excellence
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {values.map((val, idx) => {
-              const Icon = val.icon;
-              return (
-                <div 
-                  key={idx} 
-                  className="bg-white border border-slate-100 p-6 rounded-2xl flex flex-col gap-3 shadow-xs hover:shadow-sm transition-shadow"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center border shrink-0 ${val.color}`}>
-                      <Icon className="text-sm sm:text-base" />
-                    </div>
-                    <h4 className="font-semibold text-slate-900 text-sm sm:text-base">
-                      {val.title}
-                    </h4>
-                  </div>
-                  <p className="text-slate-500 text-xs leading-relaxed mt-1">
-                    {val.desc}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Quality Charter Banner */}
-        <div className="bg-white border border-slate-100 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col sm:flex-row gap-6 items-start relative">
-          <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100">
-            <FiAward className="text-xl" />
-          </div>
-          <div className="flex flex-col gap-3">
-            <h3 className="font-semibold text-slate-900 text-sm sm:text-base">
-              Academic Quality Framework
-            </h3>
-            <p className="text-slate-500 text-xs sm:text-sm leading-relaxed">
-              We continually audit our study paths using evaluation reports from tech industry leaders. Each term, the registrar evaluates class pass rates, teacher logs, and hardware lab safety benchmarks. This data-driven feedback loop allows us to dynamically refine courses while staying true to our foundational values.
+          {visionText ? (
+            <div 
+              className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed prose dark:prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: visionText }}
+            />
+          ) : (
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+              To stand recognized as a premier educational establishment noted for scholarly discipline, character formation, and technological readiness of its graduates.
             </p>
+          )}
+        </div>
+
+        {/* Core Values Grid */}
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            Four Foundational Values
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {values.map((val, idx) => (
+              <div 
+                key={idx} 
+                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded shadow-xs space-y-1.5"
+              >
+                <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">
+                  Value {idx + 1}
+                </span>
+                <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                  {val.title}
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  {val.desc}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
 
-        
+        {/* Assurance Note */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-xs space-y-1.5">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            Commitment to Continuous Improvement
+          </h3>
+          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            The governing council and faculty annually review school performance data, student outcomes, and infrastructure quality to ensure adherence to our vision and national education guidelines.
+          </p>
+        </div>
 
       </div>
     </div>

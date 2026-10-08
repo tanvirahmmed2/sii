@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { FiAward, FiCalendar, FiUser, FiArrowLeft } from 'react-icons/fi';
-import RichTextDisplay from 'src/component/helper/RichTextDisplay';
 import Image from 'next/image';
+import RichTextDisplay from 'src/component/helper/RichTextDisplay';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 const RecognitionDetailPage = () => {
   const { slug } = useParams();
+  const { getApiEndpoint, tenantUrl } = useContext(TenantWebsiteContext);
   const [recognition, setRecognition] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -17,14 +18,14 @@ const RecognitionDetailPage = () => {
     if (!slug) return;
     const fetchRecognition = async () => {
       try {
-        const res = await fetch(`/api/recognitions/by-slug/${slug}`);
+        const res = await fetch(getApiEndpoint(`recognitions/by-slug/${slug}`));
         if (res.status === 404) {
           setNotFound(true);
           return;
         }
         if (res.ok) {
           const data = await res.json();
-          setRecognition(data.paylod.recognition);
+          setRecognition(data.paylod?.recognition || data.payload?.recognition || null);
         }
       } catch (err) {
         console.error('Error fetching recognition:', err);
@@ -34,89 +35,79 @@ const RecognitionDetailPage = () => {
       }
     };
     fetchRecognition();
-  }, [slug]);
+  }, [slug, getApiEndpoint]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50/50">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Loading distinction details...</span>
       </div>
     );
   }
 
   if (notFound || !recognition) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50/50 text-center px-4">
-        <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 text-3xl mb-4">
-          <FiAward />
-        </div>
-        <h1 className="text-2xl font-semibold text-slate-900">Recognition Not Found</h1>
-        <p className="text-slate-500 text-sm mt-2">This recognition may have been removed or the link is invalid.</p>
+      <div className="w-full min-h-[50vh] flex flex-col items-center justify-center text-center px-4 space-y-3">
+        <h1 className="text-base font-semibold text-slate-900 dark:text-slate-100">Recognition Record Not Found</h1>
+        <p className="text-slate-500 dark:text-slate-400 text-xs">The distinction may have been removed or the address is invalid.</p>
         <Link
-          href="/"
-          className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-primary hover:text-primary transition-colors"
+          href={tenantUrl('/recognitions')}
+          className="text-xs font-medium text-primary hover:underline"
         >
-          <FiArrowLeft />
-          Back to Home
+          ← Back to Recognitions
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors mb-8"
-        >
-          <FiArrowLeft />
-          Back to Home
-        </Link>
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div>
+          <Link
+            href={tenantUrl('/recognitions')}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            ← Back to Recognitions
+          </Link>
+        </div>
 
-        <div className=" overflow-hidden ">
-          
-          {recognition.image ? (
-            <div className="w-full overflow-hidden bg-slate-100">
-              <Image width={1000} height={1000}
+        <article className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+          {recognition.image && (
+            <div className="w-full h-64 sm:h-80 bg-slate-100 dark:bg-slate-800 relative">
+              <Image
+                fill
                 src={recognition.image}
                 alt={recognition.name}
-                className="w-full h-full object-cover"
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 896px"
               />
-            </div>
-          ) : (
-            <div className="w-full h-48 bg-primaryr from-amber-50 to-sky-50 flex items-center justify-center">
-              <FiAward className="text-6xl text-amber-300" />
             </div>
           )}
 
-          <div className="p-4">
-            
-            <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight leading-tight mb-5">
+          <div className="p-6 sm:p-8 space-y-4">
+            <span className="text-[10px] font-medium text-primary uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 inline-block">
+              Institutional Honour
+            </span>
+
+            <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight leading-snug">
               {recognition.name}
             </h1>
 
-            <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-500 mb-6">
-              <span className="flex items-center gap-1.5">
-                <FiUser className="text-primary" />
-                Awarded by <strong className="text-slate-700 ml-1">{recognition.awarded_by}</strong>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <FiCalendar className="text-primary" />
-                {new Date(recognition.date).toLocaleDateString(undefined, {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </span>
+            <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-500 dark:text-slate-400 border-y border-slate-100 dark:border-slate-800 py-2.5">
+              <span>Awarded by: <strong className="text-slate-800 dark:text-slate-200 font-medium">{recognition.awarded_by}</strong></span>
+              {recognition.date && (
+                <span>Date: <strong className="text-slate-800 dark:text-slate-200 font-medium">{new Date(recognition.date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</strong></span>
+              )}
             </div>
 
-            {/* Description */}
             {recognition.description && (
-              <RichTextDisplay html={recognition.description} className="text-sm text-slate-600" />
+              <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed pt-2">
+                <RichTextDisplay html={recognition.description} />
+              </div>
             )}
           </div>
-        </div>
+        </article>
       </div>
     </div>
   );

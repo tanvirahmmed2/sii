@@ -2,25 +2,23 @@
 
 import React, { useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FiMenu, FiLogOut, FiUser } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import Image from 'next/image';
-import { LOGO_URL } from 'src/lib/database/secret';
 
 const Navbar = () => {
   const router = useRouter();
-  const { staffSidebar, setStaffSidebar } = useContext(TenantWebsiteContext);
+  const { staffSidebar, setStaffSidebar, tenantUrl, getApiEndpoint, website, theme, toggleTheme, language, setLanguage, availableLanguages } = useContext(TenantWebsiteContext);
   const [staff, setStaff] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStaffProfile = async () => {
       try {
-        const response = await fetch('/api/staff/me');
+        const response = await fetch(getApiEndpoint('staff/me'));
         if (response.ok) {
           const data = await response.json();
-          setStaff(data.paylod.staff);
+          setStaff(data?.paylod?.staff || data?.payload?.staff || null);
         }
       } catch (error) {
         console.error('Failed to fetch staff profile:', error);
@@ -29,14 +27,14 @@ const Navbar = () => {
       }
     };
     fetchStaffProfile();
-  }, []);
+  }, [getApiEndpoint]);
 
   const handleLogout = async () => {
     try {
-      const response = await fetch('/api/staff/logout', { method: 'POST' });
+      const response = await fetch(getApiEndpoint('staff/logout'), { method: 'POST' });
       if (response.ok) {
         toast.success('Logged out successfully.');
-        router.push('/auth/access/staff/login');
+        router.push(tenantUrl('/auth/access/staff/login'));
       } else {
         toast.error('Failed to log out.');
       }
@@ -54,51 +52,72 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 md:px-6 z-30">
+    <nav className="fixed top-0 left-0 right-0 h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 sm:px-6 z-30">
       <div className="flex items-center gap-3">
         <button
           onClick={() => setStaffSidebar(!staffSidebar)}
-          className="p-2 -ml-2 rounded-lg text-slate-500 hover:bg-slate-50 md:hidden transition-colors"
+          className="p-1.5 rounded text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 md:hidden"
           aria-label="Toggle Sidebar"
         >
-          <FiMenu className="text-xl" />
+          Menu
         </button>
 
-        {/* Logo/Brand */}
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-secondary font-bold text-lg overflow-hidden shrink-0">
-            {LOGO_URL ? (
-              <Image src={LOGO_URL} alt="School Logo" width={32} height={32} className="w-full h-full object-cover" />
-            ) : (
-              'S'
-            )}
-          </div>
-          <span className="font-bold text-slate-800 text-sm md:text-base hidden sm:inline-block">
-            Staff Portal
+          {website?.logo ? (
+            <div className="w-7 h-7 rounded border border-slate-200 dark:border-slate-700 overflow-hidden relative shrink-0">
+              <Image src={website.logo} alt={website.name || 'Logo'} fill className="object-cover" sizes="28px" />
+            </div>
+          ) : (
+            <div className="w-7 h-7 rounded bg-primary text-white flex items-center justify-center font-semibold text-xs shrink-0">
+              {website?.name ? website.name.slice(0, 2).toUpperCase() : 'SP'}
+            </div>
+          )}
+          <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm hidden sm:inline-block">
+            {website?.name ? `${website.name} — Staff Desk` : 'Staff Portal'}
           </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 text-slate-650 text-xs font-semibold">
-          {staff?.image ? (
-            <img src={staff.image} alt={staff.name} className="w-5 h-5 rounded-full object-cover border border-slate-200" />
-          ) : (
-            <FiUser className="text-sm text-slate-400" />
-          )}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Language switch */}
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          aria-label="Select portal language"
+          className="px-2 py-1 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-700 dark:text-slate-300 focus:outline-hidden"
+        >
+          {availableLanguages.map((l) => (
+            <option key={l.code} value={l.code}>
+              {l.label}
+            </option>
+          ))}
+        </select>
+
+        {/* Theme mode toggle */}
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="px-2 py-1 text-xs font-medium rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+          aria-label="Toggle display mode"
+        >
+          {theme === 'dark' ? 'Light' : 'Dark'}
+        </button>
+
+        {/* Staff badge */}
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium">
           {loading ? (
-            <span className="w-16 h-3 bg-slate-200 animate-pulse rounded"></span>
+            <span className="w-16 h-3 bg-slate-200 dark:bg-slate-700 animate-pulse rounded"></span>
           ) : (
-            <span>{staff ? `${staff.name} (${getRoleLabel(staff.role)})` : 'Staff'}</span>
+            <span>{staff ? `${staff.name} (${getRoleLabel(staff.role)})` : 'Staff Desk'}</span>
           )}
         </div>
 
+        {/* Logout */}
         <button
           onClick={handleLogout}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-semibold transition-colors duration-150 cursor-pointer"
+          className="px-2.5 py-1 text-xs font-medium rounded border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
         >
-          <FiLogOut className="text-sm" />
-          <span className="hidden sm:inline">Logout</span>
+          Sign Out
         </button>
       </div>
     </nav>

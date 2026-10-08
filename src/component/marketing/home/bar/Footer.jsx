@@ -3,14 +3,6 @@
 import { useContext } from 'react';
 import Link from 'next/link';
 import {
-  BiSun,
-  BiMoon,
-  BiEnvelope,
-  BiPhone,
-  BiMapPin,
-  BiRightArrowAlt,
-} from 'react-icons/bi';
-import {
   COMPANY_NAME,
   COMPANY_URL,
   SITE_ADDRESS,
@@ -27,135 +19,108 @@ const Footer = () => {
   const isDark = theme === 'dark';
 
   return (
-    <footer className="w-full bg-slate-900 dark:bg-slate-950 px-4 sm:px-8 lg:px-12 py-12 sm:py-16 text-slate-100 transition-colors border-t border-slate-800 dark:border-slate-900">
-      <div className="w-full flex flex-col space-y-12">
+    <footer className="w-full bg-slate-900 dark:bg-slate-950 px-4 sm:px-6 lg:px-8 py-10 sm:py-14 text-slate-100 transition-colors border-t border-slate-800 dark:border-slate-800">
+      <div className="w-full max-w-7xl mx-auto flex flex-col space-y-10">
         {/* ======================================================== */}
         {/* LAYER 1 (TOP): Company Identity & Newsletter Subscribe   */}
         {/* ======================================================== */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center pb-10 border-b border-white/10 dark:border-slate-800/80">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pb-8 border-b border-slate-800">
           {/* Company Brand & Overview */}
-          <div className="lg:col-span-7 space-y-3">
+          <div className="lg:col-span-7 space-y-2">
             <div className="space-y-1">
               <Link
                 href="/"
-                className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white hover:text-slate-200 transition-colors inline-block"
+                className="text-2xl sm:text-3xl font-semibold tracking-tight text-white hover:text-slate-200 transition-colors inline-block"
               >
                 {SITE_NAME}
               </Link>
-              <p className="text-xs sm:text-sm font-semibold text-emerald-400 dark:text-emerald-300">
-                Build your identity on the modern web
+              <p className="text-xs sm:text-sm font-medium text-emerald-400">
+                Build your institutional identity on the modern web
               </p>
             </div>
 
-            <p className="text-xs sm:text-sm text-slate-300 dark:text-slate-400 max-w-xl leading-relaxed">
-              The all-in-one portfolio website and commerce engine designed for creators, developers,
-              designers, and modern agencies. Intuitive visual studio with enterprise backend infrastructure.
+            <p className="text-xs sm:text-sm text-slate-400 max-w-xl leading-relaxed font-normal">
+              The all-in-one portfolio website and multi-tenant commerce engine designed for educational institutions,
+              creators, and modern academic academies. Intuitive visual studio with enterprise backend infrastructure.
             </p>
           </div>
 
           {/* Newsletter Subscription Component */}
-          <div className="lg:col-span-5 p-6 rounded-3xl bg-white/5 dark:bg-slate-900/60 border border-white/10 dark:border-slate-800 shadow-xl">
+          <div className="lg:col-span-5 p-5 rounded-md bg-slate-950/60 border border-slate-800">
             <SubscribeForm source="HOME_FOOTER" />
           </div>
         </div>
 
         {/* ======================================================== */}
-        {/* LAYER 2 (MIDDLE): Four Unique Columns of Links & Contact */}
+        {/* LAYER 2 (MIDDLE): Four Columns of Links & Contact        */}
         {/* ======================================================== */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-10 pb-10 border-b border-white/10 dark:border-slate-800/80">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pb-8 border-b border-slate-800">
           {/* Column 1: Products */}
-          <div className="space-y-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-white">
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-300">
               Products
             </p>
-            <ul className="space-y-2.5 text-xs text-slate-300 dark:text-slate-400">
+            <ul className="space-y-2 text-xs text-slate-400 font-normal">
               <li>
-                <Link
-                  href="/packages"
-                  className="hover:text-white transition-colors"
-                >
+                <Link href="/packages" className="hover:text-white transition-colors">
                   Packages &amp; Pricing
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/updates"
-                  className="hover:text-white transition-colors"
-                >
+                <Link href="/updates" className="hover:text-white transition-colors">
                   Platform Updates
                 </Link>
               </li>
-            </ul>
-          </div>
-
-          {/* Column 2: Resources */}
-          <div className="space-y-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-white">
-              Resources
-            </p>
-            <ul className="space-y-2.5 text-xs text-slate-300 dark:text-slate-400">
               <li>
-                <Link
-                  href="/tutorials"
-                  className="hover:text-white transition-colors"
-                >
-                  Video Tutorials
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/blogs"
-                  className="hover:text-white transition-colors"
-                >
-                  Articles &amp; Blogs
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/faqs"
-                  className="hover:text-white transition-colors"
-                >
-                  Frequently Asked Questions
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/reviews"
-                  className="hover:text-white transition-colors"
-                >
+                <Link href="/reviews" className="hover:text-white transition-colors">
                   Verified Reviews
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Column 3: Platform & Access */}
-          <div className="space-y-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-white">
+          {/* Column 2: Resources */}
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+              Resources
+            </p>
+            <ul className="space-y-2 text-xs text-slate-400 font-normal">
+              <li>
+                <Link href="/tutorials" className="hover:text-white transition-colors">
+                  Video Tutorials
+                </Link>
+              </li>
+              <li>
+                <Link href="/blogs" className="hover:text-white transition-colors">
+                  Articles &amp; Blogs
+                </Link>
+              </li>
+              <li>
+                <Link href="/faqs" className="hover:text-white transition-colors">
+                  Frequently Asked Questions
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 3: Platform */}
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-300">
               Platform
             </p>
-            <ul className="space-y-2.5 text-xs text-slate-300 dark:text-slate-400">
+            <ul className="space-y-2 text-xs text-slate-400 font-normal">
               <li>
-                <Link
-                  href="/about"
-                  className="hover:text-white transition-colors"
-                >
+                <Link href="/about" className="hover:text-white transition-colors">
                   About Us
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/careers"
-                  className="hover:text-white transition-colors flex items-center gap-1.5"
-                >
-                  <span>Careers</span>
+                <Link href="/careers" className="hover:text-white transition-colors">
+                  Careers
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/policies"
-                  className="hover:text-white transition-colors"
-                >
+                <Link href="/policies" className="hover:text-white transition-colors">
                   Company Policies
                 </Link>
               </li>
@@ -165,7 +130,7 @@ const Footer = () => {
                     href={`/creator/${creator.id}`}
                     className="hover:text-white transition-colors text-emerald-400 font-medium"
                   >
-                    Creator Studio Panel
+                    Creator Studio Panel →
                   </Link>
                 </li>
               ) : (
@@ -175,14 +140,11 @@ const Footer = () => {
                       href="/creator/login"
                       className="hover:text-white transition-colors text-emerald-400 font-medium"
                     >
-                      Creator Studio Login
+                      Creator Login →
                     </Link>
                   </li>
                   <li>
-                    <Link
-                      href="/creator/register"
-                      className="hover:text-white transition-colors"
-                    >
+                    <Link href="/creator/register" className="hover:text-white transition-colors">
                       Start Building Free
                     </Link>
                   </li>
@@ -191,108 +153,97 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Column 4: Contact & Addresses (Dedicated Contact Column) */}
-          <div className="space-y-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-white">
+          {/* Column 4: Contact & Location */}
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-300">
               Contact &amp; Location
             </p>
-            <div className="space-y-2.5 text-xs text-slate-300 dark:text-slate-400">
+            <div className="space-y-2 text-xs text-slate-400 font-normal">
               <div>
                 <Link
                   href="/contact"
-                  className="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 font-bold transition-colors"
+                  className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
                 >
-                  <span>Contact &amp; Inquiries</span>
-                  <BiRightArrowAlt className="text-sm" />
+                  <span>Contact &amp; Support</span>
+                  <span>→</span>
                 </Link>
               </div>
 
-              <div className="pt-1 space-y-2">
-                <a
-                  href={`mailto:${SITE_MAIL}`}
-                  className="flex items-center gap-2 hover:text-white transition-colors truncate font-mono"
-                  title="Email Us"
-                >
-                  <BiEnvelope className="text-emerald-400 text-sm shrink-0" />
-                  <span className="truncate">{SITE_MAIL}</span>
-                </a>
+              <div className="pt-1 space-y-1.5 font-mono text-[11px]">
+                {SITE_MAIL && (
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="text-slate-500 font-sans text-[10px] uppercase">[Email]</span>
+                    <a href={`mailto:${SITE_MAIL}`} className="hover:text-white transition-colors truncate">
+                      {SITE_MAIL}
+                    </a>
+                  </div>
+                )}
 
-                <a
-                  href={`tel:${SITE_CONTACT}`}
-                  className="flex items-center gap-2 hover:text-white transition-colors truncate"
-                  title="Phone Number"
-                >
-                  <BiPhone className="text-emerald-400 text-sm shrink-0" />
-                  <span className="truncate">{SITE_CONTACT}</span>
-                </a>
+                {SITE_CONTACT && (
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="text-slate-500 font-sans text-[10px] uppercase">[Phone]</span>
+                    <a href={`tel:${SITE_CONTACT}`} className="hover:text-white transition-colors truncate">
+                      {SITE_CONTACT}
+                    </a>
+                  </div>
+                )}
 
-                <div
-                  className="flex items-start gap-2 leading-relaxed"
-                  title="Office Address"
-                >
-                  <BiMapPin className="text-emerald-400 text-sm shrink-0 mt-0.5" />
-                  <span className="line-clamp-2">{SITE_ADDRESS}</span>
-                </div>
+                {SITE_ADDRESS && (
+                  <div className="flex items-start gap-1.5 pt-0.5">
+                    <span className="text-slate-500 font-sans text-[10px] uppercase shrink-0 mt-0.5">[Address]</span>
+                    <span className="line-clamp-2 text-slate-400 font-sans text-xs">{SITE_ADDRESS}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
 
         {/* ======================================================== */}
-        {/* LAYER 3 (BOTTOM): System Controls, Mode, Translate, Copr */}
+        {/* LAYER 3 (BOTTOM): Controls, Theme Mode, Translate, Copr  */}
         {/* ======================================================== */}
-        <div className="w-full flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-slate-400 font-sans pt-2">
+        <div className="w-full flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400 pt-2">
           {/* Copyright notice */}
-          <p className="order-2 md:order-1 text-center md:text-left">
-            &copy; 2026 {SITE_NAME} | Build Your Identity on Web
+          <p className="order-2 md:order-1 text-center md:text-left font-normal">
+            &copy; {new Date().getFullYear()} {SITE_NAME}. All rights reserved.
           </p>
 
           {/* Controls: Color Mode & Translation */}
-          <div className="order-1 md:order-2 flex flex-wrap items-center justify-center gap-4 sm:gap-6">
-            <div className="flex items-center gap-2">
-              <div className="inline-flex items-center p-0.5 rounded-full bg-black/40 border border-white/20 backdrop-blur-md">
-                <button
-                  type="button"
-                  onClick={() => (typeof setTheme === 'function' ? setTheme('light') : typeof toggleTheme === 'function' ? toggleTheme() : null)}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                    !isDark
-                      ? 'bg-white text-slate-900 shadow-md scale-105'
-                      : 'text-slate-300 hover:text-white'
-                  }`}
-                  title="Switch to Light Mode"
-                  aria-label="Light mode"
-                >
-                  <BiSun className={!isDark ? 'text-amber-500 text-sm' : 'text-sm'} />
-                  <span>Light</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => (typeof setTheme === 'function' ? setTheme('dark') : typeof toggleTheme === 'function' ? toggleTheme() : null)}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                    isDark
-                      ? 'bg-secondary text-white shadow-md scale-105'
-                      : 'text-slate-300 hover:text-white'
-                  }`}
-                  title="Switch to Dark Mode"
-                  aria-label="Dark mode"
-                >
-                  <BiMoon className={isDark ? 'text-amber-300 text-sm' : 'text-sm'} />
-                  <span>Dark</span>
-                </button>
-              </div>
+          <div className="order-1 md:order-2 flex flex-wrap items-center justify-center gap-3">
+            {/* Mode switch */}
+            <div className="inline-flex items-center rounded border border-slate-700 bg-slate-950 p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => (typeof setTheme === 'function' ? setTheme('light') : typeof toggleTheme === 'function' ? toggleTheme() : null)}
+                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
+                  !isDark ? 'bg-white text-slate-900 font-semibold' : 'text-slate-400 hover:text-white'
+                }`}
+                title="Light Mode"
+              >
+                Light
+              </button>
+              <button
+                type="button"
+                onClick={() => (typeof setTheme === 'function' ? setTheme('dark') : typeof toggleTheme === 'function' ? toggleTheme() : null)}
+                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
+                  isDark ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400 hover:text-white'
+                }`}
+                title="Dark Mode"
+              >
+                Dark
+              </button>
             </div>
 
-            <div className="flex items-center gap-2">
-              <TranslateButton align="right" variant="dark" />
-            </div>
+            {/* Language switch */}
+            <TranslateButton align="right" variant="dark" />
           </div>
 
           {/* Company attribution */}
-          <p className="order-3 text-center md:text-right">
+          <p className="order-3 text-center md:text-right font-normal">
             A Product of{' '}
             <Link
               href={`${COMPANY_URL}`}
-              className="text-slate-200 hover:text-white underline font-semibold transition-colors"
+              className="text-slate-200 hover:text-white font-medium underline transition-colors"
             >
               {COMPANY_NAME}
             </Link>

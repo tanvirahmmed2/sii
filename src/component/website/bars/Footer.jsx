@@ -1,20 +1,29 @@
 'use client';
 
-import Link from 'next/link';
 import React, { useContext } from 'react';
-import { FaLocationArrow, FaFacebookF, FaTwitter, FaInstagram, FaYoutube } from 'react-icons/fa';
-import { IoCall, IoMail } from 'react-icons/io5';
-import { TenantWebsiteContext } from '../../helper/WebsiteContext';
+import Link from 'next/link';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
+import { SCHOOL_NAME } from 'src/lib/database/secret';
 
 const Footer = () => {
-  const { websiteSettings } = useContext(TenantWebsiteContext);
+  const {
+    website,
+    websiteSettings,
+    tenantUrl,
+    theme,
+    isDark,
+    toggleTheme,
+    language,
+    setLanguage,
+    availableLanguages,
+  } = useContext(TenantWebsiteContext);
 
-  const schoolName = websiteSettings?.school_name || '';
-  const phone = websiteSettings?.contact_phone || '';
-  const email = websiteSettings?.contact_email || '';
-  const address = websiteSettings?.address || '';
-
-  const mapUrl = websiteSettings?.map_url;
+  const schoolName = website?.name || websiteSettings?.school_name || SCHOOL_NAME;
+  const phone = website?.contact_phone || websiteSettings?.contact_phone || '';
+  const email = website?.contact_email || websiteSettings?.contact_email || '';
+  const address = website?.address || websiteSettings?.address || '';
+  const eiin = website?.eiin_number || websiteSettings?.eiin || '';
+  const mapUrl = websiteSettings?.map_url || null;
 
   const renderFooterMap = () => {
     if (!mapUrl) return null;
@@ -39,134 +48,191 @@ const Footer = () => {
         width="100%"
         height="100%"
         style={{ border: 0 }}
-        allowFullScreen=""
         loading="lazy"
         referrerPolicy="strict-origin-when-cross-origin"
         title="Campus Map"
-      ></iframe>
+      />
     );
   };
 
+  const linkColClass = 'flex flex-col space-y-1.5 text-xs';
+  const navLinkClass =
+    'text-slate-400 hover:text-white dark:hover:text-slate-100 transition-colors py-0.5';
+
   return (
-    <footer className='w-full bg-tertiary-dark text-secondary flex flex-col items-center justify-center shadow-inner px-4 md:px-8 py-8 md:py-12 overflow-x-hidden gap-12 sm:gap-16'>
-      <div className='w-full flex flex-col gap-3 md:col-span-2'>
-        <h3 className='font-semibold text-sm md:text-base tracking-tight border-b border-primary pb-2 text-secondary'>
-          Quick Links
-        </h3>
-        <div className='w-full grid grid-cols-2 md:grid-cols-4 gap-8 mt-1 text-xs md:text-sm'>
-          <div className='flex flex-col gap-2'>
-            <Link href={'/'} className='hover:text-secondary transition-colors duration-200'>Home</Link>
-            <Link href={'/teachers'} className='hover:text-secondary transition-colors duration-200'>Teachers</Link>
-            <Link href={'/notices'} className='hover:text-secondary transition-colors duration-200'>Notice</Link>
-            <Link href={'/results'} className='hover:text-secondary transition-colors duration-200'>Results</Link>
-          </div>
-          <div className='flex flex-col gap-2'>
-            <Link href={'/achievements'} className='hover:text-secondary transition-colors duration-200'>Achievements</Link>
-            <Link href={'/admission'} className='hover:text-secondary transition-colors duration-200'>Admission Apply</Link>
-            <Link href={'/payments'} className='hover:text-secondary transition-colors duration-200'>Bills & Payments</Link>
-            <Link href={'/student-fees'} className='hover:text-secondary transition-colors duration-200'>Class Tuition Fees</Link>
-          </div>
-          <div className='flex flex-col gap-2'>
-            <Link href={'/gallery'} className='hover:text-secondary transition-colors duration-200'>Photo Gallery</Link>
-            <Link href={'/news'} className='hover:text-secondary transition-colors duration-200'>News Hub</Link>
-            <Link href={'/collaborations'} className='hover:text-secondary transition-colors duration-200'>Collaborations</Link>
-            <Link href={'/club-news'} className='hover:text-secondary transition-colors duration-200'>Club News</Link>
-          </div>
-          <div className='flex flex-col gap-2'>
-            <Link href={'/verify-student'} className='hover:text-secondary transition-colors duration-200'>Verify Student</Link>
-            <Link href={'/verify-id-card'} className='hover:text-secondary transition-colors duration-200'>Verify Student ID Card</Link>
-            <Link href={'/verify-testimonial'} className='hover:text-secondary transition-colors duration-200'>Verify Testimonial</Link>
-            <Link href={'/verify-tc'} className='hover:text-secondary transition-colors duration-200'>Verify Transfer Certificate</Link>
-            <Link href={'/auth/student'} className='hover:text-secondary transition-colors duration-200'>Student Portal</Link>
-          </div>
-        </div>
-      </div>
-      <div className='w-full flex flex-col md:flex-row items-start justify-between gap-8 text-xs md:text-sm'>
-        <div className='w-full md:w-1/2 flex flex-col gap-3'>
-          <h3 className='font-semibold text-sm md:text-base tracking-tight border-b border-primary pb-2 text-secondary'>
-            Contact with {schoolName}
-          </h3>
-          <p className='text-secondary/80 leading-relaxed'>
-            Dedicated to academic excellence, innovation, and holistic student development. Reach out to our administrative office for any inquiries.
-          </p>
-          <div className='flex flex-col gap-2 mt-1'>
-            {phone && (
-              <p className='w-full flex flex-row gap-2 items-center text-secondary/90'>
-                <IoCall className='text-primary shrink-0' /> {phone}
-              </p>
-            )}
-            {email && (
-              <p className='w-full flex flex-row gap-2 items-center text-secondary/90'>
-                <IoMail className='text-primary shrink-0' /> {email}
-              </p>
-            )}
-            {address && (
-              <p className='w-full flex flex-row gap-2 items-center text-secondary/90'>
-                <FaLocationArrow className='text-primary shrink-0' /> {address}
-              </p>
-            )}
-          </div>
-
-          {/* Social Links */}
-          {(websiteSettings?.facebook_url || websiteSettings?.twitter_url || websiteSettings?.instagram_url || websiteSettings?.youtube_url) && (
-            <div className='flex items-center gap-3 mt-3'>
-              {websiteSettings.facebook_url && (
-                <a
-                  href={websiteSettings.facebook_url}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  className='p-2 bg-secondary-dark hover:bg-primary-dark text-white rounded-lg transition-colors'
-                  aria-label='Facebook'
-                >
-                  <FaFacebookF className='text-sm' />
-                </a>
-              )}
-              {websiteSettings.twitter_url && (
-                <a
-                  href={websiteSettings.twitter_url}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  className='p-2 bg-secondary-dark hover:bg-primary-dark text-white rounded-lg transition-colors'
-                  aria-label='Twitter'
-                >
-                  <FaTwitter className='text-sm' />
-                </a>
-              )}
-              {websiteSettings.instagram_url && (
-                <a
-                  href={websiteSettings.instagram_url}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  className='p-2 bg-secondary-dark hover:bg-primary-dark text-white rounded-lg transition-colors'
-                  aria-label='Instagram'
-                >
-                  <FaInstagram className='text-sm' />
-                </a>
-              )}
-              {websiteSettings.youtube_url && (
-                <a
-                  href={websiteSettings.youtube_url}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  className='p-2 bg-secondary-dark hover:bg-primary-dark text-white rounded-lg transition-colors'
-                  aria-label='YouTube'
-                >
-                  <FaYoutube className='text-sm' />
-                </a>
+    <footer className="w-full bg-slate-900 dark:bg-slate-950 text-slate-300 border-t border-slate-800 transition-colors">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+        {/* Top Tier: Institution Profile & Navigation Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+          {/* Col 1 & 2: Institution Meta */}
+          <div className="lg:col-span-2 space-y-3">
+            <div className="space-y-1">
+              <span className="text-base font-semibold text-white tracking-tight">
+                {schoolName}
+              </span>
+              {eiin && (
+                <p className="text-xs font-mono text-slate-400">
+                  Government EIIN: {eiin}
+                </p>
               )}
             </div>
-          )}
+
+            <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
+              Dedicated to academic rigor, integrity, and future-ready education. Official institutional management portal and digital registry.
+            </p>
+
+            <div className="space-y-1 text-xs text-slate-400 pt-1">
+              {address && (
+                <p>
+                  <span className="font-semibold text-slate-300">Address: </span>
+                  {address}
+                </p>
+              )}
+              {phone && (
+                <p>
+                  <span className="font-semibold text-slate-300">Telephone: </span>
+                  {phone}
+                </p>
+              )}
+              {email && (
+                <p>
+                  <span className="font-semibold text-slate-300">Email: </span>
+                  {email}
+                </p>
+              )}
+            </div>
+
+            {/* Language & Theme Switchers */}
+            <div className="flex flex-wrap items-center gap-2 pt-2">
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded px-2 py-1 outline-none"
+                aria-label="Campus Language"
+              >
+                {availableLanguages?.map((l) => (
+                  <option key={l.short} value={l.value}>
+                    {l.native || l.label}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="px-2.5 py-1 text-xs font-medium rounded border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors cursor-pointer"
+                title={`Switch to ${isDark ? 'Light' : 'Dark'} mode`}
+              >
+                {isDark ? 'Light Mode' : 'Dark Mode'}
+              </button>
+            </div>
+          </div>
+
+          {/* Col 3: Academic & Admissions */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
+              Academics
+            </h3>
+            <div className={linkColClass}>
+              <Link href={tenantUrl('/classes')} className={navLinkClass}>
+                Class Programs
+              </Link>
+              <Link href={tenantUrl('/admission')} className={navLinkClass}>
+                Admission Circular
+              </Link>
+              <Link href={tenantUrl('/apply')} className={navLinkClass}>
+                Apply Online
+              </Link>
+              <Link href={tenantUrl('/student-fees')} className={navLinkClass}>
+                Tuition Fees
+              </Link>
+              <Link href={tenantUrl('/results')} className={navLinkClass}>
+                Results Archive
+              </Link>
+              <Link href={tenantUrl('/clubs')} className={navLinkClass}>
+                Clubs &amp; Societies
+              </Link>
+            </div>
+          </div>
+
+          {/* Col 4: Faculty & Campus */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
+              Campus Life
+            </h3>
+            <div className={linkColClass}>
+              <Link href={tenantUrl('/teachers')} className={navLinkClass}>
+                Faculty Roster
+              </Link>
+              <Link href={tenantUrl('/staffs')} className={navLinkClass}>
+                Staff Directory
+              </Link>
+              <Link href={tenantUrl('/notices')} className={navLinkClass}>
+                Official Notices
+              </Link>
+              <Link href={tenantUrl('/events')} className={navLinkClass}>
+                Academic Calendar
+              </Link>
+              <Link href={tenantUrl('/news')} className={navLinkClass}>
+                News &amp; Media
+              </Link>
+              <Link href={tenantUrl('/gallery')} className={navLinkClass}>
+                Campus Gallery
+              </Link>
+            </div>
+          </div>
+
+          {/* Col 5: Institutional Verification & Portals */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
+              Verification &amp; Portals
+            </h3>
+            <div className={linkColClass}>
+              <Link href={tenantUrl('/verify-student')} className={navLinkClass}>
+                Verify Student
+              </Link>
+              <Link href={tenantUrl('/verify-id-card')} className={navLinkClass}>
+                Verify ID Card
+              </Link>
+              <Link href={tenantUrl('/verify-testimonial')} className={navLinkClass}>
+                Verify Testimonial
+              </Link>
+              <Link href={tenantUrl('/verify-tc')} className={navLinkClass}>
+                Verify Transfer Cert
+              </Link>
+              <Link href={tenantUrl('/auth/student')} className={navLinkClass}>
+                Student Portal
+              </Link>
+              <Link href={tenantUrl('/auth/access')} className={navLinkClass}>
+                Staff &amp; Teacher Login
+              </Link>
+            </div>
+          </div>
         </div>
 
-        <div className='w-full md:w-1/2 flex flex-col items-center justify-center gap-4 mt-4 md:mt-0'>
-          {mapUrl && (
-            <div className='w-full max-w-md aspect-video bg-emerald-900/40 border border-primary/80 rounded-2xl overflow-hidden hover:scale-[1.02] transition-transform duration-300 shadow-md'>
-              {renderFooterMap()}
-            </div>
-          )}
-          <p className='text-secondary/80 text-center text-xs font-semibold'>
-            Copyright reserved © {schoolName} {new Date().getFullYear()}
+        {/* Middle Tier: Map if present */}
+        {mapUrl && (
+          <div className="w-full aspect-[21/9] max-h-52 rounded border border-slate-800 overflow-hidden bg-slate-800">
+            {renderFooterMap()}
+          </div>
+        )}
+
+        {/* Bottom Tier: Copyright & Disclaimers */}
+        <div className="pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+          <p>
+            Copyright &copy; {new Date().getFullYear()} {schoolName}. All rights reserved.
           </p>
+          <div className="flex items-center gap-4">
+            <Link href={tenantUrl('/policies')} className="hover:text-slate-400 transition-colors">
+              Campus Policies
+            </Link>
+            <Link href={tenantUrl('/faqs')} className="hover:text-slate-400 transition-colors">
+              FAQs
+            </Link>
+            <Link href={tenantUrl('/contact')} className="hover:text-slate-400 transition-colors">
+              Contact Office
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

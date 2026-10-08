@@ -4,10 +4,11 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-import { FiUserCheck, FiUserPlus, FiLock, FiMail, FiPhone, FiCalendar, FiMapPin, FiUsers, FiAward, FiArrowRight, FiHome } from 'react-icons/fi';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
-const StudentRegistration = () => {
+export default function StudentRegistrationPage() {
   const router = useRouter();
+  const { website, getApiEndpoint, tenantUrl } = useTenantWebsite();
   const [regNo, setRegNo] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   
@@ -22,26 +23,27 @@ const StudentRegistration = () => {
   const [birthCert, setBirthCert] = useState('');
   const [password, setPassword] = useState('');
 
-  const [step, setStep] = useState(1); // 1 = Verify registration, 2 = Complete setup
+  const [step, setStep] = useState(1);
   const [verifiedClass, setVerifiedClass] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Step 1: Verify Registration Credentials
   const handleVerifyRegistration = async (e) => {
     e.preventDefault();
-    if (!regNo || !verificationCode) {
+    if (!regNo.trim() || !verificationCode.trim()) {
       toast.error('Registration number and verification code are required.');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch('/api/student/registration', {
+      const endpoint = getApiEndpoint('student/registration');
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          registration_number: regNo, 
-          verification_code: verificationCode 
+          registration_number: regNo.trim(), 
+          verification_code: verificationCode.trim() 
         }),
       });
 
@@ -53,8 +55,7 @@ const StudentRegistration = () => {
 
       toast.success(data.message || 'Credentials verified. Confirm your details below.');
       
-      // Autofill values from the student profile created on publish
-      const s = data.paylod.student;
+      const s = data.paylod?.student || data.payload?.student || {};
       setName(s.name || '');
       setEmail(s.email || '');
       setPhone(s.phone || '');
@@ -63,7 +64,7 @@ const StudentRegistration = () => {
       setParentName(s.parent_name || '');
       setParentContact(s.parent_contact || '');
       setBirthCert(s.birth_certificate_number || '');
-      setVerifiedClass(s.class_name);
+      setVerifiedClass(s.class_name || 'Enrolled Class');
       
       setStep(2);
     } catch (err) {
@@ -86,11 +87,12 @@ const StudentRegistration = () => {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/student/registration', {
+      const endpoint = getApiEndpoint('student/registration');
+      const response = await fetch(endpoint, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          registration_number: regNo,
+          registration_number: regNo.trim(),
           name: name.trim(),
           email: email.trim(),
           phone: phone.trim(),
@@ -111,7 +113,7 @@ const StudentRegistration = () => {
       }
 
       toast.success(data.message || 'Account setup completed successfully!');
-      router.push('/auth/student/login');
+      router.push(tenantUrl('/auth/student/login'));
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -120,239 +122,213 @@ const StudentRegistration = () => {
   };
 
   return (
-    <div className="w-full min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-900 relative px-4 py-12 overflow-hidden">
-      {/* Background blobs */}
-      <div className="absolute top-[-20%] left-[-20%] w-[60%] aspect-square rounded-full bg-primary/5 blur-[100px] pointer-events-none"></div>
-      <div className="absolute bottom-[-20%] right-[-20%] w-[60%] aspect-square rounded-full bg-primary/5 blur-[100px] pointer-events-none"></div>
-
-      <div className="w-full max-w-160 animate-fade-up z-10">
-        <div className="flex flex-col items-center mb-8 text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 mb-2">Student Account Setup</h1>
-          <p className="text-sm text-slate-500 max-w-100">
-            {step === 1 
-              ? 'Complete your profile registration using the registration code issued by your administration.' 
-              : `Verification successful. Welcome to class: ${verifiedClass}. Please input your personal details below.`}
+    <div className="w-full min-h-[80vh] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-6 sm:p-8 shadow-xs space-y-6">
+        
+        {/* Header */}
+        <div className="text-center space-y-1.5 border-b border-slate-100 dark:border-slate-800 pb-5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block">
+            {website?.name || 'Academic Enrollment'}
+          </span>
+          <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            Student Account Setup
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {step === 1
+              ? 'Enter the registration credentials issued by your campus registrar.'
+              : `Credentials verified. Enrolled Class: ${verifiedClass}. Finalize your student profile.`}
           </p>
         </div>
 
-        <div className="w-full bg-white border border-slate-100 rounded-3xl p-6 md:p-8 shadow-[0_10px_40px_rgba(0,0,0,0.03)]">
-          {step === 1 ? (
-            <form onSubmit={handleVerifyRegistration} className="w-full max-w-110 mx-auto flex flex-col gap-5">
-              {/* Registration Code Input */}
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <FiUserCheck className="text-sm" /> Enter Registration Number
+        {step === 1 ? (
+          <form onSubmit={handleVerifyRegistration} className="space-y-4 max-w-md mx-auto">
+            <div>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                Registration Number *
+              </label>
+              <input
+                type="text"
+                required
+                value={regNo}
+                onChange={(e) => setRegNo(e.target.value)}
+                disabled={loading}
+                placeholder="e.g. 2026-REG-0145"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-sm text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                Verification Code / Token *
+              </label>
+              <input
+                type="text"
+                required
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value)}
+                disabled={loading}
+                placeholder="6-digit verification code"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-sm text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 rounded bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-60 text-center"
+            >
+              {loading ? 'Verifying...' : 'Verify Registration Code →'}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleCompleteSetup} className="space-y-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Student Full Name *
                 </label>
                 <input
                   type="text"
                   required
-                  value={regNo}
-                  onChange={(e) => setRegNo(e.target.value)}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   disabled={loading}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-primary focus:ring-4 focus:ring-primary/10"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-primary"
                 />
               </div>
 
-              {/* Verification Code Input */}
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <FiLock className="text-sm" /> Enter Verification Code
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Contact Email Address *
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Phone Number *
+                </label>
+                <input
+                  type="tel"
+                  required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  disabled={loading}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Date of Birth *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={dob}
+                  onChange={(e) => setDob(e.target.value)}
+                  disabled={loading}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Father/Mother Full Name *
                 </label>
                 <input
                   type="text"
                   required
-                  value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value)}
+                  value={parentName}
+                  onChange={(e) => setParentName(e.target.value)}
                   disabled={loading}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-primary focus:ring-4 focus:ring-primary/10"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-primary"
                 />
               </div>
 
-              {/* Submit Verification Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white text-sm font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-              >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <>
-                    Verify Registration Code <FiArrowRight className="text-lg" />
-                  </>
-                )}
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleCompleteSetup} className="w-full flex flex-col gap-6">
-              {/* Row 1: Student Name & Email */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-450 uppercase tracking-wider flex items-center gap-1 text-slate-500">
-                    <FiUserCheck /> Student Full Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    disabled={loading}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 outline-none transition-all duration-200 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-450 uppercase tracking-wider flex items-center gap-1 text-slate-500">
-                    <FiMail /> Contact Email Address
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={loading}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 outline-none transition-all duration-200 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5"
-                  />
-                </div>
-              </div>
-
-              {/* Row 2: Phone & Date of Birth */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-455 uppercase tracking-wider flex items-center gap-1 text-slate-500">
-                    <FiPhone /> Contact Number
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    disabled={loading}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 outline-none transition-all duration-200 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-455 uppercase tracking-wider flex items-center gap-1 text-slate-500">
-                    <FiCalendar /> Date of Birth
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={dob}
-                    onChange={(e) => setDob(e.target.value)}
-                    disabled={loading}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 outline-none transition-all duration-200 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5"
-                  />
-                </div>
-              </div>
-
-              {/* Row 3: Parents Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-455 uppercase tracking-wider flex items-center gap-1 text-slate-500">
-                    <FiUsers /> Father/Mother Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={parentName}
-                    onChange={(e) => setParentName(e.target.value)}
-                    disabled={loading}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 outline-none transition-all duration-200 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-455 uppercase tracking-wider flex items-center gap-1 text-slate-500">
-                    <FiPhone /> Parent Contact Number
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={parentContact}
-                    onChange={(e) => setParentContact(e.target.value)}
-                    disabled={loading}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 outline-none transition-all duration-200 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5"
-                  />
-                </div>
-              </div>
-
-              {/* Row 4: Birth Certificate Number & Password */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-455 uppercase tracking-wider flex items-center gap-1 text-slate-500">
-                    <FiAward /> Birth Certificate Number
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={birthCert}
-                    onChange={(e) => setBirthCert(e.target.value)}
-                    disabled={loading}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 outline-none transition-all duration-200 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-slate-455 uppercase tracking-wider flex items-center gap-1 text-slate-500">
-                    <FiLock /> Choose Password
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 outline-none transition-all duration-200 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5"
-                  />
-                </div>
-              </div>
-
-              {/* Text Area: Current Address */}
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-slate-455 uppercase tracking-wider flex items-center gap-1 text-slate-500">
-                  <FiMapPin /> Residential Address
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Parent Contact Number *
                 </label>
-                <textarea
+                <input
+                  type="tel"
                   required
-                  rows={3}
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
+                  value={parentContact}
+                  onChange={(e) => setParentContact(e.target.value)}
                   disabled={loading}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-909 outline-none transition-all duration-200 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 resize-none"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-primary"
                 />
               </div>
 
-              {/* Setup Submit Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white text-sm font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 cursor-pointer mt-2"
-              >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <>
-                    <FiUserPlus className="text-lg" /> Complete Account Setup
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-        </div>
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Birth Certificate Number *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={birthCert}
+                  onChange={(e) => setBirthCert(e.target.value)}
+                  disabled={loading}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-primary"
+                />
+              </div>
 
-        <div className="w-full text-center mt-6">
-          <Link
-            href="/auth/student/login"
-            className="text-xs font-semibold text-primary hover:text-primary transition-colors py-1.5 px-3 rounded-full hover:bg-primary-light"
-          >
-            Back to Student Login
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Choose Login Password *
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  placeholder="••••••••"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-primary"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                Residential Address *
+              </label>
+              <textarea
+                required
+                rows={2}
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                disabled={loading}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-primary resize-none"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 rounded bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-60 text-center"
+            >
+              {loading ? 'Finalizing Profile...' : 'Complete Account Setup →'}
+            </button>
+          </form>
+        )}
+
+        <div className="pt-2 text-center text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
+          Already completed registration?{' '}
+          <Link href={tenantUrl('/auth/student/login')} className="font-semibold text-primary hover:underline">
+            Go to Student Login
           </Link>
         </div>
+
       </div>
     </div>
   );
-};
-
-export default StudentRegistration;
+}

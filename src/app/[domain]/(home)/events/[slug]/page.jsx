@@ -1,15 +1,16 @@
 'use client';
 
-import React, { useEffect, useState, use } from 'react';
+import React, { useEffect, useState, use, useContext } from 'react';
 import Link from 'next/link';
-import { FiArrowLeft, FiCalendar, FiMapPin, FiClock, FiUserPlus, FiUserMinus } from 'react-icons/fi';
+import Image from 'next/image';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import Image from 'next/image';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 const EventDetailPage = ({ params: paramsPromise }) => {
   const params = use(paramsPromise);
   const slug = params?.slug;
+  const { getApiEndpoint, tenantUrl } = useContext(TenantWebsiteContext);
 
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -21,7 +22,7 @@ const EventDetailPage = ({ params: paramsPromise }) => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/events/${encodeURIComponent(slug)}`);
+        const res = await fetch(getApiEndpoint(`events/${encodeURIComponent(slug)}`));
         if (res.ok) {
           const data = await res.json();
           const fetchedEvent = data.paylod?.event || data.payload?.event || null;
@@ -29,13 +30,13 @@ const EventDetailPage = ({ params: paramsPromise }) => {
 
           if (fetchedEvent?.id) {
             try {
-              const studentRes = await axios.get('/api/student/events');
+              const studentRes = await axios.get(getApiEndpoint('student/events'));
               if (studentRes.data?.success) {
                 setIsStudentUser(true);
                 const joinedIds = studentRes.data.paylod?.joinedEventIds || studentRes.data.payload?.joinedEventIds || [];
                 setIsJoined(joinedIds.includes(String(fetchedEvent.id)));
               }
-            } catch (e) {
+            } catch {
               setIsStudentUser(false);
             }
           }
@@ -48,7 +49,7 @@ const EventDetailPage = ({ params: paramsPromise }) => {
     };
 
     if (slug) fetchData();
-  }, [slug]);
+  }, [slug, getApiEndpoint]);
 
   const handleToggleParticipation = async () => {
     if (!event?.id) return;
@@ -56,13 +57,13 @@ const EventDetailPage = ({ params: paramsPromise }) => {
     const action = isJoined ? 'leave' : 'join';
 
     try {
-      const res = await axios.post('/api/student/events', {
+      const res = await axios.post(getApiEndpoint('student/events'), {
         event_id: event.id,
         action
       });
 
       if (res.data?.success) {
-        toast.success(res.data.paylod?.message || res.data.payload?.message || (isJoined ? 'Registration cancelled.' : 'Registration successful!'));
+        toast.success(res.data.paylod?.message || res.data.payload?.message || (isJoined ? 'Registration cancelled.' : 'Registration confirmed!'));
         setIsJoined(!isJoined);
       }
     } catch (err) {
@@ -75,27 +76,23 @@ const EventDetailPage = ({ params: paramsPromise }) => {
 
   if (loading) {
     return (
-      <div className="w-full min-h-screen bg-slate-50/50 py-16 px-4 flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-slate-500 text-xs font-semibold">Loading event details...</p>
-        </div>
+      <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-12 px-4 flex items-center justify-center">
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Loading event details...</span>
       </div>
     );
   }
 
   if (!event) {
     return (
-      <div className="w-full min-h-screen bg-slate-50/50 py-16 px-4">
-        <div className="max-w-md mx-auto bg-white p-8 rounded-2xl border border-slate-100 shadow-xs text-center space-y-4">
-          <FiCalendar className="text-4xl text-slate-300 mx-auto" />
-          <h2 className="text-xl font-bold text-slate-900">Event Not Found</h2>
-          <p className="text-slate-500 text-xs">The requested event could not be found or has been removed.</p>
+      <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-12 px-4">
+        <div className="max-w-md mx-auto bg-white dark:bg-slate-900 p-6 rounded border border-slate-200 dark:border-slate-800 shadow-xs text-center space-y-3">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Event Not Found</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">The requested academic event could not be found or was archived.</p>
           <Link
-            href="/events"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark text-white font-bold text-xs rounded-xl transition-all"
+            href={tenantUrl('/events')}
+            className="inline-block px-3 py-1.5 bg-primary text-white rounded text-xs font-medium hover:bg-primary-dark transition-colors"
           >
-            <FiArrowLeft /> Back to Events
+            ← Back to Events
           </Link>
         </div>
       </div>
@@ -105,91 +102,74 @@ const EventDetailPage = ({ params: paramsPromise }) => {
   const eventDate = new Date(event.event_date);
 
   return (
-    <div className="w-full min-h-screen bg-slate-50/50 py-12 p-4">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <div className="flex items-center justify-between">
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto space-y-6">
+        
+        <div>
           <Link
-            href="/events"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl shadow-xs transition-colors"
+            href={tenantUrl('/events')}
+            className="text-xs font-medium text-primary hover:underline"
           >
-            <FiArrowLeft />
-            <span>Back to Events Calendar</span>
+            ← Back to Events Calendar
           </Link>
         </div>
 
-        <article className="overflow-hidden w-full flex flex-col gap-4">
+        <article className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
           {event.image && (
-            <div className="w-full  bg-slate-100 overflow-hidden relative">
-              <Image width={1000} height={1000}
+            <div className="w-full h-64 sm:h-80 bg-slate-100 dark:bg-slate-800 relative">
+              <Image
+                fill
                 src={event.image}
                 alt={event.title}
-                className="w-full h-full object-cover"
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 896px"
               />
             </div>
           )}
 
-          <div className="w-full flex flex-col gap-4">
-            <div className="space-y-4">
-             
-
-              <h1 className="text-2xl md:text-4xl font-semibold text-slate-900 tracking-tight leading-snug">
+          <div className="p-6 sm:p-8 space-y-5">
+            <div className="space-y-2">
+              <span className="text-[10px] font-medium text-primary uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 inline-block">
+                Campus Calendar
+              </span>
+              <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight leading-snug">
                 {event.title}
               </h1>
 
-              <div className="flex flex-wrap gap-6 items-center bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs font-bold text-slate-700">
-                <span className="flex items-center gap-2">
-                  <FiCalendar className="text-primary text-base" />
-                  {eventDate.toLocaleDateString('en-US', { dateStyle: 'full', timeZone: 'UTC' })}
-                </span>
-                <span className="flex items-center gap-2">
-                  <FiClock className="text-primary text-base" />
-                  {eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'UTC' })}
-                </span>
-                <span className="flex items-center gap-2">
-                  <FiMapPin className="text-primary text-base" />
-                  {event.location}
-                </span>
+              <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-3 rounded border border-slate-200 dark:border-slate-700">
+                <span>Date: <strong className="text-slate-900 dark:text-slate-100">{eventDate.toLocaleDateString('en-US', { dateStyle: 'full', timeZone: 'UTC' })}</strong></span>
+                <span>Time: <strong className="text-slate-900 dark:text-slate-100">{eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'UTC' })}</strong></span>
+                {event.location && (
+                  <span>Venue: <strong className="text-slate-900 dark:text-slate-100">{event.location}</strong></span>
+                )}
               </div>
             </div>
 
-            {/* Description */}
-            <div className="prose prose-slate max-w-none text-slate-700 text-sm md:text-base leading-relaxed whitespace-pre-wrap border-t border-slate-100 pt-6">
+            <div className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap border-t border-slate-100 dark:border-slate-800 pt-4">
               {event.description}
             </div>
 
-            {/* Student Participation CTA */}
+            {/* Student Registration Box */}
             {isStudentUser && (
-              <div className="p-6 bg-primary-light/60 border border-primary-light rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mt-8">
+              <div className="p-4 rounded bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="font-bold text-slate-900 text-sm">
-                    {isJoined ? 'You are registered for this event!' : 'Interested in participating?'}
+                  <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                    {isJoined ? 'Participant Status: Registered' : 'Student Participation'}
                   </h3>
-                  <p className="text-xs text-slate-600 mt-0.5">
-                    {isJoined ? 'Your registration is confirmed.' : 'Click below to register your attendance from your student account.'}
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {isJoined ? 'Your seat has been reserved.' : 'Enroll your attendance from your student credentials.'}
                   </p>
                 </div>
                 <button
                   onClick={handleToggleParticipation}
                   disabled={actionLoading}
-                  className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer shrink-0 ${
                     isJoined
-                      ? 'bg-red-50 hover:bg-red-100 text-red-600 border border-red-200'
-                      : 'bg-primary hover:bg-primary-dark text-white shadow-sm'
+                      ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
+                      : 'bg-primary hover:bg-primary-dark text-white'
                   } disabled:opacity-50`}
                 >
-                  {actionLoading ? (
-                    <span>Processing...</span>
-                  ) : isJoined ? (
-                    <>
-                      <FiUserMinus />
-                      <span>Cancel Registration</span>
-                    </>
-                  ) : (
-                    <>
-                      <FiUserPlus />
-                      <span>Register Participation</span>
-                    </>
-                  )}
+                  {actionLoading ? 'Updating...' : isJoined ? 'Cancel Attendance' : 'Register Attendance'}
                 </button>
               </div>
             )}

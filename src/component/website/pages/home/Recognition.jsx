@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useContext } from 'react';
 import Link from 'next/link';
-import { FiArrowRight, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import RecognitionCard from 'src/component/website/cards/RecognitionCard';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 const Recognition = () => {
+  const { tenantUrl, getApiEndpoint } = useContext(TenantWebsiteContext);
   const [recognitions, setRecognitions] = useState([]);
   const [loading, setLoading] = useState(true);
   const sliderRef = useRef(null);
@@ -13,10 +14,14 @@ const Recognition = () => {
   useEffect(() => {
     const fetchRecognitions = async () => {
       try {
-        const res = await fetch('/api/recognitions');
+        const res = await fetch(getApiEndpoint('recognitions'));
         if (res.ok) {
           const data = await res.json();
-          const list = data.paylod?.recognitions || data.payload?.recognitions || data.recognitions || [];
+          const list =
+            data.payload?.recognitions ||
+            data.paylod?.recognitions ||
+            data.recognitions ||
+            [];
           setRecognitions(list);
         }
       } catch (err) {
@@ -26,76 +31,66 @@ const Recognition = () => {
       }
     };
     fetchRecognitions();
-  }, []);
+  }, [getApiEndpoint]);
 
   const handleScroll = (direction) => {
     if (sliderRef.current) {
-      const scrollAmount = direction === 'left' ? -280 : 280;
+      const scrollAmount = direction === 'left' ? -260 : 260;
       sliderRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
   };
 
-  if (loading) {
-    return (
-      <section className="w-full py-12 px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="mx-auto flex justify-center py-8">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-      </section>
-    );
-  }
-
+  if (loading) return null;
   if (recognitions.length === 0) return null;
 
   return (
-    <section className="w-full py-14 px-4 sm:px-6 lg:px-8 bg-linear-to-b from-white via-emerald-50/20 to-slate-50/60 overflow-hidden">
-      <div className="w-full">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+    <section className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 py-12 px-4 sm:px-6 lg:px-8 transition-colors">
+      <div className="w-full space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
           <div>
-            
-            <h2 className="text-2xl md:text-5xl font-semibold text-slate-900 tracking-tight">
-              Recognitions
+            <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
+              Accreditations &amp; Honors
+            </span>
+            <h2 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-white tracking-tight">
+              Institutional Recognitions
             </h2>
-            <p className="text-slate-500 mt-1 text-xs md:text-sm max-w-lg">
-              Swipe or slide to view milestones and honours awarded to our institution.
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Honors, academic awards, and regulatory certifications achieved by our campus.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 self-start md:self-auto">
+          <div className="flex items-center gap-2 self-start sm:self-auto">
             <button
+              type="button"
               onClick={() => handleScroll('left')}
+              className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               aria-label="Previous recognitions"
-              className="w-9 h-9 rounded-full bg-white border border-slate-200 text-slate-600 hover:text-primary hover:border-emerald-300 shadow-xs flex items-center justify-center transition-all active:scale-95 cursor-pointer"
             >
-              <FiChevronLeft className="text-lg" />
+              &larr; Prev
             </button>
             <button
+              type="button"
               onClick={() => handleScroll('right')}
+              className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               aria-label="Next recognitions"
-              className="w-9 h-9 rounded-full bg-white border border-slate-200 text-slate-600 hover:text-primary hover:border-emerald-300 shadow-xs flex items-center justify-center transition-all active:scale-95 cursor-pointer"
             >
-              <FiChevronRight className="text-lg" />
+              Next &rarr;
             </button>
-
             <Link
-              href="/recognitions"
-              className="ml-2 inline-flex items-center gap-1.5 text-xs font-bold text-secondary bg-tertiary hover:bg-primary-light px-3.5 py-2 rounded-full border border-primary-border transition-colors"
+              href={tenantUrl('/recognitions')}
+              className="px-3 py-1 text-xs rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium transition-colors"
             >
-              <span>View All</span>
-              <FiArrowRight className="text-xs" />
+              View All ({recognitions.length})
             </Link>
           </div>
         </div>
 
         <div
           ref={sliderRef}
-          className="flex items-stretch gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 pt-1 touch-pan-x [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex items-stretch gap-4 overflow-x-auto pb-2 scroll-smooth"
         >
           {recognitions.map((item) => (
-            <div
-              key={item.id}
-              className="w-50 sm:w-60 md:w-64 shrink-0 snap-start"
-            >
+            <div key={item.id} className="w-56 shrink-0">
               <RecognitionCard recognition={item} />
             </div>
           ))}

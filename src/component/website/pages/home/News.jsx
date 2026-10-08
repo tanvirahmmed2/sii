@@ -1,21 +1,22 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { FiInfo, FiArrowRight } from 'react-icons/fi';
+import React, { useEffect, useState, useContext } from 'react';
 import Link from 'next/link';
 import NewsCard from 'src/component/website/cards/NewsCard';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 const News = () => {
+  const { tenantUrl, getApiEndpoint } = useContext(TenantWebsiteContext);
   const [newsList, setNewsList] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        const res = await fetch('/api/news/home');
+        const res = await fetch(getApiEndpoint('news/home'));
         if (res.ok) {
           const data = await res.json();
-          setNewsList(data.paylod?.news || data.payload?.news || []);
+          setNewsList(data.payload?.news || data.paylod?.news || []);
         }
       } catch (err) {
         console.error('Error fetching home news:', err);
@@ -24,48 +25,47 @@ const News = () => {
       }
     };
     fetchNews();
-  }, []);
+  }, [getApiEndpoint]);
 
   return (
-    <section className="w-full py-20 px-4 sm:px-6 lg:px-8 bg-slate-50">
-      <div className="mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-5xl font-semibold text-slate-900 tracking-tight">
-            Latest Campus News
-          </h2>
-          <p className="text-slate-500 mt-3 max-w-xl mx-auto text-sm">
-            Read updates on educational advancements, department news, faculty research journals, and campus initiatives.
-          </p>
+    <section className="w-full bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 py-12 px-4 sm:px-6 lg:px-8 transition-colors">
+      <div className="w-full space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
+          <div>
+            <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
+              Campus Journalism
+            </span>
+            <h2 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-white tracking-tight">
+              Latest Campus News &amp; Articles
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Educational achievements, department milestones, and faculty initiatives.
+            </p>
+          </div>
+
+          <Link
+            href={tenantUrl('/news')}
+            className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-colors shrink-0 self-start sm:self-auto"
+          >
+            All News ({newsList.length}) &rarr;
+          </Link>
         </div>
 
         {loading ? (
-          <div className="w-full py-12 flex justify-center">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <div className="py-8 text-center text-xs text-slate-400">
+            Loading recent news...
           </div>
         ) : newsList.length === 0 ? (
-          <div className="w-full py-12 bg-white rounded-2xl border border-slate-100 flex flex-col items-center justify-center text-center p-6">
-            <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center text-sm mb-3">
-              <FiInfo />
-            </div>
-            <p className="text-slate-400 text-xs font-medium">No news articles published at the moment.</p>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 text-center text-xs text-slate-500 dark:text-slate-400">
+            No news articles published at the moment.
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {newsList.map((item) => (
               <NewsCard key={item.id} news={item} />
             ))}
           </div>
         )}
-
-        <div className="text-center mt-10">
-          <Link
-            href="/news"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary hover:bg-primary-dark text-secondary text-xs font-bold transition-all shadow-xs hover:shadow-md"
-          >
-            <span>View All News</span>
-            <FiArrowRight className="text-sm" />
-          </Link>
-        </div>
       </div>
     </section>
   );

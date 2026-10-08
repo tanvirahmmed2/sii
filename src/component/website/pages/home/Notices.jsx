@@ -1,21 +1,22 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { FiInfo, FiArrowRight } from 'react-icons/fi';
+import React, { useEffect, useState, useContext } from 'react';
 import Link from 'next/link';
 import NoticeCard from 'src/component/website/cards/NoticeCard';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 const Notices = () => {
+  const { tenantUrl, getApiEndpoint } = useContext(TenantWebsiteContext);
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchNotices = async () => {
       try {
-        const res = await fetch('/api/notices/home');
+        const res = await fetch(getApiEndpoint('notices/home'));
         if (res.ok) {
           const data = await res.json();
-          setNotices(data.paylod?.notices || data.payload?.notices || []);
+          setNotices(data.payload?.notices || data.paylod?.notices || []);
         }
       } catch (err) {
         console.error('Error fetching home notices:', err);
@@ -24,48 +25,47 @@ const Notices = () => {
       }
     };
     fetchNotices();
-  }, []);
+  }, [getApiEndpoint]);
 
   return (
-    <section className="w-full py-20 px-4 sm:px-6 lg:px-8 bg-slate-50">
-      <div className="mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-5xl font-semibold text-slate-900 tracking-tight">
-            Notice Board
-          </h2>
-          <p className="text-slate-500 mt-3 max-w-xl mx-auto text-sm">
-            Stay informed with the latest updates, circulars, and notices released by the registrar office.
-          </p>
+    <section className="w-full bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 py-12 px-4 sm:px-6 lg:px-8 transition-colors">
+      <div className="w-full space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
+          <div>
+            <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
+              Official Bulletin
+            </span>
+            <h2 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-white tracking-tight">
+              Administrative Notices &amp; Circulars
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Updates released by the registrar office, exam control cell, and departments.
+            </p>
+          </div>
+
+          <Link
+            href={tenantUrl('/notices')}
+            className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-colors shrink-0 self-start sm:self-auto"
+          >
+            All Notices ({notices.length}) &rarr;
+          </Link>
         </div>
 
         {loading ? (
-          <div className="w-full py-12 flex justify-center">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <div className="py-8 text-center text-xs text-slate-400">
+            Loading recent notices...
           </div>
         ) : notices.length === 0 ? (
-          <div className="w-full py-12 bg-white rounded-2xl border border-slate-100 flex flex-col items-center justify-center text-center p-6">
-            <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center text-sm mb-3">
-              <FiInfo />
-            </div>
-            <p className="text-slate-400 text-xs font-medium">No announcements published at the moment.</p>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 text-center text-xs text-slate-500 dark:text-slate-400">
+            No circulars or notices published at the moment.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {notices.map((notice) => (
               <NoticeCard key={notice.id} notice={notice} />
             ))}
           </div>
         )}
-
-        <div className="text-center mt-10">
-          <Link
-            href="/notices"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary hover:bg-primary-dark text-secondary text-xs font-bold transition-all shadow-xs hover:shadow-md"
-          >
-            <span>View All Notices</span>
-            <FiArrowRight className="text-sm" />
-          </Link>
-        </div>
       </div>
     </section>
   );

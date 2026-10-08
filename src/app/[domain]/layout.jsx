@@ -2,6 +2,7 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { TenantWebsiteProvider } from 'src/component/helper/WebsiteContext';
+import { calculateColorShades } from 'src/lib/utils/colors';
 
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
@@ -47,9 +48,26 @@ export default async function TenantWebsiteMasterLayout({ children, params }) {
     notFound();
   }
 
+  const primaryShades = calculateColorShades(website.primary_color, '#1e40af');
+  const secondaryShades = calculateColorShades(website.secondary_color, '#0ea5e9');
+
   return (
     <TenantWebsiteProvider slug={slug} initialWebsite={website}>
-      <div className="tenant-institute-scope min-h-screen w-full flex flex-col bg-slate-50 text-slate-800 antialiased">
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            :root {
+              --primary: ${primaryShades.base};
+              --primary-light: ${primaryShades.light};
+              --primary-dark: ${primaryShades.dark};
+              --secondary: ${secondaryShades.base};
+              --secondary-light: ${secondaryShades.light};
+              --secondary-dark: ${secondaryShades.dark};
+            }
+          `,
+        }}
+      />
+      <div className="tenant-institute-scope min-h-screen w-full flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased transition-colors">
         {children}
       </div>
     </TenantWebsiteProvider>

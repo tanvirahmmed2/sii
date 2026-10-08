@@ -1,86 +1,103 @@
 'use client';
 
-import React from 'react';
-import { FiUsers, FiAward, FiGlobe, FiBriefcase } from 'react-icons/fi';
+import React, { useContext } from 'react';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 const Alumni = () => {
+  const { website } = useContext(TenantWebsiteContext);
+  const schoolName = website?.name || 'Institution';
+
   const testimonials = [
     {
       name: 'Sarah Rahman',
       batch: 'Class of 2018',
-      role: 'Lead Software Architect at Google',
-      quote: 'FIT provided the programming fundamentals and hands-on lab projects that shaped my engineering perspective.'
+      role: 'Lead Software Architect at Technology Firm',
+      quote: 'The academic rigor and laboratory assignments provided fundamental engineering perspective that shaped my professional practice.'
     },
     {
       name: 'Tanvir Ahmed',
       batch: 'Class of 2021',
-      role: 'DevOps Engineer at Amazon Web Services',
-      quote: 'The systems administration routines, server setups, and network prototyping labs were extremely aligned with field standards.'
+      role: 'Systems & Cloud Infrastructure Engineer',
+      quote: 'Hands-on computing workshops, server labs, and dedicated faculty guidance were directly aligned with current industry expectations.'
     }
   ];
 
   return (
-    <div className="w-full min-h-screen bg-slate-50/50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-5xl mx-auto space-y-6">
+        
         {/* Header */}
-        <div className="text-center mb-12">
-          <span className="text-xs font-bold text-primary bg-primary-light px-3 py-1 rounded-full uppercase tracking-widest">
-            Network
-          </span>
-          <h1 className="text-3xl md:text-4xl font-semibold text-slate-900 mt-3 tracking-tight">
-            FIT Alumni Association
+        <div className="border-b border-slate-200 dark:border-slate-800 pb-5">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-medium tracking-wide uppercase px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              Graduates Network
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+            {schoolName} Alumni Association
           </h1>
-          <p className="text-slate-500 mt-2 max-w-xl mx-auto text-sm md:text-base">
-            Connecting thousands of graduates global wide. Our alumni hold positions inside leading technical and management companies.
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
+            Connecting our graduates across academia, engineering enterprises, public administration, and global research institutions.
           </p>
         </div>
 
         {/* Highlights */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white border border-slate-100 p-5 rounded-2xl flex flex-col gap-3 shadow-xs">
-            <div className="w-10 h-10 bg-primary-light text-primary rounded-xl flex items-center justify-center shrink-0">
-              <FiUsers />
-            </div>
-            <h3 className="font-semibold text-slate-800 text-sm">Graduates Network</h3>
-            <p className="text-slate-500 text-xs leading-relaxed">
-              Access to a global directory containing over 5,000 active members to find mentors and explore job vacancies.
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded shadow-xs space-y-1.5">
+            <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">
+              Network Access
+            </span>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Global Alumni Registry
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Connect with fellow graduates to exchange technical knowledge, seek professional mentorship, and explore career advancements.
             </p>
           </div>
 
-          <div className="bg-white border border-slate-100 p-5 rounded-2xl flex flex-col gap-3 shadow-xs">
-            <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center shrink-0">
-              <FiBriefcase />
-            </div>
-            <h3 className="font-semibold text-slate-800 text-sm">Alumni Referrals</h3>
-            <p className="text-slate-500 text-xs leading-relaxed">
-              Direct referral opportunities at technology partners, multinational institutions, and engineering firms.
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded shadow-xs space-y-1.5">
+            <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">
+              Careers
+            </span>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Industry Placement & Referrals
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Direct recruitment referrals and internship sponsorships supported by established alumni working across diverse sectors.
             </p>
           </div>
 
-          <div className="bg-white border border-slate-100 p-5 rounded-2xl flex flex-col gap-3 shadow-xs">
-            <div className="w-10 h-10 bg-primary-light text-primary rounded-xl flex items-center justify-center shrink-0">
-              <FiGlobe />
-            </div>
-            <h3 className="font-semibold text-slate-800 text-sm">Alumni Meetups</h3>
-            <p className="text-slate-500 text-xs leading-relaxed">
-              Annual alumni dinners, technical lectures, campus visit events, and project review panels.
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded shadow-xs space-y-1.5">
+            <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">
+              Engagement
+            </span>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Annual Convocations & Lectures
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Participate in reunion dinners, guest lectures for current students, and advisory boards assessing academic syllabi.
             </p>
           </div>
         </div>
 
         {/* Testimonials */}
-        <div className="bg-white border border-slate-100 rounded-3xl p-6 md:p-8 shadow-xs flex flex-col gap-6">
-          <h3 className="font-semibold text-slate-900 text-base border-b border-slate-100 pb-3">Graduates Stories</h3>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 sm:p-6 shadow-xs space-y-4">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            Graduate Experiences
+          </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {testimonials.map((t, idx) => (
-              <div key={idx} className="bg-slate-50 p-5 rounded-2xl border border-slate-100/50 flex flex-col justify-between">
-                <p className="text-slate-600 text-xs leading-relaxed italic">
-                  "{t.quote}"
+              <div 
+                key={idx} 
+                className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded border border-slate-200 dark:border-slate-700 flex flex-col justify-between space-y-3"
+              >
+                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed italic">
+                  &ldquo;{t.quote}&rdquo;
                 </p>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col">
-                  <span className="font-semibold text-slate-850 text-xs text-slate-800">{t.name}</span>
-                  <span className="text-[10px] text-slate-400 font-semibold">{t.batch} • {t.role}</span>
+                <div className="border-t border-slate-200 dark:border-slate-700 pt-2">
+                  <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 block">{t.name}</span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">{t.batch} &bull; {t.role}</span>
                 </div>
               </div>
             ))}

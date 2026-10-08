@@ -3,10 +3,9 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import ClubNewsCard from 'src/component/website/cards/ClubNewsCard';
-import { FiActivity, FiSearch, FiX, FiFilter, FiFileText } from 'react-icons/fi';
 
 const ClubNewsPage = () => {
-  const { clubs: contextClubs } = useContext(TenantWebsiteContext);
+  const { clubs: contextClubs, getApiEndpoint } = useContext(TenantWebsiteContext);
 
   const [clubNewsList, setClubNewsList] = useState([]);
   const [clubs, setClubs] = useState([]);
@@ -18,18 +17,17 @@ const ClubNewsPage = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const newsRes = await fetch('/api/club-news');
+        const newsRes = await fetch(getApiEndpoint('club-news'));
         if (newsRes.ok) {
           const newsData = await newsRes.json();
           const payload = newsData.paylod || newsData.payload || {};
           setClubNewsList(payload.clubNews || []);
         }
 
-        // Fetch clubs list if not in context
         if (contextClubs && contextClubs.length > 0) {
           setClubs(contextClubs);
         } else {
-          const clubsRes = await fetch('/api/clubs');
+          const clubsRes = await fetch(getApiEndpoint('clubs'));
           if (clubsRes.ok) {
             const clubsData = await clubsRes.json();
             const payload = clubsData.paylod || clubsData.payload || {};
@@ -44,7 +42,7 @@ const ClubNewsPage = () => {
     };
 
     fetchData();
-  }, [contextClubs]);
+  }, [contextClubs, getApiEndpoint]);
 
   const filteredNews = clubNewsList.filter((item) => {
     const matchesSearch =
@@ -61,46 +59,41 @@ const ClubNewsPage = () => {
   });
 
   return (
-    <div className="w-full min-h-screen bg-slate-50/60 py-10 px-4 sm:px-6 lg:px-8">
-      <div className="w-full space-y-8">
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto space-y-6">
         
-        <div className="text-center max-w-2xl mx-auto space-y-2">
-          
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-            Club Announcements & News
+        {/* Header */}
+        <div className="border-b border-slate-200 dark:border-slate-800 pb-5">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-medium tracking-wide uppercase px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              Societies Desk
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+            Club Announcements & Dispatches
           </h1>
-          <p className="text-slate-500 text-xs sm:text-sm leading-relaxed">
-            Stay updated with the latest events, achievements, and notices from our student clubs and societies.
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
+            Read project updates, competitions, meetings, and activity reports published by student society moderators.
           </p>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-4">
-          
-          <div className="relative w-full sm:w-72">
-            <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+        {/* Filter bar */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="w-full sm:w-72">
             <input
               type="text"
-              placeholder="Search club news..."
+              placeholder="Search club articles..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden"
             />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
-              >
-                <FiX className="text-xs" />
-              </button>
-            )}
           </div>
 
-          <div className="relative w-full sm:w-64 shrink-0">
-            <FiFilter className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none" />
+          <div className="w-full sm:w-64">
             <select
               value={selectedClubId}
               onChange={(e) => setSelectedClubId(e.target.value)}
-              className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer"
+              className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-hidden cursor-pointer"
             >
               <option value="all">All Clubs ({clubNewsList.length})</option>
               {clubs.map((club) => {
@@ -118,33 +111,31 @@ const ClubNewsPage = () => {
           </div>
         </div>
 
-        <div className='w-full'>
+        <div>
           {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {[1, 2, 3, 4, 5, 6].map((n) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((n) => (
                 <div
                   key={n}
-                  className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs space-y-3 animate-pulse"
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-3 animate-pulse"
                 >
-                  <div className="h-44 bg-slate-200 rounded-xl w-full" />
-                  <div className="h-4 bg-slate-200 rounded w-2/3" />
-                  <div className="h-3 bg-slate-100 rounded w-full" />
-                  <div className="h-3 bg-slate-100 rounded w-4/5" />
+                  <div className="h-36 bg-slate-200 dark:bg-slate-800 rounded w-full" />
+                  <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-2/3" />
+                  <div className="h-3 bg-slate-100 dark:bg-slate-800/60 rounded w-full" />
                 </div>
               ))}
             </div>
           ) : filteredNews.length === 0 ? (
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-12 text-center max-w-md mx-auto space-y-2 shadow-2xs">
-              <FiFileText className="text-slate-300 text-3xl mx-auto" />
-              <h3 className="text-sm font-bold text-slate-700">No Club News Found</h3>
-              <p className="text-xs text-slate-400">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 text-center max-w-md mx-auto space-y-1">
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">No Club Dispatches Found</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {searchQuery || selectedClubId !== 'all'
-                  ? 'Try adjusting your search query or club filter.'
-                  : 'No news or announcements have been published for clubs yet.'}
+                  ? 'No articles match the specified filters.'
+                  : 'No announcements have been published by student clubs yet.'}
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {filteredNews.map((newsItem) => (
                 <ClubNewsCard key={newsItem.id} clubNews={newsItem} />
               ))}

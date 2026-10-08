@@ -3,24 +3,19 @@
 import React, { useContext, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  FiHome, FiCalendar, FiClock, FiFileText, FiBook,
-  FiAward, FiDollarSign, FiUsers, FiUser, FiCreditCard
-} from 'react-icons/fi';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
-import Back from 'src/component/button/Back';
 
 const Sidebar = () => {
   const pathname = usePathname();
-  const { studentSidebar, setStudentSidebar } = useContext(TenantWebsiteContext);
+  const { studentSidebar, setStudentSidebar, tenantUrl, getApiEndpoint } = useContext(TenantWebsiteContext);
   const [isClubMember, setIsClubMember] = useState(false);
 
   useEffect(() => {
     async function checkClubMember() {
       try {
-        const res = await fetch('/api/student/clubs');
+        const res = await fetch(getApiEndpoint('student/clubs'));
         const data = await res.json();
-        if (data?.success && data?.paylod?.isClubMember) {
+        if (data?.success && (data?.payload?.isClubMember || data?.paylod?.isClubMember)) {
           setIsClubMember(true);
         }
       } catch (err) {
@@ -28,83 +23,72 @@ const Sidebar = () => {
       }
     }
     checkClubMember();
-  }, []);
+  }, [getApiEndpoint]);
 
   const studentLinks = [
-    { label: 'Dashboard', href: '/student', icon: FiHome },
-    { label: 'My Class Routine', href: '/student/routine', icon: FiClock },
-    { label: 'My Attendance', href: '/student/attendance', icon: FiCalendar },
-    { label: 'Subjects & Syllabus', href: '/student/subjects', icon: FiBook },
-    { label: 'Exam Routine', href: '/student/exams', icon: FiCalendar },
-    { label: 'Admit Cards', href: '/student/cards', icon: FiFileText },
-    { label: 'My Student ID Card', href: '/student/id-card', icon: FiCreditCard },
-    { label: 'My Testimonial', href: '/student/testimonial', icon: FiAward },
-    { label: 'My Marks & Results', href: '/student/results', icon: FiAward },
-    { label: 'Fees & Fines', href: '/student/fees', icon: FiDollarSign },
-    { label: 'Hostel Accommodation', href: '/student/hostels', icon: FiHome },
-    { label: 'Campus Events', href: '/student/events', icon: FiCalendar },
-    ...(isClubMember ? [{ label: 'My Club Dashboard', href: '/student/clubs', icon: FiUsers }] : []),
-    { label: 'My Profile', href: '/student/profile', icon: FiUser },
+    { label: 'Overview Dashboard', href: '/student' },
+    { label: 'Class Routine', href: '/student/routine' },
+    { label: 'Attendance Records', href: '/student/attendance' },
+    { label: 'Subjects & Syllabus', href: '/student/subjects' },
+    { label: 'Exam Schedules', href: '/student/exams' },
+    { label: 'Exam Admit Cards', href: '/student/cards' },
+    { label: 'Student ID Card', href: '/student/id-card' },
+    { label: 'Institutional Testimonial', href: '/student/testimonial' },
+    { label: 'Academic Results & Marks', href: '/student/results' },
+    { label: 'Tuition Fees & Invoices', href: '/student/fees' },
+    { label: 'Hostel Accommodation', href: '/student/hostels' },
+    { label: 'Campus Events', href: '/student/events' },
+    ...(isClubMember ? [{ label: 'Club Dashboard', href: '/student/clubs' }] : []),
+    { label: 'Student Profile', href: '/student/profile' },
   ];
 
   return (
     <>
-      {/* Mobile Sidebar backdrop */}
       {studentSidebar && (
         <div
-          className="fixed inset-0 top-16 bg-secondary-dark/40 backdrop-blur-xs z-30 md:hidden transition-opacity duration-200"
+          className="fixed inset-0 top-14 bg-slate-950/60 backdrop-blur-xs z-30 md:hidden transition-opacity"
           onClick={() => setStudentSidebar(false)}
         />
       )}
 
-      {/* Sidebar container */}
       <aside
-        className={`fixed top-16 left-0 bottom-0 w-64 bg-primary border-r border-secondary/20 z-40 flex flex-col justify-between py-5 px-3 transition-transform duration-200 ease-in-out md:translate-x-0 overflow-y-auto ${
+        className={`fixed md:sticky top-14 z-30 h-[calc(100vh-3.5rem)] w-60 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between transition-transform duration-200 ease-in-out md:translate-x-0 overflow-y-auto ${
           studentSidebar ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex flex-col gap-4">
-          <Back />
-          {/* Sidebar Navigation */}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-bold text-white uppercase tracking-wider px-3 flex items-center gap-1.5 mb-1">
-              Student Navigation
-            </span>
-            <nav className="flex flex-col gap-1">
-              {studentLinks.map((link) => {
-                const Icon = link.icon;
-                const isActive = link.href === '/student'
-                  ? pathname === '/student'
-                  : pathname.startsWith(link.href);
+        <div className="p-3 space-y-1">
+          <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2.5 pt-2 pb-1">
+            Student Portal Navigation
+          </p>
+          <nav className="flex flex-col space-y-0.5">
+            {studentLinks.map((link) => {
+              const target = tenantUrl(link.href);
+              const isActive = pathname === target || pathname === link.href;
 
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setStudentSidebar(false)}
-                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs transition-all duration-150 group ${
-                      isActive
-                        ? 'bg-secondary text-primary font-bold border border-secondary shadow-2xs'
-                        : 'text-white font-medium hover:text-primary hover:bg-secondary'
-                    }`}
-                  >
-                    <Icon className={`text-base ${isActive ? 'text-primary' : 'text-white group-hover:text-primary'}`} />
-                    <span>{link.label}</span>
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
+              return (
+                <Link
+                  key={link.href}
+                  href={target}
+                  onClick={() => setStudentSidebar(false)}
+                  className={`px-2.5 py-1.5 rounded text-xs transition-colors flex items-center justify-between ${
+                    isActive
+                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 font-medium'
+                  }`}
+                >
+                  <span>{link.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
         </div>
 
-        <div className="mt-6 pt-3 border-t border-secondary/20">
+        <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60">
           <Link
-            href="/"
-            onClick={() => setStudentSidebar(false)}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-secondary text-primary hover:bg-primary-light font-semibold text-xs rounded-xl shadow-xs transition-colors"
+            href={tenantUrl('/')}
+            className="w-full block text-center px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-colors"
           >
-            <FiHome className="text-sm" />
-            <span>Go to Home Page</span>
+            Return to Campus Portal
           </Link>
         </div>
       </aside>

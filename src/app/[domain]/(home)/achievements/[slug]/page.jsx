@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import { FiArrowLeft, FiAward, FiStar } from 'react-icons/fi';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 const stripHtml = (html) => {
   if (!html) return '';
@@ -12,6 +13,7 @@ const stripHtml = (html) => {
 
 const AchievementDetailPage = () => {
   const { slug } = useParams();
+  const { getApiEndpoint, tenantUrl } = useContext(TenantWebsiteContext);
   const [achievement, setAchievement] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -19,10 +21,10 @@ const AchievementDetailPage = () => {
     const fetchAchievement = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/achievements/${slug}`);
+        const res = await fetch(getApiEndpoint(`achievements/${slug}`));
         if (res.ok) {
           const data = await res.json();
-          setAchievement(data.paylod?.achievement || null);
+          setAchievement(data.paylod?.achievement || data.payload?.achievement || null);
         }
       } catch (err) {
         console.error('Error fetching achievement:', err);
@@ -32,31 +34,33 @@ const AchievementDetailPage = () => {
     };
 
     if (slug) fetchAchievement();
-  }, [slug]);
+  }, [slug, getApiEndpoint]);
 
   if (loading) {
     return (
-      <div className="w-full min-h-screen bg-slate-50/50 py-16 px-4 flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-slate-500 text-xs font-semibold">Loading achievement details...</p>
-        </div>
+      <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-12 px-4 flex items-center justify-center">
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+          Loading achievement details...
+        </span>
       </div>
     );
   }
 
   if (!achievement) {
     return (
-      <div className="w-full min-h-screen bg-slate-50/50 py-16 px-4">
-        <div className="max-w-md mx-auto bg-white p-8 rounded-2xl border border-slate-100 shadow-xs text-center space-y-4">
-          <FiAward className="text-4xl text-slate-300 mx-auto" />
-          <h2 className="text-xl font-bold text-slate-900">Achievement Not Found</h2>
-          <p className="text-slate-500 text-xs">The milestone or award record could not be found.</p>
+      <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-12 px-4">
+        <div className="max-w-md mx-auto bg-white dark:bg-slate-900 p-6 rounded border border-slate-200 dark:border-slate-800 shadow-xs text-center space-y-3">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            Achievement Record Not Found
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            The requested milestone or distinction does not exist or has been retracted.
+          </p>
           <Link
-            href="/achievements"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl transition-all"
+            href={tenantUrl('/achievements')}
+            className="inline-block px-3 py-1.5 bg-primary text-white text-xs font-medium rounded hover:bg-primary-dark transition-colors"
           >
-            <FiArrowLeft /> Back to Achievements
+            ← Back to Achievements
           </Link>
         </div>
       </div>
@@ -66,46 +70,49 @@ const AchievementDetailPage = () => {
   const coverImage = achievement.image_url || achievement.image;
 
   return (
-    <div className="w-full min-h-screen bg-slate-50/50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto space-y-6">
+        
         {/* Navigation */}
         <div>
           <Link
-            href="/achievements"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl shadow-xs transition-colors"
+            href={tenantUrl('/achievements')}
+            className="inline-block text-xs font-medium text-primary hover:underline"
           >
-            <FiArrowLeft />
-            <span>Back to Achievements List</span>
+            ← Back to Achievements List
           </Link>
         </div>
 
-        {/* Achievement Card Detail */}
-        <article className="bg-white rounded-3xl border border-slate-100 shadow-xs overflow-hidden">
+        {/* Card Detail */}
+        <article className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
           {coverImage && (
-            <div className="w-full h-64 md:h-96 bg-slate-100 overflow-hidden relative">
-              <img
+            <div className="w-full h-64 sm:h-80 bg-slate-100 dark:bg-slate-800 relative">
+              <Image
                 src={coverImage}
                 alt={achievement.title}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 896px"
               />
             </div>
           )}
 
-          <div className="p-6 md:p-10 space-y-6">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-primary bg-primary-light px-3 py-1 rounded-full uppercase tracking-wider w-fit">
-                <FiAward className="text-sm" /> Campus Milestone
-              </div>
-              <h1 className="text-2xl md:text-4xl font-semibold text-slate-900 tracking-tight leading-snug">
+          <div className="p-6 sm:p-8 space-y-4">
+            <div className="space-y-1">
+              <span className="text-[10px] font-medium text-primary uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 inline-block">
+                Institutional Milestone
+              </span>
+              <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight leading-snug">
                 {achievement.title}
               </h1>
             </div>
 
-            <div className="prose prose-slate max-w-none text-slate-700 text-sm md:text-base leading-relaxed whitespace-pre-wrap border-t border-slate-100 pt-6">
+            <div className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-slate-800 pt-4 whitespace-pre-wrap">
               {stripHtml(achievement.description)}
             </div>
           </div>
         </article>
+
       </div>
     </div>
   );

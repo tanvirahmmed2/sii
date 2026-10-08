@@ -1,23 +1,15 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, Suspense, useContext } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import {
-  FiArrowLeft,
-  FiMail,
-  FiPhone,
-  FiAward,
-  FiUser,
-  FiShield,
-  FiBriefcase,
-  FiAlertCircle
-} from 'react-icons/fi';
 import Image from 'next/image';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 const AuthorityViewContent = () => {
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
+  const { getApiEndpoint, tenantUrl } = useContext(TenantWebsiteContext);
 
   const [authority, setAuthority] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -34,7 +26,7 @@ const AuthorityViewContent = () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/authorities/${id}`);
+        const res = await fetch(getApiEndpoint(`authorities/${id}`));
         if (res.ok) {
           const data = await res.json();
           const payload = data.paylod || data.payload || {};
@@ -51,128 +43,117 @@ const AuthorityViewContent = () => {
     };
 
     fetchAuthorityDetails();
-  }, [id]);
+  }, [id, getApiEndpoint]);
 
   return (
-    <div className="w-full min-h-screen bg-slate-50/60 py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto space-y-6">
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto space-y-6">
         
-        <div className="flex items-center justify-between">
+        <div>
           <Link
-            href="/authorities"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-primary transition-colors bg-white border border-slate-200/80 px-3.5 py-2 rounded-xl shadow-2xs"
+            href={tenantUrl('/authorities')}
+            className="text-xs font-medium text-primary hover:underline"
           >
-            <FiArrowLeft className="text-sm" /> Back to Authorities Directory
+            ← Back to Authorities Directory
           </Link>
         </div>
 
         {loading ? (
-          <div className="bg-white border border-slate-200/80 rounded-3xl p-8 shadow-2xs space-y-6 animate-pulse">
-            <div className="flex flex-col sm:flex-row gap-6 items-center">
-              <div className="w-28 h-28 bg-slate-200 rounded-2xl shrink-0" />
-              <div className="space-y-3 w-full max-w-md">
-                <div className="h-6 bg-slate-200 rounded w-1/2" />
-                <div className="h-4 bg-slate-200 rounded w-1/3" />
-                <div className="h-4 bg-slate-200 rounded w-2/3" />
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 shadow-xs animate-pulse space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
+              <div className="w-24 h-24 bg-slate-200 dark:bg-slate-800 rounded shrink-0" />
+              <div className="space-y-2 w-full max-w-md">
+                <div className="h-5 bg-slate-200 dark:bg-slate-800 rounded w-1/2" />
+                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/3" />
+                <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-2/3" />
               </div>
             </div>
-            <div className="h-24 bg-slate-100 rounded-2xl" />
           </div>
         ) : error ? (
-          <div className="bg-white border border-slate-200/80 rounded-3xl p-12 text-center max-w-md mx-auto space-y-4 shadow-2xs">
-            <FiAlertCircle className="text-amber-500 text-4xl mx-auto" />
-            <div className="space-y-1">
-              <h3 className="text-base font-bold text-slate-900">Profile Not Found</h3>
-              <p className="text-xs text-slate-500">{error}</p>
-            </div>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-8 text-center max-w-md mx-auto space-y-3">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Profile Not Found</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{error}</p>
             <Link
-              href="/authorities"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold uppercase tracking-wider"
+              href={tenantUrl('/authorities')}
+              className="inline-block px-3 py-1.5 bg-primary text-white rounded text-xs font-medium hover:bg-primary-dark transition-colors"
             >
-              <FiArrowLeft /> Return to Authorities
+              Return to Authorities
             </Link>
           </div>
         ) : authority ? (
           <div className="space-y-6">
             
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-2xs space-y-6 relative overflow-hidden">
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+            {/* Header Card */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 sm:p-6 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
                 
-                <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl bg-slate-100 border border-slate-200/80 overflow-hidden shrink-0 shadow-xs relative">
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0 relative">
                   {authority.image ? (
-                    <Image width={400} height={400}
+                    <Image
+                      fill
                       src={authority.image}
                       alt={authority.name}
-                      className="w-full h-full object-cover"
+                      className="object-cover"
+                      sizes="112px"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-primary bg-primary-light">
-                      <FiUser className="text-4xl" />
+                    <div className="w-full h-full flex items-center justify-center text-primary font-semibold text-xl">
+                      {authority.name?.slice(0, 2).toUpperCase() || 'AU'}
                     </div>
                   )}
                 </div>
-                <div className="flex-1 space-y-3 text-center sm:text-left">
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-                        {authority.name}
-                      </h1>
-                    </div>
-                    <p className="text-xs sm:text-sm text-primary font-bold flex items-center justify-center sm:justify-start gap-1.5">
-                      <FiBriefcase className="text-primary text-xs" />
-                      {authority.designation_title || 'Authority Leader'}
-                    </p>
-                  </div>
 
-                  {/* Quick Contact Pills */}
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-xs font-medium pt-1">
-                    {authority.email && (
+                <div className="flex-1 space-y-2 text-center sm:text-left">
+                  <span className="text-[10px] font-medium text-primary uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 inline-block">
+                    {authority.designation_title || 'Institutional Leader'}
+                  </span>
+                  <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+                    {authority.name}
+                  </h1>
+
+                  {authority.email && (
+                    <div className="pt-1">
                       <a
                         href={`mailto:${authority.email}`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200/80 rounded-xl hover:bg-white hover:border-primary transition-all text-slate-700 font-medium"
+                        className="text-xs text-slate-600 dark:text-slate-400 hover:text-primary transition-colors"
                       >
-                        <FiMail className="text-primary text-xs" /> {authority.email}
+                        Email: {authority.email}
                       </a>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
+            {/* Bio */}
             {authority.bio && (
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-2xs space-y-3">
-                <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                  <FiShield className="text-primary text-base" />
-                  <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                    Biography & Executive Statement
-                  </h2>
-                </div>
-                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-xs space-y-2">
+                <h2 className="text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+                  Biography & Executive Statement
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-line">
                   {authority.bio}
                 </p>
               </div>
             )}
 
-            {/* Qualifications Section */}
+            {/* Qualifications */}
             {authority.qualifications && authority.qualifications.length > 0 && (
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-2xs space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                  <FiAward className="text-primary text-base" />
-                  <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                    Academic Qualifications & Background
-                  </h2>
-                </div>
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-xs space-y-3">
+                <h2 className="text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+                  Academic Credentials
+                </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {authority.qualifications.map((q) => (
                     <div
                       key={q.id}
-                      className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-1"
+                      className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded p-3 space-y-0.5"
                     >
-                      <h4 className="font-bold text-slate-800 text-sm">{q.degree}</h4>
-                      <p className="text-xs text-slate-600 font-medium">{q.institution}</p>
+                      <h3 className="font-medium text-slate-900 dark:text-slate-100 text-xs">{q.degree}</h3>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">{q.institution}</p>
                       {q.passing_year && (
-                        <span className="text-[10px] text-slate-400 font-mono">
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 block">
                           Year: {q.passing_year}
                         </span>
                       )}
@@ -194,8 +175,8 @@ export default function AuthorityViewPage() {
   return (
     <Suspense
       fallback={
-        <div className="w-full min-h-screen py-20 flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-full min-h-[calc(100vh-120px)] flex items-center justify-center">
+          <span className="text-xs font-medium text-slate-500">Loading authority profile...</span>
         </div>
       }
     >

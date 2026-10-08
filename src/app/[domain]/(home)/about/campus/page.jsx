@@ -1,201 +1,126 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useContext } from 'react';
 import Link from 'next/link';
-import { 
-  FiBookOpen, 
-  FiActivity, 
-  FiMap, 
-  FiArrowLeft, 
-  FiArrowRight, 
-  FiHeart, 
-  FiShield, 
-  FiSun,
-  FiMapPin
-} from 'react-icons/fi';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 const CampusPage = () => {
-  const [settings, setSettings] = useState(null);
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const res = await fetch('/api/website-settings');
-        if (res.ok) {
-          const data = await res.json();
-          const loaded = data.payload?.settings || data.paylod?.settings || data.settings;
-          if (loaded) setSettings(loaded);
-        }
-      } catch (err) {
-        console.error('Failed to fetch settings in CampusPage:', err);
-      }
-    };
-    fetchSettings();
-  }, []);
+  const { website, tenantUrl } = useContext(TenantWebsiteContext);
+  const schoolName = website?.name || 'Institution';
 
   const facilities = [
     {
-      title: 'Central Library',
-      desc: 'An expansive academic repository featuring over 50,000 reference volumes, international journal catalog databases, and 20 quiet digital terminals for research.',
-      icon: FiBookOpen,
-      color: 'text-primary bg-primary-light border-primary-light'
+      title: 'Central Library & Reading Terminal',
+      desc: 'Extensive academic archive housing reference volumes, national curriculum texts, and high-speed digital research terminals for students and faculty.'
     },
     {
-      title: 'High-Tech Labs & Innovation Hub',
-      desc: 'Equipped with clean workbench modules, digital oscilloscopes, microcontroller boards, and high-performance server workstations for engineering practice.',
-      icon: FiActivity,
-      color: 'text-rose-600 bg-rose-50 border-rose-100'
+      title: 'Engineering & Computing Laboratories',
+      desc: 'Modern workbenches equipped for physics, chemistry, biology experiments, computer networking, and robotics design.'
     },
     {
-      title: 'Residential Hostels',
-      desc: 'Twin-sharing student rooms featuring dining halls, stable fiber Wi-Fi networks, laundry facilities, and 24/7 security watch systems.',
-      icon: FiMap,
-      color: 'text-primary bg-primary-light border-primary-light'
+      title: 'Hostels & Residential Halls',
+      desc: 'Supervised student living quarters featuring dining rooms, round-the-clock water and electricity back-up, and monitored entry gates.'
+    },
+    {
+      title: 'Athletics & Recreation Grounds',
+      desc: 'Spacious outdoor playgrounds for football, cricket, and athletics, alongside indoor table tennis and badminton setups.'
+    },
+    {
+      title: 'Healthcare & First-Aid Post',
+      desc: 'On-site health post stocked with fundamental emergency supplies and staffed for primary illness evaluations.'
+    },
+    {
+      title: 'Auditorium & Multi-Purpose Hall',
+      desc: 'Acoustically treated event space facilitating national celebrations, prize-giving ceremonies, seminars, and debates.'
     }
   ];
-
-  const highlights = [
-    {
-      title: 'Campus Medical Clinic',
-      desc: 'Our health wing provides daily diagnostic checkups, primary medicines, and recovery care for sports physical activities.',
-      icon: FiHeart,
-      color: 'text-amber-500 bg-amber-50'
-    },
-    {
-      title: 'Eco-Friendly Setup',
-      desc: 'Incorporating clean energy structures including 80kW rooftop solar grid arrays, green study gardens, and rainwater conservation basins.',
-      icon: FiSun,
-      color: 'text-primary bg-primary-light'
-    },
-    {
-      title: 'Secure Access & Network',
-      desc: 'Entire campus is secured with RFID card check-gates, complete CCTV coverage, and secure student credentials access across portals.',
-      icon: FiShield,
-      color: 'text-primary bg-primary-light'
-    }
-  ];
-
-  const mapUrl = settings?.map_url;
 
   return (
-    <div className="w-full min-h-screen bg-slate-50/50 p-4 md:p-8">
-      <div className="w-full flex flex-col gap-10">
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-5xl mx-auto space-y-6">
         
-        
-        <div className="text-center">
-          <h1 className="text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight leading-tight">
-            Our Campus & Infrastructure
+        {/* Header */}
+        <div className="border-b border-slate-200 dark:border-slate-800 pb-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Link
+              href={tenantUrl('/about')}
+              className="text-xs text-primary font-medium hover:underline"
+            >
+              ← Back to About
+            </Link>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+            Campus Infrastructure & Facilities
           </h1>
-          <p className="text-slate-500 mt-3 max-w-xl mx-auto text-xs sm:text-sm md:text-base leading-relaxed">
-            FIT is spread across a modern campus layout designed to stimulate intellectual conversations, collaborative engineering projects, and a healthy lifestyle.
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
+            {schoolName} provides a purpose-built campus environment optimized for intellectual pursuit, technical training, and safe student living.
           </p>
         </div>
 
-        {/* Dynamic Campus Map Section */}
-        {mapUrl && (
-          <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-xs flex flex-col gap-4">
-            <div className="flex items-center gap-2 text-slate-900 font-bold text-base">
-              <FiMapPin className="text-primary text-xl" />
-              <span>Campus Map & Location</span>
+        {/* Facilities Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {facilities.map((fac, idx) => (
+            <div
+              key={idx}
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded shadow-xs space-y-1.5"
+            >
+              <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">
+                Facility {idx + 1}
+              </span>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                {fac.title}
+              </h2>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                {fac.desc}
+              </p>
             </div>
-            {mapUrl.includes('<iframe') ? (
+          ))}
+        </div>
+
+        {/* Map Location Section */}
+        {website?.map_url && (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 space-y-3 shadow-xs">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Campus Geographic Location
+            </h3>
+            {website.map_url.includes('<iframe') ? (
               <div 
-                className="w-full h-80 rounded-2xl overflow-hidden shadow-inner border border-slate-100"
-                dangerouslySetInnerHTML={{ __html: mapUrl }}
+                className="w-full h-72 rounded border border-slate-200 dark:border-slate-800 overflow-hidden"
+                dangerouslySetInnerHTML={{ __html: website.map_url }}
               />
             ) : (
-              <div className="w-full bg-slate-900 text-white rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex flex-col gap-1">
-                  <span className="font-semibold text-sm">Interactive Campus Directions</span>
-                  <p className="text-xs text-slate-400">View our exact campus location and navigational markers on Google Maps.</p>
-                </div>
+              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded border border-slate-200 dark:border-slate-700">
+                <span className="text-xs text-slate-700 dark:text-slate-300">
+                  Campus Navigation Coordinates: {website.address || 'Main Campus'}
+                </span>
                 <a
-                  href={mapUrl}
+                  href={website.map_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-5 py-2.5 bg-primary text-secondary font-bold text-xs rounded-xl hover:bg-primary-dark transition-colors shrink-0 flex items-center gap-1.5"
+                  className="px-3 py-1.5 bg-primary text-white rounded text-xs font-medium hover:bg-primary-dark transition-colors"
                 >
-                  <FiMapPin /> Open Google Maps
+                  Open in Maps
                 </a>
               </div>
             )}
           </div>
         )}
 
-        {/* Core Facilities Grid */}
-        <div className="flex flex-col gap-6">
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-            Key Academic Facilities
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {facilities.map((fac, idx) => {
-              const Icon = fac.icon;
-              return (
-                <div 
-                  key={idx} 
-                  className="bg-white border border-slate-100 p-6 rounded-2xl flex flex-col gap-3 shadow-xs hover:shadow-sm transition-shadow"
-                >
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 ${fac.color}`}>
-                    <Icon className="text-base" />
-                  </div>
-                  <h3 className="font-semibold text-slate-900 text-sm sm:text-base">
-                    {fac.title}
-                  </h3>
-                  <p className="text-slate-500 text-xs leading-relaxed">
-                    {fac.desc}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Campus services highlights */}
-        <div className="bg-white border border-slate-100 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col gap-6">
-          <h3 className="font-bold text-slate-900 text-base sm:text-lg border-b border-slate-100 pb-4">
-            Services & Infrastructure Standards
-          </h3>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            {highlights.map((h, idx) => {
-              const Icon = h.icon;
-              return (
-                <div key={idx} className="flex gap-4 items-start">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border border-slate-100 ${h.color}`}>
-                    <Icon className="text-sm" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <h4 className="font-semibold text-slate-900 text-xs sm:text-sm">
-                      {h.title}
-                    </h4>
-                    <p className="text-slate-500 text-[11px] sm:text-xs leading-relaxed">
-                      {h.desc}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-md border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-6 relative overflow-hidden">
-          <div className="absolute inset-0 bg-linear-to-r from-sky-950/40 via-slate-900 to-indigo-950/40 z-0" />
-          
-          <div className="relative z-10 flex flex-col gap-1.5 max-w-xl">
-            <h4 className="font-semibold text-white text-base sm:text-lg">
-              Looking for detailed measurements & parameters?
-            </h4>
-            <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-              Read technical specs about our lab apparatus, hostel rules, clinic facilities, and library open-hours.
+        {/* Inquiries */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Campus Visits & Security Regulations
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Parents and visitors must log at the security desk upon arrival with valid national ID.
             </p>
           </div>
-
           <Link
-            href="/contact"
-            className="relative z-10 bg-white hover:bg-slate-50 text-slate-900 font-semibold px-5 py-2.5 rounded-xl text-xs sm:text-sm transition-all shadow-xs hover:shadow-md cursor-pointer shrink-0 flex items-center gap-1.5"
+            href={tenantUrl('/contact')}
+            className="px-3.5 py-1.5 bg-primary text-white rounded text-xs font-medium hover:bg-primary-dark transition-colors shrink-0"
           >
-            <span>Contact</span>
-            <FiArrowRight />
+            Contact Administrative Desk
           </Link>
         </div>
 

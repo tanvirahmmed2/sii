@@ -2,21 +2,33 @@
 
 import React, { useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FiMenu, FiLogOut, FiUser } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import Link from 'next/link';
 
 const Navbar = ({ staffUser = null }) => {
   const router = useRouter();
-  const { adminSidebar, setAdminSidebar } = useContext(TenantWebsiteContext);
+  const {
+    adminSidebar,
+    setAdminSidebar,
+    website,
+    tenantUrl,
+    getApiEndpoint,
+    theme,
+    isDark,
+    toggleTheme,
+    language,
+    setLanguage,
+    availableLanguages,
+  } = useContext(TenantWebsiteContext);
+
   const [staff, setStaff] = useState(staffUser);
 
   useEffect(() => {
     if (staffUser) return;
     const fetchStaffProfile = async () => {
       try {
-        const response = await fetch('/api/staff/me');
+        const response = await fetch(getApiEndpoint('staff/me'));
         if (response.ok) {
           const data = await response.json();
           setStaff(data.payload?.staff || data.paylod?.staff || data.staff);
@@ -26,16 +38,16 @@ const Navbar = ({ staffUser = null }) => {
       }
     };
     fetchStaffProfile();
-  }, [staffUser]);
+  }, [staffUser, getApiEndpoint]);
 
   const handleLogout = async () => {
     try {
-      const response = await fetch('/api/staff/logout', {
+      const response = await fetch(getApiEndpoint('staff/logout'), {
         method: 'POST',
       });
       if (response.ok) {
         toast.success('Logged out successfully.');
-        router.push('/auth/access/staff/login');
+        router.push(tenantUrl('/auth/access/staff/login'));
       } else {
         toast.error('Failed to log out.');
       }
@@ -45,47 +57,68 @@ const Navbar = ({ staffUser = null }) => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 md:px-6 z-30">
+    <nav className="fixed top-0 left-0 right-0 h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:px-6 z-30 transition-colors">
       <div className="flex items-center gap-3">
-        {/* Mobile Hamburger toggle button */}
+        {/* Mobile Hamburger Menu Toggle */}
         <button
+          type="button"
           onClick={() => setAdminSidebar(!adminSidebar)}
-          className="p-2 -ml-2 rounded-lg text-slate-500 hover:bg-slate-50 md:hidden transition-colors cursor-pointer"
-          aria-label="Toggle Sidebar"
+          className="px-2 py-1 text-xs font-medium rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 md:hidden transition-colors cursor-pointer"
+          aria-label="Toggle Navigation"
         >
-          <FiMenu className="text-xl" />
+          Menu
         </button>
 
-        {/* Logo/Brand */}
+        {/* Brand / Title */}
         <div className="flex items-center gap-2">
-          <span className="font-bold text-slate-800 text-sm md:text-base hidden sm:inline-block">
-            Staff Portal
-          </span>
+          <Link href={tenantUrl('/staff-panel')} className="flex items-center gap-2">
+            <span className="font-semibold text-slate-900 dark:text-white text-xs sm:text-sm">
+              {website?.name ? `${website.name} — Staff Portal` : 'Campus Staff Portal'}
+            </span>
+          </Link>
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        {/* Logged in staff info profile button */}
-        <Link
-          href="/staff-panel/profile"
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors border border-slate-200/60"
+      <div className="flex items-center gap-2">
+        {/* Language Switch */}
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          className="hidden sm:inline-block bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs px-2 py-1 text-slate-700 dark:text-slate-200"
+          aria-label="Select portal language"
         >
-          {staff?.image ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={staff.image} alt={staff.name} className="w-5 h-5 rounded-full object-cover border border-slate-200" />
-          ) : (
-            <FiUser className="text-sm text-primary" />
-          )}
-          <span>{staff ? staff.name : 'Staff Profile'}</span>
+          {availableLanguages?.map((l) => (
+            <option key={l.short} value={l.value}>
+              {l.native || l.label}
+            </option>
+          ))}
+        </select>
+
+        {/* Mode Toggle */}
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="px-2 py-1 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium transition-colors cursor-pointer"
+          title={`Switch to ${isDark ? 'Light' : 'Dark'} mode`}
+        >
+          {isDark ? 'Light' : 'Dark'}
+        </button>
+
+        {/* Profile Link */}
+        <Link
+          href={tenantUrl('/staff-panel/profile')}
+          className="px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium transition-colors"
+        >
+          {staff ? staff.name : 'Staff Profile'}
         </Link>
 
         {/* Logout Button */}
         <button
+          type="button"
           onClick={handleLogout}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-semibold transition-colors duration-150 cursor-pointer"
+          className="px-2.5 py-1 rounded border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-xs font-medium transition-colors cursor-pointer"
         >
-          <FiLogOut className="text-sm" />
-          <span className="hidden sm:inline">Logout</span>
+          Sign Out
         </button>
       </div>
     </nav>

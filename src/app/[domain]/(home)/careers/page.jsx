@@ -2,23 +2,10 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import {
-  BiBriefcase,
-  BiMapPin,
-  BiTime,
-  BiSearch,
-  BiDollarCircle,
-  BiRightArrowAlt,
-  BiGlobe,
-  BiHeart,
-  BiRocket,
-  BiLaptop,
-  BiTrendingUp,
-  BiSpeaker,
-} from 'react-icons/bi';
-import { SITE_NAME } from 'src/lib/database/secret';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
 export default function CareersPage() {
+  const { website, tenantUrl } = useTenantWebsite();
   const [careers, setCareers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +18,7 @@ export default function CareersPage() {
     async function loadCareers() {
       try {
         setLoading(true);
-        const res = await fetch('/api/careers');
+        const res = await fetch('/api/marketing/careers');
         const data = await res.json();
         if (data.success) {
           setCareers(data.careers || []);
@@ -53,167 +40,144 @@ export default function CareersPage() {
       const matchWorkplace = selectedWorkplace === 'All' || job.workplace_type === selectedWorkplace;
       const matchSearch =
         !search.trim() ||
-        job.title.toLowerCase().includes(search.toLowerCase()) ||
-        job.department.toLowerCase().includes(search.toLowerCase()) ||
-        job.location.toLowerCase().includes(search.toLowerCase()) ||
-        job.description.toLowerCase().includes(search.toLowerCase());
+        (job.title || '').toLowerCase().includes(search.toLowerCase()) ||
+        (job.department || '').toLowerCase().includes(search.toLowerCase()) ||
+        (job.location || '').toLowerCase().includes(search.toLowerCase()) ||
+        (job.description || '').toLowerCase().includes(search.toLowerCase());
 
       return matchDept && matchType && matchWorkplace && matchSearch;
     });
   }, [careers, selectedDept, selectedType, selectedWorkplace, search]);
 
-  const culturePerks = [
+  const culturePoints = [
     {
-      icon: BiGlobe,
-      title: 'Work From Anywhere',
-      desc: 'Our team is distributed across the globe. Work from wherever you do your most impactful thinking.',
+      title: 'Academic Autonomy & Rigor',
+      desc: 'Our faculty members are empowered with modern curricula, digital classroom systems, and pedagogical freedom.',
     },
     {
-      icon: BiRocket,
-      title: 'Accelerated Ownership',
-      desc: 'No bureaucracy. Ship products directly to hundreds of thousands of creators and see immediate impact.',
+      title: 'Continuous Professional Growth',
+      desc: 'Annual workshops, certification sponsorships, and career advancement paths for both teaching and non-teaching personnel.',
     },
     {
-      icon: BiTrendingUp,
-      title: 'Competitive Compensation',
-      desc: 'Top-tier global salaries, equity incentives, and performance bonuses that reward your dedication.',
+      title: 'Competitive Compensation & Benefits',
+      desc: 'Competitive salary frameworks according to educational standards, provident funds, and health allowances.',
     },
     {
-      icon: BiLaptop,
-      title: 'Home Office & Tech Stipend',
-      desc: 'Get your dream setup equipped with latest hardware, ergonomic accessories, and high-speed internet reimbursement.',
-    },
-    {
-      icon: BiHeart,
-      title: 'Wellness & Health First',
-      desc: 'Comprehensive health coverage, mental wellness memberships, and generous parental leave.',
-    },
-    {
-      icon: BiSpeaker,
-      title: 'Unlimited Paid Time Off',
-      desc: 'Take the time you need to recharge, explore new hobbies, and spend quality moments with loved ones.',
+      title: 'Supportive Campus Culture',
+      desc: 'A collaborative academic environment built on mutual respect, student mentorship, and community service.',
     },
   ];
 
   return (
-    <div className="w-full min-h-screen bg-slate-50/50 dark:bg-slate-950 py-12 md:py-16 px-4 sm:px-6 lg:px-8 space-y-16">
-      
-      <div className="max-w-6xl mx-auto text-center space-y-5">
-       
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-semibold text-slate-900 dark:text-white tracking-tight leading-tight">
-          Build The Next Generation of {SITE_NAME}
-          Web & Portfolio Creation
+    <div className="w-full min-h-screen py-8 md:py-12 px-4 sm:px-6 lg:px-8 space-y-10">
+      {/* Header */}
+      <div className="border-b border-slate-200 dark:border-slate-800 pb-8 max-w-4xl mx-auto text-center space-y-3">
+        <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block">
+          Faculty &amp; Staff Recruitment
+        </span>
+        <h1 className="text-2xl sm:text-4xl font-semibold text-slate-900 dark:text-white tracking-tight">
+          Join the {website?.name || 'Academic'} Team
         </h1>
-
-        <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
-          We empower creators, developers, and brands worldwide to launch breathtaking digital portfolios in minutes. Come build high-impact products with our mission-driven team.
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
+          Explore faculty positions, administrative appointments, and student-affairs careers dedicated to shaping the next generation of scholars and leaders.
         </p>
 
-        <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
           <a
             href="#openings"
-            className="px-6 py-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold shadow-md hover:opacity-95 transition-all"
+            className="px-4 py-2 rounded bg-primary hover:bg-primary-dark text-white text-xs font-medium transition-colors"
           >
-            Explore Open Positions ({careers.length})
+            View Open Positions ({careers.length})
           </a>
           <a
             href="#culture"
-            className="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-sm font-semibold hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
+            className="px-4 py-2 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium transition-colors"
           >
-            Our Culture & Perks
+            Working at {website?.name || 'Our Institution'}
           </a>
         </div>
       </div>
 
-      {/* Culture & Perks Grid */}
-      <div id="culture" className="max-w-6xl mx-auto space-y-8 scroll-mt-24">
-        <div className="text-center max-w-2xl mx-auto">
-          <h2 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white">
-            Why You’ll Love Working With Us
+      {/* Institutional Culture Highlights */}
+      <div id="culture" className="max-w-5xl mx-auto space-y-4 scroll-mt-20">
+        <div className="text-center space-y-1">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+            Why Build Your Career Here
           </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-            We foster an empathetic, high-trust environment where ambitious people do their life’s best work.
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            A purposeful workplace that prioritizes educational impact and professional dignity.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {culturePerks.map((perk, i) => {
-            const Icon = perk.icon;
-            return (
-              <div
-                key={i}
-                className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-indigo-300 dark:hover:border-indigo-700 transition-all space-y-3"
-              >
-                <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-2xl">
-                  <Icon />
-                </div>
-                <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-                  {perk.title}
-                </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                  {perk.desc}
-                </p>
-              </div>
-            );
-          })}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          {culturePoints.map((item, idx) => (
+            <div
+              key={idx}
+              className="bg-white dark:bg-slate-900 p-4 rounded-md border border-slate-200 dark:border-slate-800 shadow-xs space-y-1.5"
+            >
+              <span className="text-[10px] font-semibold text-primary uppercase tracking-wider block">
+                [Pillar 0{idx + 1}]
+              </span>
+              <h3 className="text-xs font-semibold text-slate-900 dark:text-white">
+                {item.title}
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                {item.desc}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* Job Openings Section */}
-      <div id="openings" className="max-w-6xl mx-auto space-y-6 scroll-mt-24">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+      <div id="openings" className="max-w-5xl mx-auto space-y-5 scroll-mt-20">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
           <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-              Careers & Opportunities
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white mt-1">
-              Current Open Roles
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+              Open Positions
             </h2>
+            <p className="text-xs text-slate-400">
+              Showing {filteredCareers.length} of {careers.length} current opportunities
+            </p>
           </div>
-          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-            Showing {filteredCareers.length} of {careers.length} openings
-          </span>
         </div>
 
         {/* Filter Toolbar */}
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-3">
-          {/* Search Input */}
-          <div className="relative">
-            <BiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-md border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+          <div>
             <input
               type="text"
-              placeholder="Search by job title, skill, or keywords..."
+              placeholder="Search by position title, department, or keyword..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 text-sm text-slate-800 dark:text-slate-200 focus:outline-hidden focus:border-indigo-500"
+              className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs text-slate-800 dark:text-slate-200 outline-none focus:border-primary"
             />
           </div>
 
-          {/* Department Pills */}
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-1">
+          <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mr-1">
               Department:
             </span>
             <button
               type="button"
               onClick={() => setSelectedDept('All')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
                 selectedDept === 'All'
-                  ? 'bg-indigo-600 text-white shadow-2xs'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  ? 'bg-primary text-white'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
               }`}
             >
-              All Departments
+              All
             </button>
             {departments.map((dept) => (
               <button
                 key={dept}
                 type="button"
                 onClick={() => setSelectedDept(dept)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
                   selectedDept === dept
-                    ? 'bg-indigo-600 text-white shadow-2xs'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    ? 'bg-primary text-white'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                 }`}
               >
                 {dept}
@@ -221,34 +185,29 @@ export default function CareersPage() {
             ))}
           </div>
 
-          {/* Type & Workplace filters */}
-          <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Workplace:
-              </span>
+              <span className="text-[11px] font-medium text-slate-400 uppercase">Workplace:</span>
               <select
                 value={selectedWorkplace}
                 onChange={(e) => setSelectedWorkplace(e.target.value)}
-                className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:outline-hidden"
+                className="px-2 py-1 rounded border border-slate-200 dark:border-slate-800 text-xs bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 outline-none"
               >
                 <option value="All">All Types</option>
-                <option value="REMOTE">Remote</option>
-                <option value="HYBRID">Hybrid</option>
                 <option value="ON_SITE">On-Site</option>
+                <option value="HYBRID">Hybrid</option>
+                <option value="REMOTE">Remote</option>
               </select>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Type:
-              </span>
+              <span className="text-[11px] font-medium text-slate-400 uppercase">Employment:</span>
               <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
-                className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:outline-hidden"
+                className="px-2 py-1 rounded border border-slate-200 dark:border-slate-800 text-xs bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 outline-none"
               >
-                <option value="All">All Employment</option>
+                <option value="All">All Forms</option>
                 <option value="FULL_TIME">Full-Time</option>
                 <option value="PART_TIME">Part-Time</option>
                 <option value="CONTRACT">Contract</option>
@@ -265,7 +224,7 @@ export default function CareersPage() {
                   setSelectedWorkplace('All');
                   setSearch('');
                 }}
-                className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer ml-auto"
+                className="text-xs text-rose-600 hover:underline cursor-pointer ml-auto"
               >
                 Reset Filters
               </button>
@@ -273,85 +232,82 @@ export default function CareersPage() {
           </div>
         </div>
 
-        {/* Listings Grid */}
+        {/* Positions List */}
         {loading ? (
-          <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-3 border-slate-200 border-t-indigo-600 mb-3" />
-            <p className="text-sm font-semibold text-slate-500">Loading open positions...</p>
+          <div className="py-16 text-center bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800">
+            <span className="text-xs font-medium text-slate-400">Loading open positions...</span>
           </div>
         ) : filteredCareers.length === 0 ? (
-          <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-indigo-50 dark:bg-indigo-950/70 flex items-center justify-center text-indigo-500 text-3xl">
-              <BiBriefcase />
-            </div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-              No matching positions found
+          <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800 space-y-2 p-6">
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider block">
+              [No Vacancies Found]
+            </span>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+              No matching positions currently posted
             </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-              We couldn't find any job posts matching your criteria. Try resetting your search or filters.
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
+              We currently have no published openings matching your filter selection. You may submit a general inquiry to the registrar office.
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4">
+          <div className="space-y-3">
             {filteredCareers.map((job) => (
               <div
                 key={job.id}
-                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 shadow-xs hover:shadow-md transition-all p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-5 group"
+                className="bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800 p-5 shadow-xs hover:border-primary/50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4"
               >
-                {/* Details */}
-                <div className="space-y-3 flex-1 min-w-0">
+                <div className="space-y-2 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-2.5 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
                       {job.department}
                     </span>
-                    <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                      {job.job_type.replace('_', ' ')}
+                    <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                      {(job.job_type || '').replace('_', ' ')}
                     </span>
-                    <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                      <BiMapPin className="text-slate-400" />
+                    <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                       {job.location} ({job.workplace_type})
                     </span>
                     {job.is_featured && (
-                      <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300">
-                        ★ Featured
+                      <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                        [Priority Hire]
                       </span>
                     )}
                   </div>
 
                   <div>
-                    <h3 className="text-xl font-semibold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                      {job.title}
+                    <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                      <Link href={tenantUrl(`/careers/${job.slug}`)} className="hover:text-primary transition-colors">
+                        {job.title}
+                      </Link>
                     </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
-                      {job.description}
-                    </p>
+                    {job.description && (
+                      <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 mt-1">
+                        {job.description}
+                      </p>
+                    )}
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 dark:text-slate-400 pt-1">
+                  <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-400 pt-1">
                     {job.salary_range && (
-                      <span className="flex items-center gap-1 font-semibold text-slate-800 dark:text-slate-200">
-                        <BiDollarCircle className="text-slate-400 text-sm" />
-                        {job.salary_range}
+                      <span className="font-medium text-slate-700 dark:text-slate-300">
+                        Scale: {job.salary_range}
                       </span>
                     )}
                     {job.deadline && (
-                      <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400 font-semibold">
-                        <BiTime />
-                        Closes: {new Date(job.deadline).toLocaleDateString()}
+                      <span className="text-rose-600 dark:text-rose-400 font-medium">
+                        Deadline: {new Date(job.deadline).toLocaleDateString()}
                       </span>
                     )}
                     <span>Posted {new Date(job.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>
 
-                {/* CTA */}
                 <div className="shrink-0 pt-2 md:pt-0">
                   <Link
-                    href={`/careers/${job.slug}`}
-                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-xs shadow-indigo-200 dark:shadow-none transition-all w-full md:w-auto"
+                    href={tenantUrl(`/careers/${job.slug}`)}
+                    className="inline-block px-4 py-2 rounded bg-primary hover:bg-primary-dark text-white text-xs font-medium transition-colors text-center w-full md:w-auto"
                   >
-                    <span>View Role & Apply</span>
-                    <BiRightArrowAlt className="text-lg group-hover:translate-x-1 transition-transform" />
+                    View Role &amp; Apply →
                   </Link>
                 </div>
               </div>

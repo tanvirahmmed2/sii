@@ -2,25 +2,36 @@
 
 import React, { useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FiMenu, FiLogOut, FiUser } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
-import Image from 'next/image';
-import { LOGO_URL } from 'src/lib/database/secret';
+import Link from 'next/link';
 
 const Navbar = () => {
   const router = useRouter();
-  const { TeacherSidebar, setTeacherSidebar } = useContext(TenantWebsiteContext);
+  const {
+    teacherSidebar,
+    setTeacherSidebar,
+    website,
+    tenantUrl,
+    getApiEndpoint,
+    theme,
+    isDark,
+    toggleTheme,
+    language,
+    setLanguage,
+    availableLanguages,
+  } = useContext(TenantWebsiteContext);
+
   const [teacher, setTeacher] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchTeacherProfile = async () => {
       try {
-        const response = await fetch('/api/teacher/me');
+        const response = await fetch(getApiEndpoint('teacher/me'));
         if (response.ok) {
           const data = await response.json();
-          setTeacher(data.paylod.teacher);
+          setTeacher(data.payload?.teacher || data.paylod?.teacher);
         }
       } catch (error) {
         console.error('Failed to fetch teacher profile:', error);
@@ -29,68 +40,79 @@ const Navbar = () => {
       }
     };
     fetchTeacherProfile();
-  }, []);
+  }, [getApiEndpoint]);
 
   const handleLogout = async () => {
     try {
-      const response = await fetch('/api/teachers/logout', { method: 'POST' });
+      const response = await fetch(getApiEndpoint('teachers/logout'), { method: 'POST' });
       if (response.ok) {
         toast.success('Logged out successfully.');
-        router.push('/auth/access/teacher/login');
+        router.push(tenantUrl('/auth/access/teacher/login'));
       } else {
         toast.error('Failed to log out.');
       }
-    } catch (error) {
+    } catch {
       toast.error('Logout error occurred.');
     }
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 md:px-6 z-30">
+    <nav className="fixed top-0 left-0 right-0 h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:px-6 z-30 transition-colors">
       <div className="flex items-center gap-3">
         <button
-          onClick={() => setTeacherSidebar(!TeacherSidebar)}
-          className="p-2 -ml-2 rounded-lg text-slate-500 hover:bg-slate-50 md:hidden transition-colors"
+          type="button"
+          onClick={() => setTeacherSidebar(!teacherSidebar)}
+          className="px-2 py-1 text-xs font-medium rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 md:hidden transition-colors cursor-pointer"
           aria-label="Toggle Sidebar"
         >
-          <FiMenu className="text-xl" />
+          Menu
         </button>
 
-        {/* Logo/Brand */}
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-secondary font-bold text-lg overflow-hidden shrink-0">
-            {LOGO_URL ? (
-              <Image src={LOGO_URL} alt="School Logo" width={32} height={32} className="w-full h-full object-cover" />
-            ) : (
-              'T'
-            )}
-          </div>
-          <span className="font-bold text-slate-800 text-sm md:text-base hidden sm:inline-block">
-            Teacher Portal
-          </span>
+          <Link href={tenantUrl('/teacher')} className="flex items-center gap-2">
+            <span className="font-semibold text-slate-900 dark:text-white text-xs sm:text-sm">
+              {website?.name ? `${website.name} — Teacher Portal` : 'Faculty Portal'}
+            </span>
+          </Link>
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 text-slate-600 text-xs font-semibold">
-          {teacher?.image ? (
-            <img src={teacher.image} alt={teacher.name} className="w-5 h-5 rounded-full object-cover border border-slate-200" />
-          ) : (
-            <FiUser className="text-sm text-slate-400" />
-          )}
-          {loading ? (
-            <span className="w-16 h-3 bg-slate-200 animate-pulse rounded"></span>
-          ) : (
-            <span>{teacher ? teacher.name : 'Teacher'}</span>
-          )}
-        </div>
+      <div className="flex items-center gap-2">
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          className="hidden sm:inline-block bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs px-2 py-1 text-slate-700 dark:text-slate-200"
+          aria-label="Select portal language"
+        >
+          {availableLanguages?.map((l) => (
+            <option key={l.short} value={l.value}>
+              {l.native || l.label}
+            </option>
+          ))}
+        </select>
 
         <button
-          onClick={handleLogout}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-semibold transition-colors duration-150 cursor-pointer"
+          type="button"
+          onClick={toggleTheme}
+          className="px-2 py-1 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium transition-colors cursor-pointer"
+          title={`Switch to ${isDark ? 'Light' : 'Dark'} mode`}
         >
-          <FiLogOut className="text-sm" />
-          <span className="hidden sm:inline">Logout</span>
+          {isDark ? 'Light' : 'Dark'}
+        </button>
+
+        <Link
+          href={tenantUrl('/teacher/profile')}
+          className="px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium transition-colors"
+        >
+          {teacher ? teacher.name : 'Teacher Profile'}
+        </Link>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="px-2.5 py-1 rounded border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-xs font-medium transition-colors cursor-pointer"
+        >
+          Sign Out
         </button>
       </div>
     </nav>

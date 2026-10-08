@@ -4,10 +4,11 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-import { FiMail, FiLock, FiMapPin, FiArrowRight, FiUserPlus } from 'react-icons/fi';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
-const TeacherRegistration = () => {
+export default function TeacherRegistrationPage() {
   const router = useRouter();
+  const { website, getApiEndpoint, tenantUrl } = useTenantWebsite();
   const [email, setEmail] = useState('');
   
   const [name, setName] = useState('');
@@ -16,19 +17,20 @@ const TeacherRegistration = () => {
   const [address, setAddress] = useState('');
   const [password, setPassword] = useState('');
 
-  const [step, setStep] = useState(1); // 1 = Verify email, 2 = Complete setup
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
   const handleVerifyEmail = async (e) => {
     e.preventDefault();
-    if (!email) {
+    if (!email.trim()) {
       toast.error('Email address is required.');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch('/api/teachers/register', {
+      const endpoint = getApiEndpoint('teachers/register');
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim() }),
@@ -41,9 +43,10 @@ const TeacherRegistration = () => {
       }
 
       toast.success(data.message || 'Email verified. Complete your profile details below.');
-      setName(data.paylod.teacher.name);
-      setPhone(data.paylod.teacher.number);
-      setDesignation(data.paylod.teacher.designation);
+      const t = data.paylod?.teacher || data.payload?.teacher || {};
+      setName(t.name || '');
+      setPhone(t.number || t.phone || '');
+      setDesignation(t.designation || 'Faculty Member');
       setStep(2);
     } catch (err) {
       toast.error(err.message);
@@ -55,14 +58,15 @@ const TeacherRegistration = () => {
   const handleCompleteSetup = async (e) => {
     e.preventDefault();
     
-    if (!email || !address || !password) {
+    if (!email.trim() || !address.trim() || !password) {
       toast.error('Address and Password are required.');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch('/api/teachers/register', {
+      const endpoint = getApiEndpoint('teachers/register');
+      const response = await fetch(endpoint, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -79,7 +83,7 @@ const TeacherRegistration = () => {
       }
 
       toast.success(data.message || 'Account setup completed successfully!');
-      router.push('/auth/access/teacher/login');
+      router.push(tenantUrl('/auth/access/teacher/login'));
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -88,148 +92,121 @@ const TeacherRegistration = () => {
   };
 
   return (
-    <div className="w-full min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-900 relative px-4 py-12 overflow-hidden">
-      {/* Background blobs */}
-      <div className="absolute top-[-20%] left-[-20%] w-[60%] aspect-square rounded-full bg-primary/5 blur-[100px] pointer-events-none"></div>
-      <div className="absolute bottom-[-20%] right-[-20%] w-[60%] aspect-square rounded-full bg-primary/5 blur-[100px] pointer-events-none"></div>
-
-      <div className="w-full max-w-140 animate-fade-up z-10">
-        <div className="flex flex-col items-center mb-8 text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 mb-2">Teacher Account Setup</h1>
-          <p className="text-sm text-slate-500 max-w-100">
-            {step === 1 
-              ? 'Use the secure verification link emailed to you by administration to set up your account.' 
-              : `Verification successful. Welcome, ${name}. Complete your credentials details below.`}
+    <div className="w-full min-h-[80vh] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-6 sm:p-8 shadow-xs space-y-6">
+        
+        {/* Header */}
+        <div className="text-center space-y-1.5 border-b border-slate-100 dark:border-slate-800 pb-5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block">
+            {website?.name || 'Academic Administration'}
+          </span>
+          <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            Teacher Account Setup
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {step === 1
+              ? 'Verify your authorized campus email address to configure your login.'
+              : `Welcome, ${name}. Complete your faculty profile credentials.`}
           </p>
         </div>
 
-        <div className="w-full bg-white border border-slate-100 rounded-3xl p-6 md:p-8 shadow-[0_10px_40px_rgba(0,0,0,0.03)]">
-          {step === 1 ? (
-            <form onSubmit={handleVerifyEmail} className="w-full max-w-110 mx-auto flex flex-col gap-5">
-              {/* Primary flow notice */}
-              <div className="flex items-start gap-3 p-3.5 bg-primary-light border border-primary-light rounded-2xl">
-                <div className="w-7 h-7 rounded-full bg-primary-light flex items-center justify-center shrink-0 mt-0.5">
-                  <FiMail className="text-primary text-xs" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-primary">Check Your Email First</p>
-                  <p className="text-[11px] text-primary mt-0.5 leading-relaxed">
-                    The administration sent a verification link to your email. Use that link to set up your profile securely. This form is a manual fallback.
-                  </p>
-                </div>
-              </div>
+        {step === 1 ? (
+          <form onSubmit={handleVerifyEmail} className="space-y-4">
+            <div className="p-3 bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              <strong className="text-slate-900 dark:text-white">Direct Verification:</strong> If you received an invitation email with a verification link, you may click that link directly. Otherwise, verify your registered institutional email below.
+            </div>
 
-              {/* Email Address Input */}
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <FiMail className="text-sm" /> Enter Registered Email
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-primary focus:ring-4 focus:ring-primary/10"
-                />
-              </div>
-
-              {/* Submit Verification Button */}
-              <button
-                type="submit"
+            <div>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                Registered Email Address *
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white text-sm font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-              >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <>
-                    Verify Email Address <FiArrowRight className="text-lg" />
-                  </>
-                )}
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleCompleteSetup} className="w-full flex flex-col gap-5">
-              {/* Pre-filled read-only details */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Full Name</span>
-                  <p className="text-xs font-bold text-slate-700 mt-0.5">{name}</p>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Email Address</span>
-                  <p className="text-xs font-bold text-slate-750 mt-0.5">{email}</p>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Phone Number</span>
-                  <p className="text-xs font-bold text-slate-700 mt-0.5">{phone}</p>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Designation</span>
-                  <p className="text-xs font-bold text-slate-700 mt-0.5">{designation}</p>
-                </div>
-              </div>
+                placeholder="faculty@institution.edu"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-sm text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors"
+              />
+            </div>
 
-              {/* Text Area: Current Address */}
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-slate-455 uppercase tracking-wider flex items-center gap-1 text-slate-500">
-                  <FiMapPin /> Residential Address
-                </label>
-                <textarea
-                  required
-                  rows={2}
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  disabled={loading}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 outline-none transition-all duration-200 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 resize-none"
-                />
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 rounded bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-60 text-center"
+            >
+              {loading ? 'Verifying...' : 'Verify Email Address →'}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleCompleteSetup} className="space-y-4 text-xs">
+            <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-950 p-3.5 rounded border border-slate-200 dark:border-slate-800">
+              <div>
+                <span className="text-[10px] text-slate-400 uppercase block">Name</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">{name}</span>
               </div>
-
-              {/* Password Select */}
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-slate-455 uppercase tracking-wider flex items-center gap-1 text-slate-500">
-                  <FiLock /> Choose Password
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 outline-none transition-all duration-200 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5"
-                />
+              <div>
+                <span className="text-[10px] text-slate-400 uppercase block">Email</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">{email}</span>
               </div>
+              <div>
+                <span className="text-[10px] text-slate-400 uppercase block">Contact</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">{phone || 'N/A'}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-400 uppercase block">Designation</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">{designation}</span>
+              </div>
+            </div>
 
-              {/* Setup Submit Button */}
-              <button
-                type="submit"
+            <div>
+              <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                Residential Address *
+              </label>
+              <textarea
+                required
+                rows={2}
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white text-sm font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 cursor-pointer mt-2"
-              >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <>
-                    <FiUserPlus className="text-lg" /> Complete Account Setup
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-        </div>
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-primary resize-none"
+              />
+            </div>
 
-        <div className="w-full text-center mt-6">
-          <Link
-            href="/auth/access/teacher/login"
-            className="text-xs font-semibold text-indigo-555 hover:text-primary transition-colors py-1.5 px-3 rounded-full hover:bg-primary-light text-indigo-650 text-primary"
-          >
-            Back to Teacher Login
+            <div>
+              <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                Choose Login Password *
+              </label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                placeholder="••••••••"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-primary"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 rounded bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-60 text-center"
+            >
+              {loading ? 'Completing Setup...' : 'Complete Account Setup →'}
+            </button>
+          </form>
+        )}
+
+        <div className="pt-2 text-center text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
+          Already registered?{' '}
+          <Link href={tenantUrl('/auth/access/teacher/login')} className="font-semibold text-primary hover:underline">
+            Go to Teacher Login
           </Link>
         </div>
+
       </div>
     </div>
   );
-};
-
-export default TeacherRegistration;
+}

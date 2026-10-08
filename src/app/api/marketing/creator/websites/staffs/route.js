@@ -14,12 +14,39 @@ async function verifyWebsiteOwnership(websiteId, sessionCreator, creatorIdParam)
   if (!cId || !websiteId) return null;
 
   const res = await queryDb(
-    `SELECT id, creator_id, name, subdomain, custom_domain, primary_color 
+    `SELECT id, creator_id, name, slug, subdomain, custom_domain, custom_domain_verified, primary_color, contact_email 
      FROM websites 
      WHERE id = $1 AND creator_id = $2 LIMIT 1`,
     [websiteId, cId]
   );
   return res.rows[0] || null;
+}
+
+/**
+ * Constructs the staff verification link to custom domain if exists, or subdomain /auth/access/staff/verify
+ */
+function buildStaffVerificationUrl(website, token, request) {
+  const reqHost = request?.headers?.get?.('x-forwarded-host') || request?.headers?.get?.('host') || '';
+  const baseHost = (reqHost ? reqHost.split(',')[0].trim() : '') || 'localhost:3000';
+  const protocol = request?.headers?.get?.('x-forwarded-proto') || (baseHost.includes('localhost') ? 'http' : 'https');
+
+  // Check if website has a custom domain
+  const rawCustom = (website.custom_domain || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  if (rawCustom) {
+    const customProto = rawCustom.includes('localhost') ? 'http' : 'https';
+    return `${customProto}://${rawCustom}/auth/access/staff/verify?token=${encodeURIComponent(token)}`;
+  }
+
+  // Otherwise route to the subdomain
+  const rawSub = (website.subdomain || website.slug || '').trim().toLowerCase();
+  const cleanSub = rawSub.includes('.') ? rawSub.split('.')[0] : rawSub;
+
+  if (baseHost.includes('localhost')) {
+    const port = baseHost.includes(':') ? `:${baseHost.split(':')[1]}` : '';
+    return `${protocol}://${cleanSub}.localhost${port}/auth/access/staff/verify?token=${encodeURIComponent(token)}`;
+  }
+
+  return `${protocol}://${cleanSub}.${baseHost}/auth/access/staff/verify?token=${encodeURIComponent(token)}`;
 }
 
 // GET: Fetch staff roster, module permissions matrix, active session counts, and modules
@@ -44,6 +71,7 @@ export async function GET(request) {
       `SELECT ws.id, ws.website_id, ws.name, ws.email, ws.number, ws.address,
               ws.is_active, ws.is_registered, ws.is_two_factor_enabled, ws.grade_id,
               ws.date_of_birth, ws.gender, ws.nid_number, ws.bio, ws.username,
+              ws.verification_token, ws.verification_token_expires,
               ws.created_at, ws.updated_at,
               gp.name AS grade_name, gp.basic_salary, gp.allowance
        FROM website_staffs ws
@@ -185,18 +213,16 @@ export async function POST(request) {
       );
     }
 
+    const verificationToken = generateToken(32);
+    const verificationExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
     let hashedPassword = null;
-    let verificationToken = null;
-    let verificationExpires = null;
-    let isRegistered = true;
+    let isRegistered = false;
 
     if (password && password.length >= 6) {
       hashedPassword = await hashPassword(password);
+      isRegistered = Boolean(body.markAsRegistered ?? false);
     } else {
-      // Setup invite link token
-      verificationToken = generateToken(16);
-      verificationExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-      hashedPassword = await hashPassword(generateToken(12)); // temporary randomized password
+      hashedPassword = await hashPassword(generateToken(16));
       isRegistered = false;
     }
 
@@ -267,40 +293,46 @@ export async function POST(request) {
       }
     }
 
-    // Send setup email if requested
-    if (sendInvite && verificationToken) {
-      const baseUrl = getBaseUrl(request);
-      const setupUrl = `${baseUrl}/auth/access/staff/verify?token=${verificationToken}`;
-      try {
-        await sendEmail({
-          to: newStaff.email,
-          toName: newStaff.name,
-          subject: `Welcome to ${website.name} - Complete Your Staff Account Setup`,
-          html: buildStyledEmail({
-            title: `${website.name} Staff Portal`,
-            subtitle: 'Institutional Account Invitation',
-            recipientName: newStaff.name,
-            bodyParagraphs: [
-              `You have been added as an official staff member for ${website.name}.`,
-              'Click the button below to set up your password and complete your staff profile:',
-            ],
-            code: verificationToken,
-            codeLabel: 'Setup Token',
-            actionUrl: setupUrl,
-            actionText: 'Complete Account Setup',
-            footerNote: 'This invite link is valid for 7 days. If you were not expecting this, please contact your school administrator.',
-          }),
-        });
-      } catch (err) {
-        console.warn('Notice sending staff invite email:', err.message);
-      }
+    // Send verification email to the staff email (to custom domain if exists, or subdomain)
+    const setupUrl = buildStaffVerificationUrl(website, verificationToken, request);
+
+    let emailSent = false;
+    let emailError = null;
+
+    try {
+      await sendEmail({
+        to: newStaff.email,
+        toName: newStaff.name,
+        subject: `Staff Verification & Portal Setup - ${website.name}`,
+        html: buildStyledEmail({
+          title: `${website.name} Staff Portal`,
+          subtitle: 'Institutional Account Verification',
+          recipientName: newStaff.name,
+          bodyParagraphs: [
+            `You have been registered as an official staff member for ${website.name}.`,
+            'Please verify your staff account and complete your portal setup by clicking the button below:',
+          ],
+          code: verificationToken,
+          codeLabel: 'Verification Token',
+          actionUrl: setupUrl,
+          actionText: 'Verify Account & Complete Setup',
+          footerNote: `This verification link is valid for 7 days. If you were not expecting this, please contact administration at ${website.contact_email || 'the institution'}.`,
+        }),
+      });
+      emailSent = true;
+    } catch (err) {
+      console.warn('Notice sending staff verification email:', err.message);
+      emailError = err.message;
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Staff member added successfully.',
+      message: `Staff member "${newStaff.name}" created successfully.${emailSent ? ' Verification email sent.' : (emailError ? ` (Email delivery notice: ${emailError})` : '')}`,
       staff: newStaff,
-      inviteSent: Boolean(sendInvite && verificationToken),
+      inviteSent: emailSent,
+      emailSent,
+      setupUrl,
+      verificationToken,
     });
   } catch (error) {
     console.error('Creator staff POST error:', error);
@@ -325,6 +357,64 @@ export async function PUT(request) {
     const website = await verifyWebsiteOwnership(websiteId, sessionCreator, creatorId);
     if (!website && !sessionCreator?.isDeveloper) {
       return NextResponse.json({ success: false, error: 'Unauthorized or website not found.' }, { status: 403 });
+    }
+
+    if (action === 'resend_verification') {
+      const newToken = generateToken(32);
+      const newExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const updStaff = await queryDb(
+        `UPDATE website_staffs
+         SET verification_token = $1,
+             verification_token_expires = $2,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $3 AND website_id = $4
+         RETURNING *`,
+        [newToken, newExpires, staffId, websiteId]
+      );
+      if (updStaff.rows.length === 0) {
+        return NextResponse.json({ success: false, error: 'Staff member not found.' }, { status: 404 });
+      }
+      const staff = updStaff.rows[0];
+
+      // Send verification link to custom domain if exists, or subdomain
+      const setupUrl = buildStaffVerificationUrl(website, newToken, request);
+
+      let emailSent = false;
+      let emailError = null;
+      try {
+        await sendEmail({
+          to: staff.email,
+          toName: staff.name,
+          subject: `Staff Verification Link - ${website.name}`,
+          html: buildStyledEmail({
+            title: `${website.name} Staff Portal`,
+            subtitle: 'Official Staff Account Verification',
+            recipientName: staff.name,
+            bodyParagraphs: [
+              `Here is your requested staff verification link for ${website.name}.`,
+              'Click the button below to complete your staff profile and security setup:',
+            ],
+            code: newToken,
+            codeLabel: 'Verification Token',
+            actionUrl: setupUrl,
+            actionText: 'Verify Staff Account',
+            footerNote: 'This verification link is valid for 7 days.',
+          }),
+        });
+        emailSent = true;
+      } catch (err) {
+        console.warn('Notice resending verification email:', err.message);
+        emailError = err.message;
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: emailSent
+          ? `Verification email sent successfully to ${staff.email}.`
+          : `Generated verification link (Email delivery notice: ${emailError || 'Failed to dispatch'}).`,
+        setupUrl,
+        emailSent,
+      });
     }
 
     if (action === 'toggle_active') {

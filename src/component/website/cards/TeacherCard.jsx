@@ -2,43 +2,49 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { FiUser, FiArrowRight, FiBriefcase } from 'react-icons/fi';
 import Image from 'next/image';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
 const TeacherCard = ({ teacher, className = '' }) => {
+  const { tenantUrl } = useTenantWebsite();
+  if (!teacher) return null;
+
+  const targetUrl = tenantUrl(`/teachers/${teacher.username || teacher.id}`);
+
   return (
     <Link
-          href={`/teachers/${teacher.username}`}
-      className={`group bg-primary w-full rounded-xl flex-col  shadow-sm hover:shadow-md transition-all duration-250 overflow-hidden flex ${className}`}
+      href={targetUrl}
+      className={`group bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-600 transition-colors flex flex-col overflow-hidden ${className}`}
     >
-      <div className="w-full shrink-0 relative rounded-xl overflow-hidden">
+      <div className="w-full aspect-square bg-slate-100 dark:bg-slate-800 relative overflow-hidden flex items-center justify-center">
         {teacher.image ? (
-          <Image width={500} height={500}
+          <Image
             src={teacher.image}
             alt={teacher.name}
-            className="w-full h-full object-cover aspect-square  transition-transform duration-300"
+            width={400}
+            height={400}
+            className="w-full h-full object-cover"
+            unoptimized={teacher.image.startsWith('http')}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <div className="w-full aspect-square  bg-white  flex items-center justify-center transition-transform duration-300">
-              <FiUser className="text-primary text-3xl" />
-            </div>
+          <div className="w-12 h-12 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-semibold flex items-center justify-center">
+            {teacher.name?.charAt(0) || 'F'}
           </div>
         )}
       </div>
 
-      <div className="flex-1 min-w-0 p-5 flex flex-col justify-center items-center gap-2">
-      
-        <h4 className="text-base font-semibold text-secondary transition-colors leading-tight truncate">
+      <div className="p-3 flex flex-col gap-1 text-center items-center">
+        <h4 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white truncate w-full group-hover:underline">
           {teacher.name}
         </h4>
-
-        <span className="flex items-center gap-1 ">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-primary-light text-secondary border border-primary-light uppercase tracking-wider">{teacher.designation || 'Faculty Member'}</span>
+        <span className="text-[10px] font-medium px-1.5 py-0.2 rounded border bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 uppercase tracking-wider truncate max-w-full">
+          {teacher.designation || 'Faculty Member'}
         </span>
-
-        
-       
+        {teacher.email && (
+          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate max-w-full">
+            {teacher.email}
+          </span>
+        )}
       </div>
     </Link>
   );

@@ -1,70 +1,88 @@
 'use client';
 
-import React from 'react';
-import { FiHome, FiCompass, FiTarget } from 'react-icons/fi';
+import React, { useContext } from 'react';
 import Link from 'next/link';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import { SCHOOL_NAME } from 'src/lib/database/secret';
 
 const Life = () => {
-  let schoolname=SCHOOL_NAME
+  const { website, websiteSettings, tenantUrl } = useContext(TenantWebsiteContext);
+  const schoolName = website?.name || websiteSettings?.school_name || SCHOOL_NAME;
+
   return (
-    <section className="w-full py-20 px-4 sm:px-6 lg:px-8 bg-slate-50">
-      <div className="w-full">
-        <div className="text-center mb-12">
-          
-          <h2 className="text-3xl md:text-5xl font-semibold text-slate-900 tracking-tight">
-            Student Life at {schoolname.split(" ").map(word => word[0]).join("")}
+    <section className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 py-12 px-4 sm:px-6 lg:px-8 transition-colors">
+      <div className="w-full space-y-8">
+        <div className="text-center max-w-2xl mx-auto space-y-2">
+          <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
+            Campus Experience
+          </span>
+          <h2 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+            Student Life at {schoolName}
           </h2>
-          <p className="text-slate-500 mt-3 max-w-xl mx-auto text-sm">
-            Education goes beyond classrooms. We provide rich campus spaces for co-curricular clubs, sports, and secure community living.
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-normal">
+            Education extends far beyond lectures. We cultivate dynamic environments for student co-curriculars, intellectual debate, athletics, and residential community life.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        
-          <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-xs flex flex-col gap-4">
-            <div className="w-12 h-12 bg-primary-light text-secondary rounded-xl flex items-center justify-center text-xl shrink-0">
-              <FiCompass />
-            </div>
-            <div>
-              <h3 className="font-bold text-slate-800 text-sm">Student Activity Clubs</h3>
-              <p className="text-slate-500 text-xs mt-2 leading-relaxed">
-                Connect with peers in our coding club, debate assemblies, research organizations, and athletic events to develop team leadership qualities.
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded p-4 flex flex-col justify-between gap-3">
+            <div className="space-y-2">
+              <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
+                Extracurricular
+              </span>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                Student Activity Clubs
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-normal">
+                Join computing guilds, science forums, debate societies, art circles, and environmental committees to build leadership skills.
               </p>
             </div>
-            <Link href="/clubs" className="mt-auto text-xs font-bold text-tertiary hover:text-sky-850 transition-colors">
-              Explore Clubs →
+            <Link
+              href={tenantUrl('/clubs')}
+              className="text-xs font-medium text-slate-800 dark:text-slate-200 hover:underline pt-2 border-t border-slate-200/80 dark:border-slate-700"
+            >
+              Explore Active Clubs &rarr;
             </Link>
           </div>
 
-          <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-xs flex flex-col gap-4">
-            <div className="w-12 h-12 bg-primary text-secondary rounded-xl flex items-center justify-center text-xl shrink-0">
-              <FiHome />
-            </div>
-            <div>
-              <h3 className="font-bold text-slate-800 text-sm">Secure Residential Halls</h3>
-              <p className="text-slate-500 text-xs mt-2 leading-relaxed">
-                Clean, gender-segregated on-campus hostels with designated room layouts, active provost management, and strict student-hostel gender matching rules.
+          <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded p-4 flex flex-col justify-between gap-3">
+            <div className="space-y-2">
+              <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
+                Residential
+              </span>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                Residential Halls &amp; Hostels
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-normal">
+                Secure, gender-segregated campus residences with quiet study spaces, reliable utility backup, meal services, and faculty provost oversight.
               </p>
             </div>
-            <Link href="/facilities/hostels" className="mt-auto text-xs font-bold text-tertiary transition-colors">
-              View Residences →
+            <Link
+              href={tenantUrl('/facilities')}
+              className="text-xs font-medium text-slate-800 dark:text-slate-200 hover:underline pt-2 border-t border-slate-200/80 dark:border-slate-700"
+            >
+              View Living Accommodations &rarr;
             </Link>
           </div>
 
-          <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-xs flex flex-col gap-4">
-            <div className="w-12 h-12 bg-primary text-secondary rounded-xl flex items-center justify-center text-xl shrink-0">
-              <FiTarget />
-            </div>
-            <div>
-              <h3 className="font-bold text-slate-800 text-sm">Sports & Athletics</h3>
-              <p className="text-slate-500 text-xs mt-2 leading-relaxed">
-                A massive central campus sports ground supporting soccer, cricket, running tracks, and dynamic indoor basketball courts to promote physical fitness.
+          <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded p-4 flex flex-col justify-between gap-3">
+            <div className="space-y-2">
+              <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
+                Athletics
+              </span>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                Athletics &amp; Wellness
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-normal">
+                Competitive inter-school sports leagues, physical education programs, gymnasiums, and outdoor courts promoting healthy physical wellness.
               </p>
             </div>
-            <span className="mt-auto text-[10px] text-tertiary font-bold uppercase tracking-wider">
-              {SCHOOL_NAME.split(" ").map((w)=>w[0]).join('')} Physical Education
-            </span>
+            <Link
+              href={tenantUrl('/events')}
+              className="text-xs font-medium text-slate-800 dark:text-slate-200 hover:underline pt-2 border-t border-slate-200/80 dark:border-slate-700"
+            >
+              View Sports &amp; Activities &rarr;
+            </Link>
           </div>
         </div>
       </div>
