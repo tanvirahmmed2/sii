@@ -13,9 +13,6 @@ const Footer = () => {
     theme,
     isDark,
     toggleTheme,
-    language,
-    setLanguage,
-    availableLanguages,
   } = useContext(TenantWebsiteContext);
 
   const schoolName = website?.name || websiteSettings?.school_name || SCHOOL_NAME;
@@ -102,21 +99,8 @@ const Footer = () => {
               )}
             </div>
 
-            {/* Language & Theme Switchers */}
+            {/* Theme Switcher */}
             <div className="flex flex-wrap items-center gap-2 pt-2">
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                className="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded px-2 py-1 outline-none"
-                aria-label="Campus Language"
-              >
-                {availableLanguages?.map((l) => (
-                  <option key={l.short} value={l.value}>
-                    {l.native || l.label}
-                  </option>
-                ))}
-              </select>
-
               <button
                 type="button"
                 onClick={toggleTheme}

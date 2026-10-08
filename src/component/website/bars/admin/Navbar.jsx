@@ -17,9 +17,6 @@ const Navbar = ({ staffUser = null }) => {
     theme,
     isDark,
     toggleTheme,
-    language,
-    setLanguage,
-    availableLanguages,
   } = useContext(TenantWebsiteContext);
 
   const [staff, setStaff] = useState(staffUser);
@@ -80,19 +77,6 @@ const Navbar = ({ staffUser = null }) => {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Language Switch */}
-        <select
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-          className="hidden sm:inline-block bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs px-2 py-1 text-slate-700 dark:text-slate-200"
-          aria-label="Select portal language"
-        >
-          {availableLanguages?.map((l) => (
-            <option key={l.short} value={l.value}>
-              {l.native || l.label}
-            </option>
-          ))}
-        </select>
 
         {/* Mode Toggle */}
         <button

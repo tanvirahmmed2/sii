@@ -8,7 +8,7 @@ import Image from 'next/image';
 
 const Navbar = () => {
   const router = useRouter();
-  const { staffSidebar, setStaffSidebar, tenantUrl, getApiEndpoint, website, theme, toggleTheme, language, setLanguage, availableLanguages } = useContext(TenantWebsiteContext);
+  const { staffSidebar, setStaffSidebar, tenantUrl, getApiEndpoint, website, theme, toggleTheme } = useContext(TenantWebsiteContext);
   const [staff, setStaff] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -79,19 +79,6 @@ const Navbar = () => {
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Language switch */}
-        <select
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-          aria-label="Select portal language"
-          className="px-2 py-1 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-700 dark:text-slate-300 focus:outline-hidden"
-        >
-          {availableLanguages.map((l) => (
-            <option key={l.code} value={l.code}>
-              {l.label}
-            </option>
-          ))}
-        </select>
 
         {/* Theme mode toggle */}
         <button

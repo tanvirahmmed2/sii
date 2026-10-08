@@ -19,32 +19,11 @@ const Navbar = () => {
     theme,
     isDark,
     toggleTheme,
-    language,
-    setLanguage,
-    availableLanguages,
   } = useContext(TenantWebsiteContext);
 
   const schoolName = website?.name || websiteSettings?.school_name || SCHOOL_NAME;
   const logoUrl = website?.logo || website?.favicon || null;
   const eiin = website?.eiin_number || websiteSettings?.eiin || null;
-
-  // Language Dropdown state
-  const [langOpen, setLangOpen] = useState(false);
-  const langRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (langRef.current && !langRef.current.contains(e.target)) {
-        setLangOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const currentLangObj =
-    availableLanguages?.find((l) => l.short === language || l.value.endsWith(`|${language}`)) ||
-    availableLanguages?.[0] || { label: 'English', short: 'en', native: 'English' };
 
   const topNavLinkClass =
     'text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-2 py-1 rounded transition-colors';
@@ -88,47 +67,8 @@ const Navbar = () => {
             </div>
           </Link>
 
-          {/* Right Action Suite: Language, Mode, Portals & Mobile Menu */}
+          {/* Right Action Suite: Mode, Portals & Mobile Menu */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Language Switcher */}
-            <div className="relative" ref={langRef}>
-              <button
-                type="button"
-                onClick={() => setLangOpen((prev) => !prev)}
-                className="px-2 sm:px-2.5 py-1 text-xs font-medium rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                title="Change language"
-                aria-label="Change language"
-              >
-                {currentLangObj.native || currentLangObj.label}
-              </button>
-
-              {langOpen && (
-                <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-lg py-1 z-50">
-                  {availableLanguages?.map((lang) => (
-                    <button
-                      key={lang.short}
-                      type="button"
-                      onClick={() => {
-                        setLanguage(lang.value);
-                        setLangOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer flex items-center justify-between ${
-                        language === lang.short
-                          ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
-                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
-                      }`}
-                    >
-                      <span>{lang.native || lang.label}</span>
-                      {language === lang.short && (
-                        <span className="text-[10px] uppercase font-mono text-emerald-600 dark:text-emerald-400">
-                          Active
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
 
             {/* Dark / Light Mode Switcher */}
             <button

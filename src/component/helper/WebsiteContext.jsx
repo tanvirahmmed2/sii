@@ -17,16 +17,6 @@ import { hexToRgb, mixColor, calculateColorShades } from 'src/lib/utils/colors';
 
 export { calculateColorShades };
 
-export const SUPPORTED_TENANT_LANGUAGES = [
-  { value: 'en|en', short: 'en', label: 'English', native: 'English' },
-  { value: 'en|bn', short: 'bn', label: 'Bangla', native: 'বাংলা' },
-  { value: 'en|es', short: 'es', label: 'Spanish', native: 'Español' },
-  { value: 'en|hi', short: 'hi', label: 'Hindi', native: 'हिन्दी' },
-  { value: 'en|de', short: 'de', label: 'German', native: 'Deutsch' },
-  { value: 'en|fr', short: 'fr', label: 'French', native: 'Français' },
-  { value: 'en|ar', short: 'ar', label: 'Arabic', native: 'العربية' },
-];
-
 export function TenantWebsiteProvider({ children, initialWebsite = null, slug: propSlug }) {
   const params = useParams();
   const router = useRouter();
@@ -119,47 +109,6 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
     });
   }, []);
 
-  // Language Management (English, Bangla, etc.)
-  const [language, setLanguageState] = useState('en');
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('ngt_lang') || localStorage.getItem('tenant_lang');
-      if (stored) {
-        setLanguageState(stored);
-      }
-    } catch (_) {}
-  }, []);
-
-  const setLanguage = useCallback((langCode) => {
-    const short = langCode.includes('|') ? langCode.split('|')[1] : langCode;
-    if (short === language) return;
-    setLanguageState(short);
-
-    try {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('tenant_lang', short);
-        localStorage.setItem('ngt_lang', short);
-
-        // Reset and apply googtrans cookie exactly like next-google-translate-widget
-        document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
-        document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=${window.location.hostname}; path=/`;
-
-        if (short && short !== 'en') {
-          const cookieValue = `/auto/${short}`;
-          document.cookie = `googtrans=${cookieValue}; path=/;`;
-          document.cookie = `googtrans=${cookieValue}; domain=${window.location.hostname}; path=/;`;
-        }
-
-        window.location.reload();
-      }
-    } catch (_) {}
-  }, [language]);
-
-  const toggleLanguage = useCallback(() => {
-    const next = language === 'en' ? 'bn' : 'en';
-    setLanguage(next);
-  }, [language, setLanguage]);
 
   // Color Theme Application directly from websites table (primary_color, secondary_color)
   const colorTheme = useMemo(() => {
@@ -356,11 +305,6 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
     setTheme,
     toggleTheme,
 
-    // Language management (English, Bangla, etc.)
-    language,
-    setLanguage,
-    toggleLanguage,
-    availableLanguages: SUPPORTED_TENANT_LANGUAGES,
 
     // Navigation
     goBack,

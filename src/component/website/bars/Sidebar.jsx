@@ -19,9 +19,6 @@ const Sidebar = () => {
     theme,
     isDark,
     toggleTheme,
-    language,
-    setLanguage,
-    availableLanguages,
   } = useContext(TenantWebsiteContext);
 
   const pathname = usePathname();
@@ -86,29 +83,13 @@ const Sidebar = () => {
 
         {/* Scrollable Navigation Body */}
         <div className="flex-1 overflow-y-auto p-3 space-y-1">
-          {/* Controls: Mode & Language Row */}
+          {/* Controls: Mode Row */}
           <div className="p-2 mb-2 bg-slate-50 dark:bg-slate-800/60 rounded border border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1">
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono uppercase">
-                Lang:
-              </span>
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-xs px-1.5 py-0.5 text-slate-800 dark:text-slate-200"
-              >
-                {availableLanguages?.map((l) => (
-                  <option key={l.short} value={l.value}>
-                    {l.native || l.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Display Theme</span>
             <button
               type="button"
               onClick={toggleTheme}
-              className="px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-900 cursor-pointer"
+              className="px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-900 cursor-pointer"
             >
               {isDark ? 'Light Mode' : 'Dark Mode'}
             </button>

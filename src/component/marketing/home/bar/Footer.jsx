@@ -11,7 +11,6 @@ import {
   SITE_NAME,
 } from 'src/lib/database/secret';
 import { Context } from 'src/component/helper/Context';
-import TranslateButton from 'src/component/website/ui/TranslateButton';
 import SubscribeForm from './SubscribeForm';
 
 const Footer = () => {
@@ -200,7 +199,7 @@ const Footer = () => {
         </div>
 
         {/* ======================================================== */}
-        {/* LAYER 3 (BOTTOM): Controls, Theme Mode, Translate, Copr  */}
+        {/* LAYER 3 (BOTTOM): Controls, Theme Mode, Copr  */}
         {/* ======================================================== */}
         <div className="w-full flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400 pt-2">
           {/* Copyright notice */}
@@ -208,7 +207,7 @@ const Footer = () => {
             &copy; {new Date().getFullYear()} {SITE_NAME}. All rights reserved.
           </p>
 
-          {/* Controls: Color Mode & Translation */}
+          {/* Controls: Color Mode */}
           <div className="order-1 md:order-2 flex flex-wrap items-center justify-center gap-3">
             {/* Mode switch */}
             <div className="inline-flex items-center rounded border border-slate-700 bg-slate-950 p-0.5 text-xs">
@@ -233,9 +232,6 @@ const Footer = () => {
                 Dark
               </button>
             </div>
-
-            {/* Language switch */}
-            <TranslateButton align="right" variant="dark" />
           </div>
 
           {/* Company attribution */}
