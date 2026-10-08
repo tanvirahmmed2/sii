@@ -68,7 +68,7 @@ const Navbar = ({ staffUser = null }) => {
 
         {/* Brand / Title */}
         <div className="flex items-center gap-2">
-          <Link href={tenantUrl('/staff-panel')} className="flex items-center gap-2">
+          <Link href="/staff-panel" className="flex items-center gap-2">
             <span className="font-semibold text-slate-900 dark:text-white text-xs sm:text-sm">
               {website?.name ? `${website.name} — Staff Portal` : 'Campus Staff Portal'}
             </span>
@@ -90,7 +90,7 @@ const Navbar = ({ staffUser = null }) => {
 
         {/* Profile Link */}
         <Link
-          href={tenantUrl('/staff-panel/profile')}
+          href="/staff-panel/staff-profile"
           className="px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium transition-colors"
         >
           {staff ? staff.name : 'Staff Profile'}

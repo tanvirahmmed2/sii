@@ -263,20 +263,33 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
   const tenantUrl = useCallback(
     (path = '') => {
       const cleanPath = path.startsWith('/') ? path : `/${path}`;
+
+      // Staff panel routes always use clean root URLs (/staff-panel/...)
+      if (cleanPath === '/staff-panel' || cleanPath.startsWith('/staff-panel/')) {
+        return cleanPath;
+      }
+
       if (typeof window !== 'undefined') {
-        const host = window.location.host.toLowerCase();
-        // If accessed through path routing (e.g. localhost or main domain preview)
-        const isPathMode =
-          host.includes('localhost') ||
-          host.includes('127.0.0.1') ||
-          window.location.pathname.startsWith(`/${activeSlug}`);
-        if (isPathMode && activeSlug) {
+        const host = window.location.host.toLowerCase().split(':')[0];
+
+        // If accessed through subdomain (e.g. afit.localhost, afit.mysite.com)
+        const isSubdomain =
+          host.endsWith('.localhost') ||
+          (activeSlug && (host === `${activeSlug}.localhost` || host.startsWith(`${activeSlug}.`)));
+
+        if (isSubdomain) {
+          return cleanPath;
+        }
+
+        // Only in explicit path preview mode on plain base domain when current URL explicitly starts with /${activeSlug}
+        const isExplicitPathMode =
+          (host === 'localhost' || host === '127.0.0.1') &&
+          window.location.pathname.startsWith(`/${activeSlug}/`);
+
+        if (isExplicitPathMode && activeSlug) {
           if (cleanPath === '/') return `/${activeSlug}`;
           return `/${activeSlug}${cleanPath}`;
         }
-      } else if (activeSlug) {
-        if (cleanPath === '/') return `/${activeSlug}`;
-        return `/${activeSlug}${cleanPath}`;
       }
       return cleanPath;
     },

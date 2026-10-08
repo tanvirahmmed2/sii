@@ -6,34 +6,33 @@ import { usePathname } from 'next/navigation';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import staffNavData from './staffNavData';
 
-// Helper to convert route to staff-panel tenant path
-const getStaffUrl = (rawPath, tenantUrl) => {
+// Helper to convert route to clean staff-panel path
+const getStaffUrl = (rawPath) => {
   if (!rawPath) return '#';
-  if (rawPath === '/' || rawPath === '/staff-panel') return tenantUrl('/staff-panel');
+  if (rawPath === '/' || rawPath === '/staff-panel') return '/staff-panel';
   const clean = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
-  const staffPath = clean.startsWith('/staff-panel') ? clean : `/staff-panel${clean}`;
-  return tenantUrl(staffPath);
+  return clean.startsWith('/staff-panel') ? clean : `/staff-panel${clean}`;
 };
 
 // Check if any descendant path matches current pathname
-const hasActiveChild = (item, pathname, tenantUrl) => {
+const hasActiveChild = (item, pathname) => {
   if (item.path) {
-    const target = getStaffUrl(item.path, tenantUrl);
-    if (pathname === target || pathname.startsWith(target + '/')) {
+    const target = getStaffUrl(item.path);
+    if (pathname === target || pathname.startsWith(target + '/') || pathname.endsWith(target)) {
       return true;
     }
   }
   if (item.children && Array.isArray(item.children)) {
-    return item.children.some((child) => hasActiveChild(child, pathname, tenantUrl));
+    return item.children.some((child) => hasActiveChild(child, pathname));
   }
   return false;
 };
 
 // Sub-level collapsible group (for nested menus like Update, Migration, ID Card, etc.)
-const SubCollapsibleGroup = ({ group, pathname, tenantUrl, setAdminSidebar }) => {
+const SubCollapsibleGroup = ({ group, pathname, setAdminSidebar }) => {
   const isInitiallyActive = useMemo(
-    () => hasActiveChild(group, pathname, tenantUrl),
-    [group, pathname, tenantUrl]
+    () => hasActiveChild(group, pathname),
+    [group, pathname]
   );
   const [isOpen, setIsOpen] = useState(isInitiallyActive);
 
@@ -57,8 +56,8 @@ const SubCollapsibleGroup = ({ group, pathname, tenantUrl, setAdminSidebar }) =>
       {isOpen && (
         <div className="flex flex-col space-y-0.5 pl-2.5 border-l border-slate-200 dark:border-slate-800 ml-1.5 py-0.5">
           {group.children?.map((child, idx) => {
-            const target = getStaffUrl(child.path, tenantUrl);
-            const isActive = pathname === target || pathname.startsWith(target + '/');
+            const target = getStaffUrl(child.path);
+            const isActive = pathname === target || pathname.startsWith(target + '/') || pathname.endsWith(target);
 
             return (
               <Link
@@ -83,17 +82,17 @@ const SubCollapsibleGroup = ({ group, pathname, tenantUrl, setAdminSidebar }) =>
 };
 
 // Top-level accordion module
-const NavModuleAccordion = ({ module, pathname, tenantUrl, setAdminSidebar }) => {
+const NavModuleAccordion = ({ module, pathname, setAdminSidebar }) => {
   const isInitiallyActive = useMemo(
-    () => hasActiveChild(module, pathname, tenantUrl),
-    [module, pathname, tenantUrl]
+    () => hasActiveChild(module, pathname),
+    [module, pathname]
   );
   const [isOpen, setIsOpen] = useState(isInitiallyActive);
 
   // If module is a direct link without children
   if (module.path && (!module.children || module.children.length === 0)) {
-    const target = getStaffUrl(module.path, tenantUrl);
-    const isActive = pathname === target || pathname.startsWith(target + '/');
+    const target = getStaffUrl(module.path);
+    const isActive = pathname === target || pathname.startsWith(target + '/') || pathname.endsWith(target);
 
     return (
       <Link
@@ -137,15 +136,14 @@ const NavModuleAccordion = ({ module, pathname, tenantUrl, setAdminSidebar }) =>
                   key={item.title || idx}
                   group={item}
                   pathname={pathname}
-                  tenantUrl={tenantUrl}
                   setAdminSidebar={setAdminSidebar}
                 />
               );
             }
 
             // Direct leaf link inside top accordion
-            const target = getStaffUrl(item.path, tenantUrl);
-            const isActive = pathname === target || pathname.startsWith(target + '/');
+            const target = getStaffUrl(item.path);
+            const isActive = pathname === target || pathname.startsWith(target + '/') || pathname.endsWith(target);
 
             return (
               <Link
@@ -200,8 +198,7 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
     return results.slice(0, 15);
   }, [filterQuery]);
 
-  const dashboardTarget = tenantUrl('/staff-panel');
-  const isDashboardActive = pathname === dashboardTarget || pathname === '/staff-panel';
+  const isDashboardActive = pathname === '/staff-panel' || pathname.endsWith('/staff-panel');
 
   return (
     <>
@@ -242,7 +239,7 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
                 <p className="text-xs text-slate-400 py-3 text-center">No matching modules found</p>
               ) : (
                 flatSearchList.map((res) => {
-                  const target = getStaffUrl(res.path, tenantUrl);
+                  const target = getStaffUrl(res.path);
                   return (
                     <Link
                       key={res.path}
@@ -265,7 +262,7 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
               {/* Primary Dashboard Link */}
               <div className="pt-0.5">
                 <Link
-                  href={dashboardTarget}
+                  href="/staff-panel"
                   onClick={() => setAdminSidebar(false)}
                   className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded text-xs transition-colors cursor-pointer ${
                     isDashboardActive
@@ -291,7 +288,6 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
                     key={module.title || idx}
                     module={module}
                     pathname={pathname}
-                    tenantUrl={tenantUrl}
                     setAdminSidebar={setAdminSidebar}
                   />
                 ))}

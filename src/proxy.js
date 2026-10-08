@@ -101,7 +101,45 @@ export function proxy(request) {
     return NextResponse.next();
   }
 
-  let tenantDomain = getWebsiteDomain(request);
+  const tenantDomain = getWebsiteDomain(request);
+
+  const PLATFORM_RESERVED = new Set([
+    'creator', 'developer', 'developer-auth', 'developers', 'api', '_next',
+    'marketing', 'auth', 'admin', 'icon.png', 'favicon.ico', 'robots.txt',
+    'sitemap.xml', 'about', 'blogs', 'careers', 'contact', 'faqs', 'packages',
+    'policies', 'reviews', 'tutorials', 'updates', 'help', 'terms', 'privacy',
+    'login', 'register', 'staff-panel'
+  ]);
+
+  // Clean /staff-panel handling: if URL has /[tenant]/staff-panel, redirect to clean /staff-panel
+  const tenantStaffMatch = pathname.match(/^\/([^/]+)(\/staff-panel(?:\/.*)?)$/i);
+  if (tenantStaffMatch) {
+    const matchedSlug = tenantStaffMatch[1].toLowerCase();
+    const cleanStaffPath = tenantStaffMatch[2];
+    if (!PLATFORM_RESERVED.has(matchedSlug)) {
+      const redirectUrl = new URL(cleanStaffPath, request.url);
+      const response = NextResponse.redirect(redirectUrl);
+      response.cookies.set('x-website-domain', matchedSlug, { path: '/' });
+      return response;
+    }
+  }
+
+  // Handle direct clean /staff-panel routes by rewriting internally to /[domain]/staff-panel
+  if (pathname === '/staff-panel' || pathname.startsWith('/staff-panel/')) {
+    const activeTenantCookie =
+      request.cookies.get('x-website-domain')?.value ||
+      request.cookies.get('x-domain')?.value;
+    const resolvedTenant = tenantDomain || activeTenantCookie || 'afit';
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-website-domain', resolvedTenant);
+    requestHeaders.set('x-domain', resolvedTenant);
+    url.pathname = `/${resolvedTenant}${pathname}`;
+    const response = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    if (!activeTenantCookie || activeTenantCookie !== resolvedTenant) {
+      response.cookies.set('x-website-domain', resolvedTenant, { path: '/' });
+    }
+    return response;
+  }
 
   // CASE 1: Main SaaS Platform request (baseurl.com or localhost)
   if (!tenantDomain) {
@@ -133,7 +171,7 @@ export function proxy(request) {
                 const first = pathParts[0].toLowerCase();
                 if ((first === 'websites' || first === 'website' || first === 'webite') && pathParts[1]) {
                   previewTenant = pathParts[1];
-                } else if (!['creator', 'api', '_next', 'marketing', 'auth', 'admin'].includes(first)) {
+                } else if (!PLATFORM_RESERVED.has(first)) {
                   previewTenant = first;
                 }
               }
@@ -153,13 +191,6 @@ export function proxy(request) {
     }
 
     // 1C: If direct preview path /[domain]/... is visited on base domain, track tenant cookie
-    const PLATFORM_RESERVED = new Set([
-      'creator', 'developer', 'developer-auth', 'developers', 'api', '_next',
-      'marketing', 'auth', 'admin', 'icon.png', 'favicon.ico', 'robots.txt',
-      'sitemap.xml', 'about', 'blogs', 'careers', 'contact', 'faqs', 'packages',
-      'policies', 'reviews', 'tutorials', 'updates', 'help', 'terms', 'privacy',
-      'login', 'register'
-    ]);
     const pathParts = pathname.split('/').filter(Boolean);
     if (pathParts.length > 0) {
       const first = pathParts[0].toLowerCase();
