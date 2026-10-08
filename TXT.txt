@@ -11,6 +11,10 @@ array:[
                 path:'/class-setup'
             },
             {
+                title:'Class Section',
+                path:'/class-section'
+            },
+            {
                 title:'Subject',
                 path:'/subjects'
             },
@@ -182,6 +186,10 @@ array:[
             {
                 title:'Payroll',
                 path:'/teacher-payroll'
+            },
+            {
+                title:'Qualifications',
+                path:'/teacher-qualifications'
             },
             {
                 title:'Id Card',
@@ -552,7 +560,7 @@ array:[
         ]
     },
     {
-        title:'Management',
+        title:'Officers',
         children:[
             {
                 title:'Hall',
@@ -561,7 +569,15 @@ array:[
             {
                 title:'Library',
                 path:'/management-library'
-            }
+            },
+            {
+                title:'Others',
+                path:'/management-others'
+            },
+            {
+                title:'Payrolls',
+                path:'/management-payrolls'
+            },
         ]
 
     },
@@ -583,6 +599,23 @@ array:[
             {
                 title:'Instagram',
                 path:'/message-instagram'
+            }
+        ]
+    },
+    {
+        title:'Salaries',
+        children:[
+            {
+                title:'Payrolls',
+                path:'/salary-payrolls
+            },
+            {
+                title:'Teacher',
+                path:'/salary-teacher'
+            }
+            {
+                title:'Officers',
+                path:'/salary-officers'
             }
         ]
     },
@@ -621,7 +654,7 @@ array:[
         ]
     },
     {
-        title:'Payements',
+        title:'Payments',
         children:[
             {
                 title:'Education',
@@ -667,6 +700,46 @@ array:[
                     {
                         title:'Paid',
                         path:'/payment-residence-paid'
+                    },
+                    {
+                        title:'Unpaid',
+                        path:'/payment-residence-unpaid'
+                    }
+                ]
+            },
+        ]
+    },
+    {
+        title:'Purchase',
+        children:[
+            {
+                title:'Inventory',
+                children:[
+                    {
+                        title:'List',
+                        path:'/inventory-list'
+                    },
+                    {
+                        title:'New',
+                        path:'/inventory-supplier'
+                    },
+                    {
+                        title:'Supplier',
+                        path:'/inventory-supplier'
+                    }
+                ]
+            },
+            
+            {
+                title:'Expenses',
+                children:[
+                    {
+                        title:'List',
+                        path:'/inventory-expenses'
+                    },
+                    {
+                        title:'Transactions',
+                        path:'/inverntory-transactions'
                     },
                     {
                         title:'Unpaid',
