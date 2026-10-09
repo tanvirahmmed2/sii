@@ -1,15 +1,17 @@
 import { BREVO_API_KEY, BREVO_SENDER_EMAIL, BREVO_SENDER_NAME } from './secret';
+import { sendWebsiteEmail, getWebsiteBrevoConfig } from './websiteBrevo.js';
+
+export { sendWebsiteEmail, getWebsiteBrevoConfig };
 
 /**
  * Sends an email using Brevo's Transactional Email SMTP API.
- * @param {Object} options
- * @param {string} options.to - Recipient email address
- * @param {string} [options.toName] - Recipient name (optional)
- * @param {string} options.subject - Email subject
- * @param {string} options.html - HTML content of the email
- * @returns {Promise<Object>} The API response details
+ * Supports optional options.websiteId to automatically use tenant mailer.
  */
-export const sendEmail = async ({ to, toName, subject, html }) => {
+export const sendEmail = async ({ to, toName, subject, html, websiteId }) => {
+  if (websiteId) {
+    return sendWebsiteEmail(websiteId, { to, toName, subject, html });
+  }
+
   if (!BREVO_API_KEY) {
     throw new Error('BREVO_API_KEY is not defined in environment secrets.');
   }

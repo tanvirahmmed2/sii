@@ -54,7 +54,7 @@ const Navbar = ({ staffUser = null }) => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:px-6 z-30 transition-colors">
+    <nav className="fixed top-0 left-0 right-0 h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:px-6 z-40 transition-colors">
       <div className="flex items-center gap-3">
         {/* Mobile Hamburger Menu Toggle */}
         <button

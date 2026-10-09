@@ -23,12 +23,12 @@ const StaffPanelLayout = async ({ children }) => {
       {/* Top Navbar */}
       <Navbar staffUser={staffUser} />
 
-      <div className="flex flex-1 relative pt-16">
+      <div className="flex flex-1 pt-14 min-h-[calc(100vh-3.5rem)]">
         {/* Left Sidebar */}
         <Sidebar allowedModules={allowedModules} isDevAdmin={devAdmin} />
 
         {/* Main Content Area */}
-        <main className="flex-1 w-full min-w-0 p-4 md:p-8 md:pl-[280px] transition-all duration-200">
+        <main className="flex-1 w-full min-w-0 p-4 sm:p-6 lg:p-8 transition-all duration-200">
           {children}
         </main>
       </div>

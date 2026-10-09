@@ -44,6 +44,7 @@ export default function StaffLoginPage() {
         setStep('2fa');
       } else {
         toast.success(data.message || 'Logged in successfully!');
+        router.refresh();
         router.push(tenantUrl('/staff-panel'));
       }
     } catch (err) {
@@ -77,6 +78,7 @@ export default function StaffLoginPage() {
       }
 
       toast.success(data.message || 'Verification successful!');
+      router.refresh();
       router.push(tenantUrl('/staff-panel'));
     } catch (err) {
       toast.error(err.message);

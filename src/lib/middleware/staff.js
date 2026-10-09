@@ -1,8 +1,36 @@
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { queryDb } from '../database/db.js';
 import { JWT_SECRET, STAFF_TOKEN } from '../database/secret.js';
 
 const DEFAULT_JWT_SECRET = JWT_SECRET || 'developer_superadmin_jwt_secret_key_2026';
+
+export const STAFF_COOKIE_NAME = STAFF_TOKEN || 'hiesci-staff';
+
+// Password helpers
+export async function hashPassword(password) {
+  const salt = await bcrypt.genSalt(10);
+  return bcrypt.hash(password, salt);
+}
+
+export async function comparePassword(password, hash) {
+  if (!password || !hash) return false;
+  try {
+    return await bcrypt.compare(String(password), String(hash));
+  } catch {
+    return false;
+  }
+}
+
+// JWT helpers
+export function signJWT(payload, expiresIn = '7d') {
+  return jwt.sign(payload, DEFAULT_JWT_SECRET, { expiresIn });
+}
+
+export function generateToken(payload, expiresIn = '7d') {
+  const jti = Math.random().toString(36).substring(2) + Date.now().toString(36);
+  return signJWT({ ...payload, jti }, expiresIn);
+}
 
 export function verifyJWT(token) {
   try {
@@ -11,8 +39,6 @@ export function verifyJWT(token) {
     return null;
   }
 }
-
-export const STAFF_COOKIE_NAME = STAFF_TOKEN || 'hiesci-staff';
 
 async function getCookieStore() {
   try {
@@ -26,11 +52,63 @@ async function getCookieStore() {
   return null;
 }
 
+export async function setStaffSessionCookie(response, token) {
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 7 * 24 * 60 * 60, // 7 days
+  };
+
+  if (response && response.cookies) {
+    response.cookies.set(STAFF_COOKIE_NAME, token, cookieOptions);
+  } else {
+    try {
+      const cookieStore = await getCookieStore();
+      cookieStore?.set(STAFF_COOKIE_NAME, token, cookieOptions);
+    } catch {}
+  }
+}
+
+export async function clearStaffSessionCookie(response) {
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 0,
+  };
+
+  if (response && response.cookies) {
+    response.cookies.set(STAFF_COOKIE_NAME, '', cookieOptions);
+    response.cookies.delete?.(STAFF_COOKIE_NAME);
+  } else {
+    try {
+      const cookieStore = await getCookieStore();
+      cookieStore?.delete(STAFF_COOKIE_NAME);
+    } catch {}
+  }
+}
+
+let _schemaEnsured = false;
+async function ensureStaffSchema() {
+  if (_schemaEnsured) return;
+  _schemaEnsured = true;
+  try {
+    await queryDb(`
+      ALTER TABLE website_staffs ADD COLUMN IF NOT EXISTS image TEXT;
+      ALTER TABLE website_staffs ADD COLUMN IF NOT EXISTS image_id VARCHAR(255);
+    `);
+  } catch {}
+}
+
 /**
  * Extracts and decodes staff session from request or cookies
  */
 export async function getStaffSession(request) {
   try {
+    await ensureStaffSchema().catch(() => {});
     let token = null;
 
     if (request) {
@@ -158,7 +236,9 @@ export async function getStaffSession(request) {
 
     const staffUser = {
       id: row.id,
+      staff_id: row.id,
       websiteId: row.website_id,
+      website_id: row.website_id,
       name: row.name,
       email: row.email,
       number: row.number,
@@ -189,9 +269,14 @@ export async function getStaffSession(request) {
     return {
       staff: staffUser,
       user: staffUser,
+      website_id: row.website_id,
+      websiteId: row.website_id,
+      staff_id: row.id,
+      staffId: row.id,
       session: {
         id: row.session_id,
         websiteId: row.website_id,
+        website_id: row.website_id,
         token,
         expiresAt: row.expires_at,
       },
@@ -325,6 +410,13 @@ const StaffMiddleware = {
   createStaffSession,
   revokeStaffSession,
   revokeAllStaffSessions,
+  hashPassword,
+  comparePassword,
+  signJWT,
+  generateToken,
+  verifyJWT,
+  setStaffSessionCookie,
+  clearStaffSessionCookie,
 };
 
 export default StaffMiddleware;

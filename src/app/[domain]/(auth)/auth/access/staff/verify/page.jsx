@@ -28,7 +28,7 @@ function StaffVerifyInner() {
 
     const validateToken = async () => {
       try {
-        const endpoint = getApiEndpoint('staff/register');
+        const endpoint = getApiEndpoint('staff/verify');
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -80,7 +80,7 @@ function StaffVerifyInner() {
 
     setSubmitting(true);
     try {
-      const endpoint = getApiEndpoint('staff/register');
+      const endpoint = getApiEndpoint('staff/verify');
       const response = await fetch(endpoint, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },

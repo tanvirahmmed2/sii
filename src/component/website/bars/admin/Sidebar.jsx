@@ -212,7 +212,7 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
 
       {/* Main Sidebar Shell */}
       <aside
-        className={`fixed md:sticky top-14 z-30 h-[calc(100vh-3.5rem)] w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between transition-transform duration-200 ease-in-out md:translate-x-0 ${
+        className={`fixed md:sticky top-14 left-0 z-30 h-[calc(100vh-3.5rem)] w-64 shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between transition-transform duration-200 ease-in-out md:translate-x-0 ${
           adminSidebar ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

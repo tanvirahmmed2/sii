@@ -8,7 +8,7 @@ const StaffAuthLayout = async ({ children }) => {
   const authenticated = await isStaff();
   
   if (authenticated) {
-    redirect('/staff');
+    redirect('/staff-panel');
   }
 
   return (

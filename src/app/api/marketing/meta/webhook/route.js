@@ -31,7 +31,22 @@ export async function GET(request) {
       return new Response('Forbidden: Server webhook token not configured', { status: 403 });
     }
 
-    const isTokenMatch = String(token).trim() === META_WEBHOOK_VERIFY_TOKEN.trim();
+    let isTokenMatch = Boolean(
+      META_WEBHOOK_VERIFY_TOKEN &&
+      String(token).trim() === META_WEBHOOK_VERIFY_TOKEN.trim()
+    );
+
+    if (!isTokenMatch) {
+      try {
+        const webCheck = await pool.query(
+          `SELECT website_id FROM website_meta WHERE meta_webhook_verify_token = $1 AND is_active = TRUE LIMIT 1`,
+          [String(token).trim()]
+        );
+        if (webCheck.rows.length > 0) {
+          isTokenMatch = true;
+        }
+      } catch {}
+    }
 
     if (!isTokenMatch) {
       console.warn('Meta Webhook Handshake: Token mismatch attempt rejected.');
@@ -110,7 +125,7 @@ export async function POST(request) {
         const safeText = String(evt.messageText || '').replace(/\0/g, '').slice(0, 4000);
         const safeMsgId = evt.externalMessageId ? String(evt.externalMessageId).slice(0, 255) : null;
 
-        // 1. Upsert conversation
+        // 1. Upsert global conversation
         const convUpsert = await pool.query(
           `INSERT INTO meta_conversations (
              platform, external_conversation_id, recipient_id, recipient_name,
@@ -138,7 +153,7 @@ export async function POST(request) {
 
         const convId = convUpsert.rows[0]?.id;
 
-        // 2. Insert incoming message
+        // 2. Insert incoming message to global table
         if (convId) {
           await pool.query(
             `INSERT INTO meta_messages (
@@ -156,6 +171,74 @@ export async function POST(request) {
               evt.timestamp || new Date(),
             ]
           );
+        }
+
+        // 3. Multi-tenant ingestion: Also store in website_meta_conversations if tenant configured
+        try {
+          const webMetaRes = await pool.query(
+            `SELECT website_id FROM website_meta
+             WHERE is_active = TRUE
+               AND (
+                 whatsapp_phone_number_id = $1
+                 OR meta_app_id = $2
+                 OR 1=1
+               )
+             ORDER BY (whatsapp_phone_number_id = $1) DESC
+             LIMIT 1`,
+            [safeRecipientId, body.entry?.[0]?.id || '']
+          );
+
+          if (webMetaRes.rows.length > 0) {
+            const webId = webMetaRes.rows[0].website_id;
+            const wConvUpsert = await pool.query(
+              `INSERT INTO website_meta_conversations (
+                 website_id, platform, external_conversation_id, recipient_id, recipient_name,
+                 recipient_phone, last_message, last_message_at, status, unread_count, updated_at
+               )
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'OPEN', 1, CURRENT_TIMESTAMP)
+               ON CONFLICT (website_id, platform, external_conversation_id)
+               DO UPDATE SET
+                 last_message = EXCLUDED.last_message,
+                 last_message_at = EXCLUDED.last_message_at,
+                 unread_count = website_meta_conversations.unread_count + 1,
+                 updated_at = CURRENT_TIMESTAMP,
+                 recipient_name = COALESCE(NULLIF(EXCLUDED.recipient_name, 'Customer'), website_meta_conversations.recipient_name)
+               RETURNING id`,
+              [
+                webId,
+                safePlatform,
+                safeConvId,
+                safeRecipientId,
+                safeName,
+                safePhone,
+                safeText,
+                evt.timestamp || new Date(),
+              ]
+            );
+
+            const wConvId = wConvUpsert.rows[0]?.id;
+            if (wConvId) {
+              await pool.query(
+                `INSERT INTO website_meta_messages (
+                   website_id, conversation_id, platform, sender_type, sender_id, sender_name,
+                   message_text, external_message_id, delivery_status, created_at
+                 )
+                 VALUES ($1, $2, $3, 'CUSTOMER', $4, $5, $6, $7, 'DELIVERED', $8)`,
+                [
+                  webId,
+                  wConvId,
+                  safePlatform,
+                  safeRecipientId,
+                  safeName,
+                  safeText,
+                  safeMsgId,
+                  evt.timestamp || new Date(),
+                ]
+              );
+            }
+          }
+        } catch (tenantErr) {
+          console.warn('Notice syncing to website_meta_conversations:', tenantErr.message);
         }
       } catch (evtErr) {
         console.error('Error processing single Meta webhook event:', evtErr.message);

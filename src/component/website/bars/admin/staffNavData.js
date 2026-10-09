@@ -24,6 +24,10 @@ export const staffNavData = [
         path: '/class-subject'
       },
       {
+        title: 'Class Routine',
+        path: '/class-routine'
+      },
+      {
         title: 'Class Teacher',
         path: '/class-teacher'
       }

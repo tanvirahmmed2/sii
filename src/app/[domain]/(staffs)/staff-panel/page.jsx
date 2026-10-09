@@ -51,7 +51,7 @@ const AdminHomePage = () => {
   }
 
   return (
-    <div className="w-full flex flex-col gap-6 max-w-7xl mx-auto pb-12">
+    <div className="w-full flex flex-col gap-6 pb-12">
       
       <div className="w-full bg-slate-900 text-white rounded-2xl p-6 md:p-8 shadow-sm relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border border-slate-800">
         <div className="flex flex-col gap-2 z-10">

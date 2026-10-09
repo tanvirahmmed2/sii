@@ -1,8 +1,8 @@
 -- ============================================================================
--- TENANT WEBSITES SUBSCHEMA
+-- TENANT WEBSITES SUBSCHEMA (STAFF & MODULE SUBSETS ONLY)
 -- Isolated Schema Definition for Tenant Educational Websites
 -- Scoped by website_id & prefixed with website_
--- Extracted from psql/schema.psql
+-- All other website modules will be created incrementally as needed.
 -- ============================================================================
 
 -- Enable required extensions
@@ -22,118 +22,36 @@ $$ LANGUAGE plpgsql;
 
 
 -- ============================================================================
--- SECTION 2: TENANT TABLES (PREFIXED WITH website_, SCOPED BY website_id)
+-- SECTION 1: MODULE TABLES
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- 25. WEBSITE SETTINGS TABLE
+-- 1. WEBSITE MODULES TABLE (Tenant Features / School System Modules Catalog)
+-- e.g., Attendance, Exams, LMS, Hostel, Fees, Accounting, Inventory
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_settings (
+CREATE TABLE IF NOT EXISTS website_modules (
     id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT UNIQUE NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    contact_phone VARCHAR(50),
-    contact_email VARCHAR(255),
-    address TEXT,
-    map_url TEXT,
-    motto TEXT,
-    mission TEXT,
-    vision TEXT,
-    history TEXT,
-    facebook_url TEXT,
-    twitter_url TEXT,
-    instagram_url TEXT,
-    youtube_url TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_settings_updated_at ON website_settings;
-CREATE TRIGGER update_website_settings_updated_at
-    BEFORE UPDATE ON website_settings
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 26. WEBSITE HISTORIES TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_histories (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    description TEXT NOT NULL,
-    date TIMESTAMPTZ NOT NULL,
-    infor TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_histories_updated_at ON website_histories;
-CREATE TRIGGER update_website_histories_updated_at
-    BEFORE UPDATE ON website_histories
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 27. WEBSITE ACHIEVEMENTS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_achievements (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    description TEXT NOT NULL,
-    image_url TEXT,
-    image_id TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_achievements_updated_at ON website_achievements;
-CREATE TRIGGER update_website_achievements_updated_at
-    BEFORE UPDATE ON website_achievements
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 28. WEBSITE RECOGNITIONS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_recognitions (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) NOT NULL,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
     description TEXT,
-    awarded_by VARCHAR(255) NOT NULL,
-    date DATE NOT NULL,
-    image TEXT,
-    image_id VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, slug)
-);
-
-DROP TRIGGER IF EXISTS update_website_recognitions_updated_at ON website_recognitions;
-CREATE TRIGGER update_website_recognitions_updated_at
-    BEFORE UPDATE ON website_recognitions
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 29. WEBSITE COLLABORATIONS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_collaborations (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    institution_name VARCHAR(255) NOT NULL,
-    logo TEXT,
-    logo_id VARCHAR(255),
-    description TEXT,
+    icon VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TRIGGER IF EXISTS update_website_collaborations_updated_at ON website_collaborations;
-CREATE TRIGGER update_website_collaborations_updated_at
-    BEFORE UPDATE ON website_collaborations
+DROP TRIGGER IF EXISTS update_website_modules_updated_at ON website_modules;
+CREATE TRIGGER update_website_modules_updated_at
+    BEFORE UPDATE ON website_modules
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+
+-- ============================================================================
+-- SECTION 2: STAFF TABLES
+-- ============================================================================
+
 -- ----------------------------------------------------------------------------
--- 30. WEBSITE STAFF PAY SCALE TABLE (Declared prior to website_staffs)
+-- 2. WEBSITE STAFF PAY SCALE TABLE (Staff Salary Grade / Scale)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_staff_pay_scale (
     id BIGSERIAL PRIMARY KEY,
@@ -152,8 +70,7 @@ CREATE TRIGGER update_website_staff_pay_scale_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 31. WEBSITE STAFFS TABLE (Admins, Registrars, Cashiers, General Staff)
--- (Unified institutional administration & operational staff table)
+-- 3. WEBSITE STAFFS TABLE (Admins, Registrars, Cashiers, General Staff)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_staffs (
     id BIGSERIAL PRIMARY KEY,
@@ -173,6 +90,8 @@ CREATE TABLE IF NOT EXISTS website_staffs (
     verification_token VARCHAR(255),
     verification_token_expires TIMESTAMPTZ,
     grade_id BIGINT REFERENCES website_staff_pay_scale(id) ON DELETE SET NULL,
+    image TEXT,
+    image_id VARCHAR(255),
     date_of_birth DATE,
     nationality VARCHAR(100),
     blood_group VARCHAR(10),
@@ -192,7 +111,7 @@ CREATE TRIGGER update_website_staffs_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 32. WEBSITE STAFF EXPERIENCES TABLE
+-- 4. WEBSITE STAFF EXPERIENCES TABLE
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_staff_experiences (
     id BIGSERIAL PRIMARY KEY,
@@ -214,8 +133,7 @@ CREATE TRIGGER update_website_staff_experiences_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 32A. WEBSITE MODULES PERMISSIONS TABLE (Granular Module Access for Tenant Staff Only)
--- (Must check if available for the website via its subscription package)
+-- 5. WEBSITE MODULES PERMISSIONS TABLE (Granular Module Access for Tenant Staff)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_modules_permissions (
     id BIGSERIAL PRIMARY KEY,
@@ -241,7 +159,7 @@ CREATE TRIGGER update_website_modules_permissions_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 32B. STAFF SESSIONS TABLE (Active Multi-Device Sessions for Tenant Staff)
+-- 6. STAFF SESSIONS TABLE (Active Multi-Device Sessions for Tenant Staff)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS staff_sessions (
     id BIGSERIAL PRIMARY KEY,
@@ -268,108 +186,137 @@ CREATE TRIGGER update_staff_sessions_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 33. WEBSITE AUTHORITY DESIGNATIONS TABLE
+-- 7. WEBSITE STAFF SALARIES TABLE (Staff Payroll Ledger)
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_authority_designations (
+CREATE TABLE IF NOT EXISTS website_staff_salaries (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) NOT NULL,
-    description TEXT,
-    is_head BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, title),
-    UNIQUE(website_id, slug)
-);
-
-DROP TRIGGER IF EXISTS update_website_authority_designations_updated_at ON website_authority_designations;
-CREATE TRIGGER update_website_authority_designations_updated_at
-    BEFORE UPDATE ON website_authority_designations
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 34. WEBSITE AUTHORITIES TABLE (Board Members, Managing Committee, Principals)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_authorities (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    bio TEXT,
-    designation_id BIGINT NOT NULL REFERENCES website_authority_designations(id) ON DELETE RESTRICT,
-    email VARCHAR(255),
-    contact VARCHAR(50),
-    image TEXT,
-    image_id VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, email)
-);
-
-DROP TRIGGER IF EXISTS update_website_authorities_updated_at ON website_authorities;
-CREATE TRIGGER update_website_authorities_updated_at
-    BEFORE UPDATE ON website_authorities
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 35. WEBSITE AUTHORITY QUALIFICATIONS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_authority_qualifications (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    authority_id BIGINT NOT NULL REFERENCES website_authorities(id) ON DELETE CASCADE,
-    degree VARCHAR(255) NOT NULL,
-    institution VARCHAR(255) NOT NULL,
-    passing_year INT NOT NULL,
-    result VARCHAR(100),
+    staff_id BIGINT REFERENCES website_staffs(id) ON DELETE CASCADE,
+    month VARCHAR(50) NOT NULL,
+    basic DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (basic >= 0.00),
+    allowance DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (allowance >= 0.00),
+    deductions DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (deductions >= 0.00),
+    status VARCHAR(50) NOT NULL DEFAULT 'Pending',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TRIGGER IF EXISTS update_website_authority_qualifications_updated_at ON website_authority_qualifications;
-CREATE TRIGGER update_website_authority_qualifications_updated_at
-    BEFORE UPDATE ON website_authority_qualifications
+DROP TRIGGER IF EXISTS update_website_staff_salaries_updated_at ON website_staff_salaries;
+CREATE TRIGGER update_website_staff_salaries_updated_at
+    BEFORE UPDATE ON website_staff_salaries
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 36. WEBSITE DAYS TABLE (Academic Schedule Days)
+-- 8. WEBSITE STAFF SALARY PAYMENTS TABLE
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_days (
+CREATE TABLE IF NOT EXISTS website_staff_salary_payments (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    name VARCHAR(50) NOT NULL,
-    status VARCHAR(10) CHECK(status IN ('on', 'off')) DEFAULT 'on',
+    staff_salary_id BIGINT NOT NULL REFERENCES website_staff_salaries(id) ON DELETE CASCADE,
+    amount_paid DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount_paid >= 0.00),
+    payment_method VARCHAR(50) NOT NULL DEFAULT 'Bank Transfer',
+    transaction_id VARCHAR(100),
+    remarks TEXT,
+    payment_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, name)
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TRIGGER IF EXISTS update_website_days_updated_at ON website_days;
-CREATE TRIGGER update_website_days_updated_at
-    BEFORE UPDATE ON website_days
+DROP TRIGGER IF EXISTS update_website_staff_salary_payments_updated_at ON website_staff_salary_payments;
+CREATE TRIGGER update_website_staff_salary_payments_updated_at
+    BEFORE UPDATE ON website_staff_salary_payments
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 37. WEBSITE PERIODS TABLE (Class Time Slots)
+-- 9. WEBSITE STAFF ATTENDANCE TABLE
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_periods (
+CREATE TABLE IF NOT EXISTS website_staff_attendance (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    staff_id BIGINT NOT NULL REFERENCES website_staffs(id) ON DELETE CASCADE,
+    date DATE NOT NULL DEFAULT CURRENT_DATE,
+    check_in VARCHAR(50),
+    check_out VARCHAR(50),
+    status VARCHAR(50) NOT NULL DEFAULT 'Present',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, staff_id, date)
+);
+
+DROP TRIGGER IF EXISTS update_website_staff_attendance_updated_at ON website_staff_attendance;
+CREATE TRIGGER update_website_staff_attendance_updated_at
+    BEFORE UPDATE ON website_staff_attendance
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 10. WEBSITE STAFF LEAVES TABLE (Leave Applications)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_staff_leaves (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    staff_id BIGINT NOT NULL REFERENCES website_staffs(id) ON DELETE CASCADE,
+    type VARCHAR(100) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    reason TEXT NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_staff_leaves_updated_at ON website_staff_leaves;
+CREATE TRIGGER update_website_staff_leaves_updated_at
+    BEFORE UPDATE ON website_staff_leaves
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 11. WEBSITE STAFF APPLICATIONS TABLE (Internal Staff Requests)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_staff_applications (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    staff_id BIGINT REFERENCES website_staffs(id) ON DELETE CASCADE,
+    type VARCHAR(100) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    details TEXT NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_staff_applications_updated_at ON website_staff_applications;
+CREATE TRIGGER update_website_staff_applications_updated_at
+    BEFORE UPDATE ON website_staff_applications
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+-- ============================================================================
+-- SECTION 3: ACADEMIC & CLASS ROUTINE TABLES
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 12. WEBSITE SESSIONS TABLE (Academic Sessions e.g., 2021-2022, 2025-2026)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_sessions (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
-    start_time VARCHAR(50) NOT NULL,
-    end_time VARCHAR(50) NOT NULL,
+    start_date DATE,
+    end_date DATE,
+    is_current BOOLEAN DEFAULT FALSE,
+    status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'archived', 'upcoming')),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(website_id, name)
 );
 
-DROP TRIGGER IF EXISTS update_website_periods_updated_at ON website_periods;
-CREATE TRIGGER update_website_periods_updated_at
-    BEFORE UPDATE ON website_periods
+DROP TRIGGER IF EXISTS update_website_sessions_updated_at ON website_sessions;
+CREATE TRIGGER update_website_sessions_updated_at
+    BEFORE UPDATE ON website_sessions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 38. WEBSITE CLASSES TABLE (Grades / Classes in the School)
+-- 13. WEBSITE CLASSES TABLE (Grades / Classes in the School)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_classes (
     id BIGSERIAL PRIMARY KEY,
@@ -391,25 +338,7 @@ CREATE TRIGGER update_website_classes_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 39. WEBSITE CLASS MONTHLY FEES TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_class_monthly_fees (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    class_id BIGINT NOT NULL REFERENCES website_classes(id) ON DELETE CASCADE,
-    amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount >= 0.00),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, class_id)
-);
-
-DROP TRIGGER IF EXISTS update_website_class_monthly_fees_updated_at ON website_class_monthly_fees;
-CREATE TRIGGER update_website_class_monthly_fees_updated_at
-    BEFORE UPDATE ON website_class_monthly_fees
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 40. WEBSITE SECTIONS TABLE (Class Sections / Batches)
+-- 14. WEBSITE SECTIONS TABLE (Class Sections / Batches)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_sections (
     id BIGSERIAL PRIMARY KEY,
@@ -429,13 +358,15 @@ CREATE TRIGGER update_website_sections_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 41. WEBSITE SUBJECTS TABLE (Courses / Subjects Taught)
+-- 15. WEBSITE SUBJECTS TABLE (Courses / Subjects Taught)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_subjects (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
     code VARCHAR(50) NOT NULL,
+    type VARCHAR(50) DEFAULT 'Theory' CHECK (type IN ('Theory', 'Practical', 'Both', 'Optional')),
+    description TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(website_id, name),
@@ -448,13 +379,16 @@ CREATE TRIGGER update_website_subjects_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 42. WEBSITE CLASS SUBJECTS TABLE (Subject Mapping to Classes)
+-- 16. WEBSITE CLASS SUBJECTS TABLE (Subject Mapping to Classes)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_class_subjects (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     class_id BIGINT NOT NULL REFERENCES website_classes(id) ON DELETE CASCADE,
     subject_id BIGINT NOT NULL REFERENCES website_subjects(id) ON DELETE CASCADE,
+    full_marks NUMERIC(6, 2) DEFAULT 100.00 CHECK (full_marks >= 0.00),
+    pass_marks NUMERIC(6, 2) DEFAULT 33.00 CHECK (pass_marks >= 0.00),
+    is_optional BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(website_id, class_id, subject_id)
@@ -466,1852 +400,188 @@ CREATE TRIGGER update_website_class_subjects_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 43. WEBSITE TEACHER PAY SCALE TABLE (Declared prior to website_teachers)
+-- 17. WEBSITE DAYS TABLE (Academic Schedule Days)
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_teacher_pay_scale (
+CREATE TABLE IF NOT EXISTS website_days (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    name VARCHAR(100) NOT NULL,
-    basic_salary NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (basic_salary >= 0.00),
-    allowance NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (allowance >= 0.00),
+    name VARCHAR(50) NOT NULL,
+    day_order INT NOT NULL DEFAULT 1 CHECK (day_order BETWEEN 1 AND 7),
+    status VARCHAR(10) CHECK(status IN ('on', 'off')) DEFAULT 'on',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(website_id, name)
 );
 
-DROP TRIGGER IF EXISTS update_website_teacher_pay_scale_updated_at ON website_teacher_pay_scale;
-CREATE TRIGGER update_website_teacher_pay_scale_updated_at
-    BEFORE UPDATE ON website_teacher_pay_scale
+DROP TRIGGER IF EXISTS update_website_days_updated_at ON website_days;
+CREATE TRIGGER update_website_days_updated_at
+    BEFORE UPDATE ON website_days
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 44. WEBSITE TEACHERS TABLE (Faculty Members)
+-- 18. WEBSITE PERIODS TABLE (Class Time Slots Linked with Day)
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_teachers (
+CREATE TABLE IF NOT EXISTS website_periods (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    number VARCHAR(50) NOT NULL,
-    designation VARCHAR(255),
-    address TEXT,
-    password VARCHAR(255),
-    recovery_token VARCHAR(255),
-    recovery_token_expires TIMESTAMPTZ,
-    is_active BOOLEAN DEFAULT FALSE,
-    is_registered BOOLEAN DEFAULT FALSE,
-    is_permanent BOOLEAN DEFAULT FALSE,
-    image TEXT,
-    image_id VARCHAR(255),
-    grade_id BIGINT REFERENCES website_teacher_pay_scale(id) ON DELETE SET NULL,
-    verification_token VARCHAR(255),
-    verification_token_expires TIMESTAMPTZ,
-    date_of_birth DATE,
-    nationality VARCHAR(100),
-    blood_group VARCHAR(10),
-    gender VARCHAR(20),
-    nid_number VARCHAR(100),
-    bio TEXT,
-    username VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, email),
-    UNIQUE(website_id, username)
-);
-
-DROP TRIGGER IF EXISTS update_website_teachers_updated_at ON website_teachers;
-CREATE TRIGGER update_website_teachers_updated_at
-    BEFORE UPDATE ON website_teachers
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 45. WEBSITE TEACHER EXPERIENCES TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_teacher_experiences (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    teacher_id BIGINT NOT NULL REFERENCES website_teachers(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    organization VARCHAR(255) NOT NULL,
-    start_date DATE,
-    end_date DATE,
-    is_current BOOLEAN DEFAULT FALSE,
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_teacher_experiences_updated_at ON website_teacher_experiences;
-CREATE TRIGGER update_website_teacher_experiences_updated_at
-    BEFORE UPDATE ON website_teacher_experiences
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 46. WEBSITE TEACHER QUALIFICATIONS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_teacher_qualifications (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    teacher_id BIGINT NOT NULL REFERENCES website_teachers(id) ON DELETE CASCADE,
-    degree VARCHAR(255) NOT NULL,
-    institution VARCHAR(255) NOT NULL,
-    passing_year INT NOT NULL,
-    result VARCHAR(100),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_teacher_qualifications_updated_at ON website_teacher_qualifications;
-CREATE TRIGGER update_website_teacher_qualifications_updated_at
-    BEFORE UPDATE ON website_teacher_qualifications
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 47. WEBSITE TEACHER SUBJECTS TABLE (Subject Expertise & Eligibility)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_teacher_subjects (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    teacher_id BIGINT NOT NULL REFERENCES website_teachers(id) ON DELETE CASCADE,
-    subject_id BIGINT NOT NULL REFERENCES website_subjects(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, teacher_id, subject_id)
-);
-
-DROP TRIGGER IF EXISTS update_website_teacher_subjects_updated_at ON website_teacher_subjects;
-CREATE TRIGGER update_website_teacher_subjects_updated_at
-    BEFORE UPDATE ON website_teacher_subjects
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 48. WEBSITE TEACHER CLASSES TABLE (Class Teacher Assignments)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_teacher_classes (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    teacher_id BIGINT NOT NULL REFERENCES website_teachers(id) ON DELETE CASCADE,
-    class_id BIGINT NOT NULL REFERENCES website_classes(id) ON DELETE CASCADE,
-    section_id BIGINT REFERENCES website_sections(id) ON DELETE CASCADE,
-    academic_year VARCHAR(50) NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, class_id, section_id, academic_year)
-);
-
-DROP TRIGGER IF EXISTS update_website_teacher_classes_updated_at ON website_teacher_classes;
-CREATE TRIGGER update_website_teacher_classes_updated_at
-    BEFORE UPDATE ON website_teacher_classes
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 49. WEBSITE CLASS SUBJECT TEACHERS TABLE (Subject-Teacher-Section Assignment)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_class_subject_teachers (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    class_subject_id BIGINT NOT NULL REFERENCES website_class_subjects(id) ON DELETE CASCADE,
-    section_id BIGINT REFERENCES website_sections(id) ON DELETE CASCADE,
-    teacher_id BIGINT NOT NULL REFERENCES website_teachers(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS website_cst_unique_idx
-  ON website_class_subject_teachers (website_id, class_subject_id, COALESCE(section_id, -1));
-
-DROP TRIGGER IF EXISTS update_website_class_subject_teachers_updated_at ON website_class_subject_teachers;
-CREATE TRIGGER update_website_class_subject_teachers_updated_at
-    BEFORE UPDATE ON website_class_subject_teachers
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 50. WEBSITE CLASS ROUTINES TABLE (Weekly Timetable)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_class_routines (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    class_id BIGINT NOT NULL REFERENCES website_classes(id) ON DELETE CASCADE,
-    subject_id BIGINT NOT NULL REFERENCES website_subjects(id) ON DELETE CASCADE,
     day_id BIGINT NOT NULL REFERENCES website_days(id) ON DELETE CASCADE,
-    start_time TIME NOT NULL,
-    end_time TIME NOT NULL,
-    section_id BIGINT REFERENCES website_sections(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS website_class_routine_unique_idx 
-    ON website_class_routines (website_id, class_id, day_id, start_time, end_time, COALESCE(section_id, -1));
-
-DROP TRIGGER IF EXISTS update_website_class_routines_updated_at ON website_class_routines;
-CREATE TRIGGER update_website_class_routines_updated_at
-    BEFORE UPDATE ON website_class_routines
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 51. WEBSITE SYLLABUSES TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_syllabuses (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    link TEXT NOT NULL,
-    class_id BIGINT NOT NULL REFERENCES website_classes(id) ON DELETE CASCADE,
-    subject_id BIGINT NOT NULL REFERENCES website_subjects(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_syllabuses_updated_at ON website_syllabuses;
-CREATE TRIGGER update_website_syllabuses_updated_at
-    BEFORE UPDATE ON website_syllabuses
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 52. WEBSITE LESSON PLANS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_lesson_plans (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    class_subject_id BIGINT NOT NULL REFERENCES website_class_subjects(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    description TEXT NOT NULL,
-    date DATE NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'Draft',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_lesson_plans_updated_at ON website_lesson_plans;
-CREATE TRIGGER update_website_lesson_plans_updated_at
-    BEFORE UPDATE ON website_lesson_plans
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 53. WEBSITE STUDY MATERIALS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_study_materials (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    class_subject_id BIGINT NOT NULL REFERENCES website_class_subjects(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    file_url TEXT NOT NULL,
-    file_id VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_study_materials_updated_at ON website_study_materials;
-CREATE TRIGGER update_website_study_materials_updated_at
-    BEFORE UPDATE ON website_study_materials
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 54. WEBSITE STUDENTS TABLE (Student Account & Authentication Master)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_students (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255),
-    phone VARCHAR(50),
-    registration_number VARCHAR(100) NOT NULL,
-    password VARCHAR(255),
-    recovery_token VARCHAR(255),
-    recovery_token_expires TIMESTAMPTZ,
-    verification_code VARCHAR(255),
-    verification_code_expires TIMESTAMPTZ,
-    is_active BOOLEAN DEFAULT FALSE,
-    is_registered BOOLEAN DEFAULT FALSE,
-    image TEXT,
-    image_id VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, registration_number),
-    UNIQUE(website_id, email)
-);
-
-DROP TRIGGER IF EXISTS update_website_students_updated_at ON website_students;
-CREATE TRIGGER update_website_students_updated_at
-    BEFORE UPDATE ON website_students
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 55. WEBSITE STUDENT INFORMATION TABLE (Student Details, Parents, Demographics)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_student_information (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT UNIQUE NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    class_id BIGINT REFERENCES website_classes(id) ON DELETE SET NULL,
-    section_id BIGINT REFERENCES website_sections(id) ON DELETE SET NULL,
-    roll INT CHECK (roll > 0),
-    date_of_birth DATE,
-    gender VARCHAR(20) CHECK (gender IN ('Male', 'Female', 'Other')),
-    blood_group VARCHAR(10),
-    birth_certificate_number VARCHAR(100),
-    address TEXT,
-    parents_info TEXT,
-    father_name VARCHAR(255),
-    father_occupation VARCHAR(255),
-    father_phone VARCHAR(50),
-    mother_name VARCHAR(255),
-    mother_occupation VARCHAR(255),
-    mother_phone VARCHAR(50),
-    guardian_name VARCHAR(255),
-    guardian_phone VARCHAR(50),
-    guardian_relationship VARCHAR(100),
-    past_school_name VARCHAR(255),
-    past_school_class VARCHAR(50),
-    past_school_result VARCHAR(100),
-    special_note TEXT,
-    signature TEXT,
-    signature_id VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, birth_certificate_number)
-);
-
-DROP TRIGGER IF EXISTS update_website_student_information_updated_at ON website_student_information;
-CREATE TRIGGER update_website_student_information_updated_at
-    BEFORE UPDATE ON website_student_information
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 56. WEBSITE STUDENT DOCUMENTS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_student_documents (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    document_name VARCHAR(255) NOT NULL,
-    document_type VARCHAR(100) NOT NULL,
-    file_url TEXT NOT NULL,
-    file_id VARCHAR(255),
-    uploaded_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_student_documents_updated_at ON website_student_documents;
-CREATE TRIGGER update_website_student_documents_updated_at
-    BEFORE UPDATE ON website_student_documents
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 57. WEBSITE STUDENT ENROLLMENTS TABLE (Academic Session History)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_student_enrollments (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    class_id BIGINT NOT NULL REFERENCES website_classes(id) ON DELETE CASCADE,
-    section_id BIGINT REFERENCES website_sections(id) ON DELETE SET NULL,
-    session_year VARCHAR(50) NOT NULL,
-    roll_number INT CHECK (roll_number > 0),
-    enrollment_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    status VARCHAR(50) DEFAULT 'Active' CHECK (status IN ('Active', 'Completed', 'Dropped', 'Transferred')),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, student_id, session_year)
-);
-
-DROP TRIGGER IF EXISTS update_website_student_enrollments_updated_at ON website_student_enrollments;
-CREATE TRIGGER update_website_student_enrollments_updated_at
-    BEFORE UPDATE ON website_student_enrollments
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 58. WEBSITE STUDENT ATTENDANCES TABLE (Daily / Period Attendance)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_student_attendances (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    class_id BIGINT NOT NULL REFERENCES website_classes(id) ON DELETE CASCADE,
-    subject_id BIGINT NOT NULL REFERENCES website_subjects(id) ON DELETE CASCADE,
-    period_id BIGINT NOT NULL REFERENCES website_periods(id) ON DELETE CASCADE,
-    date DATE NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'Present' CHECK (status IN ('Present', 'Absent', 'Late', 'On Leave')),
-    remarks TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, student_id, date, subject_id, period_id)
-);
-
-DROP TRIGGER IF EXISTS update_website_student_attendances_updated_at ON website_student_attendances;
-CREATE TRIGGER update_website_student_attendances_updated_at
-    BEFORE UPDATE ON website_student_attendances
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 59. WEBSITE STUDENT ATTENDANCE LOGS TABLE (Biometric / RFID Logs)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_student_attendance_logs (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    scan_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    device_id VARCHAR(100),
-    direction VARCHAR(50) CHECK (direction IN ('IN', 'OUT')),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
--- ----------------------------------------------------------------------------
--- 60. WEBSITE ATTENDANCE REPORTS TABLE (Aggregated Metrics)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_attendance_reports (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT REFERENCES website_students(id) ON DELETE CASCADE,
-    class_id BIGINT REFERENCES website_classes(id) ON DELETE CASCADE,
-    section_id BIGINT REFERENCES website_sections(id) ON DELETE CASCADE,
-    report_month DATE NOT NULL,
-    total_working_days INT NOT NULL,
-    total_present INT NOT NULL,
-    total_absent INT NOT NULL,
-    total_late INT NOT NULL,
-    total_half_day INT NOT NULL,
-    attendance_percentage DECIMAL(5, 2) NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
--- ----------------------------------------------------------------------------
--- 61. WEBSITE ASSIGNMENTS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_assignments (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    class_subject_id BIGINT NOT NULL REFERENCES website_class_subjects(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    description TEXT NOT NULL,
-    file_url TEXT,
-    file_id VARCHAR(255),
-    due_date TIMESTAMPTZ NOT NULL,
-    max_marks DECIMAL(5, 2) NOT NULL DEFAULT 100.00,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_assignments_updated_at ON website_assignments;
-CREATE TRIGGER update_website_assignments_updated_at
-    BEFORE UPDATE ON website_assignments
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 62. WEBSITE ASSIGNMENT SUBMISSIONS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_assignment_submissions (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    assignment_id BIGINT NOT NULL REFERENCES website_assignments(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    file_url TEXT,
-    file_id VARCHAR(255),
-    submission_text TEXT,
-    submitted_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    marks_obtained DECIMAL(5, 2),
-    remarks TEXT,
-    status VARCHAR(50) NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Graded', 'Late', 'Resubmitted')),
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, assignment_id, student_id)
-);
-
-DROP TRIGGER IF EXISTS update_website_assignment_submissions_updated_at ON website_assignment_submissions;
-CREATE TRIGGER update_website_assignment_submissions_updated_at
-    BEFORE UPDATE ON website_assignment_submissions
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 63. WEBSITE STUDENT FEES TABLE (Tuition, Exam & Term Invoices)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_student_fees (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount >= 0.00),
-    due_date DATE NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'unpaid' CHECK (LOWER(status) IN ('unpaid', 'paid', 'partially paid', 'pending', 'cancelled')),
-    paid_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (paid_amount >= 0.00),
-    payment_date TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_student_fees_updated_at ON website_student_fees;
-CREATE TRIGGER update_website_student_fees_updated_at
-    BEFORE UPDATE ON website_student_fees
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 64. WEBSITE STUDENT FEE PAYMENTS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_student_fee_payments (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_fee_id BIGINT NOT NULL REFERENCES website_student_fees(id) ON DELETE CASCADE,
-    amount_paid DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount_paid >= 0.00),
-    payment_method VARCHAR(50) NOT NULL DEFAULT 'Cash',
-    transaction_id VARCHAR(100),
-    remarks TEXT,
-    billed_by VARCHAR(255),
-    payment_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_student_fee_payments_updated_at ON website_student_fee_payments;
-CREATE TRIGGER update_website_student_fee_payments_updated_at
-    BEFORE UPDATE ON website_student_fee_payments
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 65. WEBSITE STUDENT FINES TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_student_fines (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    fee_id BIGINT REFERENCES website_student_fees(id) ON DELETE SET NULL,
-    title VARCHAR(255) NOT NULL,
-    amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount >= 0.00),
-    status VARCHAR(50) NOT NULL DEFAULT 'Unpaid' CHECK (status IN ('Paid', 'Unpaid')),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_student_fines_updated_at ON website_student_fines;
-CREATE TRIGGER update_website_student_fines_updated_at
-    BEFORE UPDATE ON website_student_fines
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 66. WEBSITE EXAMS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_exams (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    term VARCHAR(100),
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'upcoming' CHECK (status IN ('current', 'upcoming', 'previous')),
-    class_id BIGINT REFERENCES website_classes(id) ON DELETE CASCADE,
-    exam_fee NUMERIC(10, 2) DEFAULT 0.00 CHECK (exam_fee >= 0.00),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT website_unique_exam_per_class UNIQUE (website_id, name, class_id)
-);
-
-DROP TRIGGER IF EXISTS update_website_exams_updated_at ON website_exams;
-CREATE TRIGGER update_website_exams_updated_at
-    BEFORE UPDATE ON website_exams
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 67. WEBSITE EXAM SUBJECTS TABLE (Pass & Full Marks Config)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_exam_subjects (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    exam_id BIGINT NOT NULL REFERENCES website_exams(id) ON DELETE CASCADE,
-    class_id BIGINT NOT NULL REFERENCES website_classes(id) ON DELETE CASCADE,
-    subject_id BIGINT NOT NULL REFERENCES website_subjects(id) ON DELETE CASCADE,
-    full_marks DECIMAL(5, 2) NOT NULL DEFAULT 100.00,
-    pass_marks DECIMAL(5, 2) NOT NULL DEFAULT 33.00,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, exam_id, class_id, subject_id)
-);
-
-DROP TRIGGER IF EXISTS update_website_exam_subjects_updated_at ON website_exam_subjects;
-CREATE TRIGGER update_website_exam_subjects_updated_at
-    BEFORE UPDATE ON website_exam_subjects
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 68. WEBSITE EXAM SCHEDULES TABLE (Exam Routines)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_exam_schedules (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    exam_id BIGINT NOT NULL REFERENCES website_exams(id) ON DELETE CASCADE,
-    class_id BIGINT NOT NULL REFERENCES website_classes(id) ON DELETE CASCADE,
-    subject_id BIGINT NOT NULL REFERENCES website_subjects(id) ON DELETE CASCADE,
-    exam_date DATE NOT NULL,
+    name VARCHAR(100) NOT NULL,
     start_time VARCHAR(50) NOT NULL,
     end_time VARCHAR(50) NOT NULL,
+    is_break BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, day_id, name)
+);
+
+DROP TRIGGER IF EXISTS update_website_periods_updated_at ON website_periods;
+CREATE TRIGGER update_website_periods_updated_at
+    BEFORE UPDATE ON website_periods
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 19. WEBSITE PERIOD CLASS SUBJECTS TABLE (Links Class Subject with Period & Section)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_period_class_subjects (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    period_id BIGINT NOT NULL REFERENCES website_periods(id) ON DELETE CASCADE,
+    class_subject_id BIGINT NOT NULL REFERENCES website_class_subjects(id) ON DELETE CASCADE,
+    section_id BIGINT REFERENCES website_sections(id) ON DELETE CASCADE,
+    session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
     room_number VARCHAR(50),
-    full_marks DECIMAL(5, 2) DEFAULT 100.00,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS website_pcs_unique_idx
+  ON website_period_class_subjects (website_id, period_id, class_subject_id, COALESCE(section_id, -1));
+
+DROP TRIGGER IF EXISTS update_website_period_class_subjects_updated_at ON website_period_class_subjects;
+CREATE TRIGGER update_website_period_class_subjects_updated_at
+    BEFORE UPDATE ON website_period_class_subjects
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+-- ----------------------------------------------------------------------------
+-- 20. WEBSITE BREVO MAILER TABLE (Transactional Email Credentials)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_brevo_mailer (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    brevo_api_key TEXT NOT NULL,
+    brevo_sender_email VARCHAR(255) NOT NULL,
+    brevo_sender_name VARCHAR(255) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, exam_id, class_id, subject_id)
+    UNIQUE(website_id)
 );
 
-DROP TRIGGER IF EXISTS update_website_exam_schedules_updated_at ON website_exam_schedules;
-CREATE TRIGGER update_website_exam_schedules_updated_at
-    BEFORE UPDATE ON website_exam_schedules
+DROP TRIGGER IF EXISTS update_website_brevo_mailer_updated_at ON website_brevo_mailer;
+CREATE TRIGGER update_website_brevo_mailer_updated_at
+    BEFORE UPDATE ON website_brevo_mailer
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 69. WEBSITE MARK GRADES TABLE (Grading System)
+-- 21. WEBSITE META TABLE (Facebook, Instagram & WhatsApp Integration Keys)
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_mark_grades (
-    grade_id BIGSERIAL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS website_meta (
+    id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    letter_grade VARCHAR(5) NOT NULL,
-    min_mark DECIMAL(5, 2) NOT NULL,
-    max_mark DECIMAL(5, 2) NOT NULL,
-    point DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
+    -- Meta Message Receiver (Inbound Webhooks)
+    meta_webhook_verify_token VARCHAR(255),
+    meta_app_secret TEXT,
+    meta_app_id VARCHAR(255),
+    -- Meta Message Reply / Outbound (Optional)
+    meta_page_access_token TEXT,
+    whatsapp_phone_number_id VARCHAR(255),
+    is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, letter_grade)
+    UNIQUE(website_id)
 );
 
-DROP TRIGGER IF EXISTS update_website_mark_grades_updated_at ON website_mark_grades;
-CREATE TRIGGER update_website_mark_grades_updated_at
-    BEFORE UPDATE ON website_mark_grades
+DROP TRIGGER IF EXISTS update_website_meta_updated_at ON website_meta;
+CREATE TRIGGER update_website_meta_updated_at
+    BEFORE UPDATE ON website_meta
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 70. WEBSITE MARKS TABLE (Scores achieved per subject)
+-- 22. WEBSITE META CONVERSATIONS TABLE (Facebook, Instagram & WhatsApp Threads)
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_marks (
+CREATE TABLE IF NOT EXISTS website_meta_conversations (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    exam_id BIGINT NOT NULL REFERENCES website_exams(id) ON DELETE CASCADE,
-    subject_id BIGINT NOT NULL REFERENCES website_subjects(id) ON DELETE CASCADE,
-    marks_obtained DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
-    total_marks DECIMAL(5, 2) NOT NULL DEFAULT 100.00,
-    remarks VARCHAR(255),
+    platform VARCHAR(50) NOT NULL CHECK (platform IN ('facebook', 'instagram', 'whatsapp')),
+    external_conversation_id VARCHAR(255) NOT NULL,
+    recipient_id VARCHAR(255) NOT NULL,
+    recipient_name VARCHAR(255) DEFAULT 'Customer',
+    recipient_phone VARCHAR(50),
+    recipient_avatar TEXT,
+    last_message TEXT,
+    last_message_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(50) NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'RESOLVED', 'SPAM')),
+    unread_count INT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT website_unique_student_exam_subject UNIQUE(website_id, student_id, exam_id, subject_id)
+    UNIQUE(website_id, platform, external_conversation_id)
 );
 
-DROP TRIGGER IF EXISTS update_website_marks_updated_at ON website_marks;
-CREATE TRIGGER update_website_marks_updated_at
-    BEFORE UPDATE ON website_marks
+DROP TRIGGER IF EXISTS update_website_meta_conv_updated_at ON website_meta_conversations;
+CREATE TRIGGER update_website_meta_conv_updated_at
+    BEFORE UPDATE ON website_meta_conversations
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 71. WEBSITE RESULTS TABLE (Cumulative GPA and Status)
+-- 23. WEBSITE META MESSAGES TABLE (Facebook, Instagram & WhatsApp Chat Messages)
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_results (
+CREATE TABLE IF NOT EXISTS website_meta_messages (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    exam_id BIGINT NOT NULL REFERENCES website_exams(id) ON DELETE CASCADE,
-    gpa DECIMAL(3, 2) DEFAULT 0.00,
-    grade VARCHAR(10),
-    total_marks DECIMAL(6, 2) DEFAULT 0.00,
-    status VARCHAR(50) DEFAULT 'Pass',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT website_unique_student_exam UNIQUE(website_id, student_id, exam_id)
-);
-
-DROP TRIGGER IF EXISTS update_website_results_updated_at ON website_results;
-CREATE TRIGGER update_website_results_updated_at
-    BEFORE UPDATE ON website_results
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 72. WEBSITE RESULT PUBLISH TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_result_publish (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    exam_id BIGINT UNIQUE NOT NULL REFERENCES website_exams(id) ON DELETE CASCADE,
-    is_published BOOLEAN DEFAULT FALSE,
-    published_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_result_publish_updated_at ON website_result_publish;
-CREATE TRIGGER update_website_result_publish_updated_at
-    BEFORE UPDATE ON website_result_publish
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 73. WEBSITE TRANSCRIPTS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_transcripts (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    exam_id BIGINT NOT NULL REFERENCES website_exams(id) ON DELETE CASCADE,
-    gpa DECIMAL(3, 2) DEFAULT 0.00,
-    remarks TEXT,
-    generated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
--- ----------------------------------------------------------------------------
--- 74. WEBSITE ADMISSIONS TABLE (Admission Circulars)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_admissions (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    class_id BIGINT NOT NULL REFERENCES website_classes(id) ON DELETE CASCADE,
-    min_age INT,
-    max_age INT,
-    birth_regi_number VARCHAR(100),
-    admission_start_date DATE NOT NULL,
-    finish_date DATE NOT NULL,
-    result_date DATE,
-    fees DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (fees >= 0.00),
-    description TEXT,
-    is_result_published BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_admissions_updated_at ON website_admissions;
-CREATE TRIGGER update_website_admissions_updated_at
-    BEFORE UPDATE ON website_admissions
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 75. WEBSITE STUDENT ADMISSIONS TABLE (Applications Submitted)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_student_admissions (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    admission_id BIGINT REFERENCES website_admissions(id) ON DELETE CASCADE,
-    student_id BIGINT REFERENCES website_students(id) ON DELETE SET NULL,
-    applicant_name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    phone VARCHAR(50) NOT NULL,
-    date_of_birth DATE NOT NULL,
-    gender VARCHAR(20) NOT NULL CHECK (gender IN ('Male', 'Female', 'Other')),
-    blood_group VARCHAR(10),
-    address TEXT NOT NULL,
-    applied_class_id BIGINT NOT NULL REFERENCES website_classes(id) ON DELETE CASCADE,
-    father_name VARCHAR(255),
-    father_occupation VARCHAR(255),
-    father_phone VARCHAR(50),
-    mother_name VARCHAR(255),
-    mother_occupation VARCHAR(255),
-    mother_phone VARCHAR(50),
-    past_school_name VARCHAR(255),
-    past_school_class VARCHAR(50),
-    past_school_result VARCHAR(100),
-    special_note TEXT,
-    previous_school TEXT,
-    guardian_name VARCHAR(255) NOT NULL,
-    guardian_phone VARCHAR(50) NOT NULL,
-    birth_regi_number VARCHAR(100),
-    image TEXT,
-    image_id VARCHAR(255),
-    signature TEXT,
-    signature_id VARCHAR(255),
-    status VARCHAR(50) DEFAULT 'incomplete' CHECK (status IN ('incomplete', 'pending', 'approved', 'rejected', 'selected', 'disqualified')),
-    applied_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_student_admissions_updated_at ON website_student_admissions;
-CREATE TRIGGER update_website_student_admissions_updated_at
-    BEFORE UPDATE ON website_student_admissions
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 76. WEBSITE ACCEPTED ADMISSIONS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_accepted_admissions (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_admission_id BIGINT UNIQUE NOT NULL REFERENCES website_student_admissions(id) ON DELETE CASCADE,
-    admission_id BIGINT NOT NULL REFERENCES website_admissions(id) ON DELETE CASCADE,
-    class_id BIGINT NOT NULL REFERENCES website_classes(id) ON DELETE CASCADE,
-    applicant_name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    phone VARCHAR(50) NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
--- ----------------------------------------------------------------------------
--- 77. WEBSITE ADMISSION FEES TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_admission_fees (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_admission_id BIGINT UNIQUE NOT NULL REFERENCES website_student_admissions(id) ON DELETE CASCADE,
-    amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount >= 0.00),
-    status VARCHAR(50) DEFAULT 'unpaid' CHECK (status IN ('unpaid', 'pending', 'paid', 'cancelled')),
-    billed_by VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_admission_fees_updated_at ON website_admission_fees;
-CREATE TRIGGER update_website_admission_fees_updated_at
-    BEFORE UPDATE ON website_admission_fees
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 78. WEBSITE ADMISSION FEE PAYMENTS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_admission_fee_payments (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    admission_fee_id BIGINT NOT NULL REFERENCES website_admission_fees(id) ON DELETE CASCADE,
-    amount_paid DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount_paid >= 0.00),
-    payment_method VARCHAR(50) NOT NULL DEFAULT 'Cash',
-    transaction_id VARCHAR(100),
-    remarks TEXT,
-    payment_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_admission_fee_payments_updated_at ON website_admission_fee_payments;
-CREATE TRIGGER update_website_admission_fee_payments_updated_at
-    BEFORE UPDATE ON website_admission_fee_payments
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 79. WEBSITE SALARIES TABLE (Teacher Payroll Ledger)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_salaries (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    teacher_id BIGINT REFERENCES website_teachers(id) ON DELETE CASCADE,
-    month VARCHAR(50) NOT NULL,
-    basic DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (basic >= 0.00),
-    allowance DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (allowance >= 0.00),
-    deductions DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (deductions >= 0.00),
-    status VARCHAR(50) NOT NULL DEFAULT 'Pending',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_salaries_updated_at ON website_salaries;
-CREATE TRIGGER update_website_salaries_updated_at
-    BEFORE UPDATE ON website_salaries
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 80. WEBSITE TEACHER SALARY PAYMENTS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_teacher_salary_payments (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    salary_id BIGINT NOT NULL REFERENCES website_salaries(id) ON DELETE CASCADE,
-    amount_paid DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount_paid >= 0.00),
-    payment_method VARCHAR(50) NOT NULL DEFAULT 'Bank Transfer',
-    transaction_id VARCHAR(100),
-    remarks TEXT,
-    payment_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_teacher_salary_payments_updated_at ON website_teacher_salary_payments;
-CREATE TRIGGER update_website_teacher_salary_payments_updated_at
-    BEFORE UPDATE ON website_teacher_salary_payments
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 81. WEBSITE STAFF SALARIES TABLE (Staff Payroll Ledger)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_staff_salaries (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    staff_id BIGINT REFERENCES website_staffs(id) ON DELETE CASCADE,
-    month VARCHAR(50) NOT NULL,
-    basic DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (basic >= 0.00),
-    allowance DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (allowance >= 0.00),
-    deductions DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (deductions >= 0.00),
-    status VARCHAR(50) NOT NULL DEFAULT 'Pending',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_staff_salaries_updated_at ON website_staff_salaries;
-CREATE TRIGGER update_website_staff_salaries_updated_at
-    BEFORE UPDATE ON website_staff_salaries
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 82. WEBSITE STAFF SALARY PAYMENTS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_staff_salary_payments (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    staff_salary_id BIGINT NOT NULL REFERENCES website_staff_salaries(id) ON DELETE CASCADE,
-    amount_paid DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount_paid >= 0.00),
-    payment_method VARCHAR(50) NOT NULL DEFAULT 'Bank Transfer',
-    transaction_id VARCHAR(100),
-    remarks TEXT,
-    payment_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_staff_salary_payments_updated_at ON website_staff_salary_payments;
-CREATE TRIGGER update_website_staff_salary_payments_updated_at
-    BEFORE UPDATE ON website_staff_salary_payments
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 83. WEBSITE TEACHER ATTENDANCES TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_teacher_attendances (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    teacher_id BIGINT NOT NULL REFERENCES website_teachers(id) ON DELETE CASCADE,
-    date DATE NOT NULL DEFAULT CURRENT_DATE,
-    check_in VARCHAR(50),
-    check_out VARCHAR(50),
-    status VARCHAR(50) NOT NULL DEFAULT 'Present',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, teacher_id, date)
-);
-
-DROP TRIGGER IF EXISTS update_website_teacher_attendances_updated_at ON website_teacher_attendances;
-CREATE TRIGGER update_website_teacher_attendances_updated_at
-    BEFORE UPDATE ON website_teacher_attendances
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 84. WEBSITE STAFF ATTENDANCE TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_staff_attendance (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    staff_id BIGINT NOT NULL REFERENCES website_staffs(id) ON DELETE CASCADE,
-    date DATE NOT NULL DEFAULT CURRENT_DATE,
-    check_in VARCHAR(50),
-    check_out VARCHAR(50),
-    status VARCHAR(50) NOT NULL DEFAULT 'Present',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, staff_id, date)
-);
-
-DROP TRIGGER IF EXISTS update_website_staff_attendance_updated_at ON website_staff_attendance;
-CREATE TRIGGER update_website_staff_attendance_updated_at
-    BEFORE UPDATE ON website_staff_attendance
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 85. WEBSITE LEAVE APPLICATIONS TABLE (Teacher Leaves)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_leave_applications (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    teacher_id BIGINT REFERENCES website_teachers(id) ON DELETE CASCADE,
-    type VARCHAR(100) NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    reason TEXT NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'Pending',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_leave_applications_updated_at ON website_leave_applications;
-CREATE TRIGGER update_website_leave_applications_updated_at
-    BEFORE UPDATE ON website_leave_applications
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 86. WEBSITE STAFF LEAVES TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_staff_leaves (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    staff_id BIGINT NOT NULL REFERENCES website_staffs(id) ON DELETE CASCADE,
-    type VARCHAR(100) NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    reason TEXT NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'Pending',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_staff_leaves_updated_at ON website_staff_leaves;
-CREATE TRIGGER update_website_staff_leaves_updated_at
-    BEFORE UPDATE ON website_staff_leaves
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 87. WEBSITE STAFF APPLICATIONS TABLE (Internal Staff Requests)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_staff_applications (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    staff_id BIGINT REFERENCES website_staffs(id) ON DELETE CASCADE,
-    type VARCHAR(100) NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    details TEXT NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'Pending',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_staff_applications_updated_at ON website_staff_applications;
-CREATE TRIGGER update_website_staff_applications_updated_at
-    BEFORE UPDATE ON website_staff_applications
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 88. WEBSITE STUDENT TRANSFERS TABLE (TC System)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_student_transfers (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    transfer_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    transfer_reason TEXT NOT NULL,
-    target_school VARCHAR(255) NOT NULL,
-    tc_number VARCHAR(100) NOT NULL,
-    status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('Pending', 'Approved', 'Cancelled')),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, tc_number)
-);
-
-DROP TRIGGER IF EXISTS update_website_student_transfers_updated_at ON website_student_transfers;
-CREATE TRIGGER update_website_student_transfers_updated_at
-    BEFORE UPDATE ON website_student_transfers
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 89. WEBSITE STUDENT LEAVES TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_student_leaves (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    type VARCHAR(100) NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    reason TEXT NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Approved', 'Rejected')),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_student_leaves_updated_at ON website_student_leaves;
-CREATE TRIGGER update_website_student_leaves_updated_at
-    BEFORE UPDATE ON website_student_leaves
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 90. WEBSITE STUDENT TESTIMONIALS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_student_testimonials (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    testimonial_no VARCHAR(100) NOT NULL,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    academic_character VARCHAR(100) DEFAULT 'Excellent',
-    conduct VARCHAR(100) DEFAULT 'Good',
-    remarks TEXT,
-    issued_by_type VARCHAR(50) NOT NULL,
-    issued_by_id BIGINT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, testimonial_no)
-);
-
--- ----------------------------------------------------------------------------
--- 91. WEBSITE STUDENT TRANSFER CERTIFICATES TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_student_transfer_certificates (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    tc_number VARCHAR(100) NOT NULL,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    reason_for_leaving TEXT NOT NULL,
-    destination_school VARCHAR(255),
-    conduct VARCHAR(100) DEFAULT 'Good',
-    last_class_attended VARCHAR(100),
-    promoted_to_class VARCHAR(100),
-    fee_cleared BOOLEAN DEFAULT TRUE,
-    remarks TEXT,
-    issued_by_type VARCHAR(50) NOT NULL,
-    issued_by_id BIGINT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, tc_number)
-);
-
--- ----------------------------------------------------------------------------
--- 92. WEBSITE TRANSFERRED STUDENTS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_transferred_students (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT UNIQUE NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    tc_id BIGINT REFERENCES website_student_transfer_certificates(id) ON DELETE SET NULL,
-    transfer_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    reason TEXT,
-    destination_school VARCHAR(255),
-    previous_class VARCHAR(100),
-    previous_roll INT,
-    archived_by_type VARCHAR(50),
-    archived_by_id BIGINT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, student_id)
-);
-
--- ----------------------------------------------------------------------------
--- 93. WEBSITE STUDENT ADMIT CARDS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_student_admit_cards (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    admit_card_no VARCHAR(100) NOT NULL,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    exam_id BIGINT NOT NULL REFERENCES website_exams(id) ON DELETE CASCADE,
-    fee_cleared BOOLEAN DEFAULT TRUE,
-    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    issued_by_type VARCHAR(50) NOT NULL,
-    issued_by_id BIGINT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, admit_card_no)
-);
-
--- ----------------------------------------------------------------------------
--- 94. WEBSITE STUDENT ID CARDS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_student_id_cards (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    id_card_no VARCHAR(100) NOT NULL,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    expiry_date DATE,
-    status VARCHAR(50) DEFAULT 'active',
-    issued_by_type VARCHAR(50) NOT NULL,
-    issued_by_id BIGINT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, id_card_no)
-);
-
--- ----------------------------------------------------------------------------
--- 95. WEBSITE STUDENT TRANSCRIPTS TABLE (Official Academic Record)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_student_transcripts (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    transcript_no VARCHAR(100) NOT NULL,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    exam_id BIGINT REFERENCES website_exams(id) ON DELETE SET NULL,
-    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    remarks TEXT,
-    issued_by_type VARCHAR(50) NOT NULL,
-    issued_by_id BIGINT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, transcript_no)
-);
-
--- ----------------------------------------------------------------------------
--- 96. WEBSITE CLUBS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_clubs (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) NOT NULL,
-    motto TEXT,
-    description TEXT,
-    notice_info TEXT,
-    image TEXT,
-    image_id VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, name),
-    UNIQUE(website_id, slug)
-);
-
-DROP TRIGGER IF EXISTS update_website_clubs_updated_at ON website_clubs;
-CREATE TRIGGER update_website_clubs_updated_at
-    BEFORE UPDATE ON website_clubs
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 97. WEBSITE CLUB ADMIN TABLE (Teachers Assigned to Manage Clubs)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_club_admin (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    club_id BIGINT NOT NULL REFERENCES website_clubs(id) ON DELETE CASCADE,
-    teacher_id BIGINT NOT NULL REFERENCES website_teachers(id) ON DELETE CASCADE,
-    designation VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, club_id, teacher_id)
-);
-
-DROP TRIGGER IF EXISTS update_website_club_admin_updated_at ON website_club_admin;
-CREATE TRIGGER update_website_club_admin_updated_at
-    BEFORE UPDATE ON website_club_admin
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 98. WEBSITE CLUB MEMBERS TABLE (Students as Members / Officers)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_club_members (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    club_id BIGINT NOT NULL REFERENCES website_clubs(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    role VARCHAR(50) NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'moderator', 'president', 'secretary', 'treasurer')),
-    designation VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, club_id, student_id)
-);
-
-DROP TRIGGER IF EXISTS update_website_club_members_updated_at ON website_club_members;
-CREATE TRIGGER update_website_club_members_updated_at
-    BEFORE UPDATE ON website_club_members
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 99. WEBSITE CLUB NEWS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_club_news (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    club_id BIGINT NOT NULL REFERENCES website_clubs(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
-    image_url TEXT,
-    image_id VARCHAR(100),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_club_news_updated_at ON website_club_news;
-CREATE TRIGGER update_website_club_news_updated_at
-    BEFORE UPDATE ON website_club_news
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 100. WEBSITE CLUB ANNOUNCEMENTS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_club_announcements (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    club_id BIGINT NOT NULL REFERENCES website_clubs(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
-    is_important BOOLEAN DEFAULT FALSE,
-    expires_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_club_announcements_updated_at ON website_club_announcements;
-CREATE TRIGGER update_website_club_announcements_updated_at
-    BEFORE UPDATE ON website_club_announcements
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 101. WEBSITE NEWS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_news (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
-    image TEXT,
-    image_id VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, slug)
-);
-
-DROP TRIGGER IF EXISTS update_website_news_updated_at ON website_news;
-CREATE TRIGGER update_website_news_updated_at
-    BEFORE UPDATE ON website_news
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 102. WEBSITE EVENTS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_events (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    slug VARCHAR(255),
-    description TEXT NOT NULL,
-    event_date TIMESTAMPTZ NOT NULL,
-    location VARCHAR(255) NOT NULL,
-    image TEXT,
-    image_id TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, slug)
-);
-
-DROP TRIGGER IF EXISTS update_website_events_updated_at ON website_events;
-CREATE TRIGGER update_website_events_updated_at
-    BEFORE UPDATE ON website_events
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 103. WEBSITE EVENT PARTICIPANTS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_event_participants (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    event_id BIGINT NOT NULL REFERENCES website_events(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    joined_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, event_id, student_id)
-);
-
--- ----------------------------------------------------------------------------
--- 104. WEBSITE NOTICES TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_notices (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    link TEXT NOT NULL,
-    is_pinned BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_notices_updated_at ON website_notices;
-CREATE TRIGGER update_website_notices_updated_at
-    BEFORE UPDATE ON website_notices
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 105. WEBSITE ANNOUNCEMENTS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_announcements (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    expires_at TIMESTAMPTZ,
-    location VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_announcements_updated_at ON website_announcements;
-CREATE TRIGGER update_website_announcements_updated_at
-    BEFORE UPDATE ON website_announcements
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 106. WEBSITE HOSTELS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_hostels (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) NOT NULL,
-    description TEXT,
-    total_room INT NOT NULL DEFAULT 0,
-    location VARCHAR(255),
-    gender VARCHAR(50) DEFAULT 'Both',
-    image TEXT,
-    image_id VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, name),
-    UNIQUE(website_id, slug)
-);
-
-DROP TRIGGER IF EXISTS update_website_hostels_updated_at ON website_hostels;
-CREATE TRIGGER update_website_hostels_updated_at
-    BEFORE UPDATE ON website_hostels
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 107. WEBSITE HOSTEL ROOMS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_hostel_rooms (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    hostel_id BIGINT NOT NULL REFERENCES website_hostels(id) ON DELETE CASCADE,
-    floor INT DEFAULT 1,
-    room_number VARCHAR(100) NOT NULL,
-    room_type VARCHAR(100) NOT NULL DEFAULT 'Standard',
-    capacity INT NOT NULL DEFAULT 4,
-    availability_status VARCHAR(50) NOT NULL DEFAULT 'Available',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT website_unique_hostel_room UNIQUE(website_id, hostel_id, room_number)
-);
-
-DROP TRIGGER IF EXISTS update_website_hostel_rooms_updated_at ON website_hostel_rooms;
-CREATE TRIGGER update_website_hostel_rooms_updated_at
-    BEFORE UPDATE ON website_hostel_rooms
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 108. WEBSITE HOSTEL SEATS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_hostel_seats (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    room_id BIGINT NOT NULL REFERENCES website_hostel_rooms(id) ON DELETE CASCADE,
-    seat_code VARCHAR(50) NOT NULL,
-    one_time_fee NUMERIC(10, 2) DEFAULT 0.00 CHECK (one_time_fee >= 0.00),
-    monthly_fee NUMERIC(10, 2) DEFAULT 0.00 CHECK (monthly_fee >= 0.00),
-    status VARCHAR(50) DEFAULT 'available',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, room_id, seat_code)
-);
-
-DROP TRIGGER IF EXISTS update_website_hostel_seats_updated_at ON website_hostel_seats;
-CREATE TRIGGER update_website_hostel_seats_updated_at
-    BEFORE UPDATE ON website_hostel_seats
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 109. WEBSITE HOSTEL PROVOST TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_hostel_provost (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    hostel_id BIGINT NOT NULL REFERENCES website_hostels(id) ON DELETE CASCADE,
-    teacher_id BIGINT NOT NULL REFERENCES website_teachers(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, hostel_id, teacher_id)
-);
-
-DROP TRIGGER IF EXISTS update_website_hostel_provost_updated_at ON website_hostel_provost;
-CREATE TRIGGER update_website_hostel_provost_updated_at
-    BEFORE UPDATE ON website_hostel_provost
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 110. WEBSITE HOSTEL ALLOCATIONS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_hostel_allocations (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    room_id BIGINT NOT NULL REFERENCES website_hostel_rooms(id) ON DELETE CASCADE,
-    seat_id BIGINT REFERENCES website_hostel_seats(id) ON DELETE CASCADE,
-    allocated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    vacated_at DATE,
-    status VARCHAR(50) NOT NULL DEFAULT 'Active',
-    allocated_by_role VARCHAR(50) DEFAULT 'admin',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS website_unique_active_hostel_allocation 
-    ON website_hostel_allocations(website_id, student_id) WHERE status = 'Active';
-
-DROP TRIGGER IF EXISTS update_website_hostel_allocations_updated_at ON website_hostel_allocations;
-CREATE TRIGGER update_website_hostel_allocations_updated_at
-    BEFORE UPDATE ON website_hostel_allocations
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 111. WEBSITE HOSTEL TRANSFERS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_hostel_transfers (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    from_seat_id BIGINT REFERENCES website_hostel_seats(id) ON DELETE SET NULL,
-    to_seat_id BIGINT NOT NULL REFERENCES website_hostel_seats(id) ON DELETE CASCADE,
-    transferred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    reason TEXT,
-    transferred_by VARCHAR(50) DEFAULT 'admin',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
--- ----------------------------------------------------------------------------
--- 112. WEBSITE HOSTEL APPLICATIONS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_hostel_applications (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    preferred_hostel_id BIGINT REFERENCES website_hostels(id) ON DELETE SET NULL,
-    reason TEXT,
-    status VARCHAR(50) DEFAULT 'pending',
-    applied_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    reviewed_at TIMESTAMPTZ,
-    reviewed_by VARCHAR(50),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_hostel_applications_updated_at ON website_hostel_applications;
-CREATE TRIGGER update_website_hostel_applications_updated_at
-    BEFORE UPDATE ON website_hostel_applications
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 113. WEBSITE HOSTEL FEES TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_hostel_fees (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount >= 0.00),
-    due_date DATE NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'Unpaid' CHECK (status IN ('Paid', 'Unpaid', 'Partially Paid')),
-    paid_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (paid_amount >= 0.00),
-    payment_date TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_hostel_fees_updated_at ON website_hostel_fees;
-CREATE TRIGGER update_website_hostel_fees_updated_at
-    BEFORE UPDATE ON website_hostel_fees
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 114. WEBSITE PAYMENT TRANSACTIONS TABLE (Institutional Accounts Ledger)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_payment_transactions (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    transaction_number VARCHAR(100) NOT NULL,
-    payment_method VARCHAR(50) NOT NULL DEFAULT 'Cash',
-    amount DECIMAL(12, 2) NOT NULL CHECK (amount >= 0.00),
-    transaction_type VARCHAR(50) NOT NULL CHECK (transaction_type IN ('Credit', 'Debit')),
-    category VARCHAR(100) NOT NULL,
-    reference_id BIGINT,
-    payment_gateway VARCHAR(100),
-    gateway_transaction_id VARCHAR(100),
-    status VARCHAR(50) NOT NULL DEFAULT 'Success' CHECK (status IN ('Pending', 'Success', 'Failed')),
-    remarks TEXT,
-    billed_by VARCHAR(255),
-    payment_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, transaction_number)
-);
-
-DROP TRIGGER IF EXISTS update_website_payment_transactions_updated_at ON website_payment_transactions;
-CREATE TRIGGER update_website_payment_transactions_updated_at
-    BEFORE UPDATE ON website_payment_transactions
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 115. WEBSITE EXPENSE CATEGORIES TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_expense_categories (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, name)
-);
-
-DROP TRIGGER IF EXISTS update_website_expense_categories_updated_at ON website_expense_categories;
-CREATE TRIGGER update_website_expense_categories_updated_at
-    BEFORE UPDATE ON website_expense_categories
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 116. WEBSITE EXPENSES TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_expenses (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    category_id BIGINT NOT NULL REFERENCES website_expense_categories(id) ON DELETE RESTRICT,
-    title VARCHAR(255) NOT NULL,
-    amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount >= 0.00),
-    expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    paid_by VARCHAR(255),
-    receipt_image TEXT,
-    receipt_image_id VARCHAR(255),
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_expenses_updated_at ON website_expenses;
-CREATE TRIGGER update_website_expenses_updated_at
-    BEFORE UPDATE ON website_expenses
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 117. WEBSITE INCOME CATEGORIES TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_income_categories (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, name)
-);
-
-DROP TRIGGER IF EXISTS update_website_income_categories_updated_at ON website_income_categories;
-CREATE TRIGGER update_website_income_categories_updated_at
-    BEFORE UPDATE ON website_income_categories
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 118. WEBSITE INCOMES TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_incomes (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    category_id BIGINT NOT NULL REFERENCES website_income_categories(id) ON DELETE RESTRICT,
-    title VARCHAR(255) NOT NULL,
-    amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount >= 0.00),
-    income_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    received_by VARCHAR(255),
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_incomes_updated_at ON website_incomes;
-CREATE TRIGGER update_website_incomes_updated_at
-    BEFORE UPDATE ON website_incomes
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 119. WEBSITE CERTIFICATE ISSUES TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_certificate_issues (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    certificate_type VARCHAR(100) NOT NULL,
-    certificate_number VARCHAR(100) NOT NULL,
-    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    issued_by BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
-    content TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, certificate_number)
-);
-
-DROP TRIGGER IF EXISTS update_website_certificate_issues_updated_at ON website_certificate_issues;
-CREATE TRIGGER update_website_certificate_issues_updated_at
-    BEFORE UPDATE ON website_certificate_issues
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 120. WEBSITE TESTIMONIALS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_testimonials (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
-    issued_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    signatory_name VARCHAR(255) NOT NULL,
-    signatory_designation VARCHAR(255) NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_testimonials_updated_at ON website_testimonials;
-CREATE TRIGGER update_website_testimonials_updated_at
-    BEFORE UPDATE ON website_testimonials
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 121. WEBSITE INVENTORY CATEGORIES TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_inventory_categories (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, name)
-);
-
-DROP TRIGGER IF EXISTS update_website_inventory_categories_updated_at ON website_inventory_categories;
-CREATE TRIGGER update_website_inventory_categories_updated_at
-    BEFORE UPDATE ON website_inventory_categories
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 122. WEBSITE SUPPLIERS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_suppliers (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    contact_name VARCHAR(255),
-    phone VARCHAR(50) NOT NULL,
-    email VARCHAR(255),
-    address TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_suppliers_updated_at ON website_suppliers;
-CREATE TRIGGER update_website_suppliers_updated_at
-    BEFORE UPDATE ON website_suppliers
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 123. WEBSITE INVENTORY ITEMS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_inventory_items (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    category_id BIGINT NOT NULL REFERENCES website_inventory_categories(id) ON DELETE RESTRICT,
-    name VARCHAR(255) NOT NULL,
-    code VARCHAR(100) NOT NULL,
-    description TEXT,
-    total_quantity INT NOT NULL DEFAULT 0,
-    available_quantity INT NOT NULL DEFAULT 0,
-    unit VARCHAR(50) DEFAULT 'Pcs',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, code)
-);
-
-DROP TRIGGER IF EXISTS update_website_inventory_items_updated_at ON website_inventory_items;
-CREATE TRIGGER update_website_inventory_items_updated_at
-    BEFORE UPDATE ON website_inventory_items
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 124. WEBSITE PURCHASES TABLE (School / Tenant Inventory Orders)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_purchases (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    supplier_id BIGINT NOT NULL REFERENCES website_suppliers(id) ON DELETE RESTRICT,
-    purchase_number VARCHAR(100) NOT NULL,
-    purchase_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    total_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (total_amount >= 0.00),
-    paid_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00 CHECK (paid_amount >= 0.00),
-    payment_status VARCHAR(50) DEFAULT 'Unpaid' CHECK (payment_status IN ('Paid', 'Unpaid', 'Partially Paid')),
-    remarks TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, purchase_number)
-);
-
-DROP TRIGGER IF EXISTS update_website_purchases_updated_at ON website_purchases;
-CREATE TRIGGER update_website_purchases_updated_at
-    BEFORE UPDATE ON website_purchases
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 125. WEBSITE PURCHASE ITEMS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_purchase_items (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    purchase_id BIGINT NOT NULL REFERENCES website_purchases(id) ON DELETE CASCADE,
-    inventory_item_id BIGINT NOT NULL REFERENCES website_inventory_items(id) ON DELETE RESTRICT,
-    quantity INT NOT NULL CHECK (quantity > 0),
-    unit_price DECIMAL(10, 2) NOT NULL CHECK (unit_price >= 0),
-    total_price DECIMAL(10, 2) NOT NULL CHECK (total_price >= 0),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
--- ----------------------------------------------------------------------------
--- 126. WEBSITE STOCK MOVEMENTS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_stock_movements (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    inventory_item_id BIGINT NOT NULL REFERENCES website_inventory_items(id) ON DELETE CASCADE,
-    quantity INT NOT NULL,
-    movement_type VARCHAR(50) NOT NULL CHECK (movement_type IN ('Purchase', 'Issue', 'Return', 'Adjustment', 'Loss')),
-    reference_id BIGINT,
-    movement_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    handled_by VARCHAR(255),
-    remarks TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
--- ----------------------------------------------------------------------------
--- 127. WEBSITE LOGIN LOGS TABLE (Tenant User Audit Trail)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_login_logs (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    user_id BIGINT NOT NULL,
-    user_type VARCHAR(50) NOT NULL CHECK (user_type IN ('staff', 'teacher', 'student', 'guardian')),
-    name VARCHAR(255),
-    email VARCHAR(255),
-    login_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    ip_address VARCHAR(100),
-    user_agent TEXT,
-    status VARCHAR(50) NOT NULL DEFAULT 'Success' CHECK (status IN ('Success', 'Failed')),
-    failure_reason VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
--- ----------------------------------------------------------------------------
--- 128. WEBSITE ACTIVITY LOGS TABLE (Tenant Action Audit Trail)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_activity_logs (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    user_id BIGINT,
-    user_type VARCHAR(50) NOT NULL,
-    user_name VARCHAR(255),
-    action VARCHAR(255) NOT NULL,
-    entity_type VARCHAR(100),
-    entity_id BIGINT,
-    details JSONB,
+    conversation_id BIGINT NOT NULL REFERENCES website_meta_conversations(id) ON DELETE CASCADE,
+    platform VARCHAR(50) NOT NULL CHECK (platform IN ('facebook', 'instagram', 'whatsapp')),
+    sender_type VARCHAR(50) NOT NULL CHECK (sender_type IN ('CUSTOMER', 'STAFF', 'SYSTEM', 'customer', 'staff', 'system')),
+    sender_id VARCHAR(255),
+    sender_name VARCHAR(255),
+    message_text TEXT NOT NULL,
+    media_url TEXT,
+    media_type VARCHAR(50),
+    external_message_id VARCHAR(255),
+    delivery_status VARCHAR(50) DEFAULT 'SENT' CHECK (delivery_status IN ('SENDING', 'SENT', 'DELIVERED', 'READ', 'FAILED', 'sending', 'sent', 'delivered', 'read', 'failed')),
+    error_message TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 
 -- ============================================================================
--- SECTION 3: TENANT PERFORMANCE INDEXES
--- Optimizes queries filtering by website_id & foreign keys
+-- SECTION 4: PERFORMANCE INDEXES
 -- ============================================================================
 
--- Tenant Foreign Key & Isolation Indexes
+-- Staff Indexes
 CREATE INDEX IF NOT EXISTS idx_ws_staffs_website ON website_staffs(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_staff_salaries_website ON website_staff_salaries(website_id, staff_id);
+CREATE INDEX IF NOT EXISTS idx_ws_staff_attendance_lookup ON website_staff_attendance(website_id, staff_id, date);
+CREATE INDEX IF NOT EXISTS idx_ws_staff_leaves_lookup ON website_staff_leaves(website_id, staff_id, status);
+CREATE INDEX IF NOT EXISTS idx_ws_staff_applications_lookup ON website_staff_applications(website_id, staff_id, status);
+
+-- Academic & Class Routine Indexes
+CREATE INDEX IF NOT EXISTS idx_ws_sessions_website ON website_sessions(website_id);
 CREATE INDEX IF NOT EXISTS idx_ws_classes_website ON website_classes(website_id);
 CREATE INDEX IF NOT EXISTS idx_ws_sections_class ON website_sections(website_id, class_id);
-CREATE INDEX IF NOT EXISTS idx_ws_teachers_website ON website_teachers(website_id);
-CREATE INDEX IF NOT EXISTS idx_ws_teachers_grade ON website_teachers(grade_id);
 CREATE INDEX IF NOT EXISTS idx_ws_subjects_website ON website_subjects(website_id);
 CREATE INDEX IF NOT EXISTS idx_ws_class_subjects_class ON website_class_subjects(website_id, class_id);
-CREATE INDEX IF NOT EXISTS idx_ws_students_website ON website_students(website_id);
-CREATE INDEX IF NOT EXISTS idx_ws_students_reg ON website_students(website_id, registration_number);
-CREATE INDEX IF NOT EXISTS idx_ws_student_info_student ON website_student_information(student_id);
-CREATE INDEX IF NOT EXISTS idx_ws_student_info_class ON website_student_information(website_id, class_id, section_id);
-CREATE INDEX IF NOT EXISTS idx_ws_student_attendances_date ON website_student_attendances(website_id, class_id, date);
-CREATE INDEX IF NOT EXISTS idx_ws_student_attendances_student ON website_student_attendances(student_id, date);
-CREATE INDEX IF NOT EXISTS idx_ws_student_fees_student ON website_student_fees(website_id, student_id, status);
-CREATE INDEX IF NOT EXISTS idx_ws_student_fee_payments_fee ON website_student_fee_payments(student_fee_id);
-CREATE INDEX IF NOT EXISTS idx_ws_marks_exam_subject ON website_marks(website_id, exam_id, subject_id);
-CREATE INDEX IF NOT EXISTS idx_ws_marks_student ON website_marks(student_id, exam_id);
-CREATE INDEX IF NOT EXISTS idx_ws_results_exam ON website_results(website_id, exam_id);
-CREATE INDEX IF NOT EXISTS idx_ws_class_routines_lookup ON website_class_routines(website_id, class_id, section_id);
-CREATE INDEX IF NOT EXISTS idx_ws_admissions_website ON website_admissions(website_id);
-CREATE INDEX IF NOT EXISTS idx_ws_student_admissions_adm ON website_student_admissions(website_id, admission_id);
-CREATE INDEX IF NOT EXISTS idx_ws_hostel_allocations_room ON website_hostel_allocations(website_id, room_id);
-CREATE INDEX IF NOT EXISTS idx_ws_hostel_allocations_student ON website_hostel_allocations(website_id, student_id);
-CREATE INDEX IF NOT EXISTS idx_ws_activity_logs_website ON website_activity_logs(website_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_ws_login_logs_website ON website_login_logs(website_id, login_time DESC);
+CREATE INDEX IF NOT EXISTS idx_ws_class_subjects_subject ON website_class_subjects(website_id, subject_id);
+CREATE INDEX IF NOT EXISTS idx_ws_days_website ON website_days(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_periods_day ON website_periods(website_id, day_id);
+CREATE INDEX IF NOT EXISTS idx_ws_pcs_period ON website_period_class_subjects(website_id, period_id);
+CREATE INDEX IF NOT EXISTS idx_ws_pcs_class_subject ON website_period_class_subjects(website_id, class_subject_id);
+
+-- Mailer, Meta & Messaging Indexes
+CREATE INDEX IF NOT EXISTS idx_ws_brevo_mailer_website ON website_brevo_mailer(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_meta_website ON website_meta(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_meta_conv_website ON website_meta_conversations(website_id, platform);
+CREATE INDEX IF NOT EXISTS idx_ws_meta_conv_lookup ON website_meta_conversations(website_id, platform, status);
+CREATE INDEX IF NOT EXISTS idx_ws_meta_msg_conv ON website_meta_messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_ws_meta_msg_created ON website_meta_messages(created_at ASC);
+
