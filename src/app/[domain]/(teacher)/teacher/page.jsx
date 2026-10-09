@@ -12,12 +12,21 @@ const TeacherHomePage = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [profileRes, statsRes] = await Promise.all([fetch('/api/teacher/me'), fetch('/api/teacher/dashboard')]);
-        if (profileRes.ok && statsRes.ok) {
+        const [profileRes, statsRes] = await Promise.all([
+          fetch('/api/teacher/me').catch(() => null),
+          fetch('/api/teacher/dashboard').catch(() => null),
+        ]);
+        if (profileRes && profileRes.ok) {
           const profileData = await profileRes.json();
+          const t = profileData.payload?.teacher || profileData.paylod?.teacher || profileData.teacher;
+          setProfile(t);
+          const s = profileData.payload?.stats || profileData.paylod?.stats || profileData.stats;
+          if (s) setStats(s);
+        }
+        if (statsRes && statsRes.ok) {
           const statsData = await statsRes.json();
-          setProfile(profileData.paylod?.teacher);
-          setStats(statsData.paylod?.stats);
+          const s = statsData.payload?.stats || statsData.paylod?.stats || statsData.stats;
+          if (s) setStats(s);
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);

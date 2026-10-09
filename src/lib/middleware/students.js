@@ -137,18 +137,37 @@ export async function getStudentSession(request) {
     const decoded = verifyJWT(token);
     if (!decoded || !decoded.id) return null;
 
-    // Check students table first, then website_students
+    // Check website_students joined with website_student_info
     let res = await query(
-      `SELECT id, name, email, registration_number, is_active, is_registered, website_id, created_at
-       FROM students
-       WHERE id = $1 LIMIT 1`,
+      `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
+              s.class_id, s.section_id, s.session_id, s.is_active,
+              COALESCE(i.name, s.name) AS name,
+              COALESCE(i.email, s.email) AS email,
+              COALESCE(i.number, s.number) AS number,
+              COALESCE(i.gender, s.gender) AS gender,
+              COALESCE(i.blood_group, s.blood_group) AS blood_group,
+              COALESCE(i.date_of_birth, s.date_of_birth) AS date_of_birth,
+              COALESCE(i.religion, s.religion) AS religion,
+              COALESCE(i.admission_date, s.admission_date) AS admission_date,
+              COALESCE(i.is_registered, s.is_registered, FALSE) AS is_registered,
+              COALESCE(i.is_verified, s.is_verified, FALSE) AS is_verified,
+              COALESCE(i.verification_status, s.verification_status, 'pending_setup') AS verification_status,
+              c.name AS class_name, sec.name AS section_name, ses.name AS session_name
+       FROM website_students s
+       LEFT JOIN website_student_info i ON s.id = i.student_id
+       LEFT JOIN website_classes c ON s.class_id = c.id
+       LEFT JOIN website_sections sec ON s.section_id = sec.id
+       LEFT JOIN website_sessions ses ON s.session_id = ses.id
+       WHERE s.id = $1 LIMIT 1`,
       [decoded.id]
     ).catch(() => ({ rows: [] }));
 
     if (res.rows.length === 0) {
+      // Fallback for legacy table
       res = await query(
-        `SELECT id, name, email, registration_number, is_active, is_registered, website_id, created_at
-         FROM website_students
+        `SELECT id, name, email, registration_number, is_active, is_registered,
+                TRUE AS is_verified, 'verified' AS verification_status, website_id, created_at
+         FROM students
          WHERE id = $1 LIMIT 1`,
         [decoded.id]
       ).catch(() => ({ rows: [] }));
@@ -157,7 +176,7 @@ export async function getStudentSession(request) {
     if (res.rows.length === 0) return null;
     const student = res.rows[0];
 
-    if (!student.is_active || !student.is_registered) return null;
+    if (!student.is_active || !student.is_registered || !student.is_verified) return null;
 
     return {
       student,
@@ -165,10 +184,21 @@ export async function getStudentSession(request) {
       id: student.id,
       email: student.email,
       name: student.name,
-      registrationNumber: student.registration_number,
+      registrationNumber: student.registration_no || student.registration_number,
+      registration_no: student.registration_no || student.registration_number,
+      roll_no: student.roll_no,
+      student_unique_id: student.student_unique_id,
+      class_id: student.class_id,
+      section_id: student.section_id,
+      session_id: student.session_id,
+      class_name: student.class_name,
+      section_name: student.section_name,
+      session_name: student.session_name,
       website_id: student.website_id,
       isActive: Boolean(student.is_active),
       isRegistered: Boolean(student.is_registered),
+      isVerified: Boolean(student.is_verified),
+      verification_status: student.verification_status,
       token,
     };
   } catch (error) {
@@ -183,12 +213,12 @@ export const getStudentUser = async (request) => {
 };
 
 /**
- * Checks whether the current request is an authenticated and active student
+ * Checks whether the current request is an authenticated, active, and verified student
  */
 export async function isStudent(request) {
   try {
     const session = await getStudentSession(request);
-    return Boolean(session && session.isActive && session.isRegistered);
+    return Boolean(session && session.isActive && session.isRegistered && session.isVerified);
   } catch {
     return false;
   }
@@ -199,10 +229,43 @@ export async function isStudent(request) {
  */
 export async function requireStudent(request) {
   const session = await getStudentSession(request);
-  if (!session || !session.isActive) {
-    return { error: 'Unauthorized: Student authentication required.', status: 401 };
+  if (!session || !session.isActive || !session.isVerified) {
+    return { error: 'Unauthorized: Verified student authentication required.', status: 401 };
   }
   return { student: session.student, session };
+}
+
+/**
+ * Creates login session row in website_student_login_sessions
+ */
+export async function createStudentLoginSession(studentId, websiteId, token, request) {
+  try {
+    const ip = request?.headers?.get?.('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
+    const ua = request?.headers?.get?.('user-agent') || 'Unknown';
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await query(
+      `INSERT INTO website_student_login_sessions (student_id, website_id, token, ip_address, user_agent, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [studentId, websiteId, token, ip, ua, expiresAt]
+    );
+  } catch (err) {
+    console.warn('Failed to record student login session:', err.message);
+  }
+}
+
+/**
+ * Revokes a student session in website_student_login_sessions
+ */
+export async function revokeStudentLoginSession(token) {
+  try {
+    if (!token) return;
+    await query(
+      `UPDATE website_student_login_sessions SET is_revoked = TRUE WHERE token = $1`,
+      [token]
+    );
+  } catch (err) {
+    console.warn('Failed to revoke student login session:', err.message);
+  }
 }
 
 const StudentMiddleware = {
@@ -218,6 +281,8 @@ const StudentMiddleware = {
   getStudentUser,
   isStudent,
   requireStudent,
+  createStudentLoginSession,
+  revokeStudentLoginSession,
 };
 
 export default StudentMiddleware;

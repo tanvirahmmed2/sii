@@ -1,167 +1,244 @@
 'use client';
 
 import React, { useState } from 'react';
+import { toast } from 'react-hot-toast';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
+import StudentFilterBar from 'src/component/staff/StudentFilterBar';
+import StudentFilterEmptyState from 'src/component/staff/StudentFilterEmptyState';
 
-export default function Page() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [activeTab, setActiveTab] = useState('overview');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+export default function StudentAttendanceUpdatePage() {
+  const { getApiEndpoint } = useTenantWebsite();
 
-  const handleAction = (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitted(true);
-      setTimeout(() => setSubmitted(false), 3000);
-    }, 600);
+  const [hasFiltered, setHasFiltered] = useState(false);
+  const [filterInfo, setFilterInfo] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [targetDate, setTargetDate] = useState(new Date().toISOString().substring(0, 10));
+  const [attendanceRecords, setAttendanceRecords] = useState([]);
+
+  const loadData = async ({ sessionId, classId, sectionId, sessionName, className, sectionName }) => {
+    setLoading(true);
+    setFilterInfo({ sessionId, classId, sectionId, sessionName, className, sectionName });
+    try {
+      const params = new URLSearchParams({
+        date: targetDate,
+        session_id: sessionId,
+        class_id: classId,
+      });
+      if (sectionId) params.set('section_id', sectionId);
+
+      const res = await fetch(getApiEndpoint(`staff/panel/students/attendance?${params.toString()}`));
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        const list = (data.payload?.attendance || []).map((item) => ({
+          student_id: item.student_id,
+          registration_no: item.registration_no,
+          roll_no: item.roll_no,
+          name: item.name,
+          status: item.status || 'present',
+          remark: item.remark || '',
+        }));
+
+        setAttendanceRecords(list);
+        setHasFiltered(true);
+        toast.success(`Loaded ${list.length} student attendance logs for ${targetDate}.`);
+      } else {
+        toast.error(data.error || 'Failed to fetch attendance logs.');
+      }
+    } catch {
+      toast.error('Network error loading attendance logs.');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleReset = () => {
+    setHasFiltered(false);
+    setFilterInfo(null);
+    setAttendanceRecords([]);
+  };
+
+  const updateStudentStatus = (studentId, status) => {
+    setAttendanceRecords((prev) =>
+      prev.map((r) => (r.student_id === studentId ? { ...r, status } : r))
+    );
+  };
+
+  const handleSave = async () => {
+    if (!filterInfo || attendanceRecords.length === 0) return;
+
+    setSaving(true);
+    try {
+      const res = await fetch(getApiEndpoint('staff/panel/students/attendance'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: targetDate,
+          class_id: filterInfo.classId,
+          section_id: filterInfo.sectionId || null,
+          session_id: filterInfo.sessionId || null,
+          records: attendanceRecords.map((r) => ({
+            student_id: r.student_id,
+            status: r.status,
+            remark: r.remark,
+          })),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update attendance.');
+      }
+
+      toast.success(data.message || 'Attendance logs updated successfully!');
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const extraDateFilter = (
+    <div>
+      <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
+        Target Date *
+      </label>
+      <input
+        type="date"
+        value={targetDate}
+        onChange={(e) => setTargetDate(e.target.value)}
+        className="w-full text-xs px-2.5 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
+      />
+    </div>
+  );
 
   return (
     <div className="w-full space-y-4">
-      {/* Metric KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Records</p>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">1,248</span>
-            <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">+12% vs last term</span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Active Status</p>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">98.4%</span>
-            <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400">Synchronized</span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Pending Action</p>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">14</span>
-            <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">Needs review</span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">System Cycle</p>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">2026-T1</span>
-            <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">Current Session</span>
-          </div>
-        </div>
+      {/* Page Header */}
+      <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
+        <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+          Modify &amp; Update Student Attendance
+        </h1>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Filter by session, class, and section to edit past attendance entries and rectify absent or late marks.
+        </p>
       </div>
 
-      {/* Main Interactive Workstation Area */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
-        {/* Action & Filter Toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2 flex-1 max-w-md">
-            <input
-              type="text"
-              placeholder="Search update..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 transition"
-            />
-          </div>
+      {/* Filter Bar */}
+      <StudentFilterBar
+        onFilter={loadData}
+        onReset={handleReset}
+        loading={loading}
+        extraFilters={extraDateFilter}
+        submitLabel="Load Log for Date"
+        title="Filter Attendance Log"
+        description="Select session, class, section, and date to modify attendance"
+      />
 
-          <div className="flex items-center gap-2">
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-            </select>
+      {/* Show Data Only After Filter */}
+      {!hasFiltered ? (
+        <StudentFilterEmptyState
+          icon="✏️"
+          title="Filter by Session, Class & Section to Update Attendance"
+          description="Please select Academic Session, Class, Section, and Target Date above, then click 'Load Log for Date' to edit attendance records."
+        />
+      ) : (
+        <div className="space-y-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="font-semibold text-slate-900 dark:text-white">
+                Log for {targetDate}:
+              </span>
+              <span className="text-slate-500">
+                {attendanceRecords.length} student records found in {filterInfo?.className} ({filterInfo?.sectionName})
+              </span>
+            </div>
 
             <button
-              onClick={handleAction}
-              disabled={isSubmitting}
-              className="px-3 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition-colors cursor-pointer disabled:opacity-50"
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="px-4 py-1.5 bg-primary hover:bg-primary/90 text-white rounded text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5 self-start sm:self-auto"
             >
-              {isSubmitting ? 'Processing...' : 'Apply Filters'}
+              {saving ? 'Updating...' : '💾 Save Attendance Updates'}
             </button>
           </div>
-        </div>
 
-        {submitted && (
-          <div className="p-2.5 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
-            <span>Action processed successfully for Update.</span>
-            <span className="text-[10px] font-mono">OK</span>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-3">
+            {attendanceRecords.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-400">
+                No attendance entries found for this class and date.
+              </div>
+            ) : (
+              <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-lg">
+                <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+                  <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 tracking-wider">
+                    <tr>
+                      <th className="px-3 py-2.5">Roll No</th>
+                      <th className="px-3 py-2.5">Reg No</th>
+                      <th className="px-3 py-2.5">Student Name</th>
+                      <th className="px-3 py-2.5 text-center">Status</th>
+                      <th className="px-3 py-2.5">Remark</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {attendanceRecords.map((r) => (
+                      <tr key={r.student_id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                        <td className="px-3 py-2 font-mono font-bold text-slate-900 dark:text-white">
+                          {r.roll_no || '—'}
+                        </td>
+                        <td className="px-3 py-2 font-mono text-[11px] text-slate-600 dark:text-slate-400">
+                          {r.registration_no}
+                        </td>
+                        <td className="px-3 py-2 font-medium text-slate-900 dark:text-white">
+                          {r.name || <span className="text-slate-400 italic">Unnamed</span>}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <select
+                            value={r.status}
+                            onChange={(e) => updateStudentStatus(r.student_id, e.target.value)}
+                            className={`text-xs px-2 py-1 rounded border font-semibold cursor-pointer outline-none ${
+                              r.status === 'present'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
+                                : r.status === 'absent'
+                                ? 'bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800'
+                                : r.status === 'late'
+                                ? 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
+                                : 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800'
+                            }`}
+                          >
+                            <option value="present">Present</option>
+                            <option value="absent">Absent</option>
+                            <option value="late">Late</option>
+                            <option value="leave">Leave</option>
+                          </select>
+                        </td>
+                        <td className="px-3 py-2">
+                          <input
+                            type="text"
+                            placeholder="Add modification note..."
+                            value={r.remark}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setAttendanceRecords((prev) =>
+                                prev.map((item) =>
+                                  item.student_id === r.student_id ? { ...item, remark: val } : item
+                                )
+                              );
+                            }}
+                            className="w-full text-[11px] px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
-
-        {/* Dynamic Context Surface */}
-        
-        {/* High-Density Data Table */}
-        <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
-          <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
-            <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
-              <tr>
-                <th className="px-3 py-2">ID / Code</th>
-                <th className="px-3 py-2">Entity Name</th>
-                <th className="px-3 py-2">Category</th>
-                <th className="px-3 py-2">Last Updated</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
-              {[
-                { id: 'REC-101', name: 'Update Primary Entry', category: 'Student Attendance', date: '2026-10-08', status: 'Active' },
-                { id: 'REC-102', name: 'Update Secondary Batch', category: 'Student Attendance', date: '2026-10-07', status: 'Pending' },
-                { id: 'REC-103', name: 'Update Fallback Registry', category: 'Student Attendance', date: '2026-10-05', status: 'Active' },
-                { id: 'REC-104', name: 'Update Archive Log', category: 'Student Attendance', date: '2026-09-28', status: 'Completed' },
-              ].map((row, idx) => (
-                <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                  <td className="px-3 py-2 font-mono text-slate-900 dark:text-slate-200">{row.id}</td>
-                  <td className="px-3 py-2 font-medium text-slate-900 dark:text-white">{row.name}</td>
-                  <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{row.category}</td>
-                  <td className="px-3 py-2 font-mono text-[11px] text-slate-500 dark:text-slate-400">{row.date}</td>
-                  <td className="px-3 py-2">
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border ${
-                      row.status === 'Active'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
-                        : row.status === 'Pending'
-                        ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
-                        : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
-                    }`}>
-                      {row.status}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-right space-x-1">
-                    <button className="px-2 py-0.5 rounded text-[10px] font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
-                      Edit
-                    </button>
-                    <button className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:opacity-90 cursor-pointer">
-                      View
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
-        
-
-        {/* Micro Pagination Footer */}
-        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <span>Showing 1 to 4 of 1,248 entries</span>
-          <div className="flex items-center gap-1 font-mono">
-            <button className="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40">Previous</button>
-            <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-semibold text-slate-900 dark:text-white">1</span>
-            <button className="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800">Next</button>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

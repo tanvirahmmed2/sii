@@ -30,7 +30,7 @@ function TeacherVerifyInner() {
 
     const validateToken = async () => {
       try {
-        const endpoint = getApiEndpoint('teachers/register');
+        const endpoint = getApiEndpoint('teacher/verify');
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -40,24 +40,25 @@ function TeacherVerifyInner() {
 
         if (response.status === 410) {
           setStatus('expired');
-          setErrorMessage(data.message || 'Verification link has expired.');
+          setErrorMessage(data.error || data.message || 'Verification link has expired.');
           return;
         }
 
-        if (response.status === 400 && data.error === 'Already Registered') {
+        if (response.status === 400 && (data.error?.includes('already') || data.message?.includes('already'))) {
           setStatus('used');
-          setErrorMessage(data.message || 'Account has already been configured.');
+          setErrorMessage(data.error || data.message || 'Account has already been configured.');
           return;
         }
 
         if (!response.ok) {
           setStatus('invalid');
-          setErrorMessage(data.message || 'Invalid verification token.');
+          setErrorMessage(data.error || data.message || 'Invalid verification token.');
           return;
         }
 
-        const t = data.paylod?.teacher || data.payload?.teacher || {};
+        const t = data.paylod?.teacher || data.payload?.teacher || data.teacher || {};
         setTeacher(t);
+        if (t.address) setAddress(t.address);
         setStatus('valid');
       } catch {
         setStatus('invalid');
@@ -82,22 +83,26 @@ function TeacherVerifyInner() {
 
     setSubmitting(true);
     try {
-      const endpoint = getApiEndpoint('teachers/register');
+      const endpoint = getApiEndpoint('teacher/verify');
       const response = await fetch(endpoint, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, address: address.trim(), password })
+        body: JSON.stringify({
+          token,
+          address: address.trim(),
+          password
+        })
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to complete profile setup.');
+        throw new Error(data.error || data.message || 'Failed to complete profile setup.');
       }
 
       setStatus('success');
-      toast.success('Account setup complete! Redirecting to login...');
-      setTimeout(() => router.push(tenantUrl('/auth/access/teacher/login')), 2000);
+      toast.success(data.message || 'Account setup complete! Redirecting to login...');
+      setTimeout(() => router.push(tenantUrl('/auth/access/teacher/login')), 1800);
     } catch (err) {
       toast.error(err.message);
     } finally {

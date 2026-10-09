@@ -1,19 +1,34 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
-export default function StudentRecoveryPage() {
+function StudentRecoveryContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { website, getApiEndpoint, tenantUrl } = useTenantWebsite();
-  const [email, setEmail] = useState('');
-  const [token, setToken] = useState('');
+
+  const urlToken = searchParams.get('token') || '';
+  const urlEmail = searchParams.get('email') || '';
+
+  const [email, setEmail] = useState(urlEmail);
+  const [token, setToken] = useState(urlToken);
   const [password, setPassword] = useState('');
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(urlToken ? 2 : 1);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (urlToken) {
+      setToken(urlToken);
+      setStep(2);
+    }
+    if (urlEmail) {
+      setEmail(urlEmail);
+    }
+  }, [urlToken, urlEmail]);
 
   // Request recovery code
   const handleRequestToken = async (e) => {
@@ -51,7 +66,12 @@ export default function StudentRecoveryPage() {
   const handleResetPassword = async (e) => {
     e.preventDefault();
     if (!email.trim() || !token.trim() || !password) {
-      toast.error('All fields are required.');
+      toast.error('Email, verification code, and new password are required.');
+      return;
+    }
+
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters long.');
       return;
     }
 
@@ -98,7 +118,7 @@ export default function StudentRecoveryPage() {
           <p className="text-xs text-slate-500 dark:text-slate-400">
             {step === 1
               ? 'Enter your registered email to receive a password reset token.'
-              : 'Enter the verification code sent to your inbox to reset your password.'}
+              : 'Enter your verification code and set your new password.'}
           </p>
         </div>
 
@@ -131,17 +151,31 @@ export default function StudentRecoveryPage() {
           <form onSubmit={handleResetPassword} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                6-Digit Verification Token *
+                Registered Email Address *
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+                placeholder="student@example.com"
+                className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-900 dark:text-white outline-none focus:border-primary"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                Verification Code *
               </label>
               <input
                 type="text"
                 required
-                maxLength={6}
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
                 disabled={loading}
-                placeholder="123456"
-                className="w-full text-center px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-base font-mono text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors"
+                placeholder="Enter 6-digit code or paste token"
+                className="w-full text-center px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-sm font-mono text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors"
               />
             </div>
 
@@ -174,7 +208,7 @@ export default function StudentRecoveryPage() {
               disabled={loading}
               className="w-full text-center text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
             >
-              Resend verification code
+              Request a new verification code
             </button>
           </form>
         )}
@@ -190,5 +224,13 @@ export default function StudentRecoveryPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function StudentRecoveryPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-400">Loading account recovery...</div>}>
+      <StudentRecoveryContent />
+    </Suspense>
   );
 }

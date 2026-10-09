@@ -41,7 +41,7 @@ const Navbar = () => {
 
   const handleLogout = async () => {
     try {
-      const response = await fetch(getApiEndpoint('teachers/logout'), { method: 'POST' });
+      const response = await fetch(getApiEndpoint('teacher/logout'), { method: 'POST' });
       if (response.ok) {
         toast.success('Logged out successfully.');
         router.push(tenantUrl('/auth/access/teacher/login'));

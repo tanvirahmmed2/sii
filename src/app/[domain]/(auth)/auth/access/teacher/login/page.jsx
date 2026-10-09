@@ -26,7 +26,7 @@ export default function TeacherLoginPage() {
 
     setLoading(true);
     try {
-      const endpoint = getApiEndpoint('teachers/login');
+      const endpoint = getApiEndpoint('teacher/login');
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -63,7 +63,7 @@ export default function TeacherLoginPage() {
 
     setLoading(true);
     try {
-      const endpoint = getApiEndpoint('teachers/verify-2fa');
+      const endpoint = getApiEndpoint('teacher/verify-2fa');
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -90,7 +90,7 @@ export default function TeacherLoginPage() {
     if (resending) return;
     setResending(true);
     try {
-      const endpoint = getApiEndpoint('teachers/resend-2fa');
+      const endpoint = getApiEndpoint('teacher/resend-2fa');
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -232,12 +232,12 @@ export default function TeacherLoginPage() {
             </button>
 
             <div className="text-center text-xs text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-              Invited by administration?{' '}
+              Received an invitation email?{' '}
               <Link
-                href={tenantUrl('/auth/access/teacher/register')}
+                href={tenantUrl('/auth/access/teacher/verify')}
                 className="font-semibold text-primary hover:underline"
               >
-                Set up account credentials
+                Verify profile & set password
               </Link>
             </div>
           </form>

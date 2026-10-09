@@ -1,167 +1,248 @@
 'use client';
 
 import React, { useState } from 'react';
+import { toast } from 'react-hot-toast';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
+import StudentFilterBar from 'src/component/staff/StudentFilterBar';
+import StudentFilterEmptyState from 'src/component/staff/StudentFilterEmptyState';
 
-export default function Page() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [activeTab, setActiveTab] = useState('overview');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+export default function SearchSingleStudentPage() {
+  const { getApiEndpoint } = useTenantWebsite();
 
-  const handleAction = (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitted(true);
-      setTimeout(() => setSubmitted(false), 3000);
-    }, 600);
+  const [hasFiltered, setHasFiltered] = useState(false);
+  const [filterInfo, setFilterInfo] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [students, setStudents] = useState([]);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [fullDetail, setFullDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  const loadData = async ({ sessionId, classId, sectionId, sessionName, className, sectionName }) => {
+    setLoading(true);
+    setFilterInfo({ sessionId, classId, sectionId, sessionName, className, sectionName });
+    setSelectedStudent(null);
+    setFullDetail(null);
+
+    try {
+      const params = new URLSearchParams({ session_id: sessionId, class_id: classId });
+      if (sectionId) params.set('section_id', sectionId);
+
+      const res = await fetch(getApiEndpoint(`staff/panel/students?${params.toString()}`));
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        const list = data.payload?.students || [];
+        setStudents(list);
+        setHasFiltered(true);
+        if (list[0]) {
+          inspectStudent(list[0]);
+        }
+        toast.success(`Found ${list.length} students in this class/section.`);
+      } else {
+        toast.error(data.error || 'Failed to search students.');
+      }
+    } catch {
+      toast.error('Network error loading students.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inspectStudent = async (student) => {
+    setSelectedStudent(student);
+    setDetailLoading(true);
+    try {
+      const res = await fetch(getApiEndpoint(`staff/panel/students?id=${student.id}`));
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setFullDetail(data.payload);
+      }
+    } catch {
+      // Ignored
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleReset = () => {
+    setHasFiltered(false);
+    setFilterInfo(null);
+    setStudents([]);
+    setSelectedStudent(null);
+    setFullDetail(null);
   };
 
   return (
     <div className="w-full space-y-4">
-      {/* Metric KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Records</p>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">1,248</span>
-            <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">+12% vs last term</span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Active Status</p>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">98.4%</span>
-            <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400">Synchronized</span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Pending Action</p>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">14</span>
-            <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">Needs review</span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">System Cycle</p>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">2026-T1</span>
-            <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">Current Session</span>
-          </div>
-        </div>
+      {/* Page Header */}
+      <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
+        <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+          Single Student Inspection &amp; Profile Lookup
+        </h1>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Filter by session, class, and section to locate and inspect complete student dossiers.
+        </p>
       </div>
 
-      {/* Main Interactive Workstation Area */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
-        {/* Action & Filter Toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2 flex-1 max-w-md">
-            <input
-              type="text"
-              placeholder="Search single student..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 transition"
-            />
-          </div>
+      {/* Filter Bar */}
+      <StudentFilterBar
+        onFilter={loadData}
+        onReset={handleReset}
+        loading={loading}
+        title="Filter Roster for Single Student Lookup"
+        description="Select session, class, and section to inspect individual profiles"
+      />
 
-          <div className="flex items-center gap-2">
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-            </select>
+      {/* Show Data Only After Filter */}
+      {!hasFiltered ? (
+        <StudentFilterEmptyState
+          icon="🔎"
+          title="Filter by Session, Class & Section to Inspect a Student"
+          description="Please select Academic Session, Class, and Section above, then click 'View Data' to look up student profiles."
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Left Student Selector List */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 shadow-2xs space-y-2">
+            <div className="pb-2 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                Students ({students.length})
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">
+                {filterInfo?.className}
+              </span>
+            </div>
 
-            <button
-              onClick={handleAction}
-              disabled={isSubmitting}
-              className="px-3 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition-colors cursor-pointer disabled:opacity-50"
-            >
-              {isSubmitting ? 'Processing...' : 'Apply Filters'}
-            </button>
-          </div>
-        </div>
-
-        {submitted && (
-          <div className="p-2.5 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
-            <span>Action processed successfully for Single Student.</span>
-            <span className="text-[10px] font-mono">OK</span>
-          </div>
-        )}
-
-        {/* Dynamic Context Surface */}
-        
-        {/* High-Density Data Table */}
-        <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
-          <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
-            <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
-              <tr>
-                <th className="px-3 py-2">ID / Code</th>
-                <th className="px-3 py-2">Entity Name</th>
-                <th className="px-3 py-2">Category</th>
-                <th className="px-3 py-2">Last Updated</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
-              {[
-                { id: 'REC-101', name: 'Single Student Primary Entry', category: 'Student', date: '2026-10-08', status: 'Active' },
-                { id: 'REC-102', name: 'Single Student Secondary Batch', category: 'Student', date: '2026-10-07', status: 'Pending' },
-                { id: 'REC-103', name: 'Single Student Fallback Registry', category: 'Student', date: '2026-10-05', status: 'Active' },
-                { id: 'REC-104', name: 'Single Student Archive Log', category: 'Student', date: '2026-09-28', status: 'Completed' },
-              ].map((row, idx) => (
-                <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                  <td className="px-3 py-2 font-mono text-slate-900 dark:text-slate-200">{row.id}</td>
-                  <td className="px-3 py-2 font-medium text-slate-900 dark:text-white">{row.name}</td>
-                  <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{row.category}</td>
-                  <td className="px-3 py-2 font-mono text-[11px] text-slate-500 dark:text-slate-400">{row.date}</td>
-                  <td className="px-3 py-2">
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border ${
-                      row.status === 'Active'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
-                        : row.status === 'Pending'
-                        ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
-                        : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
-                    }`}>
-                      {row.status}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-right space-x-1">
-                    <button className="px-2 py-0.5 rounded text-[10px] font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
-                      Edit
-                    </button>
-                    <button className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:opacity-90 cursor-pointer">
-                      View
-                    </button>
-                  </td>
-                </tr>
+            <div className="max-h-[600px] overflow-y-auto space-y-1">
+              {students.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => inspectStudent(s)}
+                  className={`w-full text-left p-2.5 rounded-lg border text-xs transition-colors cursor-pointer flex items-center justify-between ${
+                    selectedStudent?.id === s.id
+                      ? 'border-primary bg-primary/5 text-primary font-semibold'
+                      : 'border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300'
+                  }`}
+                >
+                  <div className="min-w-0 pr-2">
+                    <p className="font-medium text-slate-900 dark:text-white truncate">
+                      {s.name || 'Unnamed Student'}
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-mono">
+                      Reg: {s.registration_no}
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-mono text-slate-500 shrink-0">
+                    Roll: {s.roll_no || '—'}
+                  </span>
+                </button>
               ))}
-            </tbody>
-          </table>
-        </div>
-        
+            </div>
+          </div>
 
-        {/* Micro Pagination Footer */}
-        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <span>Showing 1 to 4 of 1,248 entries</span>
-          <div className="flex items-center gap-1 font-mono">
-            <button className="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40">Previous</button>
-            <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-semibold text-slate-900 dark:text-white">1</span>
-            <button className="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800">Next</button>
+          {/* Right Profile Inspector Dossier */}
+          <div className="md:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 shadow-2xs space-y-4">
+            {!selectedStudent ? (
+              <div className="py-20 text-center text-xs text-slate-400">
+                Select a student on the left to inspect their dossier.
+              </div>
+            ) : detailLoading ? (
+              <div className="py-20 text-center text-xs text-slate-400">
+                Loading student dossier...
+              </div>
+            ) : (
+              <div className="space-y-4 text-xs">
+                {/* Header card with photo and key credentials */}
+                <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                  <div className="w-24 h-28 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden flex items-center justify-center shrink-0">
+                    {selectedStudent.primary_photo_url ? (
+                      <img
+                        src={selectedStudent.primary_photo_url}
+                        alt="Student"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-3xl text-slate-400">👤</span>
+                    )}
+                  </div>
+
+                  <div className="space-y-1 text-center sm:text-left flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                      <h2 className="text-base font-bold text-slate-900 dark:text-white truncate">
+                        {selectedStudent.name || 'Unnamed Student'}
+                      </h2>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                        {selectedStudent.is_active ? 'Active' : 'Dropped Out'}
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-500 font-mono">
+                      Registration: <strong className="text-slate-800 dark:text-slate-200">{selectedStudent.registration_no}</strong> • Roll: <strong className="text-slate-800 dark:text-slate-200">{selectedStudent.roll_no || '—'}</strong>
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      Class: <strong className="text-slate-800 dark:text-slate-200">{selectedStudent.class_name}</strong> {selectedStudent.section_name ? `(${selectedStudent.section_name})` : ''} • Session: <strong className="text-slate-800 dark:text-slate-200">{selectedStudent.session_name || '—'}</strong>
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-mono">
+                      UID: {selectedStudent.student_unique_id}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Grid details */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="p-2.5 rounded bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-400 uppercase font-semibold block">Email</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-200 truncate block">{selectedStudent.email || '—'}</span>
+                  </div>
+                  <div className="p-2.5 rounded bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-400 uppercase font-semibold block">Phone</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-200 block">{selectedStudent.number || '—'}</span>
+                  </div>
+                  <div className="p-2.5 rounded bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-400 uppercase font-semibold block">Gender</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-200 block">{selectedStudent.gender || '—'}</span>
+                  </div>
+                  <div className="p-2.5 rounded bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-400 uppercase font-semibold block">Blood Group</span>
+                    <span className="font-mono font-medium text-slate-800 dark:text-slate-200 block">{selectedStudent.blood_group || '—'}</span>
+                  </div>
+                  <div className="p-2.5 rounded bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-400 uppercase font-semibold block">Birth Date</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-200 block">{selectedStudent.date_of_birth ? new Date(selectedStudent.date_of_birth).toLocaleDateString() : '—'}</span>
+                  </div>
+                  <div className="p-2.5 rounded bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-400 uppercase font-semibold block">Religion</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-200 block">{selectedStudent.religion || '—'}</span>
+                  </div>
+                </div>
+
+                {/* Addresses */}
+                {fullDetail?.address && (
+                  <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-400 uppercase font-semibold block">Residence Data</span>
+                    <p><strong>Present Address:</strong> {fullDetail.address.present_address || '—'}</p>
+                    <p><strong>Permanent Address:</strong> {fullDetail.address.permanent_address || '—'}</p>
+                    <p className="text-[11px] text-slate-500">
+                      {[fullDetail.address.upazila, fullDetail.address.district, fullDetail.address.city, fullDetail.address.postal_code].filter(Boolean).join(', ')}
+                    </p>
+                  </div>
+                )}
+
+                {/* Guardians */}
+                {fullDetail?.guardian && (
+                  <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
+                    <span className="text-[10px] text-slate-400 uppercase font-semibold block">Guardians</span>
+                    <p><strong>Father:</strong> {fullDetail.guardian.father_name || '—'} ({fullDetail.guardian.father_phone || 'No phone'})</p>
+                    <p><strong>Mother:</strong> {fullDetail.guardian.mother_name || '—'} ({fullDetail.guardian.mother_phone || 'No phone'})</p>
+                    <p><strong>Guardian:</strong> {fullDetail.guardian.guardian_name || '—'} ({fullDetail.guardian.guardian_relation || '—'}) • {fullDetail.guardian.guardian_phone || '—'}</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

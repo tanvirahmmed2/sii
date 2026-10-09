@@ -45,6 +45,10 @@ export const staffNavData = [
         path: '/student-registration'
       },
       {
+        title: 'Verify Student',
+        path: '/student-verify'
+      },
+      {
         title: 'Update',
         children: [
           {
@@ -513,10 +517,6 @@ export const staffNavData = [
         path: '/club-notices'
       }
     ]
-  },
-  {
-    title: 'Notices',
-    path: '/notices'
   },
   {
     title: 'News',

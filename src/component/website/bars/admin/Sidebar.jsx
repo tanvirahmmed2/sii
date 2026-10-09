@@ -285,7 +285,7 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
 
                 {staffNavData.map((module, idx) => (
                   <NavModuleAccordion
-                    key={module.title || idx}
+                    key={`${module.title}-${idx}`}
                     module={module}
                     pathname={pathname}
                     setAdminSidebar={setAdminSidebar}

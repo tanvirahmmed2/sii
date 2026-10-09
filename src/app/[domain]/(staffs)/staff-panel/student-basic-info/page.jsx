@@ -1,167 +1,372 @@
 'use client';
 
 import React, { useState } from 'react';
+import { toast } from 'react-hot-toast';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
+import StudentFilterBar from 'src/component/staff/StudentFilterBar';
+import StudentFilterEmptyState from 'src/component/staff/StudentFilterEmptyState';
 
-export default function Page() {
+export default function StudentBasicInfoPage() {
+  const { getApiEndpoint } = useTenantWebsite();
+
+  const [hasFiltered, setHasFiltered] = useState(false);
+  const [filterInfo, setFilterInfo] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [students, setStudents] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [activeTab, setActiveTab] = useState('overview');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
 
-  const handleAction = (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitted(true);
-      setTimeout(() => setSubmitted(false), 3000);
-    }, 600);
+  // Edit Modal State
+  const [editingStudent, setEditingStudent] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    roll_no: '',
+    gender: 'Male',
+    blood_group: 'A+',
+    date_of_birth: '',
+    religion: 'Islam',
+  });
+
+  const loadData = async ({ sessionId, classId, sectionId, sessionName, className, sectionName }) => {
+    setLoading(true);
+    setFilterInfo({ sessionId, classId, sectionId, sessionName, className, sectionName });
+    try {
+      const params = new URLSearchParams({
+        session_id: sessionId,
+        class_id: classId,
+      });
+      if (sectionId) params.set('section_id', sectionId);
+
+      const res = await fetch(getApiEndpoint(`staff/panel/students?${params.toString()}`));
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setStudents(data.payload?.students || []);
+        setHasFiltered(true);
+        toast.success(`Loaded ${(data.payload?.students || []).length} students.`);
+      } else {
+        toast.error(data.error || 'Failed to fetch student basic info.');
+      }
+    } catch {
+      toast.error('Network error loading students.');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleReset = () => {
+    setHasFiltered(false);
+    setFilterInfo(null);
+    setStudents([]);
+    setEditingStudent(null);
+  };
+
+  const openEditModal = (student) => {
+    setEditingStudent(student);
+    setFormData({
+      name: student.name || '',
+      roll_no: student.roll_no || '',
+      gender: student.gender || 'Male',
+      blood_group: student.blood_group || 'A+',
+      date_of_birth: student.date_of_birth ? student.date_of_birth.substring(0, 10) : '',
+      religion: student.religion || 'Islam',
+    });
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (!editingStudent) return;
+
+    setSaving(true);
+    try {
+      const res = await fetch(getApiEndpoint('staff/panel/students'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingStudent.id,
+          name: formData.name.trim() || null,
+          roll_no: formData.roll_no.trim() || null,
+          gender: formData.gender,
+          blood_group: formData.blood_group,
+          date_of_birth: formData.date_of_birth || null,
+          religion: formData.religion || null,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update basic info.');
+      }
+
+      toast.success('Student basic info updated successfully!');
+      // Update local state
+      setStudents((prev) =>
+        prev.map((s) => (s.id === editingStudent.id ? { ...s, ...formData } : s))
+      );
+      setEditingStudent(null);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const filtered = students.filter((s) => {
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      s.registration_no?.toLowerCase().includes(term) ||
+      s.roll_no?.toLowerCase().includes(term) ||
+      s.name?.toLowerCase().includes(term)
+    );
+  });
 
   return (
     <div className="w-full space-y-4">
-      {/* Metric KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Records</p>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">1,248</span>
-            <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">+12% vs last term</span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Active Status</p>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">98.4%</span>
-            <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400">Synchronized</span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Pending Action</p>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">14</span>
-            <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">Needs review</span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">System Cycle</p>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">2026-T1</span>
-            <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">Current Session</span>
-          </div>
-        </div>
+      {/* Page Header */}
+      <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
+        <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+          Student Basic Information
+        </h1>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Filter by session, class, and section to view and update student names, roll numbers, gender, blood group, and birth records.
+        </p>
       </div>
 
-      {/* Main Interactive Workstation Area */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
-        {/* Action & Filter Toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2 flex-1 max-w-md">
-            <input
-              type="text"
-              placeholder="Search basic info..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 transition"
-            />
+      {/* Filter Bar */}
+      <StudentFilterBar
+        onFilter={loadData}
+        onReset={handleReset}
+        loading={loading}
+        title="Filter Student Basic Info"
+        description="Select session, class, and section to view records"
+      />
+
+      {/* View Data Only After Filter */}
+      {!hasFiltered ? (
+        <StudentFilterEmptyState
+          icon="👤"
+          title="Filter by Session, Class & Section to View Basic Info"
+          description="Please select Academic Session, Class, and Section above, then click 'View Data' to display and edit basic student records."
+        />
+      ) : (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-4">
+          {/* Active Filter Bar & Search */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                Active Filter:
+              </span>
+              <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-primary/10 text-primary border border-primary/20">
+                {filterInfo?.sessionName}
+              </span>
+              <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                {filterInfo?.className}
+              </span>
+              <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                {filterInfo?.sectionName}
+              </span>
+              <span className="text-xs text-slate-400">
+                ({filtered.length} students)
+              </span>
+            </div>
+
+            <div className="w-full sm:w-64">
+              <input
+                type="text"
+                placeholder="Search by Reg, Roll, Name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full text-xs px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
+              />
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-            </select>
+          {filtered.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-400">
+              No students found for this session, class, and section.
+            </div>
+          ) : (
+            <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-lg">
+              <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+                <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 tracking-wider">
+                  <tr>
+                    <th className="px-3 py-2.5">Reg No</th>
+                    <th className="px-3 py-2.5">Roll No</th>
+                    <th className="px-3 py-2.5">Full Name</th>
+                    <th className="px-3 py-2.5">Gender</th>
+                    <th className="px-3 py-2.5">Blood Group</th>
+                    <th className="px-3 py-2.5">Date of Birth</th>
+                    <th className="px-3 py-2.5">Religion</th>
+                    <th className="px-3 py-2.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {filtered.map((s) => (
+                    <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="px-3 py-2 font-mono font-medium text-slate-900 dark:text-white">
+                        {s.registration_no}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-[11px] text-slate-600 dark:text-slate-400">
+                        {s.roll_no || '—'}
+                      </td>
+                      <td className="px-3 py-2 font-medium text-slate-900 dark:text-white">
+                        {s.name || <span className="text-slate-400 italic">Not set</span>}
+                      </td>
+                      <td className="px-3 py-2 text-slate-600 dark:text-slate-400">{s.gender || '—'}</td>
+                      <td className="px-3 py-2 font-mono text-[11px] text-slate-600 dark:text-slate-400">
+                        {s.blood_group || '—'}
+                      </td>
+                      <td className="px-3 py-2 text-slate-600 dark:text-slate-400">
+                        {s.date_of_birth ? new Date(s.date_of_birth).toLocaleDateString() : '—'}
+                      </td>
+                      <td className="px-3 py-2 text-slate-600 dark:text-slate-400">{s.religion || '—'}</td>
+                      <td className="px-3 py-2 text-right">
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(s)}
+                          className="px-2.5 py-1 text-[11px] font-medium rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 cursor-pointer"
+                        >
+                          ✏️ Edit Basic Info
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
-            <button
-              onClick={handleAction}
-              disabled={isSubmitting}
-              className="px-3 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition-colors cursor-pointer disabled:opacity-50"
-            >
-              {isSubmitting ? 'Processing...' : 'Apply Filters'}
-            </button>
+      {/* Edit Basic Info Modal */}
+      {editingStudent && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-md w-full p-5 space-y-4 shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Edit Student Basic Info
+                </h3>
+                <p className="text-[11px] text-slate-500 font-mono">
+                  Reg: {editingStudent.registration_no}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingStudent(null)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSave} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g. Tanvir Ahmmed"
+                  className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Roll Number
+                </label>
+                <input
+                  type="text"
+                  value={formData.roll_no}
+                  onChange={(e) => setFormData({ ...formData, roll_no: e.target.value })}
+                  placeholder="e.g. 101"
+                  className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Gender
+                  </label>
+                  <select
+                    value={formData.gender}
+                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                    className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Blood Group
+                  </label>
+                  <select
+                    value={formData.blood_group}
+                    onChange={(e) => setFormData({ ...formData, blood_group: e.target.value })}
+                    className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer"
+                  >
+                    {['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map((bg) => (
+                      <option key={bg} value={bg}>{bg}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Date of Birth
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.date_of_birth}
+                    onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                    className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Religion
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.religion}
+                    onChange={(e) => setFormData({ ...formData, religion: e.target.value })}
+                    placeholder="e.g. Islam"
+                    className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingStudent(null)}
+                  className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 text-xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-4 py-1.5 rounded bg-primary hover:bg-primary/90 text-white text-xs font-semibold cursor-pointer disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-
-        {submitted && (
-          <div className="p-2.5 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
-            <span>Action processed successfully for Basic Info.</span>
-            <span className="text-[10px] font-mono">OK</span>
-          </div>
-        )}
-
-        {/* Dynamic Context Surface */}
-        
-        {/* High-Density Data Table */}
-        <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
-          <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
-            <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
-              <tr>
-                <th className="px-3 py-2">ID / Code</th>
-                <th className="px-3 py-2">Entity Name</th>
-                <th className="px-3 py-2">Category</th>
-                <th className="px-3 py-2">Last Updated</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
-              {[
-                { id: 'REC-101', name: 'Basic Info Primary Entry', category: 'Student', date: '2026-10-08', status: 'Active' },
-                { id: 'REC-102', name: 'Basic Info Secondary Batch', category: 'Student', date: '2026-10-07', status: 'Pending' },
-                { id: 'REC-103', name: 'Basic Info Fallback Registry', category: 'Student', date: '2026-10-05', status: 'Active' },
-                { id: 'REC-104', name: 'Basic Info Archive Log', category: 'Student', date: '2026-09-28', status: 'Completed' },
-              ].map((row, idx) => (
-                <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                  <td className="px-3 py-2 font-mono text-slate-900 dark:text-slate-200">{row.id}</td>
-                  <td className="px-3 py-2 font-medium text-slate-900 dark:text-white">{row.name}</td>
-                  <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{row.category}</td>
-                  <td className="px-3 py-2 font-mono text-[11px] text-slate-500 dark:text-slate-400">{row.date}</td>
-                  <td className="px-3 py-2">
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border ${
-                      row.status === 'Active'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
-                        : row.status === 'Pending'
-                        ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
-                        : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
-                    }`}>
-                      {row.status}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-right space-x-1">
-                    <button className="px-2 py-0.5 rounded text-[10px] font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
-                      Edit
-                    </button>
-                    <button className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:opacity-90 cursor-pointer">
-                      View
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-
-        {/* Micro Pagination Footer */}
-        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <span>Showing 1 to 4 of 1,248 entries</span>
-          <div className="flex items-center gap-1 font-mono">
-            <button className="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40">Previous</button>
-            <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-semibold text-slate-900 dark:text-white">1</span>
-            <button className="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800">Next</button>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

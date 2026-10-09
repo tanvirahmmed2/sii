@@ -108,7 +108,7 @@ export function proxy(request) {
     'marketing', 'auth', 'admin', 'icon.png', 'favicon.ico', 'robots.txt',
     'sitemap.xml', 'about', 'blogs', 'careers', 'contact', 'faqs', 'packages',
     'policies', 'reviews', 'tutorials', 'updates', 'help', 'terms', 'privacy',
-    'login', 'register', 'staff-panel'
+    'login', 'register', 'staff-panel', 'teacher', 'student', 'student-verify'
   ]);
 
   // Clean /staff-panel handling: if URL has /[tenant]/staff-panel, redirect to clean /staff-panel
@@ -126,6 +126,57 @@ export function proxy(request) {
 
   // Handle direct clean /staff-panel routes by rewriting internally to /[domain]/staff-panel
   if (pathname === '/staff-panel' || pathname.startsWith('/staff-panel/')) {
+    const activeTenantCookie =
+      request.cookies.get('x-website-domain')?.value ||
+      request.cookies.get('x-domain')?.value;
+    const resolvedTenant = tenantDomain || activeTenantCookie || 'afit';
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-website-domain', resolvedTenant);
+    requestHeaders.set('x-domain', resolvedTenant);
+    url.pathname = `/${resolvedTenant}${pathname}`;
+    const response = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    if (!activeTenantCookie || activeTenantCookie !== resolvedTenant) {
+      response.cookies.set('x-website-domain', resolvedTenant, { path: '/' });
+    }
+    return response;
+  }
+
+  // Handle direct clean /student-verify routes by rewriting internally to /[domain]/staff-panel/student-verify
+  if (pathname === '/student-verify' || pathname.startsWith('/student-verify/')) {
+    const activeTenantCookie =
+      request.cookies.get('x-website-domain')?.value ||
+      request.cookies.get('x-domain')?.value;
+    const resolvedTenant = tenantDomain || activeTenantCookie || 'afit';
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-website-domain', resolvedTenant);
+    requestHeaders.set('x-domain', resolvedTenant);
+    url.pathname = `/${resolvedTenant}/staff-panel/student-verify`;
+    const response = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    if (!activeTenantCookie || activeTenantCookie !== resolvedTenant) {
+      response.cookies.set('x-website-domain', resolvedTenant, { path: '/' });
+    }
+    return response;
+  }
+
+  // Handle direct clean /student routes by rewriting internally to /[domain]/student
+  if (pathname === '/student' || pathname.startsWith('/student/')) {
+    const activeTenantCookie =
+      request.cookies.get('x-website-domain')?.value ||
+      request.cookies.get('x-domain')?.value;
+    const resolvedTenant = tenantDomain || activeTenantCookie || 'afit';
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-website-domain', resolvedTenant);
+    requestHeaders.set('x-domain', resolvedTenant);
+    url.pathname = `/${resolvedTenant}${pathname}`;
+    const response = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    if (!activeTenantCookie || activeTenantCookie !== resolvedTenant) {
+      response.cookies.set('x-website-domain', resolvedTenant, { path: '/' });
+    }
+    return response;
+  }
+
+  // Handle direct clean /teacher routes by rewriting internally to /[domain]/teacher
+  if (pathname === '/teacher' || pathname.startsWith('/teacher/')) {
     const activeTenantCookie =
       request.cookies.get('x-website-domain')?.value ||
       request.cookies.get('x-domain')?.value;
