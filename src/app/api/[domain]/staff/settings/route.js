@@ -25,21 +25,6 @@ export async function GET(request, context) {
       );
     }
 
-    // Load website settings row if table exists
-    let s = {};
-    try {
-      const setRes = await queryDb(
-        `SELECT * FROM website_settings WHERE website_id = $1 LIMIT 1`,
-        [website.id]
-      );
-      if (setRes.rows.length > 0) {
-        s = setRes.rows[0];
-      }
-    } catch {
-      // website_settings table may be created later as needed
-      s = {};
-    }
-
     const mergedSettings = {
       id: website.id,
       name: website.name || '',
@@ -54,20 +39,19 @@ export async function GET(request, context) {
       status: website.status || 'active',
       subdomain: website.subdomain || '',
       custom_domain: website.custom_domain || '',
-      // Settings table fields
-      contact_phone: s.contact_phone || website.contact_phone || '',
-      contact_email: s.contact_email || website.contact_email || '',
-      address: s.address || website.address || '',
-      map_url: s.map_url || '',
-      motto: s.motto || '',
-      mission: s.mission || '',
-      vision: s.vision || '',
-      history: s.history || '',
-      facebook_url: s.facebook_url || '',
-      twitter_url: s.twitter_url || '',
-      instagram_url: s.instagram_url || '',
-      youtube_url: s.youtube_url || '',
-      updated_at: s.updated_at || website.updated_at,
+      contact_phone: website.contact_phone || '',
+      contact_email: website.contact_email || '',
+      address: website.address || '',
+      map_url: '',
+      motto: `Excellence in ${website.institution_type || 'Education'}`,
+      mission: '',
+      vision: '',
+      history: '',
+      facebook_url: '',
+      twitter_url: '',
+      instagram_url: '',
+      youtube_url: '',
+      updated_at: website.updated_at,
     };
 
     return NextResponse.json({
@@ -146,66 +130,12 @@ export async function PUT(request, context) {
 
     const updatedWebsite = webRes.rows[0];
 
-    // 2. Upsert into website_settings table if it exists
-    let updatedSettings = {};
-    try {
-      const setRes = await queryDb(
-        `INSERT INTO website_settings (
-           website_id, contact_phone, contact_email, address, map_url, motto,
-           mission, vision, history, facebook_url, twitter_url, instagram_url, youtube_url
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-         ON CONFLICT (website_id) DO UPDATE SET
-           contact_phone = COALESCE(EXCLUDED.contact_phone, website_settings.contact_phone),
-           contact_email = COALESCE(EXCLUDED.contact_email, website_settings.contact_email),
-           address = COALESCE(EXCLUDED.address, website_settings.address),
-           map_url = COALESCE(EXCLUDED.map_url, website_settings.map_url),
-           motto = COALESCE(EXCLUDED.motto, website_settings.motto),
-           mission = COALESCE(EXCLUDED.mission, website_settings.mission),
-           vision = COALESCE(EXCLUDED.vision, website_settings.vision),
-           history = COALESCE(EXCLUDED.history, website_settings.history),
-           facebook_url = COALESCE(EXCLUDED.facebook_url, website_settings.facebook_url),
-           twitter_url = COALESCE(EXCLUDED.twitter_url, website_settings.twitter_url),
-           instagram_url = COALESCE(EXCLUDED.instagram_url, website_settings.instagram_url),
-           youtube_url = COALESCE(EXCLUDED.youtube_url, website_settings.youtube_url),
-           updated_at = CURRENT_TIMESTAMP
-         RETURNING *`,
-        [
-          website.id,
-          data.contact_phone !== undefined ? String(data.contact_phone).trim() : null,
-          data.contact_email !== undefined ? String(data.contact_email).trim() : null,
-          data.address !== undefined ? String(data.address).trim() : null,
-          data.map_url !== undefined ? String(data.map_url).trim() : null,
-          data.motto !== undefined || data.tagline !== undefined 
-            ? String(data.motto ?? data.tagline ?? '').trim() 
-            : null,
-          data.mission !== undefined ? String(data.mission).trim() : null,
-          data.vision !== undefined ? String(data.vision).trim() : null,
-          data.history !== undefined ? String(data.history).trim() : null,
-          data.facebook_url !== undefined ? String(data.facebook_url).trim() : null,
-          data.twitter_url !== undefined ? String(data.twitter_url).trim() : null,
-          data.instagram_url !== undefined ? String(data.instagram_url).trim() : null,
-          data.youtube_url !== undefined ? String(data.youtube_url).trim() : null,
-        ]
-      );
-      if (setRes.rows && setRes.rows.length > 0) {
-        updatedSettings = setRes.rows[0];
-      }
-    } catch {
-      // website_settings table will be created later as needed
-      updatedSettings = {};
-    }
-
     const merged = {
-      ...updatedSettings,
-      name: updatedWebsite.name,
-      institution_type: updatedWebsite.institution_type,
-      eiin_number: updatedWebsite.eiin_number,
-      logo: updatedWebsite.logo,
-      favicon: updatedWebsite.favicon,
-      theme: updatedWebsite.theme,
-      primary_color: updatedWebsite.primary_color,
-      secondary_color: updatedWebsite.secondary_color,
-      is_maintenance_mode: Boolean(updatedWebsite.is_maintenance_mode),
+      ...updatedWebsite,
+      school_name: updatedWebsite.name,
+      logo_url: updatedWebsite.logo,
+      meta_title: `${updatedWebsite.name} - Academic Excellence & Growth`,
+      meta_description: `Official portal for ${updatedWebsite.name}.`,
     };
 
     return NextResponse.json({

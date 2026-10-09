@@ -1,6 +1,8 @@
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -60,14 +62,7 @@ export default function UpdateAwardPage() {
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
-  useEffect(() => {
-    document.title = 'Update';
-    if (slug) {
-      fetchAwardData();
-    }
-  }, [domain, slug]);
-
-  const showToast = (msg, isErr = false) => {
+  const showToast = useCallback((msg, isErr = false) => {
     if (isErr) {
       setToastError(msg);
       setTimeout(() => setToastError(null), 4000);
@@ -75,9 +70,9 @@ export default function UpdateAwardPage() {
       setToastMessage(msg);
       setTimeout(() => setToastMessage(null), 4000);
     }
-  };
+  }, []);
 
-  const fetchAwardData = async () => {
+  const fetchAwardData = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/${domain}/staff/panel/awards?slug=${encodeURIComponent(slug)}`);
@@ -109,7 +104,14 @@ export default function UpdateAwardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [domain, slug, showToast]);
+
+  useEffect(() => {
+    document.title = 'Update';
+    if (slug) {
+      fetchAwardData();
+    }
+  }, [domain, slug, fetchAwardData]);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];

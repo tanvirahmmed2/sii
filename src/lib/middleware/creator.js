@@ -346,14 +346,10 @@ export async function resolveWebsiteFromRequest(request, context) {
     if (res.rows.length === 0) return null;
     const website = res.rows[0];
 
-    // Load merged settings from website_settings if available
-    try {
-      const setRes = await query(`SELECT * FROM website_settings WHERE website_id = $1 LIMIT 1`, [website.id]);
-      if (setRes.rows.length > 0) {
-        website.settings = setRes.rows[0];
-        website.website_settings = setRes.rows[0];
-      }
-    } catch {}
+    // Attach settings alias referencing websites table (shallow copy to prevent circular JSON serialization)
+    const settingsCopy = { ...website };
+    website.settings = settingsCopy;
+    website.website_settings = settingsCopy;
 
     return website;
   } catch (error) {

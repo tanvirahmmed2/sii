@@ -1,6 +1,8 @@
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -50,11 +52,7 @@ export default function NewsListPage() {
   const [toastMessage, setToastMessage] = useState(null);
   const [toastError, setToastError] = useState(null);
 
-  useEffect(() => {
-    fetchNews();
-  }, [domain, selectedCategory, selectedStatus]);
-
-  const showToast = (msg, isErr = false) => {
+  const showToast = useCallback((msg, isErr = false) => {
     if (isErr) {
       setToastError(msg);
       setTimeout(() => setToastError(null), 4000);
@@ -62,9 +60,9 @@ export default function NewsListPage() {
       setToastMessage(msg);
       setTimeout(() => setToastMessage(null), 4000);
     }
-  };
+  }, []);
 
-  const fetchNews = async () => {
+  const fetchNews = useCallback(async () => {
     setLoading(true);
     try {
       let url = `/api/${domain}/staff/panel/news?`;
@@ -85,7 +83,11 @@ export default function NewsListPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [domain, selectedStatus, selectedCategory, searchTerm, showToast]);
+
+  useEffect(() => {
+    fetchNews();
+  }, [fetchNews]);
 
   const handleCreateNews = async () => {
     setCreating(true);
@@ -336,7 +338,7 @@ export default function NewsListPage() {
               ) : newsList.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="py-12 text-center text-slate-400 dark:text-slate-500">
-                    No news articles found. Click "Create News" to publish your first story.
+                    No news articles found. Click &quot;Create News&quot; to publish your first story.
                   </td>
                 </tr>
               ) : (
@@ -454,7 +456,7 @@ export default function NewsListPage() {
               <h3 className="text-base font-bold text-slate-900 dark:text-white">Delete News Article</h3>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              Are you sure you want to delete <strong className="text-slate-800 dark:text-slate-200">"{newsToDelete.title}"</strong>? This will permanently remove the article and all attached gallery photos.
+              Are you sure you want to delete <strong className="text-slate-800 dark:text-slate-200">&ldquo;{newsToDelete.title}&rdquo;</strong>? This will permanently remove the article and all attached gallery photos.
             </p>
             <div className="flex items-center justify-end gap-3 pt-2">
               <button

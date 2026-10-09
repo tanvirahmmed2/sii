@@ -1,6 +1,8 @@
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -39,11 +41,7 @@ export default function AwardsListPage() {
   const [toastMessage, setToastMessage] = useState(null);
   const [toastError, setToastError] = useState(null);
 
-  useEffect(() => {
-    fetchAwards();
-  }, [domain, selectedStatus, selectedYear]);
-
-  const showToast = (msg, isErr = false) => {
+  const showToast = useCallback((msg, isErr = false) => {
     if (isErr) {
       setToastError(msg);
       setTimeout(() => setToastError(null), 4000);
@@ -51,9 +49,9 @@ export default function AwardsListPage() {
       setToastMessage(msg);
       setTimeout(() => setToastMessage(null), 4000);
     }
-  };
+  }, []);
 
-  const fetchAwards = async () => {
+  const fetchAwards = useCallback(async () => {
     setLoading(true);
     try {
       let url = `/api/${domain}/staff/panel/awards?`;
@@ -74,7 +72,11 @@ export default function AwardsListPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [domain, selectedStatus, selectedYear, searchTerm, showToast]);
+
+  useEffect(() => {
+    fetchAwards();
+  }, [fetchAwards]);
 
   const handleCreateAward = async () => {
     setCreating(true);
@@ -329,7 +331,7 @@ export default function AwardsListPage() {
               ) : awards.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="py-12 text-center text-slate-400 dark:text-slate-500">
-                    No awards found. Click "Create Award" to add institutional honours.
+                    No awards found. Click &quot;Create Award&quot; to add institutional honours.
                   </td>
                 </tr>
               ) : (
@@ -425,7 +427,7 @@ export default function AwardsListPage() {
               <h3 className="text-base font-bold text-slate-900 dark:text-white">Delete Award Entry</h3>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              Are you sure you want to delete <strong className="text-slate-800 dark:text-slate-200">"{awardToDelete.title}"</strong>? This will permanently remove the record and trophy image.
+              Are you sure you want to delete <strong className="text-slate-800 dark:text-slate-200">&ldquo;{awardToDelete.title}&rdquo;</strong>? This will permanently remove the record and trophy image.
             </p>
             <div className="flex items-center justify-end gap-3 pt-2">
               <button

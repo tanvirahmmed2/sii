@@ -1,6 +1,8 @@
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -71,14 +73,7 @@ export default function UpdateNewsPage() {
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
-  useEffect(() => {
-    document.title = 'Update';
-    if (slug) {
-      fetchNewsData();
-    }
-  }, [domain, slug]);
-
-  const showToast = (msg, isErr = false) => {
+  const showToast = useCallback((msg, isErr = false) => {
     if (isErr) {
       setToastError(msg);
       setTimeout(() => setToastError(null), 4000);
@@ -86,9 +81,9 @@ export default function UpdateNewsPage() {
       setToastMessage(msg);
       setTimeout(() => setToastMessage(null), 4000);
     }
-  };
+  }, []);
 
-  const fetchNewsData = async () => {
+  const fetchNewsData = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/${domain}/staff/panel/news?slug=${encodeURIComponent(slug)}`);
@@ -117,7 +112,14 @@ export default function UpdateNewsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [domain, slug, showToast]);
+
+  useEffect(() => {
+    document.title = 'Update';
+    if (slug) {
+      fetchNewsData();
+    }
+  }, [domain, slug, fetchNewsData]);
 
   // Upload more photos to Cloudinary and attach directly
   const handleUploadPhotos = async (e) => {
@@ -499,7 +501,7 @@ export default function UpdateNewsPage() {
             ) : (
               <div className="border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-6 text-center bg-slate-50/50 dark:bg-slate-800/20">
                 <FiImage className="mx-auto text-2xl mb-1 text-slate-400" />
-                <p className="text-xs text-slate-500">No photos attached yet. Click "Add Photos" to upload album pictures.</p>
+                <p className="text-xs text-slate-500">No photos attached yet. Click &quot;Add Photos&quot; to upload album pictures.</p>
               </div>
             )}
           </div>
