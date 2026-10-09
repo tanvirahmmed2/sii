@@ -1,167 +1,592 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
+import Link from 'next/link';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
-export default function Page() {
+export default function ResidenceListPage() {
+  const { website, getApiEndpoint } = useTenantWebsite();
+
+  const [loading, setLoading] = useState(true);
+  const [halls, setHalls] = useState([]);
+  const [stats, setStats] = useState({
+    total_halls: 0,
+    total_rooms: 0,
+    total_seats: 0,
+    total_allocated: 0,
+    total_available: 0,
+  });
+
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedGender, setSelectedGender] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
-  const [activeTab, setActiveTab] = useState('overview');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
 
-  const handleAction = (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitted(true);
-      setTimeout(() => setSubmitted(false), 3000);
-    }, 600);
+  // Modal states
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingHall, setEditingHall] = useState(null);
+
+  const [formData, setFormData] = useState({
+    name: '',
+    code: '',
+    gender: 'male',
+    provost_name: '',
+    contact_number: '',
+    email: '',
+    location: '',
+    description: '',
+    total_floors: 1,
+    is_active: true,
+  });
+
+  const fetchHalls = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (searchTerm.trim()) params.set('search', searchTerm.trim());
+      if (selectedGender !== 'all') params.set('gender', selectedGender);
+      if (selectedStatus !== 'all') params.set('status', selectedStatus);
+
+      const url = getApiEndpoint(`/staff/panel/residence/halls?${params.toString()}`);
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to load halls.');
+      }
+
+      setHalls(data.payload.halls || []);
+      setStats(data.payload.stats || {});
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  useEffect(() => {
+    fetchHalls();
+  }, [selectedGender, selectedStatus]);
+
+  const openCreateModal = () => {
+    setEditingHall(null);
+    setFormData({
+      name: '',
+      code: '',
+      gender: 'male',
+      provost_name: '',
+      contact_number: '',
+      email: '',
+      location: '',
+      description: '',
+      total_floors: 1,
+      is_active: true,
+    });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (hall) => {
+    setEditingHall(hall);
+    setFormData({
+      name: hall.name || '',
+      code: hall.code || '',
+      gender: hall.gender || 'male',
+      provost_name: hall.provost_name || '',
+      contact_number: hall.contact_number || '',
+      email: hall.email || '',
+      location: hall.location || '',
+      description: hall.description || '',
+      total_floors: hall.total_floors || 1,
+      is_active: hall.is_active ?? true,
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.name.trim()) {
+      toast.error('Hall name is required.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const url = getApiEndpoint('/staff/panel/residence/halls');
+      const method = editingHall ? 'PUT' : 'POST';
+      const bodyData = editingHall ? { id: editingHall.id, ...formData } : formData;
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bodyData),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to save hall.');
+      }
+
+      toast.success(data.message || (editingHall ? 'Hall updated!' : 'Hall created!'));
+      setIsModalOpen(false);
+      fetchHalls();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (hall) => {
+    if (!confirm(`Are you sure you want to delete "${hall.name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const url = getApiEndpoint(`/staff/panel/residence/halls?id=${hall.id}`);
+      const res = await fetch(url, { method: 'DELETE' });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete hall.');
+      }
+
+      toast.success(data.message || 'Hall deleted successfully.');
+      fetchHalls();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const occupancyRate = stats.total_seats > 0
+    ? Math.round((stats.total_allocated / stats.total_seats) * 100)
+    : 0;
+
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-5">
+      {/* Page Title & Actions Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+        <div>
+          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block mb-1">
+            Path: /residence-list
+          </span>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+            Halls & Dormitory Management
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Configure student residence halls, provosts, floor plans, and view overall room and seat occupancy.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchHalls}
+            disabled={loading}
+            className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium cursor-pointer transition flex items-center gap-1.5"
+          >
+            <span>🔄</span> Refresh
+          </button>
+          <button
+            onClick={openCreateModal}
+            className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs font-semibold cursor-pointer transition flex items-center gap-1.5 shadow-2xs"
+          >
+            <span>＋</span> Create Hall
+          </button>
+        </div>
+      </div>
+
       {/* Metric KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Records</p>
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 shadow-2xs">
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Halls</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">1,248</span>
-            <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">+12% vs last term</span>
+            <span className="text-xl font-bold text-slate-900 dark:text-white font-mono">{stats.total_halls || 0}</span>
+            <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400">Facilities</span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Active Status</p>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 shadow-2xs">
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Rooms</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">98.4%</span>
-            <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400">Synchronized</span>
+            <span className="text-xl font-bold text-slate-900 dark:text-white font-mono">{stats.total_rooms || 0}</span>
+            <span className="text-[10px] font-medium text-slate-500">Configured</span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Pending Action</p>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 shadow-2xs">
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Seats</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">14</span>
-            <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">Needs review</span>
+            <span className="text-xl font-bold text-slate-900 dark:text-white font-mono">{stats.total_seats || 0}</span>
+            <span className="text-[10px] font-medium text-slate-500">Capacity</span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">System Cycle</p>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 shadow-2xs">
+          <p className="text-[10px] uppercase font-semibold text-emerald-600 dark:text-emerald-400 tracking-wider">Available Seats</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">2026-T1</span>
-            <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">Current Session</span>
+            <span className="text-xl font-bold text-emerald-600 font-mono">{stats.total_available || 0}</span>
+            <span className="text-[10px] font-medium text-emerald-600">Vacant</span>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 shadow-2xs">
+          <p className="text-[10px] uppercase font-semibold text-indigo-600 dark:text-indigo-400 tracking-wider">Occupancy Rate</p>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-xl font-bold text-indigo-600 font-mono">{occupancyRate}%</span>
+            <span className="text-[10px] font-medium text-slate-500">{stats.total_allocated || 0} Occupied</span>
           </div>
         </div>
       </div>
 
       {/* Main Interactive Workstation Area */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-4">
         {/* Action & Filter Toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 flex-1 max-w-md">
             <input
               type="text"
-              placeholder="Search list..."
+              placeholder="Search hall name, code, provost..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 transition"
+              onKeyDown={(e) => e.key === 'Enter' && fetchHalls()}
+              className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary transition"
             />
+            <button
+              onClick={fetchHalls}
+              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs font-medium cursor-pointer"
+            >
+              Filter
+            </button>
           </div>
 
           <div className="flex items-center gap-2">
             <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer"
+              value={selectedGender}
+              onChange={(e) => setSelectedGender(e.target.value)}
+              className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 cursor-pointer outline-none"
             >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
+              <option value="all">All Gender Halls</option>
+              <option value="male">Male (Boys)</option>
+              <option value="female">Female (Girls)</option>
+              <option value="co-ed">Co-ed</option>
             </select>
 
-            <button
-              onClick={handleAction}
-              disabled={isSubmitting}
-              className="px-3 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition-colors cursor-pointer disabled:opacity-50"
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 cursor-pointer outline-none"
             >
-              {isSubmitting ? 'Processing...' : 'Apply Filters'}
-            </button>
+              <option value="all">All Status</option>
+              <option value="active">Active Only</option>
+              <option value="inactive">Inactive Only</option>
+            </select>
           </div>
         </div>
 
-        {submitted && (
-          <div className="p-2.5 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
-            <span>Action processed successfully for List.</span>
-            <span className="text-[10px] font-mono">OK</span>
+        {/* Halls Roster Table */}
+        {loading ? (
+          <div className="text-center py-12 text-xs text-slate-500">
+            <div className="inline-block w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2" />
+            <p>Loading residence halls...</p>
+          </div>
+        ) : halls.length === 0 ? (
+          <div className="text-center py-12 text-xs text-slate-400">
+            <p className="text-base mb-1">🏢</p>
+            <p className="font-semibold text-slate-700 dark:text-slate-300">No residence halls found.</p>
+            <p className="mt-1">Click "Create Hall" above to set up your first dormitory or residence building.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
+            <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
+              <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
+                <tr>
+                  <th className="px-3 py-2.5">Hall Name & Code</th>
+                  <th className="px-3 py-2.5">Type / Gender</th>
+                  <th className="px-3 py-2.5">Provost & Contact</th>
+                  <th className="px-3 py-2.5">Rooms</th>
+                  <th className="px-3 py-2.5">Seats & Occupancy</th>
+                  <th className="px-3 py-2.5">Status</th>
+                  <th className="px-3 py-2.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {halls.map((hall) => {
+                  const hallOccPercent = hall.total_seats > 0
+                    ? Math.round((hall.allocated_seats / hall.total_seats) * 100)
+                    : 0;
+
+                  return (
+                    <tr key={hall.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                      <td className="px-3 py-2.5">
+                        <div className="font-semibold text-slate-900 dark:text-white">{hall.name}</div>
+                        <div className="text-[10px] text-slate-400 font-mono">
+                          {hall.code ? `Code: ${hall.code} • ` : ''}
+                          {hall.total_floors} {hall.total_floors === 1 ? 'Floor' : 'Floors'}
+                          {hall.location ? ` • ${hall.location}` : ''}
+                        </div>
+                      </td>
+
+                      <td className="px-3 py-2.5 capitalize">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border ${
+                          hall.gender === 'female'
+                            ? 'bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 border-pink-200 dark:border-pink-800'
+                            : hall.gender === 'male'
+                            ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                            : 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
+                        }`}>
+                          {hall.gender === 'male' ? '♂ Boys' : hall.gender === 'female' ? '♀ Girls' : '⚧ Co-ed'}
+                        </span>
+                      </td>
+
+                      <td className="px-3 py-2.5">
+                        <div className="text-slate-800 dark:text-slate-200 font-medium">
+                          {hall.provost_name || 'Provost not assigned'}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono">
+                          {hall.contact_number || hall.email || '—'}
+                        </div>
+                      </td>
+
+                      <td className="px-3 py-2.5 font-mono">
+                        <span className="font-bold text-slate-900 dark:text-white">{hall.total_rooms || 0}</span>
+                        <span className="text-[10px] text-slate-400"> rooms</span>
+                      </td>
+
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-slate-900 dark:text-white text-[11px]">
+                            {hall.allocated_seats || 0} / {hall.total_seats || 0}
+                          </span>
+                          <span className="text-[10px] text-slate-400">({hallOccPercent}%)</span>
+                          <span className="text-[10px] text-emerald-600 font-medium ml-auto">
+                            {hall.available_seats || 0} vacant
+                          </span>
+                        </div>
+                        <div className="w-32 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${
+                              hallOccPercent > 90 ? 'bg-rose-500' : hallOccPercent > 70 ? 'bg-amber-500' : 'bg-emerald-500'
+                            }`}
+                            style={{ width: `${Math.min(100, hallOccPercent)}%` }}
+                          />
+                        </div>
+                      </td>
+
+                      <td className="px-3 py-2.5">
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                          hall.is_active
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                        }`}>
+                          {hall.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+
+                      <td className="px-3 py-2.5 text-right space-x-1.5 whitespace-nowrap">
+                        <Link
+                          href={`/staff-panel/residence-room?hall_id=${hall.id}`}
+                          className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-medium transition"
+                        >
+                          Manage Rooms →
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(hall)}
+                          className="px-2 py-1 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-medium cursor-pointer"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(hall)}
+                          className="px-2 py-1 rounded border border-rose-200 dark:border-rose-800 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[11px] font-medium cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
+      </div>
 
-        {/* Dynamic Context Surface */}
-        
-        {/* High-Density Data Table */}
-        <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
-          <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
-            <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
-              <tr>
-                <th className="px-3 py-2">ID / Code</th>
-                <th className="px-3 py-2">Entity Name</th>
-                <th className="px-3 py-2">Category</th>
-                <th className="px-3 py-2">Last Updated</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
-              {[
-                { id: 'REC-101', name: 'List Primary Entry', category: 'Residence', date: '2026-10-08', status: 'Active' },
-                { id: 'REC-102', name: 'List Secondary Batch', category: 'Residence', date: '2026-10-07', status: 'Pending' },
-                { id: 'REC-103', name: 'List Fallback Registry', category: 'Residence', date: '2026-10-05', status: 'Active' },
-                { id: 'REC-104', name: 'List Archive Log', category: 'Residence', date: '2026-09-28', status: 'Completed' },
-              ].map((row, idx) => (
-                <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                  <td className="px-3 py-2 font-mono text-slate-900 dark:text-slate-200">{row.id}</td>
-                  <td className="px-3 py-2 font-medium text-slate-900 dark:text-white">{row.name}</td>
-                  <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{row.category}</td>
-                  <td className="px-3 py-2 font-mono text-[11px] text-slate-500 dark:text-slate-400">{row.date}</td>
-                  <td className="px-3 py-2">
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border ${
-                      row.status === 'Active'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
-                        : row.status === 'Pending'
-                        ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
-                        : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
-                    }`}>
-                      {row.status}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-right space-x-1">
-                    <button className="px-2 py-0.5 rounded text-[10px] font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
-                      Edit
-                    </button>
-                    <button className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:opacity-90 cursor-pointer">
-                      View
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
+      {/* CREATE / EDIT HALL MODAL */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 overflow-y-auto">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden my-8 space-y-4 p-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                {editingHall ? `Edit Hall: ${editingHall.name}` : 'Create New Residence Hall'}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center cursor-pointer text-xs"
+              >
+                ✕
+              </button>
+            </div>
 
-        {/* Micro Pagination Footer */}
-        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <span>Showing 1 to 4 of 1,248 entries</span>
-          <div className="flex items-center gap-1 font-mono">
-            <button className="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40">Previous</button>
-            <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-semibold text-slate-900 dark:text-white">1</span>
-            <button className="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800">Next</button>
+            <form onSubmit={handleSubmit} className="space-y-3 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Hall Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Shaheed Salam Hall"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Code / Abbreviation
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. SSH-01"
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Gender Designation
+                  </label>
+                  <select
+                    value={formData.gender}
+                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                    className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="male">Male (Boys)</option>
+                    <option value="female">Female (Girls)</option>
+                    <option value="co-ed">Co-ed</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Provost / In-Charge Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Prof. Dr. Harun Ur Rashid"
+                    value={formData.provost_name}
+                    onChange={(e) => setFormData({ ...formData, provost_name: e.target.value })}
+                    className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Total Floors
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={formData.total_floors}
+                    onChange={(e) => setFormData({ ...formData, total_floors: e.target.value })}
+                    className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Contact Phone Number
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 01711223344"
+                    value={formData.contact_number}
+                    onChange={(e) => setFormData({ ...formData, contact_number: e.target.value })}
+                    className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Contact Email Address
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="e.g. hall@campus.edu"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Campus Location / Address
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. North Campus, Gate 2"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Description / Notes
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="Optional details, amenities (e.g. WiFi, Dining room, Gym)..."
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div className="sm:col-span-2 flex items-center gap-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="hall_active_check"
+                    checked={formData.is_active}
+                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                    className="rounded border-slate-300 text-primary cursor-pointer"
+                  />
+                  <label htmlFor="hall_active_check" className="text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
+                    Hall is Active & Open for Room Allocations
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-3.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-4 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer disabled:opacity-60 transition"
+                >
+                  {isSubmitting ? 'Saving...' : editingHall ? 'Update Hall' : 'Create Hall'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

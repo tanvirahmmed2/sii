@@ -1,166 +1,177 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
+import Link from 'next/link';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
-export default function Page() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [activeTab, setActiveTab] = useState('overview');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+export default function ResidenceReportPage() {
+  const { website, getApiEndpoint } = useTenantWebsite();
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState({ kpi: {}, hallBreakdown: [] });
 
-  const handleAction = (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitted(true);
-      setTimeout(() => setSubmitted(false), 3000);
-    }, 600);
+  const fetchSummary = async () => {
+    try {
+      setLoading(true);
+      const url = getApiEndpoint('/staff/panel/residence/reports');
+      const res = await fetch(url);
+      const result = await res.json();
+      if (!res.ok || !result.success) throw new Error(result.error);
+      setData(result.payload || {});
+    } catch (err) {
+      toast.error(err.message || 'Failed to load residence summary.');
+    } finally {
+      setLoading(false);
+    }
   };
 
+  useEffect(() => {
+    fetchSummary();
+  }, []);
+
+  const kpi = data.kpi || {};
+  const halls = data.hallBreakdown || [];
+
   return (
-    <div className="w-full space-y-4">
-      {/* Metric KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Records</p>
+    <div className="w-full space-y-5">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+        <div>
+          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block mb-1">
+            Path: /residence-report
+          </span>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+            Comprehensive Residence Executive Report
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Overview of campus accommodation capacity, student resident distribution, and revenue.
+          </p>
+        </div>
+
+        <button
+          onClick={fetchSummary}
+          disabled={loading}
+          className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium cursor-pointer transition flex items-center gap-1.5"
+        >
+          <span>🔄</span> Refresh
+        </button>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 shadow-2xs">
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Halls</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">1,248</span>
-            <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">+12% vs last term</span>
+            <span className="text-xl font-bold text-slate-900 dark:text-white font-mono">{kpi.total_halls || 0}</span>
+            <span className="text-[10px] font-medium text-blue-600">Active Facilities</span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Active Status</p>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 shadow-2xs">
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Rooms</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">98.4%</span>
-            <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400">Synchronized</span>
+            <span className="text-xl font-bold text-slate-900 dark:text-white font-mono">{kpi.total_rooms || 0}</span>
+            <span className="text-[10px] font-medium text-slate-500">{kpi.total_capacity || 0} Beds</span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Pending Action</p>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 shadow-2xs">
+          <p className="text-[10px] uppercase font-semibold text-indigo-600 dark:text-indigo-400 tracking-wider">Occupied Beds</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">14</span>
-            <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">Needs review</span>
+            <span className="text-xl font-bold text-indigo-600 font-mono">{kpi.occupied_seats || 0}</span>
+            <span className="text-[10px] font-medium text-slate-500">
+              {kpi.total_capacity > 0 ? Math.round(((kpi.occupied_seats || 0) / kpi.total_capacity) * 100) : 0}% Occupancy
+            </span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">System Cycle</p>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 shadow-2xs">
+          <p className="text-[10px] uppercase font-semibold text-emerald-600 dark:text-emerald-400 tracking-wider">Vacant Beds</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">2026-T1</span>
-            <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">Current Session</span>
+            <span className="text-xl font-bold text-emerald-600 font-mono">{kpi.vacant_seats || 0}</span>
+            <span className="text-[10px] font-medium text-emerald-600">Available</span>
           </div>
         </div>
       </div>
 
-      {/* Main Interactive Workstation Area */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
-        {/* Action & Filter Toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2 flex-1 max-w-md">
-            <input
-              type="text"
-              placeholder="Search report..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 transition"
-            />
+      {/* Hall Breakdown Table */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-4">
+        <h2 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+          Hall Performance & Summary Roster
+        </h2>
+
+        {loading ? (
+          <div className="text-center py-12 text-xs text-slate-500">
+            <div className="inline-block w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2" />
+            <p>Loading report data...</p>
           </div>
-
-          <div className="flex items-center gap-2">
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-            </select>
-
-            <button
-              onClick={handleAction}
-              disabled={isSubmitting}
-              className="px-3 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition-colors cursor-pointer disabled:opacity-50"
-            >
-              {isSubmitting ? 'Processing...' : 'Apply Filters'}
-            </button>
+        ) : halls.length === 0 ? (
+          <div className="text-center py-12 text-xs text-slate-400">
+            No residence halls configured yet.
           </div>
-        </div>
-
-        {submitted && (
-          <div className="p-2.5 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
-            <span>Action processed successfully for Report.</span>
-            <span className="text-[10px] font-mono">OK</span>
+        ) : (
+          <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
+            <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
+              <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
+                <tr>
+                  <th className="px-3 py-2.5">Hall Name</th>
+                  <th className="px-3 py-2.5">Type</th>
+                  <th className="px-3 py-2.5">Provost</th>
+                  <th className="px-3 py-2.5">Rooms</th>
+                  <th className="px-3 py-2.5">Total Beds</th>
+                  <th className="px-3 py-2.5">Occupied</th>
+                  <th className="px-3 py-2.5">Vacant</th>
+                  <th className="px-3 py-2.5">Occupancy Rate</th>
+                  <th className="px-3 py-2.5 text-right">Quick Navigation</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {halls.map((h) => (
+                  <tr key={h.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                    <td className="px-3 py-2.5 font-semibold text-slate-900 dark:text-white">
+                      {h.name}
+                    </td>
+                    <td className="px-3 py-2.5 capitalize text-slate-600 dark:text-slate-400">
+                      {h.gender === 'male' ? '♂ Boys' : h.gender === 'female' ? '♀ Girls' : 'Co-ed'}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {h.provost_name || '—'}
+                    </td>
+                    <td className="px-3 py-2.5 font-mono">
+                      {h.total_rooms || 0}
+                    </td>
+                    <td className="px-3 py-2.5 font-mono">
+                      {h.total_seats || 0}
+                    </td>
+                    <td className="px-3 py-2.5 font-mono text-indigo-600 font-semibold">
+                      {h.occupied_seats || 0}
+                    </td>
+                    <td className="px-3 py-2.5 font-mono text-emerald-600 font-bold">
+                      {h.vacant_seats || 0}
+                    </td>
+                    <td className="px-3 py-2.5 font-mono font-semibold">
+                      {h.occupancy_rate || 0}%
+                    </td>
+                    <td className="px-3 py-2.5 text-right space-x-2">
+                      <Link
+                        href={`/staff-panel/residence-room?hall_id=${h.id}`}
+                        className="text-xs text-primary hover:underline font-medium"
+                      >
+                        Rooms →
+                      </Link>
+                      <Link
+                        href={`/staff-panel/residence-allocations?hall_id=${h.id}`}
+                        className="text-xs text-primary hover:underline font-medium"
+                      >
+                        Allocations →
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
-
-        {/* Dynamic Context Surface */}
-        
-        {/* High-Density Data Table */}
-        <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
-          <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
-            <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
-              <tr>
-                <th className="px-3 py-2">ID / Code</th>
-                <th className="px-3 py-2">Entity Name</th>
-                <th className="px-3 py-2">Category</th>
-                <th className="px-3 py-2">Last Updated</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
-              {[
-                { id: 'REC-101', name: 'Report Primary Entry', category: 'Residence', date: '2026-10-08', status: 'Active' },
-                { id: 'REC-102', name: 'Report Secondary Batch', category: 'Residence', date: '2026-10-07', status: 'Pending' },
-                { id: 'REC-103', name: 'Report Fallback Registry', category: 'Residence', date: '2026-10-05', status: 'Active' },
-                { id: 'REC-104', name: 'Report Archive Log', category: 'Residence', date: '2026-09-28', status: 'Completed' },
-              ].map((row, idx) => (
-                <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                  <td className="px-3 py-2 font-mono text-slate-900 dark:text-slate-200">{row.id}</td>
-                  <td className="px-3 py-2 font-medium text-slate-900 dark:text-white">{row.name}</td>
-                  <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{row.category}</td>
-                  <td className="px-3 py-2 font-mono text-[11px] text-slate-500 dark:text-slate-400">{row.date}</td>
-                  <td className="px-3 py-2">
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border ${
-                      row.status === 'Active'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
-                        : row.status === 'Pending'
-                        ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
-                        : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
-                    }`}>
-                      {row.status}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-right space-x-1">
-                    <button className="px-2 py-0.5 rounded text-[10px] font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
-                      Edit
-                    </button>
-                    <button className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:opacity-90 cursor-pointer">
-                      View
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-
-        {/* Micro Pagination Footer */}
-        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <span>Showing 1 to 4 of 1,248 entries</span>
-          <div className="flex items-center gap-1 font-mono">
-            <button className="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40">Previous</button>
-            <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-semibold text-slate-900 dark:text-white">1</span>
-            <button className="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800">Next</button>
-          </div>
-        </div>
       </div>
     </div>
   );
