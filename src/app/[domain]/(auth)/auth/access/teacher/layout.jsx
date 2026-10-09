@@ -1,6 +1,6 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
-import { isTeacher } from 'src/lib/middleware/developer';
+import { isTeacher } from 'src/lib/middleware/teacher';
 
 export const dynamic = 'force-dynamic';
 

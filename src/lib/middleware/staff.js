@@ -401,11 +401,38 @@ export async function revokeAllStaffSessions(staffId, websiteId = null) {
   }
 }
 
+/**
+ * Specialized staff role helpers
+ */
+export async function isCashier(request) {
+  const staff = await getStaffUser(request);
+  return Boolean(staff?.permissions?.fees?.can_view || staff?.permissions?.accounting?.can_view);
+}
+
+export async function isRegister(request) {
+  const staff = await getStaffUser(request);
+  return Boolean(staff?.permissions?.sis?.can_view || staff?.permissions?.routine?.can_view);
+}
+
+export async function isGeneralStaff(request) {
+  const staff = await getStaffUser(request);
+  return Boolean(staff && (staff.isActive || staff.is_active));
+}
+
+export async function isStaffRole(request) {
+  const staff = await getStaffUser(request);
+  return Boolean(staff && (staff.isActive || staff.is_active));
+}
+
 const StaffMiddleware = {
   STAFF_COOKIE_NAME,
   getStaffSession,
   getStaffUser,
   isStaff,
+  isCashier,
+  isRegister,
+  isGeneralStaff,
+  isStaffRole,
   hasStaffModulePermission,
   createStaffSession,
   revokeStaffSession,

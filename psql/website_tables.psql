@@ -554,6 +554,115 @@ CREATE TABLE IF NOT EXISTS website_meta_messages (
 );
 
 
+-- ----------------------------------------------------------------------------
+-- 24. WEBSITE NOTICES TABLE
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_notices (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL,
+    drive_url TEXT NOT NULL,
+    description TEXT,
+    published_date DATE DEFAULT CURRENT_DATE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, slug)
+);
+
+DROP TRIGGER IF EXISTS update_website_notices_updated_at ON website_notices;
+CREATE TRIGGER update_website_notices_updated_at
+    BEFORE UPDATE ON website_notices
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 25. WEBSITE AWARDS TABLE
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_awards (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL,
+    description TEXT,
+    year INT,
+    issuer VARCHAR(255),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, slug)
+);
+
+DROP TRIGGER IF EXISTS update_website_awards_updated_at ON website_awards;
+CREATE TRIGGER update_website_awards_updated_at
+    BEFORE UPDATE ON website_awards
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 26. WEBSITE AWARD IMAGES TABLE (Strictly Single Image per Award)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_award_images (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    award_id BIGINT NOT NULL REFERENCES website_awards(id) ON DELETE CASCADE,
+    image_url TEXT NOT NULL,
+    image_id VARCHAR(255),
+    caption TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(award_id)
+);
+
+DROP TRIGGER IF EXISTS update_website_award_images_updated_at ON website_award_images;
+CREATE TRIGGER update_website_award_images_updated_at
+    BEFORE UPDATE ON website_award_images
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 27. WEBSITE NEWS TABLE
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_news (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL,
+    summary TEXT,
+    content TEXT,
+    category VARCHAR(100) DEFAULT 'General',
+    published_date DATE DEFAULT CURRENT_DATE,
+    is_published BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, slug)
+);
+
+DROP TRIGGER IF EXISTS update_website_news_updated_at ON website_news;
+CREATE TRIGGER update_website_news_updated_at
+    BEFORE UPDATE ON website_news
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 28. WEBSITE NEWS IMAGES TABLE (Multiple Images per News Article)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_news_images (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    news_id BIGINT NOT NULL REFERENCES website_news(id) ON DELETE CASCADE,
+    image_url TEXT NOT NULL,
+    image_id VARCHAR(255),
+    caption TEXT,
+    is_cover BOOLEAN DEFAULT FALSE,
+    display_order INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_news_images_updated_at ON website_news_images;
+CREATE TRIGGER update_website_news_images_updated_at
+    BEFORE UPDATE ON website_news_images
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
 -- ============================================================================
 -- SECTION 4: PERFORMANCE INDEXES
 -- ============================================================================
@@ -584,4 +693,14 @@ CREATE INDEX IF NOT EXISTS idx_ws_meta_conv_website ON website_meta_conversation
 CREATE INDEX IF NOT EXISTS idx_ws_meta_conv_lookup ON website_meta_conversations(website_id, platform, status);
 CREATE INDEX IF NOT EXISTS idx_ws_meta_msg_conv ON website_meta_messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_ws_meta_msg_created ON website_meta_messages(created_at ASC);
+
+-- Notices, Awards & News Indexes
+CREATE INDEX IF NOT EXISTS idx_ws_notices_website ON website_notices(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_notices_active ON website_notices(website_id, is_active, published_date DESC);
+CREATE INDEX IF NOT EXISTS idx_ws_awards_website ON website_awards(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_award_images_award ON website_award_images(award_id);
+CREATE INDEX IF NOT EXISTS idx_ws_news_website ON website_news(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_news_published ON website_news(website_id, is_published, published_date DESC);
+CREATE INDEX IF NOT EXISTS idx_ws_news_images_news ON website_news_images(news_id, display_order ASC);
+
 

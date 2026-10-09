@@ -31,6 +31,7 @@ export default function TiptapEditor({
     editable,
     extensions: [
       StarterKit.configure({
+        link: false,
         heading: {
           levels: [1, 2, 3],
         },

@@ -1,6 +1,6 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
-import { isTeacher } from 'src/lib/middleware/developer';
+import { isTeacher } from 'src/lib/middleware/teacher';
 import Navbar from 'src/component/website/bars/teacher/Navbar';
 import Sidebar from 'src/component/website/bars/teacher/Sidebar';
 import { SCHOOL_NAME } from 'src/lib/database/secret';

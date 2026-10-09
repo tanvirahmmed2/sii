@@ -587,214 +587,31 @@ export async function authenticateAdmin(email, password, { ip = '127.0.0.1', use
 }
 
 // ============================================================================
-// Legacy Domain Role Compatibility Helpers (Integrated from auth.js)
+// Developer Admin Helpers (Developers Table)
 // ============================================================================
 
+/**
+ * Checks if the current requester is an active authenticated developer/superadmin.
+ */
 export async function isAdmin(request) {
   try {
-    let token = null;
-    if (request) {
-      const authHeader = request.headers?.get?.('authorization') || request.headers?.get?.('Authorization');
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        token = authHeader.substring(7);
-      } else if (request.cookies?.get) {
-        token = request.cookies.get(ADMIN_COOKIE_NAME)?.value || request.cookies.get('fit-admin')?.value;
-      }
-    }
-
-    if (!token) {
-      const cookieStore = await cookies();
-      token = cookieStore.get(ADMIN_COOKIE_NAME)?.value || cookieStore.get('fit-admin')?.value;
-    }
-    if (!token) return false;
-
-    const decoded = verifyJWT(token);
-    if (!decoded || !decoded.id) return false;
-
-    const devRes = await query(
-      `SELECT d.id, d.is_active, 'developer' as role
-       FROM developers d
-       WHERE d.id = $1`,
-      [decoded.id]
-    ).catch(() => ({ rows: [] }));
-    if (devRes.rows.length > 0 && devRes.rows[0].is_active) {
-      return true;
-    }
-
-    const adminRes = await query('SELECT id, is_active FROM admins WHERE id = $1', [decoded.id]).catch(() => ({ rows: [] }));
-    if (adminRes.rows.length > 0) return Boolean(adminRes.rows[0].is_active);
-
-    return false;
-  } catch (error) {
+    const session = await getAdminSession(request);
+    return Boolean(session && session.isActive);
+  } catch {
     return false;
   }
 }
 
-export async function getAdminUser() {
+/**
+ * Returns the authenticated developer user record.
+ */
+export async function getAdminUser(request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(ADMIN_COOKIE_NAME)?.value || cookieStore.get('fit-admin')?.value;
-    if (!token) return null;
-
-    const decoded = verifyJWT(token);
-    if (!decoded || !decoded.id) return null;
-
-    const devRes = await query('SELECT id, name, email, phone, is_active FROM developers WHERE id = $1', [decoded.id]).catch(() => ({ rows: [] }));
-    if (devRes.rows.length > 0 && devRes.rows[0].is_active) return devRes.rows[0];
-
-    const adminRes = await query('SELECT id, name, email, number, address, is_active FROM admins WHERE id = $1', [decoded.id]).catch(() => ({ rows: [] }));
-    if (adminRes.rows.length > 0 && adminRes.rows[0].is_active) return adminRes.rows[0];
-
-    return null;
-  } catch (error) {
+    const session = await getAdminSession(request);
+    return session || null;
+  } catch {
     return null;
   }
-}
-
-export async function isTeacher() {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('fit-teacher')?.value;
-    if (!token) return false;
-
-    const decoded = verifyJWT(token);
-    if (!decoded || !decoded.id) return false;
-
-    const result = await query('SELECT id, is_active, is_registered FROM teachers WHERE id = $1', [decoded.id]);
-    if (result.rows.length === 0) return false;
-
-    const teacher = result.rows[0];
-    return !!(teacher.is_active && teacher.is_registered);
-  } catch (error) {
-    return false;
-  }
-}
-
-export async function getTeacherUser() {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('fit-teacher')?.value;
-    if (!token) return null;
-
-    const decoded = verifyJWT(token);
-    if (!decoded || !decoded.id) return null;
-
-    const result = await query('SELECT id, name, email, is_active, is_registered FROM teachers WHERE id = $1', [decoded.id]);
-    if (result.rows.length === 0) return null;
-
-    const teacher = result.rows[0];
-    if (teacher.is_active && teacher.is_registered) return teacher;
-    return null;
-  } catch (error) {
-    return null;
-  }
-}
-
-export async function isStudent() {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('fit-student')?.value;
-    if (!token) return false;
-
-    const decoded = verifyJWT(token);
-    if (!decoded || !decoded.id) return false;
-
-    const result = await query('SELECT id, is_active, is_registered FROM students WHERE id = $1', [decoded.id]);
-    if (result.rows.length === 0) return false;
-
-    const student = result.rows[0];
-    return !!(student.is_active && student.is_registered);
-  } catch (error) {
-    return false;
-  }
-}
-
-export async function getStudentUser() {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('fit-student')?.value;
-    if (!token) return null;
-
-    const decoded = verifyJWT(token);
-    if (!decoded || !decoded.id) return null;
-
-    const result = await query('SELECT id, name, email, registration_number, is_active, is_registered FROM students WHERE id = $1', [decoded.id]);
-    if (result.rows.length === 0) return null;
-
-    const student = result.rows[0];
-    if (student.is_active && student.is_registered) return student;
-    return null;
-  } catch (error) {
-    return null;
-  }
-}
-
-export async function getStaffUser(request) {
-  try {
-    let token = null;
-    if (request) {
-      const authHeader = request.headers?.get?.('authorization') || request.headers?.get?.('Authorization');
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        token = authHeader.substring(7);
-      } else if (request.cookies?.get) {
-        token = request.cookies.get('fit-staff')?.value;
-      }
-    }
-    if (!token) {
-      const cookieStore = await cookies();
-      token = cookieStore.get('fit-staff')?.value;
-    }
-    if (!token) return null;
-
-    const decoded = verifyJWT(token);
-    if (!decoded || !decoded.id) return null;
-
-    const result = await query(
-      `SELECT ws.id, ws.name, ws.email, ws.number, ws.address, ws.is_active, ws.is_registered, ws.website_id
-       FROM website_staffs ws
-       WHERE ws.id = $1`,
-      [decoded.id]
-    );
-    if (result.rows.length === 0) return null;
-
-    const staff = result.rows[0];
-    if (staff.is_active && staff.is_registered) {
-      const permsRes = await query(
-        `SELECT module_slug, can_view, can_create, can_edit, can_delete 
-         FROM staff_permissions 
-         WHERE staff_id = $1`,
-        [staff.id]
-      ).catch(() => ({ rows: [] }));
-      const permissions = {};
-      permsRes.rows.forEach(p => {
-        permissions[p.module_slug] = p;
-      });
-      return { ...staff, permissions };
-    }
-    return null;
-  } catch (error) {
-    return null;
-  }
-}
-
-export async function isCashier(request) {
-  const staff = await getStaffUser(request);
-  return Boolean(staff?.permissions?.fees?.can_view || staff?.permissions?.accounting?.can_view);
-}
-
-export async function isRegister(request) {
-  const staff = await getStaffUser(request);
-  return Boolean(staff?.permissions?.sis?.can_view || staff?.permissions?.routine?.can_view);
-}
-
-export async function isGeneralStaff(request) {
-  const staff = await getStaffUser(request);
-  return Boolean(staff && staff.is_active);
-}
-
-export async function isStaffRole(request) {
-  const staff = await getStaffUser(request);
-  return Boolean(staff && staff.is_active);
 }
 
 const DeveloperMiddleware = {
@@ -837,18 +654,10 @@ const DeveloperMiddleware = {
   hasDeveloperPermission,
   requireDeveloperPermission,
 
-  // Legacy Domain Helpers
+  // Developer Admin Helpers
   isAdmin,
   getAdminUser,
-  isTeacher,
-  getTeacherUser,
-  isStudent,
-  getStudentUser,
-  getStaffUser,
-  isCashier,
-  isRegister,
-  isGeneralStaff,
-  isStaffRole,
 };
 
 export default DeveloperMiddleware;
+

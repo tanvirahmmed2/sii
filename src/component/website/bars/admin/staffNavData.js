@@ -515,15 +515,15 @@ export const staffNavData = [
     ]
   },
   {
+    title: 'Notices',
+    path: '/notices'
+  },
+  {
     title: 'News',
     children: [
       {
         title: 'List',
         path: '/news-list'
-      },
-      {
-        title: 'Images',
-        path: '/news-images'
       },
       {
         title: 'Create',
@@ -537,10 +537,6 @@ export const staffNavData = [
       {
         title: 'List',
         path: '/awards-list'
-      },
-      {
-        title: 'Images',
-        path: '/awards-images'
       },
       {
         title: 'Create',
