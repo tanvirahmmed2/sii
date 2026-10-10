@@ -421,15 +421,15 @@ export const staffNavData = [
         ]
       },
       {
-        title: 'Staff',
+        title: 'Teacher',
         children: [
           {
             title: 'Book Issue',
-            path: '/library-staff-issue'
+            path: '/library-teacher-issue'
           },
           {
             title: 'Book Return',
-            path: '/library-staff-return'
+            path: '/library-teacher-return'
           }
         ]
       }
@@ -611,12 +611,20 @@ export const staffNavData = [
         path: '/salary-payrolls'
       },
       {
-        title: 'Teacher',
+        title: 'Teacher Salaries',
         path: '/salary-teacher'
       },
       {
-        title: 'Officers',
+        title: 'Teacher Payments',
+        path: '/salary-teacher-payments'
+      },
+      {
+        title: 'Officer Salaries',
         path: '/salary-officers'
+      },
+      {
+        title: 'Officer Payments',
+        path: '/salary-officer-payments'
       }
     ]
   },

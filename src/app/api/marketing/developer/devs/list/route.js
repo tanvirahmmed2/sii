@@ -41,7 +41,6 @@ export async function GET(request) {
     const [devsRes, modsRes, permsRes] = await Promise.all([
       queryDb(`
         SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url,
-               'developer' AS role, 'Developer' AS role_name,
                d.is_active, COALESCE(d.email_verified, FALSE) AS email_verified, d.last_login_at, d.created_at
         FROM developers d
         ORDER BY d.id DESC
@@ -85,16 +84,13 @@ export async function GET(request) {
       table: 'developers',
       records,
       modules: modsRes.rows,
-      roles: [],
       currentUser: auth
         ? {
             id: auth.id,
             name: auth.name,
             email: auth.email,
-            role: auth.role,
-            roleName: auth.roleName,
+            designation: auth.designation,
             permissions: auth.permissions || [],
-            isAdmin: true,
           }
         : null,
     });

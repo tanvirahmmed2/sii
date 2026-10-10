@@ -17,8 +17,7 @@ export async function GET(request) {
 
     const devRes = await queryDb(
       `SELECT d.id, d.name, d.email, d.phone, d.designation, d.bio, d.avatar_url,
-              d.github_profile, d.linkedin_profile, d.is_active, d.last_login_at, d.created_at, d.updated_at,
-              'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name
+              d.github_profile, d.linkedin_profile, d.is_active, d.last_login_at, d.created_at, d.updated_at
        FROM developers d
        WHERE d.id = $1
        LIMIT 1`,
@@ -59,7 +58,6 @@ export async function GET(request) {
         ...developer,
         isVerified: true,
         permissions: authUser.permissions || [],
-        isAdmin: Boolean(authUser.isAdmin),
       },
       activeSessions,
       recentLogins: loginRes.rows,

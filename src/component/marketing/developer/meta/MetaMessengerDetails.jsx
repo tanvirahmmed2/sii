@@ -12,12 +12,11 @@ export default function MetaMessengerDetails({
 }) {
   const router = useRouter();
   const { user } = useContext(Context);
-  const role = (user?.role || 'developer').toLowerCase();
   const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
-  const isAdminOrManager = ['admin', 'superadmin', 'manager'].includes(role);
-  const hasPlatformPerm = isAdminOrManager || permissions.includes(`${platform}-messages`) || permissions.includes('chats');
-  const canManage = Boolean(isAdminOrManager || hasPlatformPerm || permissions.includes('support') || role === 'support');
-  const canDelete = Boolean(isAdminOrManager || hasPlatformPerm);
+  const isOwner = Number(user?.id) === 1;
+  const hasPlatformPerm = isOwner || permissions.includes(`${platform}-messages`) || permissions.includes('chats');
+  const canManage = Boolean(isOwner || hasPlatformPerm || permissions.includes('support'));
+  const canDelete = Boolean(isOwner || hasPlatformPerm);
 
   const [conversations, setConversations] = useState([]);
   const [config, setConfig] = useState(null);

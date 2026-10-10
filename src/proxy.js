@@ -108,7 +108,8 @@ export function proxy(request) {
     'marketing', 'auth', 'admin', 'icon.png', 'favicon.ico', 'robots.txt',
     'sitemap.xml', 'about', 'blogs', 'careers', 'contact', 'faqs', 'packages',
     'policies', 'reviews', 'tutorials', 'updates', 'help', 'terms', 'privacy',
-    'login', 'register', 'staff-panel', 'teacher', 'student', 'student-verify'
+    'login', 'register', 'staff-panel', 'teacher', 'student', 'student-verify',
+    'officer', 'officer-panel'
   ]);
 
   // Clean /staff-panel handling: if URL has /[tenant]/staff-panel, redirect to clean /staff-panel
@@ -185,6 +186,26 @@ export function proxy(request) {
     requestHeaders.set('x-website-domain', resolvedTenant);
     requestHeaders.set('x-domain', resolvedTenant);
     url.pathname = `/${resolvedTenant}${pathname}`;
+    const response = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    if (!activeTenantCookie || activeTenantCookie !== resolvedTenant) {
+      response.cookies.set('x-website-domain', resolvedTenant, { path: '/' });
+    }
+    return response;
+  }
+
+  // Handle direct clean /officer routes by rewriting internally to /[domain]/officer
+  if (pathname === '/officer' || pathname.startsWith('/officer/') || pathname === '/officer-panel' || pathname.startsWith('/officer-panel/')) {
+    const activeTenantCookie =
+      request.cookies.get('x-website-domain')?.value ||
+      request.cookies.get('x-domain')?.value;
+    const resolvedTenant = tenantDomain || activeTenantCookie || 'afit';
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-website-domain', resolvedTenant);
+    requestHeaders.set('x-domain', resolvedTenant);
+    const targetPath = pathname.startsWith('/officer-panel')
+      ? pathname.replace('/officer-panel', '/officer')
+      : pathname;
+    url.pathname = `/${resolvedTenant}${targetPath}`;
     const response = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
     if (!activeTenantCookie || activeTenantCookie !== resolvedTenant) {
       response.cookies.set('x-website-domain', resolvedTenant, { path: '/' });

@@ -81,8 +81,7 @@ export default function DevelopersPage() {
   const permissions = Array.isArray(currentUser?.permissions) ? currentUser.permissions : [];
   const isUserAdmin = Boolean(
     permissions.includes('developers') ||
-    currentUser?.isSuperAdmin ||
-    currentUser?.isAdmin
+    Number(currentUser?.id) === 1
   );
 
   const activeDevCount = developers.filter((d) => d.is_active).length;

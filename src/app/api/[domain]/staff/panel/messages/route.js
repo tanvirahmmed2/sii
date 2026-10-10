@@ -254,7 +254,7 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Delete conversation
+// DELETE: Delete conversation or individual message
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -262,10 +262,28 @@ export async function DELETE(request, context) {
 
     const { searchParams } = new URL(request.url);
     const conversationId = searchParams.get('conversationId');
+    const messageId = searchParams.get('messageId');
+
+    if (messageId) {
+      const msgId = parseInt(messageId, 10);
+      if (isNaN(msgId) || msgId <= 0) {
+        return NextResponse.json({ success: false, error: 'Valid integer messageId is required.' }, { status: 400 });
+      }
+
+      await queryDb(
+        `DELETE FROM website_meta_messages WHERE id = $1 AND website_id = $2`,
+        [msgId, auth.website.id]
+      );
+
+      return NextResponse.json({
+        success: true,
+        message: 'Message deleted successfully.'
+      });
+    }
 
     const convId = parseInt(conversationId, 10);
     if (isNaN(convId) || convId <= 0) {
-      return NextResponse.json({ success: false, error: 'Valid conversationId is required.' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Valid conversationId or messageId is required.' }, { status: 400 });
     }
 
     await queryDb(
@@ -275,7 +293,7 @@ export async function DELETE(request, context) {
 
     return NextResponse.json({
       success: true,
-      message: 'Conversation deleted successfully.'
+      message: 'Conversation thread deleted successfully.'
     });
   } catch (error) {
     console.error('Error in DELETE /messages:', error);

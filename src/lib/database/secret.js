@@ -71,6 +71,7 @@ export const DEVELOPER_TOKEN='hiesci-dev'
 export const CREATOR_TOKEN='hiesci-creator'
 export const TEACHER_TOKEN='hiesci-teacher'
 export const STAFF_TOKEN='hiesci-staff'
+export const OFFICER_TOKEN='hiesci-officer'
 export const STUDENT_TOKEN='hiesci-student'
 export const LIVE_CHAT_TOKEN='hiesci-live'
 

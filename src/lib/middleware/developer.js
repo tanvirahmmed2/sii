@@ -3,8 +3,9 @@ import jwt from 'jsonwebtoken';
 import { JWT_SECRET, DEVELOPER_TOKEN } from '../database/secret.js';
 import { query, queryDb } from '../database/db.js';
 
-const DEFAULT_JWT_SECRET = JWT_SECRET || 'developer_superadmin_jwt_secret_key_2026';
-const ADMIN_COOKIE_NAME = DEVELOPER_TOKEN;
+const DEFAULT_JWT_SECRET = JWT_SECRET || 'developer_jwt_secret_key_2026';
+export const DEVELOPER_COOKIE_NAME = DEVELOPER_TOKEN;
+export const ADMIN_COOKIE_NAME = DEVELOPER_TOKEN; // Compatibility alias
 
 async function getCookieStore() {
   try {
@@ -19,7 +20,7 @@ async function getCookieStore() {
 }
 
 // ============================================================================
-// Password helpers (Always using bcrypt)
+// Password Helpers (Bcrypt)
 // ============================================================================
 export async function hashPassword(password) {
   if (!password) {
@@ -40,7 +41,7 @@ export async function comparePassword(password, hash) {
 }
 
 // ============================================================================
-// JWT helpers
+// JWT Helpers
 // ============================================================================
 export function signJWT(payload, expiresIn = '7d') {
   return jwt.sign(payload, DEFAULT_JWT_SECRET, { expiresIn });
@@ -54,15 +55,15 @@ export function generateToken(payload, expiresIn = '7d') {
 export function verifyJWT(token) {
   try {
     return jwt.verify(token, DEFAULT_JWT_SECRET);
-  } catch (error) {
+  } catch {
     return null;
   }
 }
 
 // ============================================================================
-// Cookie helpers
+// Cookie Helpers
 // ============================================================================
-export async function setAdminSessionCookie(response, token) {
+export async function setDeveloperSessionCookie(response, token) {
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -72,90 +73,48 @@ export async function setAdminSessionCookie(response, token) {
   };
 
   if (response && response.cookies) {
-    response.cookies.set(ADMIN_COOKIE_NAME, token, cookieOptions);
+    response.cookies.set(DEVELOPER_COOKIE_NAME, token, cookieOptions);
   } else {
     try {
-      const cookieStore = await cookies();
-      cookieStore.set(ADMIN_COOKIE_NAME, token, cookieOptions);
-    } catch (e) {
-      // In non-server-action context, ignore
+      const cookieStore = await getCookieStore();
+      if (cookieStore) {
+        cookieStore.set(DEVELOPER_COOKIE_NAME, token, cookieOptions);
+      }
+    } catch {
+      // Non-server-action context
     }
   }
 }
 
-export async function clearAdminSessionCookie(response) {
+export async function clearDeveloperSessionCookie(response) {
   if (response && response.cookies) {
-    response.cookies.delete(ADMIN_COOKIE_NAME);
+    response.cookies.delete(DEVELOPER_COOKIE_NAME);
   } else {
     try {
-      const cookieStore = await cookies();
-      cookieStore.delete(ADMIN_COOKIE_NAME);
-    } catch (e) {
+      const cookieStore = await getCookieStore();
+      if (cookieStore) {
+        cookieStore.delete(DEVELOPER_COOKIE_NAME);
+      }
+    } catch {
       // Ignore
     }
   }
 }
 
-// ============================================================================
-// Developer Roles Constants & Definitions
-// ============================================================================
-export const DEVELOPER_ROLES = {
-  SUPER_ADMIN: 'admin',
-  ADMIN: 'admin',
-  DEVELOPER: 'developer',
-  LEAD_DEVELOPER: 'developer',
-  MANAGER: 'manager',
-  MARKETER: 'marketer',
-  SUPPORT: 'support',
-};
-
-export const DEVELOPER_ROLE_LABELS = {
-  admin: 'Super Admin',
-  developer: 'Lead Developer',
-  manager: 'Operations Manager',
-  marketer: 'Marketing Specialist',
-  support: 'Support Specialist',
-};
-
-export const DEVELOPER_ROLE_PERMISSIONS = {
-  admin: [
-    'overview', 'developers', 'roles', 'team', 'creators', 'users', 'websites',
-    'blogs', 'packages', 'features', 'modules', 'purchases', 'payments', 'subscriptions', 'payroll', 'my-salaries',
-    'live-chats', 'chats', 'contacts', 'support', 'reports', 'reviews', 'spams',
-    'facebook-messages', 'instagram-messages', 'whatsapp-messages',
-    'leads', 'subscribers', 'profile', 'settings', 'faqs', 'updates', 'tasks', 'notices', 'tutorials', 'policies'
-  ],
-  manager: [
-    'overview', 'creators', 'users', 'websites', 'packages', 'features',
-    'purchases', 'payments', 'subscriptions', 'live-chats', 'chats', 'contacts', 'support', 'my-salaries',
-    'facebook-messages', 'instagram-messages', 'whatsapp-messages',
-    'reports', 'reviews', 'leads', 'subscribers', 'profile', 'settings', 'faqs', 'updates', 'tasks', 'notices', 'tutorials', 'policies'
-  ],
-  developer: [
-    'overview', 'websites', 'packages', 'features',
-    'spams', 'reports', 'blogs', 'support', 'live-chats', 'contacts', 'reviews', 'profile', 'settings', 'chats', 'tasks', 'notices', 'my-salaries', 'tutorials', 'faqs', 'updates', 'policies'
-  ],
-  marketer: [
-    'overview', 'blogs', 'leads',
-    'packages', 'reviews', 'profile', 'settings', 'chats', 'tasks', 'notices', 'my-salaries', 'tutorials', 'faqs', 'updates', 'policies'
-  ],
-  support: [
-    'overview', 'live-chats', 'chats', 'contacts', 'support', 'reports',
-    'facebook-messages', 'instagram-messages', 'whatsapp-messages',
-    'reviews', 'users', 'creators', 'subscribers', 'profile', 'settings', 'tasks', 'notices', 'my-salaries', 'tutorials', 'faqs', 'updates', 'policies'
-  ],
-};
-
-export const ROLE_PERMISSIONS = DEVELOPER_ROLE_PERMISSIONS;
+// Compatibility aliases
+export const setAdminSessionCookie = setDeveloperSessionCookie;
+export const clearAdminSessionCookie = clearDeveloperSessionCookie;
 
 // ============================================================================
-// Developer Session & RBAC
+// Developer Session Management (Direct Developers & Module Permissions)
+// Adheres strictly to psql/schema.psql (developers, developer_login_sessions, module_permissions)
 // ============================================================================
 
 /**
- * Extracts and decodes developer session from request or cookies
+ * Extracts and decodes developer session from request or cookies.
+ * Contains NO roles; permissions are mapped directly from module_permissions.
  */
-export async function getAdminSession(request) {
+export async function getDeveloperSession(request) {
   try {
     let token = null;
 
@@ -164,7 +123,7 @@ export async function getAdminSession(request) {
       if (authHeader && authHeader.startsWith('Bearer ')) {
         token = authHeader.substring(7);
       } else if (request.cookies?.get) {
-        token = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
+        token = request.cookies.get(DEVELOPER_COOKIE_NAME)?.value;
       }
     }
 
@@ -172,9 +131,9 @@ export async function getAdminSession(request) {
       try {
         const cookieStore = await getCookieStore();
         if (cookieStore) {
-          token = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
+          token = cookieStore.get(DEVELOPER_COOKIE_NAME)?.value;
         }
-      } catch (e) {
+      } catch {
         // Not in server request context
       }
     }
@@ -241,7 +200,7 @@ export async function getAdminSession(request) {
       .filter((r) => r.can_view)
       .map((r) => r.module_slug);
 
-    // If superadmin (Tanvir) or empty, provide all platform modules
+    // Platform root developer / owner fallback
     const isOwner = Number(dev.id) === 1 || String(dev.email).toLowerCase() === 'tanvir004006@gmail.com';
     if (permissions.length === 0 || isOwner) {
       const allMods = await queryDb(`SELECT slug FROM modules WHERE is_active = TRUE`).catch(() => ({ rows: [] }));
@@ -268,168 +227,72 @@ export async function getAdminSession(request) {
       bio: dev.bio,
       githubProfile: dev.github_profile,
       linkedinProfile: dev.linkedin_profile,
-      role: 'developer',
-      roleSlug: 'developer',
-      roleName: 'Developer',
       isActive: dev.is_active,
       isVerified: Boolean(dev.email_verified),
       permissions,
       permissionsMap,
-      isAdmin: true,
-      isSuperAdmin: isOwner,
-      isPlatformAdmin: true,
       token,
     };
   } catch (error) {
-    console.error('Error fetching admin session:', error);
+    console.error('Error fetching developer session:', error);
     return null;
   }
 }
 
-export const getAuthenticatedUser = getAdminSession;
-export const getDeveloperSession = getAdminSession;
+// Compatibility aliases
+export const getAdminSession = getDeveloperSession;
+export const getAuthenticatedUser = getDeveloperSession;
+
+/**
+ * Checks whether the request is from an active developer session.
+ */
+export async function isDeveloper(request) {
+  try {
+    const session = await getDeveloperSession(request);
+    return Boolean(session && session.isActive);
+  } catch {
+    return false;
+  }
+}
+
+// Compatibility alias for tenant routes checking developer authentication
+export const isAdmin = isDeveloper;
+export const getDeveloperUser = getDeveloperSession;
+export const getAdminUser = getDeveloperSession;
 
 export async function isStaff(request) {
-  const session = await getAdminSession(request);
+  const session = await getDeveloperSession(request);
   if (!session || !session.isActive) {
     return { success: false, user: null, staff: null };
   }
   return { success: true, user: session, staff: session };
 }
-
 export const authenticateStaff = isStaff;
 
 // ============================================================================
-// Developer Role Guard & Authorization Helpers
+// Direct Module Permissions Validation (No Roles)
+// Combines Developer directly with Module per schema.psql
 // ============================================================================
 
 /**
- * Returns current developer role slug (e.g. 'admin', 'developer', 'manager', etc.)
- */
-export async function getDeveloperRole(requestOrSession) {
-  let session = requestOrSession;
-  if (!session || (session.headers && typeof session.headers.get === 'function') || !session.id) {
-    session = await getAdminSession(requestOrSession);
-  }
-  return session ? String(session.role || 'developer').toLowerCase() : null;
-}
-
-/**
- * Checks if current developer has one of the allowed roles
- */
-export async function hasDeveloperRole(requestOrSession, allowedRoles = []) {
-  let session = requestOrSession;
-  if (!session || (session.headers && typeof session.headers.get === 'function') || !session.id) {
-    session = await getAdminSession(requestOrSession);
-  }
-  if (!session || !session.isActive) return false;
-
-  const currentRole = String(session.role || '').toLowerCase();
-  if (currentRole === 'admin' || currentRole === 'superadmin') return true;
-
-  const roles = (Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles])
-    .map((r) => String(r || '').toLowerCase().trim())
-    .filter(Boolean);
-
-  if (roles.length === 0) return true;
-  return roles.includes(currentRole);
-}
-
-export const hasRole = hasDeveloperRole;
-
-/**
- * Route guard helper that enforces developer roles
- */
-export async function requireDeveloperRole(request, allowedRoles = []) {
-  const session = await getAdminSession(request);
-  if (!session || !session.isActive) {
-    return {
-      success: false,
-      status: 401,
-      user: null,
-      staff: null,
-      message: 'Unauthorized: Active developer session required',
-      error: 'Unauthorized',
-    };
-  }
-
-  const allowed = await hasDeveloperRole(session, allowedRoles);
-  if (!allowed) {
-    return {
-      success: false,
-      status: 403,
-      user: session,
-      staff: session,
-      message: 'Forbidden: Insufficient role permissions for this resource',
-      error: 'Forbidden',
-    };
-  }
-
-  return {
-    success: true,
-    user: session,
-    staff: session,
-  };
-}
-
-export const requireRole = requireDeveloperRole;
-
-export async function isDeveloperAdmin(requestOrSession) {
-  return hasDeveloperRole(requestOrSession, ['admin', 'superadmin']);
-}
-
-export async function isSuperAdmin(requestOrSession) {
-  return hasDeveloperRole(requestOrSession, ['admin', 'superadmin']);
-}
-
-export async function isLeadDeveloper(requestOrSession) {
-  return hasDeveloperRole(requestOrSession, ['developer', 'admin']);
-}
-
-export async function isDeveloper(requestOrSession) {
-  return hasDeveloperRole(requestOrSession, ['developer', 'admin']);
-}
-
-export async function isDeveloperManager(requestOrSession) {
-  return hasDeveloperRole(requestOrSession, ['manager', 'admin']);
-}
-
-export async function isDeveloperMarketer(requestOrSession) {
-  return hasDeveloperRole(requestOrSession, ['marketer', 'admin']);
-}
-
-export async function isDeveloperSupport(requestOrSession) {
-  return hasDeveloperRole(requestOrSession, ['support', 'admin']);
-}
-
-export async function getDeveloperRoles() {
-  return Object.keys(DEVELOPER_ROLE_LABELS).map((slug, idx) => ({
-    id: idx + 1,
-    slug,
-    name: DEVELOPER_ROLE_LABELS[slug],
-    description: `Platform role: ${DEVELOPER_ROLE_LABELS[slug]}`,
-    developers_count: 0,
-  }));
-}
-
-/**
- * Checks if current developer has permission for a specific module or action
+ * Checks if current developer has permission for a specific module or action.
  */
 export async function hasModulePermission(request, moduleSlug) {
   try {
-    const session = await getAdminSession(request);
+    const session = await getDeveloperSession(request);
     if (!session || !session.isActive) {
-      return { success: false, user: null, staff: null, message: 'Unauthenticated' };
+      return { success: false, user: null, staff: null, developer: null, message: 'Unauthenticated' };
     }
 
-    // Admins and Superadmins have all permissions
-    const userRole = (session.role || '').toLowerCase();
-    if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'manager') {
-      return { success: true, user: session, staff: session };
+    // Default global developer pages
+    if (!moduleSlug || moduleSlug === 'overview' || moduleSlug === 'profile' || moduleSlug === 'settings') {
+      return { success: true, user: session, staff: session, developer: session };
     }
 
-    if (!moduleSlug || moduleSlug === 'overview' || moduleSlug === 'profile') {
-      return { success: true, user: session, staff: session };
+    // Platform owner check
+    const isOwner = Number(session.id) === 1 || String(session.email).toLowerCase() === 'tanvir004006@gmail.com';
+    if (isOwner) {
+      return { success: true, user: session, staff: session, developer: session };
     }
 
     // Normalize module slugs into an array of lowercase strings
@@ -438,10 +301,10 @@ export async function hasModulePermission(request, moduleSlug) {
       .filter(Boolean);
 
     if (slugs.length === 0) {
-      return { success: true, user: session, staff: session };
+      return { success: true, user: session, staff: session, developer: session };
     }
 
-    // Direct developer module_permissions lookup (developer combines directly with modules)
+    // Direct developer module_permissions lookup (combines developer with modules)
     const permRes = await queryDb(
       `SELECT 1 FROM module_permissions mp
        JOIN modules m ON mp.module_id = m.id
@@ -451,7 +314,7 @@ export async function hasModulePermission(request, moduleSlug) {
     ).catch(() => ({ rows: [] }));
 
     if (permRes.rows.length > 0) {
-      return { success: true, user: session, staff: session };
+      return { success: true, user: session, staff: session, developer: session };
     }
 
     // Fallback: check session permissions array
@@ -459,13 +322,13 @@ export async function hasModulePermission(request, moduleSlug) {
     const hasPerm = slugs.some((slug) => userPerms.includes(slug));
 
     if (hasPerm) {
-      return { success: true, user: session, staff: session };
+      return { success: true, user: session, staff: session, developer: session };
     }
 
-    return { success: false, user: session, staff: session, message: 'Permission denied for this module' };
+    return { success: false, user: session, staff: session, developer: session, message: 'Permission denied for this module' };
   } catch (error) {
     console.error('Permission validation error:', error);
-    return { success: false, user: null, staff: null, message: error.message };
+    return { success: false, user: null, staff: null, developer: null, message: error.message };
   }
 }
 
@@ -483,15 +346,17 @@ export async function requireDeveloperPermission(request, moduleSlug) {
   return check;
 }
 
-/**
- * Direct email/password authentication handler for developers
- */
-export async function authenticateAdmin(email, password, { ip = '127.0.0.1', userAgent = 'Unknown' } = {}) {
+// ============================================================================
+// Direct Developer Authentication Handler
+// Validates credentials against developers table and records activities & sessions
+// ============================================================================
+
+export async function authenticateDeveloper(email, password, { ip = '127.0.0.1', userAgent = 'Unknown' } = {}) {
   const cleanEmail = String(email || '').trim().toLowerCase();
   const cleanPassword = String(password || '');
 
   const devRes = await queryDb(
-    `SELECT d.*, 'developer' as role, 'Developer' as role_name
+    `SELECT d.*
      FROM developers d
      WHERE LOWER(d.email) = $1 LIMIT 1`,
     [cleanEmail]
@@ -510,8 +375,8 @@ export async function authenticateAdmin(email, password, { ip = '127.0.0.1', use
          VALUES ($1, $2, $3, 'Failed', 'Account deactivated')`,
         [dev.id, ip, userAgent]
       );
-    } catch (e) {}
-    const err = new Error('Your administrator account has been deactivated.');
+    } catch {}
+    const err = new Error('Your developer account has been deactivated.');
     err.deactivated = true;
     throw err;
   }
@@ -524,7 +389,7 @@ export async function authenticateAdmin(email, password, { ip = '127.0.0.1', use
          VALUES ($1, $2, $3, 'Failed', 'Incorrect password')`,
         [dev.id, ip, userAgent]
       );
-    } catch (e) {}
+    } catch {}
     throw new Error('Invalid email or password.');
   }
 
@@ -536,7 +401,7 @@ export async function authenticateAdmin(email, password, { ip = '127.0.0.1', use
     throw err;
   }
 
-  // If email is verified but stale verification token remains, clear it
+  // Clear stale verification token if any
   if (dev.verification_token) {
     queryDb(`UPDATE developers SET verification_token = NULL, verification_token_expires = NULL WHERE id = $1`, [dev.id]).catch(() => {});
   }
@@ -571,93 +436,52 @@ export async function authenticateAdmin(email, password, { ip = '127.0.0.1', use
     console.warn('Notice saving login activity:', e.message);
   }
 
+  const developerProfile = {
+    id: dev.id,
+    name: dev.name,
+    email: dev.email,
+    phone: dev.phone,
+    designation: dev.designation,
+    avatarUrl: dev.avatar_url,
+  };
+
   return {
-    admin: {
-      id: dev.id,
-      name: dev.name,
-      email: dev.email,
-      phone: dev.phone,
-      designation: dev.designation,
-      avatarUrl: dev.avatar_url,
-      role: dev.role,
-      roleName: dev.role_name,
-    },
+    developer: developerProfile,
+    admin: developerProfile, // Compatibility alias
     token,
   };
 }
 
-// ============================================================================
-// Developer Admin Helpers (Developers Table)
-// ============================================================================
-
-/**
- * Checks if the current requester is an active authenticated developer/superadmin.
- */
-export async function isAdmin(request) {
-  try {
-    const session = await getAdminSession(request);
-    return Boolean(session && session.isActive);
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Returns the authenticated developer user record.
- */
-export async function getAdminUser(request) {
-  try {
-    const session = await getAdminSession(request);
-    return session || null;
-  } catch {
-    return null;
-  }
-}
+// Compatibility alias
+export const authenticateAdmin = authenticateDeveloper;
 
 const DeveloperMiddleware = {
-  // Constants
-  DEVELOPER_ROLES,
-  DEVELOPER_ROLE_LABELS,
-  DEVELOPER_ROLE_PERMISSIONS,
-  ROLE_PERMISSIONS,
-
   // Password & Auth
   hashPassword,
   comparePassword,
   signJWT,
   generateToken,
   verifyJWT,
+  setDeveloperSessionCookie,
+  clearDeveloperSessionCookie,
   setAdminSessionCookie,
   clearAdminSessionCookie,
+  authenticateDeveloper,
   authenticateAdmin,
 
-  // Session & Developer Roles
-  getAdminSession,
+  // Session & Permissions
   getDeveloperSession,
+  getAdminSession,
   getAuthenticatedUser,
+  getDeveloperUser,
+  getAdminUser,
+  isDeveloper,
+  isAdmin,
   isStaff,
   authenticateStaff,
-  getDeveloperRole,
-  hasDeveloperRole,
-  hasRole,
-  requireDeveloperRole,
-  requireRole,
-  isDeveloperAdmin,
-  isSuperAdmin,
-  isLeadDeveloper,
-  isDeveloper,
-  isDeveloperManager,
-  isDeveloperMarketer,
-  isDeveloperSupport,
-  getDeveloperRoles,
   hasModulePermission,
   hasDeveloperPermission,
   requireDeveloperPermission,
-
-  // Developer Admin Helpers
-  isAdmin,
-  getAdminUser,
 };
 
 export default DeveloperMiddleware;
-

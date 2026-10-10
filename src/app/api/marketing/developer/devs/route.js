@@ -38,8 +38,6 @@ async function handleCreateAdmin(d, request) {
 
   const newAdmin = {
     ...insertRes.rows[0],
-    role: 'developer',
-    role_name: 'Developer',
     is_verified: false,
   };
 
@@ -83,14 +81,13 @@ export async function GET() {
   try {
     const devsRes = await queryDb(`
       SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url,
-             'developer' AS role, 'Developer' AS role_name,
              d.is_active, COALESCE(d.email_verified, FALSE) AS email_verified, d.last_login_at, d.created_at
       FROM developers d
       ORDER BY d.id DESC
     `);
 
     const records = devsRes.rows.map((r) => ({ ...r, is_verified: Boolean(r.email_verified) }));
-    return NextResponse.json({ success: true, table: 'developers', records, roles: [] });
+    return NextResponse.json({ success: true, table: 'developers', records });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
