@@ -116,6 +116,31 @@ export default function StudentImagesPage() {
             </div>
           </div>
 
+          {/* IN-PAGE PHOTO PREVIEW CARD */}
+          {previewImage && (
+            <div className="bg-white dark:bg-slate-900 border-2 border-primary/30 rounded-xl p-4 shadow-sm mb-4 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-3">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  📷 Student Photo Preview
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPreviewImage(null)}
+                  className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
+                >
+                  ✕ Close Preview
+                </button>
+              </div>
+              <div className="flex justify-center p-2 bg-slate-50 dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800">
+                <img
+                  src={previewImage}
+                  alt="Enlarged"
+                  className="max-h-72 object-contain rounded shadow-xs"
+                />
+              </div>
+            </div>
+          )}
+
           {filtered.length === 0 ? (
             <div className="p-8 text-center text-xs text-slate-400">
               No students found for this session, class, and section.
@@ -125,10 +150,19 @@ export default function StudentImagesPage() {
               {filtered.map((s) => (
                 <div
                   key={s.id}
-                  className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 flex flex-col items-center text-center space-y-2 hover:border-primary/50 transition-colors"
+                  className={`bg-slate-50 dark:bg-slate-950 border rounded-lg p-2.5 flex flex-col items-center text-center space-y-2 transition-all ${
+                    previewImage === s.primary_photo_url
+                      ? 'border-primary ring-2 ring-primary/20 shadow-xs'
+                      : 'border-slate-200 dark:border-slate-800 hover:border-primary/50'
+                  }`}
                 >
                   <div
-                    onClick={() => s.primary_photo_url && setPreviewImage(s.primary_photo_url)}
+                    onClick={() =>
+                      s.primary_photo_url &&
+                      setPreviewImage(
+                        previewImage === s.primary_photo_url ? null : s.primary_photo_url
+                      )
+                    }
                     className={`w-20 h-24 rounded border border-slate-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-900 flex items-center justify-center ${
                       s.primary_photo_url ? 'cursor-pointer hover:opacity-90' : ''
                     }`}
@@ -158,21 +192,6 @@ export default function StudentImagesPage() {
               ))}
             </div>
           )}
-        </div>
-      )}
-
-      {/* Enlarged Photo Preview Modal */}
-      {previewImage && (
-        <div
-          onClick={() => setPreviewImage(null)}
-          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 cursor-pointer"
-        >
-          <div className="relative max-w-md w-full bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xl">
-            <img src={previewImage} alt="Enlarged" className="w-full max-h-[75vh] object-contain rounded" />
-            <div className="text-center pt-2">
-              <span className="text-[11px] text-slate-400 font-medium">Click anywhere to close</span>
-            </div>
-          </div>
         </div>
       )}
     </div>

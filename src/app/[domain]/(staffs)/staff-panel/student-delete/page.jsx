@@ -165,14 +165,70 @@ export default function StudentDeletePage() {
               {selectedIds.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setConfirmModal({ count: selectedIds.length, ids: selectedIds })}
-                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-semibold shadow-2xs cursor-pointer flex items-center gap-1.5"
+                  onClick={() =>
+                    confirmModal?.ids?.length === selectedIds.length && !confirmModal.student
+                      ? setConfirmModal(null)
+                      : setConfirmModal({ count: selectedIds.length, ids: selectedIds })
+                  }
+                  className={`px-3 py-1.5 rounded text-xs font-semibold shadow-2xs cursor-pointer flex items-center gap-1.5 transition ${
+                    confirmModal?.ids?.length === selectedIds.length && !confirmModal.student
+                      ? 'bg-slate-700 hover:bg-slate-800 text-white'
+                      : 'bg-rose-600 hover:bg-rose-700 text-white'
+                  }`}
                 >
-                  <span>🗑️</span> Delete Selected ({selectedIds.length})
+                  <span>🗑️</span>{' '}
+                  {confirmModal?.ids?.length === selectedIds.length && !confirmModal.student
+                    ? 'Cancel Selection'
+                    : `Delete Selected (${selectedIds.length})`}
                 </button>
               )}
             </div>
           </div>
+
+          {/* IN-PAGE DELETE CONFIRMATION PANEL */}
+          {confirmModal && (
+            <div className="bg-rose-50/70 dark:bg-rose-950/40 border-2 border-rose-300 dark:border-rose-800 rounded-xl p-5 space-y-3 shadow-sm mb-4 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="flex items-center justify-between border-b border-rose-200 dark:border-rose-800/80 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">⚠️</span>
+                  <h3 className="text-sm font-bold text-rose-900 dark:text-rose-200">
+                    Confirm Record Deletion
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setConfirmModal(null)}
+                  className="px-2.5 py-1 text-xs rounded border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/60 cursor-pointer"
+                >
+                  ✕ Cancel
+                </button>
+              </div>
+
+              <p className="text-xs text-rose-800 dark:text-rose-300">
+                Are you sure you want to delete {confirmModal.count} student record(s)
+                {confirmModal.student ? ` for "${confirmModal.student.name || 'Student'}" (Reg: ${confirmModal.student.registration_no})` : ''}?
+                This will also permanently remove their address, guardian, and attendance entries.
+              </p>
+
+              <div className="pt-2 flex justify-end gap-2 border-t border-rose-200 dark:border-rose-800/80">
+                <button
+                  type="button"
+                  onClick={() => setConfirmModal(null)}
+                  className="px-3.5 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteConfirmed}
+                  disabled={deleting}
+                  className="px-4 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-50 transition"
+                >
+                  {deleting ? 'Deleting...' : 'Yes, Permanently Delete'}
+                </button>
+              </div>
+            </div>
+          )}
 
           {filtered.length === 0 ? (
             <div className="p-8 text-center text-xs text-slate-400">
@@ -235,10 +291,18 @@ export default function StudentDeletePage() {
                       <td className="px-3 py-2 text-right">
                         <button
                           type="button"
-                          onClick={() => setConfirmModal({ count: 1, ids: [s.id], student: s })}
-                          className="px-2.5 py-1 text-[11px] font-medium rounded border border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 cursor-pointer"
+                          onClick={() =>
+                            confirmModal?.student?.id === s.id
+                              ? setConfirmModal(null)
+                              : setConfirmModal({ count: 1, ids: [s.id], student: s })
+                          }
+                          className={`px-2.5 py-1 text-[11px] font-medium rounded border cursor-pointer transition ${
+                            confirmModal?.student?.id === s.id
+                              ? 'border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                              : 'border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400'
+                          }`}
                         >
-                          Delete
+                          {confirmModal?.student?.id === s.id ? '✕ Cancel' : 'Delete'}
                         </button>
                       </td>
                     </tr>
@@ -247,43 +311,6 @@ export default function StudentDeletePage() {
               </table>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {confirmModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-sm w-full p-5 space-y-4 shadow-xl">
-            <div className="text-center space-y-2">
-              <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-600 flex items-center justify-center text-xl mx-auto">
-                ⚠️
-              </div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                Confirm Record Deletion
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Are you sure you want to delete {confirmModal.count} student record(s)? This will also permanently remove their address, guardian, and attendance entries.
-              </p>
-            </div>
-
-            <div className="pt-2 flex justify-center gap-2">
-              <button
-                type="button"
-                onClick={() => setConfirmModal(null)}
-                className="px-4 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 text-xs font-semibold cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteConfirmed}
-                disabled={deleting}
-                className="px-4 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-50"
-              >
-                {deleting ? 'Deleting...' : 'Yes, Delete'}
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>

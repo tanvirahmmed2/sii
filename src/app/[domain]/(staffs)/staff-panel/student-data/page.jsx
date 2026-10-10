@@ -144,6 +144,105 @@ export default function StudentDataPage() {
             </div>
           </div>
 
+          {/* IN-PAGE STUDENT DETAILS VIEW */}
+          {selectedStudent && (
+            <div className="bg-white dark:bg-slate-900 border-2 border-primary/30 rounded-xl p-5 space-y-4 shadow-sm mb-4 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Student Record Details
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-mono">
+                    {selectedStudent.registration_no} • {selectedStudent.student_unique_id}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedStudent(null)}
+                  className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
+                >
+                  ✕ Close Details
+                </button>
+              </div>
+
+              {detailLoading ? (
+                <div className="py-12 text-center text-xs text-slate-400">Loading student details...</div>
+              ) : (
+                <div className="space-y-4 text-xs">
+                  {/* Academic & Identity Box */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block uppercase font-semibold">Registration No</span>
+                      <span className="font-mono font-medium text-slate-900 dark:text-white">{selectedStudent.registration_no}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block uppercase font-semibold">Roll Number</span>
+                      <span className="font-mono font-medium text-slate-900 dark:text-white">{selectedStudent.roll_no || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block uppercase font-semibold">Class &amp; Section</span>
+                      <span className="text-slate-900 dark:text-white">{selectedStudent.class_name} {selectedStudent.section_name ? `(${selectedStudent.section_name})` : ''}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block uppercase font-semibold">Session</span>
+                      <span className="text-slate-900 dark:text-white">{selectedStudent.session_name || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block uppercase font-semibold">Student Name</span>
+                      <span className="text-slate-900 dark:text-white">{selectedStudent.name || 'Not provided'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block uppercase font-semibold">Email</span>
+                      <span className="text-slate-900 dark:text-white">{selectedStudent.email || 'Not provided'}</span>
+                    </div>
+                  </div>
+
+                  {/* Address Information */}
+                  {detailData?.address && (
+                    <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
+                      <span className="text-[10px] text-slate-400 block uppercase font-semibold">Address Information</span>
+                      <p className="text-slate-700 dark:text-slate-300">
+                        <strong>Present:</strong> {detailData.address.present_address || '—'}
+                      </p>
+                      <p className="text-slate-700 dark:text-slate-300">
+                        <strong>Permanent:</strong> {detailData.address.permanent_address || '—'}
+                      </p>
+                      <p className="text-slate-500 text-[11px]">
+                        {[detailData.address.upazila, detailData.address.district, detailData.address.city].filter(Boolean).join(', ')}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Guardian Information */}
+                  {detailData?.guardian && (
+                    <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
+                      <span className="text-[10px] text-slate-400 block uppercase font-semibold">Guardian Information</span>
+                      <p className="text-slate-700 dark:text-slate-300">
+                        <strong>Father:</strong> {detailData.guardian.father_name || '—'} ({detailData.guardian.father_phone || 'No phone'})
+                      </p>
+                      <p className="text-slate-700 dark:text-slate-300">
+                        <strong>Mother:</strong> {detailData.guardian.mother_name || '—'} ({detailData.guardian.mother_phone || 'No phone'})
+                      </p>
+                      <p className="text-slate-700 dark:text-slate-300">
+                        <strong>Primary Guardian:</strong> {detailData.guardian.guardian_name || '—'} ({detailData.guardian.guardian_relation || '—'}) • {detailData.guardian.guardian_phone || '—'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="pt-2 flex justify-end border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setSelectedStudent(null)}
+                  className="px-4 py-1.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Student Table */}
           {filteredStudents.length === 0 ? (
             <div className="p-8 text-center text-xs text-slate-400">
@@ -197,10 +296,18 @@ export default function StudentDataPage() {
                       <td className="px-3 py-2 text-right">
                         <button
                           type="button"
-                          onClick={() => handleViewDetails(s)}
-                          className="px-2.5 py-1 text-[11px] font-medium rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 cursor-pointer"
+                          onClick={() =>
+                            selectedStudent?.id === s.id
+                              ? setSelectedStudent(null)
+                              : handleViewDetails(s)
+                          }
+                          className={`px-2.5 py-1 text-[11px] font-medium rounded border cursor-pointer transition ${
+                            selectedStudent?.id === s.id
+                              ? 'border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400'
+                              : 'border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                          }`}
                         >
-                          View Details
+                          {selectedStudent?.id === s.id ? '✕ Close Details' : 'View Details'}
                         </button>
                       </td>
                     </tr>
@@ -209,107 +316,6 @@ export default function StudentDataPage() {
               </table>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Details Modal */}
-      {selectedStudent && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-xl w-full p-5 space-y-4 max-h-[85vh] overflow-y-auto shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Student Record Details
-                </h3>
-                <p className="text-[11px] text-slate-500 font-mono">
-                  {selectedStudent.registration_no} • {selectedStudent.student_unique_id}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedStudent(null)}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer text-lg font-bold"
-              >
-                ✕
-              </button>
-            </div>
-
-            {detailLoading ? (
-              <div className="py-12 text-center text-xs text-slate-400">Loading student details...</div>
-            ) : (
-              <div className="space-y-4 text-xs">
-                {/* Academic & Identity Box */}
-                <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <div>
-                    <span className="text-[10px] text-slate-400 block uppercase font-semibold">Registration No</span>
-                    <span className="font-mono font-medium text-slate-900 dark:text-white">{selectedStudent.registration_no}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block uppercase font-semibold">Roll Number</span>
-                    <span className="font-mono font-medium text-slate-900 dark:text-white">{selectedStudent.roll_no || '—'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block uppercase font-semibold">Class &amp; Section</span>
-                    <span className="text-slate-900 dark:text-white">{selectedStudent.class_name} {selectedStudent.section_name ? `(${selectedStudent.section_name})` : ''}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block uppercase font-semibold">Session</span>
-                    <span className="text-slate-900 dark:text-white">{selectedStudent.session_name || '—'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block uppercase font-semibold">Student Name</span>
-                    <span className="text-slate-900 dark:text-white">{selectedStudent.name || 'Not provided'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block uppercase font-semibold">Email</span>
-                    <span className="text-slate-900 dark:text-white">{selectedStudent.email || 'Not provided'}</span>
-                  </div>
-                </div>
-
-                {/* Address Information */}
-                {detailData?.address && (
-                  <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
-                    <span className="text-[10px] text-slate-400 block uppercase font-semibold">Address Information</span>
-                    <p className="text-slate-700 dark:text-slate-300">
-                      <strong>Present:</strong> {detailData.address.present_address || '—'}
-                    </p>
-                    <p className="text-slate-700 dark:text-slate-300">
-                      <strong>Permanent:</strong> {detailData.address.permanent_address || '—'}
-                    </p>
-                    <p className="text-slate-500 text-[11px]">
-                      {[detailData.address.upazila, detailData.address.district, detailData.address.city].filter(Boolean).join(', ')}
-                    </p>
-                  </div>
-                )}
-
-                {/* Guardian Information */}
-                {detailData?.guardian && (
-                  <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
-                    <span className="text-[10px] text-slate-400 block uppercase font-semibold">Guardian Information</span>
-                    <p className="text-slate-700 dark:text-slate-300">
-                      <strong>Father:</strong> {detailData.guardian.father_name || '—'} ({detailData.guardian.father_phone || 'No phone'})
-                    </p>
-                    <p className="text-slate-700 dark:text-slate-300">
-                      <strong>Mother:</strong> {detailData.guardian.mother_name || '—'} ({detailData.guardian.mother_phone || 'No phone'})
-                    </p>
-                    <p className="text-slate-700 dark:text-slate-300">
-                      <strong>Primary Guardian:</strong> {detailData.guardian.guardian_name || '—'} ({detailData.guardian.guardian_relation || '—'}) • {detailData.guardian.guardian_phone || '—'}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="pt-2 flex justify-end border-t border-slate-100 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => setSelectedStudent(null)}
-                className="px-4 py-1.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>

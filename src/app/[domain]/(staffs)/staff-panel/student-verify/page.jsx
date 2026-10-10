@@ -372,12 +372,20 @@ export default function StudentVerifyPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          setSelectedStudent(st);
-                          setReviewNotes(st.verification_notes || '');
+                          if (selectedStudent?.id === st.id) {
+                            setSelectedStudent(null);
+                          } else {
+                            setSelectedStudent(st);
+                            setReviewNotes(st.verification_notes || '');
+                          }
                         }}
-                        className="px-3 py-1 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer transition shadow-2xs"
+                        className={`px-3 py-1 rounded text-xs font-semibold cursor-pointer transition shadow-2xs ${
+                          selectedStudent?.id === st.id
+                            ? 'bg-primary text-white'
+                            : 'bg-slate-900 hover:bg-slate-800 text-white'
+                        }`}
                       >
-                        Inspect & Verify →
+                        {selectedStudent?.id === st.id ? '✕ Close Review' : 'Inspect & Verify →'}
                       </button>
                     </td>
                   </tr>
@@ -390,180 +398,178 @@ export default function StudentVerifyPage() {
         </>
       )}
 
-      {/* DETAILED VERIFICATION DRAWER / MODAL */}
+      {/* IN-PAGE DETAILED VERIFICATION INSPECTION DESK */}
       {selectedStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="w-full max-w-3xl bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden my-8 space-y-5 p-6 animate-in fade-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-primary tracking-wider">
-                  Verification Inspection Desk
-                </span>
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                  {selectedStudent.name} (Reg: {selectedStudent.registration_no})
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedStudent(null)}
-                className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center cursor-pointer"
-              >
-                ✕
-              </button>
+        <div className="bg-white dark:bg-slate-900 rounded-lg border-2 border-primary/30 shadow-sm overflow-hidden space-y-5 p-6 animate-in fade-in slide-in-from-top-2 duration-150">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <div>
+              <span className="text-[10px] uppercase font-bold text-primary tracking-wider">
+                Verification Inspection Desk
+              </span>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                {selectedStudent.name} (Reg: {selectedStudent.registration_no})
+              </h2>
             </div>
+            <button
+              type="button"
+              onClick={() => setSelectedStudent(null)}
+              className="text-xs px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 cursor-pointer flex items-center gap-1 font-medium"
+            >
+              ✕ Close Review
+            </button>
+          </div>
 
-            {/* Profile Grid */}
-            <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1 text-xs">
-              {/* Row: Photo, Signature, Academic Credentials */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 dark:bg-slate-950 p-3.5 rounded border border-slate-200 dark:border-slate-800">
-                {/* Photo Preview */}
-                <div className="flex flex-col items-center justify-center p-2 text-center">
-                  <p className="text-[10px] uppercase font-semibold text-slate-400 mb-1">Student Photo</p>
-                  <div className="w-24 h-28 rounded border border-slate-300 dark:border-slate-700 overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                    {selectedStudent.photo_url ? (
-                      <img src={selectedStudent.photo_url} alt="Photo" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-[10px] text-slate-400">No Photo Uploaded</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Signature Preview */}
-                <div className="flex flex-col items-center justify-center p-2 text-center">
-                  <p className="text-[10px] uppercase font-semibold text-slate-400 mb-1">Digital Signature</p>
-                  <div className="w-36 h-20 rounded border border-slate-300 dark:border-slate-700 overflow-hidden bg-white flex items-center justify-center p-1">
-                    {selectedStudent.signature_url ? (
-                      <img src={selectedStudent.signature_url} alt="Signature" className="max-h-full object-contain" />
-                    ) : (
-                      <span className="text-[10px] text-slate-400">No Signature Uploaded</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Academic Metadata */}
-                <div className="space-y-1 text-[11px] justify-center flex flex-col">
-                  <div><span className="text-slate-400">Class:</span> <span className="font-semibold text-slate-900 dark:text-white">{selectedStudent.class_name || 'N/A'}</span></div>
-                  <div><span className="text-slate-400">Section:</span> <span className="font-semibold text-slate-900 dark:text-white">{selectedStudent.section_name || 'N/A'}</span></div>
-                  <div><span className="text-slate-400">Session:</span> <span className="font-semibold text-slate-900 dark:text-white">{selectedStudent.session_name || 'N/A'}</span></div>
-                  <div><span className="text-slate-400">Roll No:</span> <span className="font-semibold text-slate-900 dark:text-white">{selectedStudent.roll_no || 'N/A'}</span></div>
-                  <div><span className="text-slate-400">Unique ID:</span> <span className="font-mono text-slate-900 dark:text-white">{selectedStudent.student_unique_id}</span></div>
+          {/* Profile Grid */}
+          <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1 text-xs">
+            {/* Row: Photo, Signature, Academic Credentials */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 dark:bg-slate-950 p-3.5 rounded border border-slate-200 dark:border-slate-800">
+              {/* Photo Preview */}
+              <div className="flex flex-col items-center justify-center p-2 text-center">
+                <p className="text-[10px] uppercase font-semibold text-slate-400 mb-1">Student Photo</p>
+                <div className="w-24 h-28 rounded border border-slate-300 dark:border-slate-700 overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                  {selectedStudent.photo_url ? (
+                    <img src={selectedStudent.photo_url} alt="Photo" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[10px] text-slate-400">No Photo Uploaded</span>
+                  )}
                 </div>
               </div>
 
-              {/* Personal Details */}
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 space-y-2">
-                <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                  Personal Information
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-                  <div><span className="text-slate-400">Phone:</span> {selectedStudent.number || '—'}</div>
-                  <div><span className="text-slate-400">Gender:</span> {selectedStudent.gender || '—'}</div>
-                  <div><span className="text-slate-400">Blood Group:</span> {selectedStudent.blood_group || '—'}</div>
-                  <div><span className="text-slate-400">DOB:</span> {selectedStudent.date_of_birth ? new Date(selectedStudent.date_of_birth).toLocaleDateString() : '—'}</div>
-                  <div><span className="text-slate-400">Religion:</span> {selectedStudent.religion || '—'}</div>
-                  <div><span className="text-slate-400">Admission Date:</span> {selectedStudent.admission_date ? new Date(selectedStudent.admission_date).toLocaleDateString() : '—'}</div>
+              {/* Signature Preview */}
+              <div className="flex flex-col items-center justify-center p-2 text-center">
+                <p className="text-[10px] uppercase font-semibold text-slate-400 mb-1">Digital Signature</p>
+                <div className="w-36 h-20 rounded border border-slate-300 dark:border-slate-700 overflow-hidden bg-white flex items-center justify-center p-1">
+                  {selectedStudent.signature_url ? (
+                    <img src={selectedStudent.signature_url} alt="Signature" className="max-h-full object-contain" />
+                  ) : (
+                    <span className="text-[10px] text-slate-400">No Signature Uploaded</span>
+                  )}
                 </div>
               </div>
 
-              {/* Address Details */}
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 space-y-2">
-                <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                  Addresses
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
-                  <div>
-                    <span className="text-slate-400 block mb-0.5">Present Address:</span>
-                    <p className="font-medium text-slate-800 dark:text-slate-200">{selectedStudent.present_address || 'Not filled'}</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      {selectedStudent.city ? `${selectedStudent.city}, ` : ''}
-                      {selectedStudent.district ? `${selectedStudent.district}, ` : ''}
-                      {selectedStudent.postal_code || ''}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block mb-0.5">Permanent Address:</span>
-                    <p className="font-medium text-slate-800 dark:text-slate-200">{selectedStudent.permanent_address || 'Not filled'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Parents & Guardians Details */}
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 space-y-2">
-                <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                  Parents & Guardians
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px]">
-                  <div className="space-y-0.5">
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">Father</span>
-                    <div>Name: {selectedStudent.father_name || '—'}</div>
-                    <div>Phone: {selectedStudent.father_phone || '—'}</div>
-                    <div>NID: {selectedStudent.father_nid || '—'}</div>
-                    <div>Occupation: {selectedStudent.father_occupation || '—'}</div>
-                  </div>
-
-                  <div className="space-y-0.5">
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">Mother</span>
-                    <div>Name: {selectedStudent.mother_name || '—'}</div>
-                    <div>Phone: {selectedStudent.mother_phone || '—'}</div>
-                    <div>NID: {selectedStudent.mother_nid || '—'}</div>
-                    <div>Occupation: {selectedStudent.mother_occupation || '—'}</div>
-                  </div>
-
-                  <div className="space-y-0.5">
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">Local Guardian</span>
-                    <div>Name: {selectedStudent.guardian_name || '—'}</div>
-                    <div>Relation: {selectedStudent.guardian_relation || '—'}</div>
-                    <div>Phone: {selectedStudent.guardian_phone || '—'}</div>
-                    <div>Address: {selectedStudent.guardian_address || '—'}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Feedback / Review Notes */}
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Staff Verification Notes (Sent to student if rejected or saved with approval)
-                </label>
-                <textarea
-                  rows={2}
-                  value={reviewNotes}
-                  onChange={(e) => setReviewNotes(e.target.value)}
-                  placeholder="Optional review note or reason for rejection (e.g. Photo resolution is too low, please re-upload passport photo)..."
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-900 dark:text-white outline-none focus:border-primary"
-                />
+              {/* Academic Metadata */}
+              <div className="space-y-1 text-[11px] justify-center flex flex-col">
+                <div><span className="text-slate-400">Class:</span> <span className="font-semibold text-slate-900 dark:text-white">{selectedStudent.class_name || 'N/A'}</span></div>
+                <div><span className="text-slate-400">Section:</span> <span className="font-semibold text-slate-900 dark:text-white">{selectedStudent.section_name || 'N/A'}</span></div>
+                <div><span className="text-slate-400">Session:</span> <span className="font-semibold text-slate-900 dark:text-white">{selectedStudent.session_name || 'N/A'}</span></div>
+                <div><span className="text-slate-400">Roll No:</span> <span className="font-semibold text-slate-900 dark:text-white">{selectedStudent.roll_no || 'N/A'}</span></div>
+                <div><span className="text-slate-400">Unique ID:</span> <span className="font-mono text-slate-900 dark:text-white">{selectedStudent.student_unique_id}</span></div>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            {/* Personal Details */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 space-y-2">
+              <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                Personal Information
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                <div><span className="text-slate-400">Phone:</span> {selectedStudent.number || '—'}</div>
+                <div><span className="text-slate-400">Gender:</span> {selectedStudent.gender || '—'}</div>
+                <div><span className="text-slate-400">Blood Group:</span> {selectedStudent.blood_group || '—'}</div>
+                <div><span className="text-slate-400">DOB:</span> {selectedStudent.date_of_birth ? new Date(selectedStudent.date_of_birth).toLocaleDateString() : '—'}</div>
+                <div><span className="text-slate-400">Religion:</span> {selectedStudent.religion || '—'}</div>
+                <div><span className="text-slate-400">Admission Date:</span> {selectedStudent.admission_date ? new Date(selectedStudent.admission_date).toLocaleDateString() : '—'}</div>
+              </div>
+            </div>
+
+            {/* Address Details */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 space-y-2">
+              <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                Addresses
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
+                <div>
+                  <span className="text-slate-400 block mb-0.5">Present Address:</span>
+                  <p className="font-medium text-slate-800 dark:text-slate-200">{selectedStudent.present_address || 'Not filled'}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    {selectedStudent.city ? `${selectedStudent.city}, ` : ''}
+                    {selectedStudent.district ? `${selectedStudent.district}, ` : ''}
+                    {selectedStudent.postal_code || ''}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-slate-400 block mb-0.5">Permanent Address:</span>
+                  <p className="font-medium text-slate-800 dark:text-slate-200">{selectedStudent.permanent_address || 'Not filled'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Parents & Guardians Details */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 space-y-2">
+              <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                Parents & Guardians
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px]">
+                <div className="space-y-0.5">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">Father</span>
+                  <div>Name: {selectedStudent.father_name || '—'}</div>
+                  <div>Phone: {selectedStudent.father_phone || '—'}</div>
+                  <div>NID: {selectedStudent.father_nid || '—'}</div>
+                  <div>Occupation: {selectedStudent.father_occupation || '—'}</div>
+                </div>
+
+                <div className="space-y-0.5">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">Mother</span>
+                  <div>Name: {selectedStudent.mother_name || '—'}</div>
+                  <div>Phone: {selectedStudent.mother_phone || '—'}</div>
+                  <div>NID: {selectedStudent.mother_nid || '—'}</div>
+                  <div>Occupation: {selectedStudent.mother_occupation || '—'}</div>
+                </div>
+
+                <div className="space-y-0.5">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">Local Guardian</span>
+                  <div>Name: {selectedStudent.guardian_name || '—'}</div>
+                  <div>Relation: {selectedStudent.guardian_relation || '—'}</div>
+                  <div>Phone: {selectedStudent.guardian_phone || '—'}</div>
+                  <div>Address: {selectedStudent.guardian_address || '—'}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Feedback / Review Notes */}
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                Staff Verification Notes (Sent to student if rejected or saved with approval)
+              </label>
+              <textarea
+                rows={2}
+                value={reviewNotes}
+                onChange={(e) => setReviewNotes(e.target.value)}
+                placeholder="Optional review note or reason for rejection (e.g. Photo resolution is too low, please re-upload passport photo)..."
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-900 dark:text-white outline-none focus:border-primary"
+              />
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setSelectedStudent(null)}
+              className="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded text-xs font-medium cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
+            >
+              Cancel
+            </button>
+
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setSelectedStudent(null)}
-                className="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded text-xs font-medium cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
+                disabled={actionLoading}
+                onClick={() => handleAction('reject')}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-semibold cursor-pointer disabled:opacity-60 transition"
               >
-                Cancel
+                {actionLoading ? 'Processing...' : 'Reject Profile ✕'}
               </button>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={actionLoading}
-                  onClick={() => handleAction('reject')}
-                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-semibold cursor-pointer disabled:opacity-60 transition"
-                >
-                  {actionLoading ? 'Processing...' : 'Reject Profile ✕'}
-                </button>
-
-                <button
-                  type="button"
-                  disabled={actionLoading}
-                  onClick={() => handleAction('approve')}
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold cursor-pointer disabled:opacity-60 transition shadow-xs"
-                >
-                  {actionLoading ? 'Verifying...' : 'Approve & Verify Student ✓'}
-                </button>
-              </div>
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => handleAction('approve')}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold cursor-pointer disabled:opacity-60 transition shadow-xs"
+              >
+                {actionLoading ? 'Verifying...' : 'Approve & Verify Student ✓'}
+              </button>
             </div>
           </div>
         </div>

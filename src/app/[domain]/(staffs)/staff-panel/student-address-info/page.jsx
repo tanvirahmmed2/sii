@@ -183,6 +183,115 @@ export default function StudentAddressInfoPage() {
             </div>
           </div>
 
+          {/* IN-PAGE EDIT ADDRESS FORM */}
+          {editingStudent && (
+            <div className="bg-white dark:bg-slate-900 border-2 border-primary/30 rounded-xl p-5 space-y-4 shadow-sm mb-4 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Update Student Address
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-mono">
+                    {editingStudent.name || 'Student'} • Reg: {editingStudent.registration_no}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingStudent(null)}
+                  className="text-xs px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 cursor-pointer flex items-center gap-1 font-medium"
+                >
+                  ✕ Close Form
+                </button>
+              </div>
+
+              <form onSubmit={handleSave} className="space-y-3 text-xs">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Present Address
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={formData.present_address}
+                    onChange={(e) => setFormData({ ...formData, present_address: e.target.value })}
+                    placeholder="Current residence address"
+                    className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Permanent Address
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={formData.permanent_address}
+                    onChange={(e) => setFormData({ ...formData, permanent_address: e.target.value })}
+                    placeholder="Permanent home address"
+                    className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary resize-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      City / Thana
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      placeholder="e.g. Uttara"
+                      className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      District
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.district}
+                      onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                      placeholder="e.g. Dhaka"
+                      className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Postal Code
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.postal_code}
+                      onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
+                      placeholder="e.g. 1230"
+                      className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingStudent(null)}
+                    className="px-3.5 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 text-xs cursor-pointer font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-4 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer disabled:opacity-50 transition"
+                  >
+                    {saving ? 'Saving...' : 'Save Address'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
           {filtered.length === 0 ? (
             <div className="p-8 text-center text-xs text-slate-400">
               No students found for this session, class, and section.
@@ -221,10 +330,18 @@ export default function StudentAddressInfoPage() {
                       <td className="px-3 py-2 text-right">
                         <button
                           type="button"
-                          onClick={() => openEditModal(s)}
-                          className="px-2.5 py-1 text-[11px] font-medium rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 cursor-pointer"
+                          onClick={() =>
+                            editingStudent?.id === s.id
+                              ? setEditingStudent(null)
+                              : openEditModal(s)
+                          }
+                          className={`px-2.5 py-1 text-[11px] font-medium rounded border cursor-pointer transition ${
+                            editingStudent?.id === s.id
+                              ? 'border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400'
+                              : 'border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                          }`}
                         >
-                          📍 Edit Address
+                          {editingStudent?.id === s.id ? '✕ Close' : '📍 Edit Address'}
                         </button>
                       </td>
                     </tr>
@@ -233,132 +350,6 @@ export default function StudentAddressInfoPage() {
               </table>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Edit Address Modal */}
-      {editingStudent && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-lg w-full p-5 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Update Student Address
-                </h3>
-                <p className="text-[11px] text-slate-500 font-mono">
-                  {editingStudent.name || 'Student'} • Reg: {editingStudent.registration_no}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditingStudent(null)}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSave} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Present Address
-                </label>
-                <textarea
-                  rows={2}
-                  value={formData.present_address}
-                  onChange={(e) => setFormData({ ...formData, present_address: e.target.value })}
-                  placeholder="e.g. House 12, Road 4, Sector 7, Uttara"
-                  className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary resize-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Permanent Address
-                </label>
-                <textarea
-                  rows={2}
-                  value={formData.permanent_address}
-                  onChange={(e) => setFormData({ ...formData, permanent_address: e.target.value })}
-                  placeholder="e.g. Village/Town, Post Office, Police Station"
-                  className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary resize-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Upazila / Sub-district
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.upazila}
-                    onChange={(e) => setFormData({ ...formData, upazila: e.target.value })}
-                    placeholder="e.g. Uttara"
-                    className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    District
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.district}
-                    onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                    placeholder="e.g. Dhaka"
-                    className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    City
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    placeholder="e.g. Dhaka"
-                    className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Postal Code
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.postal_code}
-                    onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
-                    placeholder="e.g. 1230"
-                    className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingStudent(null)}
-                  className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 text-xs cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-1.5 rounded bg-primary hover:bg-primary/90 text-white text-xs font-semibold cursor-pointer disabled:opacity-50"
-                >
-                  {saving ? 'Saving...' : 'Save Address'}
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
       )}
     </div>

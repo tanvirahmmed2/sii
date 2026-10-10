@@ -272,6 +272,85 @@ export default function StudentAttendanceDevicesPage() {
 
           {/* Student Roster Table */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-3">
+            {/* IN-PAGE RFID CONFIGURATION CARD */}
+            {editingStudent && (
+              <div className="bg-white dark:bg-slate-900 border-2 border-primary/30 rounded-xl p-5 space-y-4 shadow-sm mb-4 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Configure RFID / Biometric ID for {editingStudent.name || editingStudent.registration_no}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setEditingStudent(null)}
+                    className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 cursor-pointer"
+                  >
+                    ✕ Close Form
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Registration Number
+                    </label>
+                    <input
+                      type="text"
+                      value={editingStudent.registration_no}
+                      disabled
+                      className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      RFID Badge UID / Machine User ID *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. RFID-839201 or 1002"
+                      value={modalCardId}
+                      onChange={(e) => setModalCardId(e.target.value)}
+                      className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Assigned Terminal
+                    </label>
+                    <select
+                      value={modalTerminal}
+                      onChange={(e) => setModalTerminal(e.target.value)}
+                      className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white outline-none cursor-pointer"
+                    >
+                      {terminals.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setEditingStudent(null)}
+                    className="text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={savePairing}
+                    className="text-xs px-3.5 py-1.5 rounded bg-primary text-white font-medium hover:bg-primary/90 cursor-pointer transition"
+                  >
+                    Save Credential
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200">
                 Device Credentials: {filterInfo?.className} ({filterInfo?.sectionName}) - {students.length} Students
@@ -342,10 +421,18 @@ export default function StudentAttendanceDevicesPage() {
                           </td>
                           <td className="px-3 py-2 text-right space-x-1.5">
                             <button
-                              onClick={() => openPairModal(st)}
-                              className="px-2 py-1 rounded text-[11px] font-medium border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition cursor-pointer"
+                              onClick={() =>
+                                editingStudent?.id === st.id
+                                  ? setEditingStudent(null)
+                                  : openPairModal(st)
+                              }
+                              className={`px-2 py-1 rounded text-[11px] font-medium border transition cursor-pointer ${
+                                editingStudent?.id === st.id
+                                  ? 'border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400'
+                                  : 'border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
+                              }`}
                             >
-                              Edit RFID
+                              {editingStudent?.id === st.id ? '✕ Close' : 'Edit RFID'}
                             </button>
                             <button
                               onClick={() => handleSyncSingle(st)}
@@ -361,78 +448,6 @@ export default function StudentAttendanceDevicesPage() {
                 </table>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Edit RFID Modal */}
-      {editingStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 max-w-md w-full shadow-xl space-y-4">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-              Configure RFID / Biometric ID for {editingStudent.name || editingStudent.registration_no}
-            </h3>
-
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Registration Number
-                </label>
-                <input
-                  type="text"
-                  value={editingStudent.registration_no}
-                  disabled
-                  className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  RFID Badge UID / Machine User ID *
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. RFID-839201 or 1002"
-                  value={modalCardId}
-                  onChange={(e) => setModalCardId(e.target.value)}
-                  className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Assigned Terminal
-                </label>
-                <select
-                  value={modalTerminal}
-                  onChange={(e) => setModalTerminal(e.target.value)}
-                  className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white outline-none cursor-pointer"
-                >
-                  {terminals.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => setEditingStudent(null)}
-                className="text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={savePairing}
-                className="text-xs px-3.5 py-1.5 rounded bg-primary text-white font-medium hover:bg-primary/90 cursor-pointer"
-              >
-                Save Credential
-              </button>
-            </div>
           </div>
         </div>
       )}

@@ -180,6 +180,89 @@ export default function ResidenceDisallocationsPage() {
           </div>
         </div>
 
+        {/* IN-PAGE VACATE / DISALLOCATE FORM CARD */}
+        {selectedAlloc && (
+          <div className="bg-white dark:bg-slate-900 border-2 border-rose-500/40 rounded-lg p-4 shadow-sm space-y-3 animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-rose-600 tracking-wider">
+                  Check-out & Disallocate Desk
+                </span>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Vacate Student from Seat: {selectedAlloc.student_name}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedAlloc(null)}
+                className="text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 cursor-pointer flex items-center gap-1 font-medium"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <form onSubmit={handleVacateSubmit} className="space-y-3 text-xs">
+              <div className="p-3 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                <div className="font-semibold text-slate-900 dark:text-white text-sm">
+                  {selectedAlloc.student_name}
+                </div>
+                <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                  Reg No: {selectedAlloc.registration_no} • Roll: {selectedAlloc.roll_no || '—'}
+                </div>
+                <div className="text-xs text-slate-700 dark:text-slate-300 font-medium mt-1">
+                  Assigned: {selectedAlloc.hall_name} • Room {selectedAlloc.room_number} • {selectedAlloc.seat_number}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Vacate / Departure Date <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={vacateDate}
+                    onChange={(e) => setVacateDate(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Clearance / Vacation Reason <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={vacateReason}
+                    onChange={(e) => setVacateReason(e.target.value)}
+                    placeholder="e.g. Course completed, student transferred, academic session ended..."
+                    className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setSelectedAlloc(null)}
+                  className="px-3.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-4 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-60 transition"
+                >
+                  {isSubmitting ? 'Processing...' : 'Confirm Vacate & Release Seat'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
         {/* Records Table */}
         {loading ? (
           <div className="text-center py-12 text-xs text-slate-500">
@@ -256,13 +339,21 @@ export default function ResidenceDisallocationsPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            setSelectedAlloc(r);
-                            setVacateDate(new Date().toISOString().split('T')[0]);
-                            setVacateReason('Graduated / semester completed');
+                            if (selectedAlloc?.id === r.id) {
+                              setSelectedAlloc(null);
+                            } else {
+                              setSelectedAlloc(r);
+                              setVacateDate(new Date().toISOString().split('T')[0]);
+                              setVacateReason('Graduated / semester completed');
+                            }
                           }}
-                          className="px-3 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-semibold cursor-pointer transition shadow-2xs"
+                          className={`px-3 py-1 rounded text-[11px] font-semibold cursor-pointer transition shadow-2xs ${
+                            selectedAlloc?.id === r.id
+                              ? 'bg-slate-800 text-white'
+                              : 'bg-rose-600 hover:bg-rose-700 text-white'
+                          }`}
                         >
-                          Clear & Vacate Seat ✕
+                          {selectedAlloc?.id === r.id ? 'Cancel Clearance' : 'Clear & Vacate Seat ✕'}
                         </button>
                       ) : (
                         <span className="text-[10px] font-medium text-emerald-600">✓ Clearance Complete</span>
@@ -275,89 +366,6 @@ export default function ResidenceDisallocationsPage() {
           </div>
         )}
       </div>
-
-      {/* VACATE MODAL */}
-      {selectedAlloc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden my-8 space-y-4 p-5 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-rose-600 tracking-wider">
-                  Check-out & Disallocate Desk
-                </span>
-                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Vacate Student from Seat
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedAlloc(null)}
-                className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center cursor-pointer text-xs"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleVacateSubmit} className="space-y-3 text-xs">
-              <div className="p-3 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                <div className="font-semibold text-slate-900 dark:text-white text-sm">
-                  {selectedAlloc.student_name}
-                </div>
-                <div className="text-[11px] text-slate-500 font-mono mt-0.5">
-                  Reg No: {selectedAlloc.registration_no} • Roll: {selectedAlloc.roll_no || '—'}
-                </div>
-                <div className="text-xs text-slate-700 dark:text-slate-300 font-medium mt-1">
-                  Assigned: {selectedAlloc.hall_name} • Room {selectedAlloc.room_number} • {selectedAlloc.seat_number}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Vacate / Departure Date <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={vacateDate}
-                  onChange={(e) => setVacateDate(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Clearance / Vacation Reason <span className="text-rose-500">*</span>
-                </label>
-                <textarea
-                  rows={2}
-                  required
-                  value={vacateReason}
-                  onChange={(e) => setVacateReason(e.target.value)}
-                  placeholder="e.g. Course completed, student transferred, academic session ended..."
-                  className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setSelectedAlloc(null)}
-                  className="px-3.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-60 transition"
-                >
-                  {isSubmitting ? 'Processing...' : 'Confirm Vacate & Release Seat'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

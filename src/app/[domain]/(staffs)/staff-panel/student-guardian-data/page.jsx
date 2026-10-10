@@ -194,6 +194,216 @@ export default function StudentGuardianDataPage() {
             </div>
           </div>
 
+          {/* IN-PAGE EDIT GUARDIAN FORM */}
+          {editingStudent && (
+            <div className="bg-white dark:bg-slate-900 border-2 border-primary/30 rounded-xl p-5 space-y-4 shadow-sm mb-4 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Update Guardian Information
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-mono">
+                    {editingStudent.name || 'Student'} • Reg: {editingStudent.registration_no}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingStudent(null)}
+                  className="text-xs px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 cursor-pointer flex items-center gap-1 font-medium"
+                >
+                  ✕ Close Form
+                </button>
+              </div>
+
+              <form onSubmit={handleSave} className="space-y-3 text-xs max-h-[70vh] overflow-y-auto pr-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Father's Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.father_name}
+                      onChange={(e) => setFormData({ ...formData, father_name: e.target.value })}
+                      placeholder="Father's full name"
+                      className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Father's Phone
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.father_phone}
+                      onChange={(e) => setFormData({ ...formData, father_phone: e.target.value })}
+                      placeholder="e.g. 017xxxxxxxx"
+                      className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Father's NID
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.father_nid}
+                      onChange={(e) => setFormData({ ...formData, father_nid: e.target.value })}
+                      placeholder="NID Number"
+                      className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Father's Occupation
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.father_occupation}
+                      onChange={(e) => setFormData({ ...formData, father_occupation: e.target.value })}
+                      placeholder="Occupation"
+                      className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Mother's Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.mother_name}
+                      onChange={(e) => setFormData({ ...formData, mother_name: e.target.value })}
+                      placeholder="Mother's full name"
+                      className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Mother's Phone
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.mother_phone}
+                      onChange={(e) => setFormData({ ...formData, mother_phone: e.target.value })}
+                      placeholder="e.g. 018xxxxxxxx"
+                      className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Mother's NID
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.mother_nid}
+                      onChange={(e) => setFormData({ ...formData, mother_nid: e.target.value })}
+                      placeholder="NID Number"
+                      className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Mother's Occupation
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.mother_occupation}
+                      onChange={(e) => setFormData({ ...formData, mother_occupation: e.target.value })}
+                      placeholder="Occupation"
+                      className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Local Guardian Name
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.guardian_name}
+                        onChange={(e) => setFormData({ ...formData, guardian_name: e.target.value })}
+                        placeholder="Guardian's name"
+                        className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Relation with Student
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.guardian_relation}
+                        onChange={(e) => setFormData({ ...formData, guardian_relation: e.target.value })}
+                        placeholder="e.g. Uncle, Grandfather"
+                        className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Guardian Phone
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.guardian_phone}
+                        onChange={(e) => setFormData({ ...formData, guardian_phone: e.target.value })}
+                        placeholder="e.g. 019xxxxxxxx"
+                        className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Guardian Email
+                      </label>
+                      <input
+                        type="email"
+                        value={formData.guardian_email}
+                        onChange={(e) => setFormData({ ...formData, guardian_email: e.target.value })}
+                        placeholder="guardian@example.com"
+                        className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Guardian Address
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={formData.guardian_address}
+                      onChange={(e) => setFormData({ ...formData, guardian_address: e.target.value })}
+                      placeholder="Guardian residential address"
+                      className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingStudent(null)}
+                    className="px-3.5 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 text-xs cursor-pointer font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-4 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer disabled:opacity-50 transition"
+                  >
+                    {saving ? 'Saving...' : 'Save Guardian Info'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
           {filtered.length === 0 ? (
             <div className="p-8 text-center text-xs text-slate-400">
               No students found for this session, class, and section.
@@ -232,10 +442,20 @@ export default function StudentGuardianDataPage() {
                       <td className="px-3 py-2 text-right">
                         <button
                           type="button"
-                          onClick={() => openEditModal(s)}
-                          className="px-2.5 py-1 text-[11px] font-medium rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 cursor-pointer"
+                          onClick={() => {
+                            if (editingStudent?.id === s.id) {
+                              setEditingStudent(null);
+                            } else {
+                              openEditModal(s);
+                            }
+                          }}
+                          className={`px-2.5 py-1 text-[11px] font-medium rounded border cursor-pointer transition ${
+                            editingStudent?.id === s.id
+                              ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 font-semibold'
+                              : 'border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                          }`}
                         >
-                          👪 Edit Guardian
+                          {editingStudent?.id === s.id ? '✕ Close Form' : '👪 Edit Guardian'}
                         </button>
                       </td>
                     </tr>
@@ -244,177 +464,6 @@ export default function StudentGuardianDataPage() {
               </table>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Edit Guardian Modal */}
-      {editingStudent && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-lg w-full p-5 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Update Guardian Information
-                </h3>
-                <p className="text-[11px] text-slate-500 font-mono">
-                  {editingStudent.name || 'Student'} • Reg: {editingStudent.registration_no}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditingStudent(null)}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSave} className="space-y-3 text-xs max-h-[70vh] overflow-y-auto pr-1">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Father's Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.father_name}
-                    onChange={(e) => setFormData({ ...formData, father_name: e.target.value })}
-                    placeholder="Father's full name"
-                    className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Father's Phone
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.father_phone}
-                    onChange={(e) => setFormData({ ...formData, father_phone: e.target.value })}
-                    placeholder="017xxxxxxxx"
-                    className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Mother's Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.mother_name}
-                    onChange={(e) => setFormData({ ...formData, mother_name: e.target.value })}
-                    placeholder="Mother's full name"
-                    className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Mother's Phone
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.mother_phone}
-                    onChange={(e) => setFormData({ ...formData, mother_phone: e.target.value })}
-                    placeholder="018xxxxxxxx"
-                    className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="border-t border-slate-100 dark:border-slate-800 pt-2 space-y-3">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Primary Guardian Details
-                </span>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Guardian Name
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.guardian_name}
-                      onChange={(e) => setFormData({ ...formData, guardian_name: e.target.value })}
-                      placeholder="Primary guardian"
-                      className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Relationship
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.guardian_relation}
-                      onChange={(e) => setFormData({ ...formData, guardian_relation: e.target.value })}
-                      placeholder="e.g. Father, Mother, Uncle"
-                      className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Guardian Phone
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.guardian_phone}
-                      onChange={(e) => setFormData({ ...formData, guardian_phone: e.target.value })}
-                      placeholder="Emergency contact"
-                      className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Guardian Email
-                    </label>
-                    <input
-                      type="email"
-                      value={formData.guardian_email}
-                      onChange={(e) => setFormData({ ...formData, guardian_email: e.target.value })}
-                      placeholder="guardian@example.com"
-                      className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Guardian Address
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={formData.guardian_address}
-                    onChange={(e) => setFormData({ ...formData, guardian_address: e.target.value })}
-                    placeholder="Guardian residential address"
-                    className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary resize-none"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingStudent(null)}
-                  className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 text-xs cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-1.5 rounded bg-primary hover:bg-primary/90 text-white text-xs font-semibold cursor-pointer disabled:opacity-50"
-                >
-                  {saving ? 'Saving...' : 'Save Guardian Info'}
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
       )}
     </div>

@@ -278,10 +278,17 @@ export default function ResidenceRoomPage() {
             <span>🔄</span> Refresh
           </button>
           <button
-            onClick={openCreateModal}
+            onClick={() => {
+              if (isModalOpen) {
+                setIsModalOpen(false);
+                setEditingRoom(null);
+              } else {
+                openCreateModal();
+              }
+            }}
             className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs font-semibold cursor-pointer transition flex items-center gap-1.5 shadow-2xs"
           >
-            <span>＋</span> Add Room
+            <span>{isModalOpen ? '✕' : '＋'}</span> {isModalOpen ? 'Close Form' : 'Add Room'}
           </button>
         </div>
       </div>
@@ -320,6 +327,275 @@ export default function ResidenceRoomPage() {
           </div>
         </div>
       </div>
+
+      {/* IN-PAGE CREATE / EDIT ROOM FORM */}
+      {isModalOpen && (
+        <div className="bg-white dark:bg-slate-900 border-2 border-primary/30 rounded-lg p-5 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-2 duration-150">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <div>
+              <span className="text-[10px] uppercase font-bold text-primary tracking-wider">
+                {editingRoom ? 'Edit Room Record' : 'Create Room Record'}
+              </span>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                {editingRoom ? `Editing Room: ${editingRoom.room_number}` : 'Add New Room'}
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsModalOpen(false);
+                setEditingRoom(null);
+              }}
+              className="text-xs px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 cursor-pointer flex items-center gap-1 font-medium"
+            >
+              ✕ Close Form
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Residence Hall <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  required
+                  value={formData.hall_id}
+                  onChange={(e) => setFormData({ ...formData, hall_id: e.target.value })}
+                  className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer"
+                >
+                  <option value="">Select Hall</option>
+                  {halls.map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.name} ({h.gender})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Room Number <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 101, 204B"
+                  value={formData.room_number}
+                  onChange={(e) => setFormData({ ...formData, room_number: e.target.value })}
+                  className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Floor Level
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={formData.floor_number}
+                  onChange={(e) => setFormData({ ...formData, floor_number: e.target.value })}
+                  className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Room Type
+                </label>
+                <select
+                  value={formData.room_type}
+                  onChange={(e) => setFormData({ ...formData, room_type: e.target.value })}
+                  className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer"
+                >
+                  <option value="single">Single Bed</option>
+                  <option value="double">Double (2 Beds)</option>
+                  <option value="triple">Triple (3 Beds)</option>
+                  <option value="quad">Quad (4 Beds)</option>
+                  <option value="dormitory">Dormitory</option>
+                  <option value="standard">Standard</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Bed Capacity <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  required
+                  value={formData.capacity}
+                  onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+                  className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Monthly Rent (BDT)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step={50}
+                  placeholder="0.00"
+                  value={formData.rent_monthly}
+                  onChange={(e) => setFormData({ ...formData, rent_monthly: e.target.value })}
+                  className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Description / Amenities
+              </label>
+              <textarea
+                rows={2}
+                placeholder="e.g. Attached washroom, balcony, window facing garden..."
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
+              />
+            </div>
+
+            {!editingRoom && (
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="auto_gen_check"
+                  checked={formData.auto_generate_seats}
+                  onChange={(e) => setFormData({ ...formData, auto_generate_seats: e.target.checked })}
+                  className="rounded border-slate-300 text-primary cursor-pointer"
+                />
+                <label htmlFor="auto_gen_check" className="text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
+                  Automatically generate {formData.capacity} seats (Seat-1, Seat-2, etc.)
+                </label>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setEditingRoom(null);
+                }}
+                className="px-3.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-4 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer disabled:opacity-60 transition"
+              >
+                {isSubmitting ? 'Saving...' : editingRoom ? 'Update Room' : 'Create Room'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* IN-PAGE ROOM SEATS INVENTORY PANEL */}
+      {inspectingRoom && (
+        <div className="bg-white dark:bg-slate-900 border-2 border-indigo-500/30 rounded-lg p-5 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-2 duration-150">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <div>
+              <span className="text-[10px] uppercase font-bold text-indigo-600 tracking-wider">
+                Room Seats Inventory & Real-Time Roster
+              </span>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                Room {inspectingRoom.room_number} • {inspectingRoom.hall_name}
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => setInspectingRoom(null)}
+              className="text-xs px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 cursor-pointer flex items-center gap-1 font-medium"
+            >
+              ✕ Close Seats
+            </button>
+          </div>
+
+          {/* Quick Add Seat Form */}
+          <form onSubmit={handleAddSeat} className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Seat identifier (e.g. Seat-5, Bed 5)..."
+              value={newSeatNumber}
+              onChange={(e) => setNewSeatNumber(e.target.value)}
+              className="flex-1 text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
+            />
+            <button
+              type="submit"
+              className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs font-semibold cursor-pointer shrink-0"
+            >
+              ＋ Add Seat
+            </button>
+          </form>
+
+          {/* Seats Grid */}
+          {loadingSeats ? (
+            <div className="text-center py-6 text-xs text-slate-500">
+              <div className="inline-block w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mb-1" />
+              <p>Loading seats...</p>
+            </div>
+          ) : roomSeats.length === 0 ? (
+            <div className="text-center py-6 text-xs text-slate-400">
+              No seats generated for this room yet. Enter a seat identifier above to add one.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto pr-1">
+              {roomSeats.map((seat) => (
+                <div
+                  key={seat.id}
+                  className="p-3 rounded border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 flex flex-col justify-between text-xs space-y-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-900 dark:text-white font-mono">
+                      {seat.seat_number}
+                    </span>
+                    <span
+                      className={`inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold border ${
+                        seat.status === 'available'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                          : seat.status === 'allocated'
+                          ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
+                          : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                      }`}
+                    >
+                      {seat.status === 'available' ? '✓ Available' : seat.status === 'allocated' ? '👤 Occupied' : '🛠 Maintenance'}
+                    </span>
+                  </div>
+
+                  {seat.status === 'allocated' && seat.student_name ? (
+                    <div className="text-[11px] text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded border border-slate-100 dark:border-slate-800">
+                      Resident: <strong className="text-slate-900 dark:text-white">{seat.student_name}</strong> (Reg: {seat.student_reg || '—'})
+                    </div>
+                  ) : null}
+
+                  {seat.status !== 'allocated' && (
+                    <button
+                      type="button"
+                      onClick={() => handleToggleSeatStatus(seat)}
+                      className="w-full text-center py-1 rounded border border-slate-300 dark:border-slate-700 text-[10px] font-medium text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 cursor-pointer"
+                    >
+                      {seat.status === 'maintenance' ? 'Mark Available' : 'Mark Maintenance'}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Main Table Workstation */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-4">
@@ -468,17 +744,34 @@ export default function ResidenceRoomPage() {
                     <td className="px-3 py-2.5 text-right space-x-1.5 whitespace-nowrap">
                       <button
                         type="button"
-                        onClick={() => inspectRoomSeats(room)}
-                        className="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-semibold cursor-pointer transition shadow-2xs"
+                        onClick={() => {
+                          if (inspectingRoom?.id === room.id) {
+                            setInspectingRoom(null);
+                          } else {
+                            inspectRoomSeats(room);
+                          }
+                        }}
+                        className={`px-2.5 py-1 rounded text-[11px] font-semibold cursor-pointer transition shadow-2xs ${
+                          inspectingRoom?.id === room.id
+                            ? 'bg-indigo-700 text-white'
+                            : 'bg-slate-900 hover:bg-slate-800 text-white'
+                        }`}
                       >
-                        Inspect Seats ({room.total_seats || 0}) →
+                        {inspectingRoom?.id === room.id ? '✕ Close Seats' : `Inspect Seats (${room.total_seats || 0}) →`}
                       </button>
                       <button
                         type="button"
-                        onClick={() => openEditModal(room)}
+                        onClick={() => {
+                          if (isModalOpen && editingRoom?.id === room.id) {
+                            setIsModalOpen(false);
+                            setEditingRoom(null);
+                          } else {
+                            openEditModal(room);
+                          }
+                        }}
                         className="px-2 py-1 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-medium cursor-pointer"
                       >
-                        Edit
+                        {isModalOpen && editingRoom?.id === room.id ? 'Cancel' : 'Edit'}
                       </button>
                       <button
                         type="button"
@@ -495,282 +788,6 @@ export default function ResidenceRoomPage() {
           </div>
         )}
       </div>
-
-      {/* CREATE / EDIT ROOM MODAL */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden my-8 space-y-4 p-5 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                {editingRoom ? `Edit Room: ${editingRoom.room_number}` : 'Add New Room'}
-              </h2>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center cursor-pointer text-xs"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Residence Hall <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  required
-                  value={formData.hall_id}
-                  onChange={(e) => setFormData({ ...formData, hall_id: e.target.value })}
-                  className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer"
-                >
-                  <option value="">Select Hall</option>
-                  {halls.map((h) => (
-                    <option key={h.id} value={h.id}>
-                      {h.name} ({h.gender})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Room Number <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 101, 204B"
-                    value={formData.room_number}
-                    onChange={(e) => setFormData({ ...formData, room_number: e.target.value })}
-                    className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Floor Level
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={formData.floor_number}
-                    onChange={(e) => setFormData({ ...formData, floor_number: e.target.value })}
-                    className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Room Type
-                  </label>
-                  <select
-                    value={formData.room_type}
-                    onChange={(e) => setFormData({ ...formData, room_type: e.target.value })}
-                    className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer"
-                  >
-                    <option value="single">Single Bed</option>
-                    <option value="double">Double (2 Beds)</option>
-                    <option value="triple">Triple (3 Beds)</option>
-                    <option value="quad">Quad (4 Beds)</option>
-                    <option value="dormitory">Dormitory</option>
-                    <option value="standard">Standard</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Bed Capacity <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={20}
-                    required
-                    value={formData.capacity}
-                    onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
-                    className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Monthly Rent (BDT)
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  step={50}
-                  placeholder="0.00"
-                  value={formData.rent_monthly}
-                  onChange={(e) => setFormData({ ...formData, rent_monthly: e.target.value })}
-                  className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Description / Amenities
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="e.g. Attached washroom, balcony, window facing garden..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
-                />
-              </div>
-
-              {!editingRoom && (
-                <div className="flex items-center gap-2 pt-1">
-                  <input
-                    type="checkbox"
-                    id="auto_gen_check"
-                    checked={formData.auto_generate_seats}
-                    onChange={(e) => setFormData({ ...formData, auto_generate_seats: e.target.checked })}
-                    className="rounded border-slate-300 text-primary cursor-pointer"
-                  />
-                  <label htmlFor="auto_gen_check" className="text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
-                    Automatically generate {formData.capacity} seats (Seat-1, Seat-2, etc.)
-                  </label>
-                </div>
-              )}
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-3.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer disabled:opacity-60 transition"
-                >
-                  {isSubmitting ? 'Saving...' : editingRoom ? 'Update Room' : 'Create Room'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* INSPECT ROOM SEATS MODAL */}
-      {inspectingRoom && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden my-8 space-y-4 p-5 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-primary tracking-wider">
-                  Room Seats Inventory
-                </span>
-                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Room {inspectingRoom.room_number} ({inspectingRoom.hall_name})
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setInspectingRoom(null)}
-                className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center cursor-pointer text-xs"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Quick Add Seat Form */}
-            <form onSubmit={handleAddSeat} className="flex items-center gap-2">
-              <input
-                type="text"
-                placeholder="Seat identifier (e.g. Seat-5, Bed 5)..."
-                value={newSeatNumber}
-                onChange={(e) => setNewSeatNumber(e.target.value)}
-                className="flex-1 text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
-              />
-              <button
-                type="submit"
-                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs font-semibold cursor-pointer shrink-0"
-              >
-                ＋ Add Seat
-              </button>
-            </form>
-
-            {/* Seats Grid */}
-            {loadingSeats ? (
-              <div className="text-center py-6 text-xs text-slate-500">
-                <div className="inline-block w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mb-1" />
-                <p>Loading seats...</p>
-              </div>
-            ) : roomSeats.length === 0 ? (
-              <div className="text-center py-6 text-xs text-slate-400">
-                No seats generated for this room yet. Enter a seat identifier above to add one.
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                {roomSeats.map((seat) => (
-                  <div
-                    key={seat.id}
-                    className="p-2.5 rounded border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 flex items-center justify-between text-xs"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900 dark:text-white font-mono">
-                          {seat.seat_number}
-                        </span>
-                        <span
-                          className={`inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold border ${
-                            seat.status === 'available'
-                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                              : seat.status === 'allocated'
-                              ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
-                              : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                          }`}
-                        >
-                          {seat.status === 'available' ? '✓ Available' : seat.status === 'allocated' ? '👤 Occupied' : '🛠 Maintenance'}
-                        </span>
-                      </div>
-
-                      {seat.status === 'allocated' && seat.student_name ? (
-                        <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
-                          Resident: <strong className="text-slate-900 dark:text-white">{seat.student_name}</strong> (Reg: {seat.student_reg || '—'})
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      {seat.status !== 'allocated' && (
-                        <button
-                          type="button"
-                          onClick={() => handleToggleSeatStatus(seat)}
-                          className="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-[10px] font-medium text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 cursor-pointer"
-                        >
-                          {seat.status === 'maintenance' ? 'Set Available' : 'Set Maintenance'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="flex items-center justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => setInspectingRoom(null)}
-                className="px-3.5 py-1.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium cursor-pointer hover:bg-slate-200"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -298,10 +298,16 @@ export default function ResidenceAllocationsPage() {
             <span>🔄</span> Refresh
           </button>
           <button
-            onClick={openAllocateModal}
+            onClick={() => {
+              if (isAllocModalOpen) {
+                setIsAllocModalOpen(false);
+              } else {
+                openAllocateModal();
+              }
+            }}
             className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs font-semibold cursor-pointer transition flex items-center gap-1.5 shadow-2xs"
           >
-            <span>＋</span> Allocate Seat to Student
+            <span>{isAllocModalOpen ? '✕' : '＋'}</span> {isAllocModalOpen ? 'Close Form' : 'Allocate Seat to Student'}
           </button>
         </div>
       </div>
@@ -340,6 +346,325 @@ export default function ResidenceAllocationsPage() {
           </div>
         </div>
       </div>
+
+      {/* IN-PAGE ALLOCATE SEAT FORM */}
+      {isAllocModalOpen && (
+        <div className="bg-white dark:bg-slate-900 border-2 border-primary/30 rounded-lg p-5 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-2 duration-150">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <div>
+              <span className="text-[10px] uppercase font-bold text-primary tracking-wider">
+                Residence Assignment Desk
+              </span>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                Allocate Hall Seat to Student
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsAllocModalOpen(false)}
+              className="text-xs px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 cursor-pointer flex items-center gap-1 font-medium"
+            >
+              ✕ Close Form
+            </button>
+          </div>
+
+          <form onSubmit={handleAllocateSubmit} className="space-y-4 text-xs">
+            {/* Step 1: Hall, Room & Available Seat */}
+            <div className="p-3.5 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+              <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                1. Select Facility & Seat
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Hall <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={selectedModalHall}
+                    onChange={(e) => setSelectedModalHall(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="">Select Hall</option>
+                    {modalHalls.map((h) => (
+                      <option key={h.id} value={h.id}>
+                        {h.name} ({h.gender})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Room <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    required
+                    disabled={!selectedModalHall || modalRooms.length === 0}
+                    value={selectedModalRoom}
+                    onChange={(e) => setSelectedModalRoom(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer disabled:opacity-50"
+                  >
+                    <option value="">
+                      {!selectedModalHall ? 'Select Hall first' : modalRooms.length === 0 ? 'No rooms found' : 'Select Room'}
+                    </option>
+                    {modalRooms.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        Room {r.room_number} ({r.available_seats || 0} vacant)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Available Seat <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    required
+                    disabled={!selectedModalRoom || modalSeats.length === 0}
+                    value={selectedModalSeat}
+                    onChange={(e) => setSelectedModalSeat(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer disabled:opacity-50 font-mono font-medium"
+                  >
+                    <option value="">
+                      {!selectedModalRoom ? 'Select Room first' : modalSeats.length === 0 ? 'No vacant seats' : 'Select Vacant Seat'}
+                    </option>
+                    {modalSeats.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.seat_number} (Available)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 2: Student Search & Selection */}
+            <div className="p-3.5 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2.5">
+              <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                2. Select Enrolled Student
+              </p>
+
+              {selectedStudent ? (
+                <div className="p-2.5 rounded bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-slate-900 dark:text-white">
+                      {selectedStudent.name || 'Student'} (Reg: {selectedStudent.registration_no})
+                    </div>
+                    <div className="text-[11px] text-slate-600 dark:text-slate-400">
+                      Roll: {selectedStudent.roll_no || '—'} • Class: {selectedStudent.class_name || '—'}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStudent(null)}
+                    className="text-xs text-rose-600 hover:underline cursor-pointer font-semibold"
+                  >
+                    Change Student
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Search student by Registration No or Name..."
+                      value={studentSearchQuery}
+                      onChange={(e) => setStudentSearchQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleStudentSearch())}
+                      className="flex-1 px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleStudentSearch}
+                      disabled={searchingStudents}
+                      className="px-3.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer"
+                    >
+                      {searchingStudents ? 'Searching...' : 'Search'}
+                    </button>
+                  </div>
+
+                  {studentSearchResults.length > 0 && (
+                    <div className="mt-2 max-h-36 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded bg-white dark:bg-slate-900">
+                      {studentSearchResults.map((st) => (
+                        <div
+                          key={st.id}
+                          onClick={() => setSelectedStudent(st)}
+                          className="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer flex items-center justify-between"
+                        >
+                          <div>
+                            <span className="font-semibold text-slate-900 dark:text-white">{st.name || 'Student'}</span>
+                            <span className="text-slate-400 ml-1 font-mono text-[10px]">({st.registration_no})</span>
+                          </div>
+                          <span className="text-[10px] text-slate-500">{st.class_name || 'Class —'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Step 3: Terms, Dates & Rent */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Allocation Date <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={allocFormData.allocated_date}
+                  onChange={(e) => setAllocFormData({ ...allocFormData, allocated_date: e.target.value })}
+                  className="w-full px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Monthly Rent Fee (BDT)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step={50}
+                  placeholder="0.00"
+                  value={allocFormData.fee_monthly}
+                  onChange={(e) => setAllocFormData({ ...allocFormData, fee_monthly: e.target.value })}
+                  className="w-full px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Expected End Date (Optional)
+                </label>
+                <input
+                  type="date"
+                  value={allocFormData.end_date}
+                  onChange={(e) => setAllocFormData({ ...allocFormData, end_date: e.target.value })}
+                  className="w-full px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
+                />
+              </div>
+
+              <div className="sm:col-span-3">
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Special Remarks / Allocation Notes
+                </label>
+                <input
+                  type="text"
+                  placeholder="Optional notes or instructions..."
+                  value={allocFormData.remarks}
+                  onChange={(e) => setAllocFormData({ ...allocFormData, remarks: e.target.value })}
+                  className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setIsAllocModalOpen(false)}
+                className="px-3.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={allocSubmitting || !selectedModalSeat || !selectedStudent}
+                className="px-4 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer disabled:opacity-60 transition"
+              >
+                {allocSubmitting ? 'Allocating...' : 'Confirm Allocation ✓'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* IN-PAGE VACATE / DISALLOCATE FORM */}
+      {vacateTarget && (
+        <div className="bg-white dark:bg-slate-900 border-2 border-rose-500/40 rounded-lg p-5 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-2 duration-150">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <div>
+              <span className="text-[10px] uppercase font-bold text-rose-600 tracking-wider">
+                Check-out & Disallocate Clearance
+              </span>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                Vacate Resident: {vacateTarget.student_name}
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => setVacateTarget(null)}
+              className="text-xs px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 cursor-pointer flex items-center gap-1 font-medium"
+            >
+              ✕ Close Clearance
+            </button>
+          </div>
+
+          <form onSubmit={handleVacateSubmit} className="space-y-3 text-xs">
+            <div className="p-3 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+              <div className="font-semibold text-slate-900 dark:text-white text-sm">
+                {vacateTarget.student_name}
+              </div>
+              <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                Reg No: {vacateTarget.registration_no}
+              </div>
+              <div className="text-xs text-slate-700 dark:text-slate-300 font-medium mt-1">
+                Assigned: {vacateTarget.hall_name} • Room {vacateTarget.room_number} • {vacateTarget.seat_number}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Vacate / Departure Date <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={vacateDate}
+                  onChange={(e) => setVacateDate(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Departure Clearance Reason <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={vacateReason}
+                  onChange={(e) => setVacateReason(e.target.value)}
+                  placeholder="e.g. Completed academic year, transferred..."
+                  className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setVacateTarget(null)}
+                className="px-3.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={vacateSubmitting}
+                className="px-4 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-60 transition"
+              >
+                {vacateSubmitting ? 'Vacating...' : 'Confirm Vacate & Release Seat'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Main Table Workstation */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-4">
@@ -494,13 +819,21 @@ export default function ResidenceAllocationsPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            setVacateTarget(alloc);
-                            setVacateDate(new Date().toISOString().split('T')[0]);
-                            setVacateReason('Completed semester / vacated hall.');
+                            if (vacateTarget?.id === alloc.id) {
+                              setVacateTarget(null);
+                            } else {
+                              setVacateTarget(alloc);
+                              setVacateDate(new Date().toISOString().split('T')[0]);
+                              setVacateReason('Completed semester / vacated hall.');
+                            }
                           }}
-                          className="px-2.5 py-1 rounded border border-rose-200 dark:border-rose-800 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-[11px] font-medium cursor-pointer transition"
+                          className={`px-2.5 py-1 rounded text-[11px] font-medium cursor-pointer transition border ${
+                            vacateTarget?.id === alloc.id
+                              ? 'bg-rose-600 text-white border-rose-600 font-semibold'
+                              : 'border-rose-200 dark:border-rose-800 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40'
+                          }`}
                         >
-                          Vacate Seat ✕
+                          {vacateTarget?.id === alloc.id ? 'Cancel Vacate' : 'Vacate Seat ✕'}
                         </button>
                       ) : (
                         <span className="text-[10px] text-slate-400 italic">No action needed</span>
@@ -513,327 +846,6 @@ export default function ResidenceAllocationsPage() {
           </div>
         )}
       </div>
-
-      {/* ALLOCATE SEAT MODAL */}
-      {isAllocModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="w-full max-w-xl bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden my-8 space-y-4 p-5 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-primary tracking-wider">
-                  Residence Assignment Desk
-                </span>
-                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Allocate Hall Seat to Student
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsAllocModalOpen(false)}
-                className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center cursor-pointer text-xs"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleAllocateSubmit} className="space-y-4 text-xs">
-              {/* Step 1: Hall, Room & Available Seat */}
-              <div className="p-3 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
-                <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                  1. Select Facility & Seat
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Hall <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      required
-                      value={selectedModalHall}
-                      onChange={(e) => setSelectedModalHall(e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer"
-                    >
-                      <option value="">Select Hall</option>
-                      {modalHalls.map((h) => (
-                        <option key={h.id} value={h.id}>
-                          {h.name} ({h.gender})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Room <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      required
-                      disabled={!selectedModalHall || modalRooms.length === 0}
-                      value={selectedModalRoom}
-                      onChange={(e) => setSelectedModalRoom(e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer disabled:opacity-50"
-                    >
-                      <option value="">
-                        {!selectedModalHall ? 'Select Hall first' : modalRooms.length === 0 ? 'No rooms found' : 'Select Room'}
-                      </option>
-                      {modalRooms.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          Room {r.room_number} ({r.available_seats || 0} vacant)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Available Seat <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      required
-                      disabled={!selectedModalRoom || modalSeats.length === 0}
-                      value={selectedModalSeat}
-                      onChange={(e) => setSelectedModalSeat(e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer disabled:opacity-50 font-mono font-medium"
-                    >
-                      <option value="">
-                        {!selectedModalRoom ? 'Select Room first' : modalSeats.length === 0 ? 'No vacant seats' : 'Select Vacant Seat'}
-                      </option>
-                      {modalSeats.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.seat_number} (Available)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Step 2: Student Search & Selection */}
-              <div className="p-3 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2.5">
-                <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                  2. Select Enrolled Student
-                </p>
-
-                {selectedStudent ? (
-                  <div className="p-2.5 rounded bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
-                    <div>
-                      <div className="font-bold text-slate-900 dark:text-white">
-                        {selectedStudent.name || 'Student'} (Reg: {selectedStudent.registration_no})
-                      </div>
-                      <div className="text-[11px] text-slate-600 dark:text-slate-400">
-                        Roll: {selectedStudent.roll_no || '—'} • Class: {selectedStudent.class_name || '—'}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedStudent(null)}
-                      className="text-xs text-rose-600 hover:underline cursor-pointer"
-                    >
-                      Change Student
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder="Search student by Registration No or Name..."
-                        value={studentSearchQuery}
-                        onChange={(e) => setStudentSearchQuery(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleStudentSearch())}
-                        className="flex-1 px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleStudentSearch}
-                        disabled={searchingStudents}
-                        className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer"
-                      >
-                        {searchingStudents ? 'Searching...' : 'Search'}
-                      </button>
-                    </div>
-
-                    {studentSearchResults.length > 0 && (
-                      <div className="mt-2 max-h-36 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded bg-white dark:bg-slate-900">
-                        {studentSearchResults.map((st) => (
-                          <div
-                            key={st.id}
-                            onClick={() => setSelectedStudent(st)}
-                            className="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer flex items-center justify-between"
-                          >
-                            <div>
-                              <span className="font-semibold text-slate-900 dark:text-white">{st.name || 'Student'}</span>
-                              <span className="text-slate-400 ml-1 font-mono text-[10px]">({st.registration_no})</span>
-                            </div>
-                            <span className="text-[10px] text-slate-500">{st.class_name || 'Class —'}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Step 3: Terms, Dates & Rent */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Allocation Date <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={allocFormData.allocated_date}
-                    onChange={(e) => setAllocFormData({ ...allocFormData, allocated_date: e.target.value })}
-                    className="w-full px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Monthly Rent Fee (BDT)
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    step={50}
-                    placeholder="0.00"
-                    value={allocFormData.fee_monthly}
-                    onChange={(e) => setAllocFormData({ ...allocFormData, fee_monthly: e.target.value })}
-                    className="w-full px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Expected End Date (Optional)
-                  </label>
-                  <input
-                    type="date"
-                    value={allocFormData.end_date}
-                    onChange={(e) => setAllocFormData({ ...allocFormData, end_date: e.target.value })}
-                    className="w-full px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
-                  />
-                </div>
-
-                <div className="sm:col-span-3">
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Special Remarks / Allocation Notes
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Optional notes or instructions..."
-                    value={allocFormData.remarks}
-                    onChange={(e) => setAllocFormData({ ...allocFormData, remarks: e.target.value })}
-                    className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
-                  />
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsAllocModalOpen(false)}
-                  className="px-3.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={allocSubmitting || !selectedModalSeat || !selectedStudent}
-                  className="px-4 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer disabled:opacity-60 transition"
-                >
-                  {allocSubmitting ? 'Allocating...' : 'Confirm Allocation ✓'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* VACATE / DISALLOCATE MODAL */}
-      {vacateTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden my-8 space-y-4 p-5 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-rose-600 tracking-wider">
-                  Check-out & Disallocate
-                </span>
-                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Vacate Student from Seat
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setVacateTarget(null)}
-                className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center cursor-pointer text-xs"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleVacateSubmit} className="space-y-3 text-xs">
-              <div className="p-3 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                <div className="font-semibold text-slate-900 dark:text-white text-sm">
-                  {vacateTarget.student_name}
-                </div>
-                <div className="text-[11px] text-slate-500 font-mono mt-0.5">
-                  Reg No: {vacateTarget.registration_no}
-                </div>
-                <div className="text-xs text-slate-700 dark:text-slate-300 font-medium mt-1">
-                  Location: {vacateTarget.hall_name} • Room {vacateTarget.room_number} • {vacateTarget.seat_number}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Vacate / Departure Date <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={vacateDate}
-                  onChange={(e) => setVacateDate(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Departure Clearance Reason <span className="text-rose-500">*</span>
-                </label>
-                <textarea
-                  rows={2}
-                  required
-                  value={vacateReason}
-                  onChange={(e) => setVacateReason(e.target.value)}
-                  placeholder="e.g. Completed academic year, transferred, disciplinary reason..."
-                  className="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setVacateTarget(null)}
-                  className="px-3.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={vacateSubmitting}
-                  className="px-4 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-60 transition"
-                >
-                  {vacateSubmitting ? 'Vacating...' : 'Confirm Vacate & Release Seat'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
