@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
 export default function LibraryShelvesWorkstation() {
   const [shelves, setShelves] = useState([]);
@@ -9,6 +9,10 @@ export default function LibraryShelvesWorkstation() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'inactive'
   const [feedback, setFeedback] = useState(null);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // View Mode: 'cards' | 'table'
   const [viewMode, setViewMode] = useState('cards');
@@ -60,6 +64,17 @@ export default function LibraryShelvesWorkstation() {
   useEffect(() => {
     loadShelves();
   }, [loadShelves]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, pageSize]);
+
+  const totalItems = shelves.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const paginatedShelves = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return shelves.slice(start, start + pageSize);
+  }, [shelves, currentPage, pageSize]);
 
   // Open Add Modal
   const handleOpenAdd = () => {
@@ -340,7 +355,7 @@ export default function LibraryShelvesWorkstation() {
       ) : viewMode === 'cards' ? (
         /* Grid of Visual Shelf Cards */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {shelves.map((shelf) => {
+          {paginatedShelves.map((shelf) => {
             const occupancy = shelf.occupancy_percentage || 0;
             const booksCount = shelf.total_books_count || 0;
             const capacity = shelf.capacity || 0;
@@ -463,7 +478,7 @@ export default function LibraryShelvesWorkstation() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {shelves.map((shelf) => {
+              {paginatedShelves.map((shelf) => {
                 const occupancy = shelf.occupancy_percentage || 0;
                 const booksCount = shelf.total_books_count || 0;
                 const capacity = shelf.capacity || 0;
@@ -542,6 +557,46 @@ export default function LibraryShelvesWorkstation() {
           </table>
         </div>
       )}
+
+      {/* Pagination Bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 rounded bg-white dark:bg-slate-900 text-xs text-slate-500 shadow-2xs">
+        <div>
+          Showing <span className="font-semibold text-slate-700 dark:text-slate-300">{totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1}</span> to{' '}
+          <span className="font-semibold text-slate-700 dark:text-slate-300">{Math.min(currentPage * pageSize, totalItems)}</span> of{' '}
+          <span className="font-semibold text-slate-700 dark:text-slate-300">{totalItems}</span> shelves
+        </div>
+
+        <div className="flex items-center gap-2">
+          <select
+            value={pageSize}
+            onChange={(e) => setPageSize(Number(e.target.value))}
+            className="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-slate-800 dark:text-slate-200"
+          >
+            <option value={4}>4 / page</option>
+            <option value={8}>8 / page</option>
+            <option value={12}>12 / page</option>
+            <option value={24}>24 / page</option>
+          </select>
+
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage <= 1}
+            className="px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+          >
+            Previous
+          </button>
+          <span className="px-2 font-medium text-slate-700 dark:text-slate-300">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage >= totalPages}
+            className="px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+          >
+            Next
+          </button>
+        </div>
+      </div>
 
       {/* Slide-out Drawer / Modal: Shelf Book Roster */}
       {rosterShelf && (

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
 export default function LibraryCirculationWorkstation({ targetType = 'student', defaultTab = 'all' }) {
   const isStudent = targetType === 'student';
@@ -14,6 +14,10 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [feedback, setFeedback] = useState(null);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Issue Modal
   const [issueModalOpen, setIssueModalOpen] = useState(false);
@@ -66,6 +70,17 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
   useEffect(() => {
     loadCirculation();
   }, [loadCirculation]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, activeTab, pageSize]);
+
+  const totalItems = issues.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const paginatedIssues = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return issues.slice(start, start + pageSize);
+  }, [issues, currentPage, pageSize]);
 
   // Autocomplete Target Search
   useEffect(() => {
@@ -373,7 +388,7 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
                   </td>
                 </tr>
               ) : (
-                issues.map((row) => (
+                paginatedIssues.map((row) => (
                   <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                     <td className="px-3 py-2.5">
                       <div className="font-medium text-slate-900 dark:text-white">{row.book_title}</div>
@@ -474,9 +489,44 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
           </table>
         </div>
 
-        {/* Footer Count */}
-        <div className="text-[11px] text-slate-500 dark:text-slate-400 pt-1">
-          Showing {issues.length} circulation records
+        {/* Pagination Bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3.5 py-2.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 text-xs text-slate-500">
+          <div>
+            Showing <span className="font-semibold text-slate-700 dark:text-slate-300">{totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1}</span> to{' '}
+            <span className="font-semibold text-slate-700 dark:text-slate-300">{Math.min(currentPage * pageSize, totalItems)}</span> of{' '}
+            <span className="font-semibold text-slate-700 dark:text-slate-300">{totalItems}</span> records
+          </div>
+
+          <div className="flex items-center gap-2">
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-slate-800 dark:text-slate-200"
+            >
+              <option value={5}>5 / page</option>
+              <option value={10}>10 / page</option>
+              <option value={20}>20 / page</option>
+              <option value={50}>50 / page</option>
+            </select>
+
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+              className="px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+            >
+              Previous
+            </button>
+            <span className="px-2 font-medium text-slate-700 dark:text-slate-300">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className="px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
 
