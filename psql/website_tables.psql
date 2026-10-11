@@ -2054,5 +2054,143 @@ CREATE INDEX IF NOT EXISTS idx_ws_edu_pay_status ON website_education_fee_paymen
 CREATE INDEX IF NOT EXISTS idx_ws_edu_pay_inv ON website_education_fee_payments(website_id, invoice_no);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_ws_edu_pay_uniq_due ON website_education_fee_payments(website_id, student_id, education_fee_id, month_name) WHERE education_fee_id IS NOT NULL;
 
+-- ----------------------------------------------------------------------------
+-- 54. WEBSITE CLASSROOMS (Academic Classroom Hubs for Classes & Sessions)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_classrooms (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    class_id BIGINT NOT NULL REFERENCES website_classes(id) ON DELETE CASCADE,
+    session_id BIGINT NOT NULL REFERENCES website_sessions(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    room_number VARCHAR(100),
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, class_id, session_id)
+);
+
+DROP TRIGGER IF EXISTS update_website_classrooms_updated_at ON website_classrooms;
+CREATE TRIGGER update_website_classrooms_updated_at
+    BEFORE UPDATE ON website_classrooms
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_classrooms_web ON website_classrooms(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_classrooms_class ON website_classrooms(website_id, class_id);
+CREATE INDEX IF NOT EXISTS idx_ws_classrooms_sess ON website_classrooms(website_id, session_id);
+
+-- ----------------------------------------------------------------------------
+-- 55. WEBSITE CLASSROOM SYLLABUS
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_classroom_syllabus (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    classroom_id BIGINT NOT NULL REFERENCES website_classrooms(id) ON DELETE CASCADE,
+    class_id BIGINT NOT NULL REFERENCES website_classes(id) ON DELETE CASCADE,
+    session_id BIGINT NOT NULL REFERENCES website_sessions(id) ON DELETE CASCADE,
+    subject_id BIGINT NOT NULL REFERENCES website_subjects(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    pdf_url TEXT,
+    description TEXT,
+    created_by_teacher_id BIGINT REFERENCES website_teachers(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_classroom_syllabus_updated_at ON website_classroom_syllabus;
+CREATE TRIGGER update_website_classroom_syllabus_updated_at
+    BEFORE UPDATE ON website_classroom_syllabus
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_syllabus_web ON website_classroom_syllabus(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_syllabus_cr ON website_classroom_syllabus(website_id, classroom_id);
+CREATE INDEX IF NOT EXISTS idx_ws_syllabus_subj ON website_classroom_syllabus(website_id, subject_id);
+
+-- ----------------------------------------------------------------------------
+-- 56. WEBSITE CLASSROOM ASSIGNMENTS
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_classroom_assignments (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    classroom_id BIGINT NOT NULL REFERENCES website_classrooms(id) ON DELETE CASCADE,
+    class_id BIGINT NOT NULL REFERENCES website_classes(id) ON DELETE CASCADE,
+    session_id BIGINT NOT NULL REFERENCES website_sessions(id) ON DELETE CASCADE,
+    subject_id BIGINT NOT NULL REFERENCES website_subjects(id) ON DELETE CASCADE,
+    topic_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    submission_date DATE NOT NULL,
+    pdf_url TEXT,
+    created_by_teacher_id BIGINT REFERENCES website_teachers(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_classroom_assignments_updated_at ON website_classroom_assignments;
+CREATE TRIGGER update_website_classroom_assignments_updated_at
+    BEFORE UPDATE ON website_classroom_assignments
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_assignments_web ON website_classroom_assignments(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_assignments_cr ON website_classroom_assignments(website_id, classroom_id);
+CREATE INDEX IF NOT EXISTS idx_ws_assignments_subj ON website_classroom_assignments(website_id, subject_id);
+CREATE INDEX IF NOT EXISTS idx_ws_assignments_subm ON website_classroom_assignments(website_id, submission_date);
+
+-- ----------------------------------------------------------------------------
+-- 57. WEBSITE CLASSROOM LECTURES
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_classroom_lectures (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    classroom_id BIGINT NOT NULL REFERENCES website_classrooms(id) ON DELETE CASCADE,
+    class_id BIGINT NOT NULL REFERENCES website_classes(id) ON DELETE CASCADE,
+    session_id BIGINT NOT NULL REFERENCES website_sessions(id) ON DELETE CASCADE,
+    subject_id BIGINT NOT NULL REFERENCES website_subjects(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    pdf_url TEXT,
+    description TEXT,
+    created_by_teacher_id BIGINT REFERENCES website_teachers(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_classroom_lectures_updated_at ON website_classroom_lectures;
+CREATE TRIGGER update_website_classroom_lectures_updated_at
+    BEFORE UPDATE ON website_classroom_lectures
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_lectures_web ON website_classroom_lectures(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_lectures_cr ON website_classroom_lectures(website_id, classroom_id);
+CREATE INDEX IF NOT EXISTS idx_ws_lectures_subj ON website_classroom_lectures(website_id, subject_id);
+
+-- ----------------------------------------------------------------------------
+-- 58. WEBSITE CLASSROOM NOTES
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_classroom_notes (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    classroom_id BIGINT NOT NULL REFERENCES website_classrooms(id) ON DELETE CASCADE,
+    class_id BIGINT NOT NULL REFERENCES website_classes(id) ON DELETE CASCADE,
+    session_id BIGINT NOT NULL REFERENCES website_sessions(id) ON DELETE CASCADE,
+    subject_id BIGINT NOT NULL REFERENCES website_subjects(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    pdf_url TEXT,
+    created_by_teacher_id BIGINT REFERENCES website_teachers(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_classroom_notes_updated_at ON website_classroom_notes;
+CREATE TRIGGER update_website_classroom_notes_updated_at
+    BEFORE UPDATE ON website_classroom_notes
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_notes_web ON website_classroom_notes(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_notes_cr ON website_classroom_notes(website_id, classroom_id);
+CREATE INDEX IF NOT EXISTS idx_ws_notes_subj ON website_classroom_notes(website_id, subject_id);
+
+
 
 

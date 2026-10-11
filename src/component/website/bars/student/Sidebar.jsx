@@ -27,6 +27,7 @@ const Sidebar = () => {
 
   const studentLinks = [
     { label: 'Overview Dashboard', href: '/student' },
+    { label: 'My Classrooms & LMS', href: '/student/classrooms' },
     { label: 'Class Routine', href: '/student/routine' },
     { label: 'Attendance Records', href: '/student/attendance' },
     { label: 'Subjects & Syllabus', href: '/student/subjects' },

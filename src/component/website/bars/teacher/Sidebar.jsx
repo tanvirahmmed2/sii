@@ -34,6 +34,7 @@ const Sidebar = () => {
 
   const teacherLinks = [
     { label: 'Overview Dashboard', href: '/teacher' },
+    { label: 'Classrooms & Learning', href: '/teacher/classrooms' },
     { label: 'Exam Schedules', href: '/teacher/exams' },
     { label: 'Class Schedules', href: '/teacher/schedule' },
     { label: 'Attendance Records', href: '/teacher/attendance' },

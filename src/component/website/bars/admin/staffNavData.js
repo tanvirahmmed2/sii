@@ -30,6 +30,10 @@ export const staffNavData = [
       {
         title: 'Class Teacher',
         path: '/class-teacher'
+      },
+      {
+        title: 'Classrooms (LMS)',
+        path: '/classrooms'
       }
     ]
   },
