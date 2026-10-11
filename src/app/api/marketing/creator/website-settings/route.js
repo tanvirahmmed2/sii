@@ -3,8 +3,8 @@ import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession } from 'src/lib/middleware/creator';
 
 /**
- * API Route: /api/creator/website-settings
- * Dedicated to the `website_settings` table.
+ * API Route: /api/marketing/creator/website-settings
+ * Directly queries and updates the `websites` table from schema.psql.
  */
 
 export async function GET(request) {
@@ -28,18 +28,22 @@ export async function GET(request) {
     }
 
     const res = await queryDb(
-      `SELECT ws.*, 
+      `SELECT w.*, 
+              w.id AS website_id,
               w.name AS website_name, 
               w.name AS site_title,
-              COALESCE(ws.motto, 'Modern Educational Hub') AS tagline,
-              w.subdomain, 
-              w.custom_domain, 
-              w.primary_color,
-              w.secondary_color,
-              w.theme,
+              ('Excellence in ' || COALESCE(w.institution_type, 'Education')) AS tagline,
+              ('Excellence in ' || COALESCE(w.institution_type, 'Education')) AS motto,
+              '' AS mission,
+              '' AS vision,
+              '' AS history,
+              '' AS map_url,
+              '' AS facebook_url,
+              '' AS twitter_url,
+              '' AS instagram_url,
+              '' AS youtube_url,
               (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published
        FROM websites w
-       LEFT JOIN website_settings ws ON ws.website_id = w.id
        WHERE w.id = $1
        LIMIT 1`,
       [websiteId]
@@ -74,7 +78,7 @@ export async function POST(request) {
       }
     }
 
-    // 1. Update websites table attributes if provided
+    // Update websites table attributes
     const websiteUpdates = [];
     const websiteValues = [];
     let wIdx = 1;
@@ -99,6 +103,28 @@ export async function POST(request) {
       websiteUpdates.push(`status = $${wIdx++}`);
       websiteValues.push(body.is_published ? 'active' : 'suspended');
     }
+    const contactPhone = body.contact_phone !== undefined ? body.contact_phone : body.contactPhone;
+    if (contactPhone !== undefined) {
+      websiteUpdates.push(`contact_phone = $${wIdx++}`);
+      websiteValues.push(contactPhone || null);
+    }
+    const contactEmail = body.contact_email !== undefined ? body.contact_email : body.contactEmail;
+    if (contactEmail !== undefined) {
+      websiteUpdates.push(`contact_email = $${wIdx++}`);
+      websiteValues.push(contactEmail || null);
+    }
+    if (body.address !== undefined) {
+      websiteUpdates.push(`address = $${wIdx++}`);
+      websiteValues.push(body.address || null);
+    }
+    if (body.institution_type !== undefined || body.institutionType !== undefined) {
+      websiteUpdates.push(`institution_type = $${wIdx++}`);
+      websiteValues.push(body.institution_type || body.institutionType || null);
+    }
+    if (body.eiin_number !== undefined || body.eiinNumber !== undefined) {
+      websiteUpdates.push(`eiin_number = $${wIdx++}`);
+      websiteValues.push(body.eiin_number || body.eiinNumber || null);
+    }
 
     if (websiteUpdates.length > 0) {
       websiteValues.push(websiteId);
@@ -108,60 +134,31 @@ export async function POST(request) {
       ).catch((err) => console.warn('Websites update notice:', err.message));
     }
 
-    // 2. Update website_settings table attributes
-    const contactPhone = body.contact_phone !== undefined ? body.contact_phone : body.contactPhone;
-    const contactEmail = body.contact_email !== undefined ? body.contact_email : body.contactEmail;
-    const address = body.address;
-    const motto = body.motto || body.tagline;
-    const mission = body.mission;
-    const vision = body.vision;
-    const history = body.history;
-    const mapUrl = body.map_url || body.mapUrl;
-    const facebookUrl = body.facebook_url || body.facebookUrl;
-    const twitterUrl = body.twitter_url || body.twitterUrl;
-    const instagramUrl = body.instagram_url || body.instagramUrl;
-    const youtubeUrl = body.youtube_url || body.youtubeUrl;
-
-    const res = await queryDb(
-      `INSERT INTO website_settings (
-        website_id, contact_phone, contact_email, address, motto, mission, vision, history, map_url, facebook_url, twitter_url, instagram_url, youtube_url
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-      ON CONFLICT (website_id) DO UPDATE SET
-        contact_phone = COALESCE(EXCLUDED.contact_phone, website_settings.contact_phone),
-        contact_email = COALESCE(EXCLUDED.contact_email, website_settings.contact_email),
-        address = COALESCE(EXCLUDED.address, website_settings.address),
-        motto = COALESCE(EXCLUDED.motto, website_settings.motto),
-        mission = COALESCE(EXCLUDED.mission, website_settings.mission),
-        vision = COALESCE(EXCLUDED.vision, website_settings.vision),
-        history = COALESCE(EXCLUDED.history, website_settings.history),
-        map_url = COALESCE(EXCLUDED.map_url, website_settings.map_url),
-        facebook_url = COALESCE(EXCLUDED.facebook_url, website_settings.facebook_url),
-        twitter_url = COALESCE(EXCLUDED.twitter_url, website_settings.twitter_url),
-        instagram_url = COALESCE(EXCLUDED.instagram_url, website_settings.instagram_url),
-        youtube_url = COALESCE(EXCLUDED.youtube_url, website_settings.youtube_url),
-        updated_at = CURRENT_TIMESTAMP
-      RETURNING *`,
-      [
-        websiteId,
-        contactPhone || null,
-        contactEmail || null,
-        address || null,
-        motto || null,
-        mission || null,
-        vision || null,
-        history || null,
-        mapUrl || null,
-        facebookUrl || null,
-        twitterUrl || null,
-        instagramUrl || null,
-        youtubeUrl || null,
-      ]
+    const refreshed = await queryDb(
+      `SELECT w.*, 
+              w.id AS website_id,
+              w.name AS website_name, 
+              w.name AS site_title,
+              ('Excellence in ' || COALESCE(w.institution_type, 'Education')) AS tagline,
+              ('Excellence in ' || COALESCE(w.institution_type, 'Education')) AS motto,
+              '' AS mission,
+              '' AS vision,
+              '' AS history,
+              '' AS map_url,
+              '' AS facebook_url,
+              '' AS twitter_url,
+              '' AS instagram_url,
+              '' AS youtube_url,
+              (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published
+       FROM websites w
+       WHERE w.id = $1
+       LIMIT 1`,
+      [websiteId]
     );
 
     return NextResponse.json({
       success: true,
-      settings: res.rows[0],
+      settings: refreshed.rows[0] || {},
       message: 'Website settings updated successfully',
     });
   } catch (error) {

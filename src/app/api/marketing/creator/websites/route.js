@@ -89,30 +89,24 @@ export async function GET(request) {
       const singleRes = await queryDb(
         `SELECT w.*, 
                 w.name AS site_title,
-                ws.motto AS tagline,
-                ws.motto,
-                ws.mission,
-                ws.vision,
-                ws.history,
-                ws.map_url,
-                ws.facebook_url,
-                ws.twitter_url,
-                ws.instagram_url,
-                ws.youtube_url,
+                ('Excellence in ' || COALESCE(w.institution_type, 'Education')) AS tagline,
+                ('Excellence in ' || COALESCE(w.institution_type, 'Education')) AS motto,
+                '' AS mission,
+                '' AS vision,
+                '' AS history,
+                '' AS map_url,
+                '' AS facebook_url,
+                '' AS twitter_url,
+                '' AS instagram_url,
+                '' AS youtube_url,
                 p.name AS package_name,
                 p.slug AS package_slug,
                 s.id AS subscription_id,
                 s.status AS subscription_status,
                 s.billing_cycle AS subscription_billing_cycle,
                 s.current_period_end AS subscription_period_end,
-                COALESCE(w.contact_email, ws.contact_email) AS contact_email,
-                COALESCE(w.contact_phone, ws.contact_phone) AS contact_phone, 
-                COALESCE(w.address, ws.address) AS address,
-                w.primary_color,
-                w.secondary_color,
                 (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published
          FROM websites w
-         LEFT JOIN website_settings ws ON w.id = ws.website_id
          LEFT JOIN subscriptions s ON w.subscription_id = s.id
          LEFT JOIN packages p ON s.package_id = p.id
          WHERE w.creator_id = $1 
@@ -143,21 +137,15 @@ export async function GET(request) {
     const res = await queryDb(
       `SELECT w.*, 
               w.name AS site_title,
-              ws.motto AS tagline,
+              ('Excellence in ' || COALESCE(w.institution_type, 'Education')) AS tagline,
               p.name AS package_name,
               p.slug AS package_slug,
               s.id AS subscription_id,
               s.status AS subscription_status,
               s.billing_cycle AS subscription_billing_cycle,
               s.current_period_end AS subscription_period_end,
-              COALESCE(w.contact_email, ws.contact_email) AS contact_email,
-              COALESCE(w.contact_phone, ws.contact_phone) AS contact_phone, 
-              COALESCE(w.address, ws.address) AS address,
-              w.primary_color,
-              w.secondary_color,
               (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published
        FROM websites w
-       LEFT JOIN website_settings ws ON w.id = ws.website_id
        LEFT JOIN subscriptions s ON w.subscription_id = s.id
        LEFT JOIN packages p ON s.package_id = p.id
        WHERE w.creator_id = $1
@@ -755,99 +743,22 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       }
     }
 
-    // Synchronize website_settings
-    const settingUpdates = [];
-    const settingValues = [];
-    let sIdx = 1;
-
-    if (body.contact_email !== undefined || body.email !== undefined || body.mail !== undefined) {
-      settingUpdates.push(`contact_email = $${sIdx++}`);
-      settingValues.push(body.contact_email || body.email || body.mail);
-    }
-    if (body.contact_phone !== undefined || body.phone !== undefined || body.contactNumber !== undefined) {
-      settingUpdates.push(`contact_phone = $${sIdx++}`);
-      settingValues.push(body.contact_phone || body.phone || body.contactNumber);
-    }
-    if (body.address !== undefined) {
-      settingUpdates.push(`address = $${sIdx++}`);
-      settingValues.push(body.address);
-    }
-    if (body.tagline !== undefined || body.motto !== undefined) {
-      settingUpdates.push(`motto = $${sIdx++}`);
-      settingValues.push(body.tagline || body.motto);
-    }
-    if (body.mission !== undefined) {
-      settingUpdates.push(`mission = $${sIdx++}`);
-      settingValues.push(body.mission);
-    }
-    if (body.vision !== undefined) {
-      settingUpdates.push(`vision = $${sIdx++}`);
-      settingValues.push(body.vision);
-    }
-    if (body.history !== undefined) {
-      settingUpdates.push(`history = $${sIdx++}`);
-      settingValues.push(body.history);
-    }
-    if (body.map_url !== undefined) {
-      settingUpdates.push(`map_url = $${sIdx++}`);
-      settingValues.push(body.map_url);
-    }
-    if (body.facebook_url !== undefined) {
-      settingUpdates.push(`facebook_url = $${sIdx++}`);
-      settingValues.push(body.facebook_url);
-    }
-    if (body.twitter_url !== undefined) {
-      settingUpdates.push(`twitter_url = $${sIdx++}`);
-      settingValues.push(body.twitter_url);
-    }
-    if (body.instagram_url !== undefined) {
-      settingUpdates.push(`instagram_url = $${sIdx++}`);
-      settingValues.push(body.instagram_url);
-    }
-    if (body.youtube_url !== undefined) {
-      settingUpdates.push(`youtube_url = $${sIdx++}`);
-      settingValues.push(body.youtube_url);
-    }
-
-    if (settingUpdates.length > 0) {
-      settingValues.push(id);
-      await queryDb(`
-        UPDATE website_settings
-        SET ${settingUpdates.join(', ')},
-            updated_at = CURRENT_TIMESTAMP
-        WHERE website_id = $${sIdx++}
-      `, settingValues).catch(async () => {
-        // If row doesn't exist yet, insert it
-        await queryDb(`
-          INSERT INTO website_settings (website_id, contact_email, contact_phone, address, motto)
-          VALUES ($1, $2, $3, $4, $5)
-          ON CONFLICT (website_id) DO NOTHING
-        `, [id, body.contact_email || null, body.contact_phone || null, body.address || null, body.tagline || body.motto || null]);
-      });
-    }
-
-    // Fetch refreshed website with settings
+    // Fetch refreshed website directly from websites table
     const refreshed = await queryDb(
       `SELECT w.*, 
               w.name AS site_title,
-              ws.motto AS tagline,
-              ws.motto,
-              ws.mission,
-              ws.vision,
-              ws.history,
-              ws.map_url,
-              ws.facebook_url,
-              ws.twitter_url,
-              ws.instagram_url,
-              ws.youtube_url,
-              COALESCE(w.contact_email, ws.contact_email) AS contact_email,
-              COALESCE(w.contact_phone, ws.contact_phone) AS contact_phone, 
-              COALESCE(w.address, ws.address) AS address,
-              w.primary_color,
-              w.secondary_color,
+              ('Excellence in ' || COALESCE(w.institution_type, 'Education')) AS tagline,
+              ('Excellence in ' || COALESCE(w.institution_type, 'Education')) AS motto,
+              '' AS mission,
+              '' AS vision,
+              '' AS history,
+              '' AS map_url,
+              '' AS facebook_url,
+              '' AS twitter_url,
+              '' AS instagram_url,
+              '' AS youtube_url,
               (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published
        FROM websites w
-       LEFT JOIN website_settings ws ON w.id = ws.website_id
        WHERE w.id = $1 AND w.creator_id = $2
        LIMIT 1`,
       [id, creatorId]
@@ -924,29 +835,7 @@ export async function POST(request) {
  */
 export async function seedWebsiteDefaults(websiteId, websiteName, themeConfig = {}, extraSettings = {}) {
   try {
-    const primaryColor = themeConfig.primaryColor || extraSettings.primaryColor || '#1e40af';
-
-    // 1. Settings
-    await queryDb(`
-      INSERT INTO website_settings (
-        website_id, contact_email, contact_phone, motto, address
-      )
-      VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT (website_id) DO UPDATE SET
-        contact_email = EXCLUDED.contact_email,
-        contact_phone = EXCLUDED.contact_phone,
-        motto = EXCLUDED.motto,
-        address = EXCLUDED.address,
-        updated_at = CURRENT_TIMESTAMP
-    `, [
-      websiteId,
-      extraSettings.contactEmail || extraSettings.contact_email || extraSettings.mail || null,
-      extraSettings.contactPhone || extraSettings.contact_phone || extraSettings.contactNumber || null,
-      extraSettings.tagline || extraSettings.motto || `Excellence in ${extraSettings.institutionType || 'Academic'} Education`,
-      extraSettings.address || null,
-    ]);
-
-    // 2. Default Sample Notice
+    // Default Sample Notice
     await queryDb(`
       INSERT INTO website_notices (website_id, title, content, is_published, published_at)
       VALUES ($1, $2, $3, TRUE, CURRENT_TIMESTAMP)

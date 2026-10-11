@@ -1,8 +1,8 @@
 import React from 'react';
 
 export const metadata = {
-  title: 'Payments | Staff Panel',
-  description: 'Manage payments in campus administration portal.',
+  title: 'Payment Gateways & Routing | Staff Panel',
+  description: 'Manage multi-tenant payment gateway accounts, sandbox/live credentials, and fee routing assignments.',
 };
 
 export default function Layout({ children }) {
@@ -15,11 +15,14 @@ export default function Layout({ children }) {
             <span className="text-slate-300 dark:text-slate-600">/</span>
             <span>Configuration</span>
             <span className="text-slate-300 dark:text-slate-600">/</span>
-            <span className="text-slate-900 dark:text-slate-200 font-semibold">Payments</span>
+            <span className="text-slate-900 dark:text-slate-200 font-semibold">Payment Gateways</span>
           </div>
-          <h1 className="text-lg font-semibold text-slate-900 dark:text-white mt-0.5 tracking-tight">
-            Payments
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white mt-0.5 tracking-tight flex items-center gap-2">
+            Multi-Gateway & Task Routing Engine
           </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Configure merchant accounts for bKash, Nagad, Stripe, SSLCommerz, Paddle, Sonali Gateway, SurjoPay & EPS with sandbox/live switching and fee task routing.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">

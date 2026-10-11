@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import Link from 'next/link';
+import { BiMenu } from 'react-icons/bi';
 
 const Navbar = ({ staffUser = null }) => {
   const router = useRouter();
@@ -63,7 +64,7 @@ const Navbar = ({ staffUser = null }) => {
           className="px-2 py-1 text-xs font-medium rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 md:hidden transition-colors cursor-pointer"
           aria-label="Toggle Navigation"
         >
-          Menu
+          <BiMenu/>
         </button>
 
         {/* Brand / Title */}
@@ -102,7 +103,7 @@ const Navbar = ({ staffUser = null }) => {
           onClick={handleLogout}
           className="px-2.5 py-1 rounded border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-xs font-medium transition-colors cursor-pointer"
         >
-          Sign Out
+          Logout
         </button>
       </div>
     </nav>

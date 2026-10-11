@@ -127,6 +127,27 @@ export const staffNavData = [
     ]
   },
   {
+    title: 'Admissions',
+    children: [
+      {
+        title: 'Circulars & Fees',
+        path: '/admission-circulars'
+      },
+      {
+        title: 'Applicants Review',
+        path: '/admission-applicants'
+      },
+      {
+        title: 'Merit Results',
+        path: '/admission-result'
+      },
+      {
+        title: 'Student Enrollment',
+        path: '/admission-enrollment'
+      }
+    ]
+  },
+  {
     title: 'Student Attendance',
     children: [
       {

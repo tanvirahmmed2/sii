@@ -994,6 +994,7 @@ CREATE TABLE IF NOT EXISTS website_students (
     section_id BIGINT REFERENCES website_sections(id) ON DELETE SET NULL,
     session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
     roll_no VARCHAR(50),
+    email VARCHAR(255),
     student_unique_id VARCHAR(100) NOT NULL,
     is_active BOOLEAN DEFAULT FALSE, -- Indicates whether setup is completed and student account is active
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1001,6 +1002,8 @@ CREATE TABLE IF NOT EXISTS website_students (
     UNIQUE(website_id, registration_no),
     UNIQUE(website_id, student_unique_id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_ws_students_email ON website_students(website_id, email);
 
 DROP TRIGGER IF EXISTS update_website_students_updated_at ON website_students;
 CREATE TRIGGER update_website_students_updated_at
@@ -1959,6 +1962,7 @@ CREATE TABLE IF NOT EXISTS website_exam_fee_payments (
     amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount >= 0),
     paid_amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (paid_amount >= 0),
     fine_amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (fine_amount >= 0),
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
     payment_status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid', 'partially_paid', 'waived', 'failed')),
     payment_method VARCHAR(50) DEFAULT 'cash',
     transaction_id VARCHAR(100),
@@ -1994,6 +1998,7 @@ CREATE TABLE IF NOT EXISTS website_education_fees (
     fee_type VARCHAR(100) NOT NULL DEFAULT 'tuition',
     frequency VARCHAR(50) NOT NULL DEFAULT 'monthly' CHECK (frequency IN ('monthly', 'term', 'quarterly', 'yearly', 'one_time')),
     amount NUMERIC(10, 2) NOT NULL CHECK (amount >= 0),
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
     late_fee NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (late_fee >= 0),
     due_day_of_month INT DEFAULT 10 CHECK (due_day_of_month BETWEEN 1 AND 31),
     description TEXT,
@@ -2030,6 +2035,7 @@ CREATE TABLE IF NOT EXISTS website_education_fee_payments (
     amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount >= 0),
     fine_amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (fine_amount >= 0),
     paid_amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (paid_amount >= 0),
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
     due_date DATE,
     payment_status VARCHAR(50) NOT NULL DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid', 'paid', 'partially_paid', 'waived', 'failed')),
     payment_method VARCHAR(50) DEFAULT 'online',
@@ -2192,5 +2198,332 @@ CREATE INDEX IF NOT EXISTS idx_ws_notes_cr ON website_classroom_notes(website_id
 CREATE INDEX IF NOT EXISTS idx_ws_notes_subj ON website_classroom_notes(website_id, subject_id);
 
 
+-- ============================================================================
+-- SECTION 15: MULTI-TENANT PAYMENT GATEWAYS & ROUTING CONFIGURATION
+-- Supports: paddle, sslcommerz, sonali gateway, stripe, bkash, nagad, surjopay, eps
+-- Multi-account per gateway, sandbox & live environments, task/fee routing
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 59. WEBSITE PAYMENT GATEWAYS CATALOG (Supported Gateway Providers)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_payment_gateways (
+    id BIGSERIAL PRIMARY KEY,
+    code VARCHAR(50) UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    category VARCHAR(50) DEFAULT 'mobile_banking',
+    description TEXT,
+    logo_icon VARCHAR(255),
+    website_url VARCHAR(255),
+    supported_currencies VARCHAR(100)[] DEFAULT ARRAY['BDT'],
+    credential_schema JSONB NOT NULL DEFAULT '[]'::jsonb,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_payment_gateways_updated_at ON website_payment_gateways;
+CREATE TRIGGER update_website_payment_gateways_updated_at
+    BEFORE UPDATE ON website_payment_gateways
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 60. WEBSITE PAYMENT GATEWAY ACCOUNTS (Tenant Multi-Account Gateway Configurations)
+-- Allows multiple accounts per gateway (e.g. 2 bKash, 2 Stripe) with sandbox & live support
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_payment_gateway_accounts (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    gateway_code VARCHAR(50) NOT NULL REFERENCES website_payment_gateways(code) ON DELETE RESTRICT,
+    account_name VARCHAR(150) NOT NULL,
+    account_number VARCHAR(100),
+    environment VARCHAR(20) NOT NULL DEFAULT 'sandbox' CHECK (environment IN ('sandbox', 'live')),
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
+    credentials JSONB NOT NULL DEFAULT '{}'::jsonb,
+    is_active BOOLEAN DEFAULT TRUE,
+    is_default BOOLEAN DEFAULT FALSE,
+    notes TEXT,
+    created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_payment_gateway_accounts_updated_at ON website_payment_gateway_accounts;
+CREATE TRIGGER update_website_payment_gateway_accounts_updated_at
+    BEFORE UPDATE ON website_payment_gateway_accounts
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_pay_acc_web ON website_payment_gateway_accounts(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_pay_acc_gw ON website_payment_gateway_accounts(website_id, gateway_code);
+CREATE INDEX IF NOT EXISTS idx_ws_pay_acc_active ON website_payment_gateway_accounts(website_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_ws_pay_acc_env ON website_payment_gateway_accounts(website_id, environment);
+
+-- ----------------------------------------------------------------------------
+-- 61. WEBSITE PAYMENT PURPOSE ASSIGNMENTS (Task & Fee Type to Gateway Account Routing)
+-- Allows allowed staff to assign a specific gateway account to a specific task
+-- (e.g., residential_fees, education_fees, exam_fees, admission_fees, other_fees)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_payment_purpose_assignments (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    purpose VARCHAR(100) NOT NULL CHECK (purpose IN ('residential_fees', 'education_fees', 'exam_fees', 'admission_fees', 'other_fees')),
+    title VARCHAR(150) NOT NULL,
+    description TEXT,
+    gateway_account_id BIGINT NOT NULL REFERENCES website_payment_gateway_accounts(id) ON DELETE CASCADE,
+    fallback_gateway_account_id BIGINT REFERENCES website_payment_gateway_accounts(id) ON DELETE SET NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    allow_student_portal BOOLEAN DEFAULT TRUE,
+    allow_public_checkout BOOLEAN DEFAULT TRUE,
+    assigned_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, purpose)
+);
+
+DROP TRIGGER IF EXISTS update_website_payment_purpose_assignments_updated_at ON website_payment_purpose_assignments;
+CREATE TRIGGER update_website_payment_purpose_assignments_updated_at
+    BEFORE UPDATE ON website_payment_purpose_assignments
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_pay_assign_web ON website_payment_purpose_assignments(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_pay_assign_acc ON website_payment_purpose_assignments(gateway_account_id);
+CREATE INDEX IF NOT EXISTS idx_ws_pay_assign_purp ON website_payment_purpose_assignments(website_id, purpose);
+
+-- ----------------------------------------------------------------------------
+-- 62. WEBSITE PAYMENT TRANSACTIONS (Multi-Gateway Transaction Ledger & Audit)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_payment_transactions (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    gateway_account_id BIGINT REFERENCES website_payment_gateway_accounts(id) ON DELETE SET NULL,
+    gateway_code VARCHAR(50) NOT NULL,
+    purpose VARCHAR(100) NOT NULL,
+    invoice_ref VARCHAR(150),
+    student_id BIGINT REFERENCES website_students(id) ON DELETE SET NULL,
+    payer_name VARCHAR(150),
+    payer_email VARCHAR(150),
+    payer_phone VARCHAR(50),
+    amount NUMERIC(12, 2) NOT NULL CHECK (amount >= 0),
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
+    environment VARCHAR(20) NOT NULL DEFAULT 'sandbox' CHECK (environment IN ('sandbox', 'live')),
+    transaction_id VARCHAR(150),
+    gateway_reference VARCHAR(255),
+    status VARCHAR(50) NOT NULL DEFAULT 'initiated' CHECK (status IN ('initiated', 'pending', 'completed', 'failed', 'refunded', 'cancelled')),
+    checkout_url TEXT,
+    raw_request JSONB,
+    raw_response JSONB,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_payment_transactions_updated_at ON website_payment_transactions;
+CREATE TRIGGER update_website_payment_transactions_updated_at
+    BEFORE UPDATE ON website_payment_transactions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_pay_tx_web ON website_payment_transactions(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_pay_tx_gw ON website_payment_transactions(website_id, gateway_code);
+CREATE INDEX IF NOT EXISTS idx_ws_pay_tx_status ON website_payment_transactions(website_id, status);
+CREATE INDEX IF NOT EXISTS idx_ws_pay_tx_inv ON website_payment_transactions(website_id, invoice_ref);
+CREATE INDEX IF NOT EXISTS idx_ws_pay_tx_student ON website_payment_transactions(website_id, student_id);
 
 
+-- ============================================================================
+-- SECTION 16: ADMISSION SUBSYSTEM & APPLICANT MANAGEMENT TABLES
+-- Circulars, Admission Fees, Applicants, Details, Fee Payments, Results
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 63. WEBSITE ADMISSIONS TABLE (Intake Circulars / Campaigns)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_admissions (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
+    class_id BIGINT REFERENCES website_classes(id) ON DELETE SET NULL,
+    title VARCHAR(255) NOT NULL,
+    circular_number VARCHAR(100),
+    description TEXT,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    exam_date DATE,
+    min_age INT,
+    max_age INT,
+    capacity INT DEFAULT 100,
+    status VARCHAR(50) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed', 'upcoming', 'archived')),
+    is_published BOOLEAN DEFAULT TRUE,
+    created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_admissions_updated_at ON website_admissions;
+CREATE TRIGGER update_website_admissions_updated_at
+    BEFORE UPDATE ON website_admissions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_adm_web ON website_admissions(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_adm_class ON website_admissions(website_id, class_id);
+CREATE INDEX IF NOT EXISTS idx_ws_adm_status ON website_admissions(website_id, status);
+
+-- ----------------------------------------------------------------------------
+-- 64. WEBSITE ADMISSION FEES TABLE (Application & Intake Fees Structure)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_admission_fees (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    admission_id BIGINT NOT NULL REFERENCES website_admissions(id) ON DELETE CASCADE,
+    fee_title VARCHAR(255) NOT NULL DEFAULT 'Application Form Fee',
+    amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount >= 0),
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
+    late_fee NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (late_fee >= 0),
+    status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_admission_fees_updated_at ON website_admission_fees;
+CREATE TRIGGER update_website_admission_fees_updated_at
+    BEFORE UPDATE ON website_admission_fees
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_adm_fees_web ON website_admission_fees(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_adm_fees_adm ON website_admission_fees(admission_id);
+
+-- ----------------------------------------------------------------------------
+-- 65. WEBSITE ADMISSION APPLICANTS TABLE (Core Candidate Submissions)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_admission_applicants (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    admission_id BIGINT NOT NULL REFERENCES website_admissions(id) ON DELETE CASCADE,
+    application_no VARCHAR(100) NOT NULL,
+    roll_no VARCHAR(50),
+    applicant_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    phone VARCHAR(50) NOT NULL,
+    gender VARCHAR(20) DEFAULT 'Male' CHECK (gender IN ('Male', 'Female', 'Other')),
+    date_of_birth DATE,
+    payment_status VARCHAR(50) NOT NULL DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid', 'paid', 'exempted')),
+    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'selected', 'rejected', 'enrolled')),
+    selection_notes TEXT,
+    score NUMERIC(6, 2) DEFAULT 0.00,
+    merit_position INT,
+    selected_at TIMESTAMPTZ,
+    selected_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    enrolled_at TIMESTAMPTZ,
+    enrolled_student_id BIGINT REFERENCES website_students(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, application_no)
+);
+
+DROP TRIGGER IF EXISTS update_website_admission_applicants_updated_at ON website_admission_applicants;
+CREATE TRIGGER update_website_admission_applicants_updated_at
+    BEFORE UPDATE ON website_admission_applicants
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_adm_app_web ON website_admission_applicants(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_adm_app_adm ON website_admission_applicants(admission_id);
+CREATE INDEX IF NOT EXISTS idx_ws_adm_app_stat ON website_admission_applicants(website_id, status);
+CREATE INDEX IF NOT EXISTS idx_ws_adm_app_pay ON website_admission_applicants(website_id, payment_status);
+CREATE INDEX IF NOT EXISTS idx_ws_adm_app_email ON website_admission_applicants(website_id, email);
+
+-- ----------------------------------------------------------------------------
+-- 66. WEBSITE ADMISSION APPLICANT INFO TABLE (Extended Candidate & Guardian Data)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_admission_applicant_info (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    applicant_id BIGINT NOT NULL REFERENCES website_admission_applicants(id) ON DELETE CASCADE,
+    father_name VARCHAR(255),
+    father_phone VARCHAR(50),
+    father_occupation VARCHAR(100),
+    mother_name VARCHAR(255),
+    mother_phone VARCHAR(50),
+    mother_occupation VARCHAR(100),
+    guardian_name VARCHAR(255),
+    guardian_phone VARCHAR(50),
+    guardian_relation VARCHAR(50),
+    present_address TEXT,
+    permanent_address TEXT,
+    previous_school VARCHAR(255),
+    previous_gpa NUMERIC(4, 2),
+    photo_url TEXT,
+    photo_id VARCHAR(255),
+    signature_url TEXT,
+    signature_id VARCHAR(255),
+    submitted_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(applicant_id)
+);
+
+DROP TRIGGER IF EXISTS update_website_admission_applicant_info_updated_at ON website_admission_applicant_info;
+CREATE TRIGGER update_website_admission_applicant_info_updated_at
+    BEFORE UPDATE ON website_admission_applicant_info
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_adm_info_app ON website_admission_applicant_info(applicant_id);
+
+-- ----------------------------------------------------------------------------
+-- 67. WEBSITE ADMISSION FEE PAYMENTS TABLE (Form Purchase Ledger)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_admission_fee_payments (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    applicant_id BIGINT NOT NULL REFERENCES website_admission_applicants(id) ON DELETE CASCADE,
+    admission_id BIGINT NOT NULL REFERENCES website_admissions(id) ON DELETE CASCADE,
+    gateway_account_id BIGINT REFERENCES website_payment_gateway_accounts(id) ON DELETE SET NULL,
+    gateway_code VARCHAR(50) NOT NULL DEFAULT 'online',
+    amount NUMERIC(10, 2) NOT NULL CHECK (amount >= 0),
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
+    transaction_id VARCHAR(100),
+    payment_status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid', 'failed')),
+    paid_date TIMESTAMPTZ,
+    invoice_no VARCHAR(100),
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_admission_fee_payments_updated_at ON website_admission_fee_payments;
+CREATE TRIGGER update_website_admission_fee_payments_updated_at
+    BEFORE UPDATE ON website_admission_fee_payments
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_adm_pay_web ON website_admission_fee_payments(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_adm_pay_app ON website_admission_fee_payments(applicant_id);
+CREATE INDEX IF NOT EXISTS idx_ws_adm_pay_stat ON website_admission_fee_payments(website_id, payment_status);
+
+-- ----------------------------------------------------------------------------
+-- 68. WEBSITE ADMISSION RESULTS TABLE (Published Intake Results)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_admission_results (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    admission_id BIGINT NOT NULL REFERENCES website_admissions(id) ON DELETE CASCADE,
+    applicant_id BIGINT NOT NULL REFERENCES website_admission_applicants(id) ON DELETE CASCADE,
+    roll_no VARCHAR(50),
+    applicant_name VARCHAR(255) NOT NULL,
+    merit_position INT,
+    score NUMERIC(6, 2) DEFAULT 0.00,
+    selection_status VARCHAR(50) NOT NULL DEFAULT 'selected' CHECK (selection_status IN ('selected', 'waiting', 'rejected')),
+    remarks TEXT,
+    is_published BOOLEAN DEFAULT TRUE,
+    published_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    published_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(admission_id, applicant_id)
+);
+
+DROP TRIGGER IF EXISTS update_website_admission_results_updated_at ON website_admission_results;
+CREATE TRIGGER update_website_admission_results_updated_at
+    BEFORE UPDATE ON website_admission_results
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_adm_res_web ON website_admission_results(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_adm_res_adm ON website_admission_results(admission_id);
+CREATE INDEX IF NOT EXISTS idx_ws_adm_res_pub ON website_admission_results(admission_id, is_published);

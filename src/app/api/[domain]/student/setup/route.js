@@ -15,14 +15,15 @@ export async function GET(request, context) {
 
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token')?.trim();
+    const emailParam = searchParams.get('email')?.trim();
 
-    if (!token) {
-      return NextResponse.json({ success: false, error: 'Setup token is required.' }, { status: 400 });
+    if (!token && !emailParam) {
+      return NextResponse.json({ success: false, error: 'Setup token or registered email is required.' }, { status: 400 });
     }
 
     const res = await queryDb(
       `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
-              s.class_id, s.section_id, s.session_id, s.is_active,
+              s.class_id, s.section_id, s.session_id, s.is_active, s.email AS registered_email,
               i.name, i.email, i.number, i.gender, i.blood_group, i.date_of_birth,
               i.religion, i.admission_date, i.is_registered, i.is_verified,
               i.verification_status, i.verification_token_expires,
@@ -32,14 +33,18 @@ export async function GET(request, context) {
        LEFT JOIN website_classes c ON s.class_id = c.id
        LEFT JOIN website_sections sec ON s.section_id = sec.id
        LEFT JOIN website_sessions ses ON s.session_id = ses.id
-       WHERE s.website_id = $1 AND (i.verification_token = $2 OR s.registration_no = $2)
+       WHERE s.website_id = $1 
+         AND (
+           ($2::text IS NOT NULL AND (i.verification_token = $2 OR s.registration_no = $2))
+           OR ($3::text IS NOT NULL AND LOWER(TRIM(COALESCE(s.email, i.email))) = LOWER(TRIM($3)))
+         )
        LIMIT 1`,
-      [website.id, token]
+      [website.id, token || null, emailParam || null]
     );
 
     if (res.rows.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'Invalid or expired setup token. Please contact administration.' },
+        { success: false, error: 'Invalid or unrecognized setup identifier. Please contact administration.' },
         { status: 404 }
       );
     }
@@ -64,7 +69,10 @@ export async function GET(request, context) {
     return NextResponse.json({
       success: true,
       payload: {
-        student,
+        student: {
+          ...student,
+          email: student.registered_email || student.email
+        },
         address: addrRes.rows[0] || null,
         guardian: guardRes.rows[0] || null,
         picture: picRes.rows[0] || null,
@@ -137,6 +145,10 @@ async function handleSetupSubmission(request, context) {
       return NextResponse.json({ success: false, error: 'Verification token is required.' }, { status: 400 });
     }
 
+    if (!email?.trim()) {
+      return NextResponse.json({ success: false, error: 'Email address is required.' }, { status: 400 });
+    }
+
     if (!password || password.length < 6) {
       return NextResponse.json(
         { success: false, error: 'Password is required and must be at least 6 characters long.' },
@@ -146,11 +158,12 @@ async function handleSetupSubmission(request, context) {
 
     // Verify token exists and is valid
     const studentCheck = await queryDb(
-      `SELECT s.id, s.registration_no,
-              i.email, i.name, i.is_verified, i.verification_token_expires
+      `SELECT s.id, s.registration_no, s.email AS registered_student_email,
+              i.email AS info_email, i.name, i.is_verified, i.verification_token_expires
        FROM website_students s
        LEFT JOIN website_student_info i ON s.id = i.student_id
-       WHERE s.website_id = $1 AND (i.verification_token = $2 OR s.registration_no = $2)
+       WHERE s.website_id = $1 
+         AND (i.verification_token = $2 OR s.registration_no = $2 OR LOWER(TRIM(s.email)) = LOWER(TRIM($2)))
        LIMIT 1`,
       [website.id, token.trim()]
     );
@@ -160,6 +173,25 @@ async function handleSetupSubmission(request, context) {
     }
 
     const student = studentCheck.rows[0];
+
+    // Enforce matching registered student email
+    const registeredEmail = (student.registered_student_email || student.info_email || '').trim().toLowerCase();
+    const inputEmail = email.trim().toLowerCase();
+
+    if (registeredEmail && registeredEmail !== inputEmail) {
+      return NextResponse.json({
+        success: false,
+        error: `Email address mismatch! You must provide your registered institutional email address (${registeredEmail}).`
+      }, { status: 400 });
+    }
+
+    // Enforce email verification via web mailer before continuing setup
+    if (!student.is_verified) {
+      return NextResponse.json({
+        success: false,
+        error: 'Institutional email verification is required. Please verify the code sent to your email before completing setup.'
+      }, { status: 403 });
+    }
 
     if (student.verification_token_expires && new Date() > new Date(student.verification_token_expires)) {
       return NextResponse.json(
@@ -175,7 +207,7 @@ async function handleSetupSubmission(request, context) {
       `UPDATE website_student_info
        SET password = $1,
            name = COALESCE($2, name),
-           email = COALESCE($3, email),
+           email = $3,
            number = COALESCE($4, number),
            gender = COALESCE($5, gender),
            blood_group = COALESCE($6, blood_group),
@@ -188,7 +220,7 @@ async function handleSetupSubmission(request, context) {
       [
         hashedPassword,
         name?.trim() || null,
-        email?.trim()?.toLowerCase() || null,
+        inputEmail,
         number || null,
         gender || null,
         blood_group || null,
@@ -199,13 +231,14 @@ async function handleSetupSubmission(request, context) {
       ]
     );
 
-    // 2. In website_students, ensure is_active remains FALSE (waiting for staff verification)
+    // 2. In website_students, update email and keep is_active = false waiting for staff approval
     await queryDb(
       `UPDATE website_students
-       SET is_active = FALSE,
+       SET email = $1,
+           is_active = FALSE,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $1 AND website_id = $2`,
-      [student.id, website.id]
+       WHERE id = $2 AND website_id = $3`,
+      [inputEmail, student.id, website.id]
     );
 
     // 3. Upsert website_student_addresses
