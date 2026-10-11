@@ -3,7 +3,6 @@ import crypto from 'crypto';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { getStaffSession, isGeneralStaff } from 'src/lib/middleware/staff.js';
-import { isAdmin } from 'src/lib/middleware/developer.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
 
 function buildOfficerVerificationUrl(website, token, request) {
@@ -40,11 +39,14 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Educational institution portal not found.' }, { status: 404 });
     }
 
-    const devAdmin = await isAdmin();
     const staffSession = await getStaffSession(request);
-
-    if (!staffSession && !devAdmin) {
+    if (!staffSession) {
       return NextResponse.json({ success: false, error: 'Unauthorized: Staff credentials required.' }, { status: 401 });
+    }
+
+    const staffWebsiteId = staffSession?.website_id || staffSession?.websiteId || staffSession?.staff?.websiteId || staffSession?.staff?.website_id;
+    if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
+      return NextResponse.json({ success: false, error: 'Forbidden: Cross-tenant access denied.' }, { status: 403 });
     }
 
     const body = await request.json().catch(() => ({}));

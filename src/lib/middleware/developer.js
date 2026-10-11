@@ -255,10 +255,7 @@ export async function isDeveloper(request) {
   }
 }
 
-// Compatibility alias for tenant routes checking developer authentication
-export const isAdmin = isDeveloper;
 export const getDeveloperUser = getDeveloperSession;
-export const getAdminUser = getDeveloperSession;
 
 export async function isStaff(request) {
   const session = await getDeveloperSession(request);
@@ -474,9 +471,7 @@ const DeveloperMiddleware = {
   getAdminSession,
   getAuthenticatedUser,
   getDeveloperUser,
-  getAdminUser,
   isDeveloper,
-  isAdmin,
   isStaff,
   authenticateStaff,
   hasModulePermission,

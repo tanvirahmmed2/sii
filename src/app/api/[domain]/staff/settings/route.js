@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { getStaffSession } from 'src/lib/middleware/staff';
-import { isAdmin } from 'src/lib/middleware/developer';
 
 // GET: Fetch all website configuration and metadata for staff workstation
 export async function GET(request, context) {
@@ -16,9 +15,8 @@ export async function GET(request, context) {
     }
 
     const staffSession = await getStaffSession(request);
-    const devAdmin = await isAdmin();
 
-    if (!staffSession && !devAdmin) {
+    if (!staffSession) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized: Staff authentication required to view website settings.' },
         { status: 401 }
@@ -81,9 +79,8 @@ export async function PUT(request, context) {
     }
 
     const staffSession = await getStaffSession(request);
-    const devAdmin = await isAdmin();
 
-    if (!staffSession && !devAdmin) {
+    if (!staffSession) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized: Staff authentication required to update website settings.' },
         { status: 401 }

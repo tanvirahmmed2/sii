@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getAdminSession } from 'src/lib/middleware/developer';
+import { getDeveloperSession } from 'src/lib/middleware/developer';
 import { SITE_NAME } from 'src/lib/database/secret';
 
 export const metadata = {
@@ -8,7 +8,7 @@ export const metadata = {
 };
 
 export default async function DeveloperAuthLayout({ children }) {
-  const session = await getAdminSession();
+  const session = await getDeveloperSession();
 
   if (session && session.isActive !== false) {
     redirect('/developer');

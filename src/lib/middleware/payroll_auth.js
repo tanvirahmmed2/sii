@@ -1,6 +1,5 @@
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { getStaffSession, hasStaffModulePermission, isGeneralStaff } from 'src/lib/middleware/staff.js';
-import { isAdmin } from 'src/lib/middleware/developer.js';
 
 /**
  * Validates staff authorization to access and manage teacher and officer payroll, salary, and payment records.
@@ -11,10 +10,9 @@ export async function verifyPayrollStaffAccess(request, context, action = 'view'
     return { error: 'Educational institution portal not found.', status: 404 };
   }
 
-  const devAdmin = await isAdmin();
   const staffSession = await getStaffSession(request);
 
-  if (!staffSession && !devAdmin) {
+  if (!staffSession) {
     return { error: 'Unauthorized: Staff credentials required.', status: 401 };
   }
 
@@ -24,12 +22,8 @@ export async function verifyPayrollStaffAccess(request, context, action = 'view'
     staffSession?.staff?.websiteId ||
     staffSession?.staff?.website_id;
 
-  if (!devAdmin && staffSession && staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
+  if (staffSession && staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
     return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
-  }
-
-  if (devAdmin) {
-    return { website, staffSession, devAdmin, allowed: true };
   }
 
   const hasStaffPayroll = hasStaffModulePermission(staffSession, 'staff-payroll', action);
@@ -40,5 +34,5 @@ export async function verifyPayrollStaffAccess(request, context, action = 'view'
     return { error: `Forbidden: Insufficient privileges to ${action} payroll and salary records.`, status: 403 };
   }
 
-  return { website, staffSession, devAdmin, allowed: true };
+  return { website, staffSession, allowed: true };
 }

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { getStaffSession } from 'src/lib/middleware/staff';
-import { isAdmin } from 'src/lib/middleware/developer';
 import { uploadImage } from 'src/lib/database/cloudinary.js';
 
 export async function POST(request, context) {
@@ -11,15 +10,13 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Educational institution portal not found.' }, { status: 404 });
     }
 
-    const devAdmin = await isAdmin();
     const staffSession = await getStaffSession(request);
-
-    if (!staffSession && !devAdmin) {
+    if (!staffSession) {
       return NextResponse.json({ success: false, error: 'Unauthorized: Staff access required.' }, { status: 401 });
     }
 
     const staffWebsiteId = staffSession?.website_id || staffSession?.websiteId || staffSession?.staff?.websiteId || staffSession?.staff?.website_id;
-    if (!devAdmin && staffSession && staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
+    if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
       return NextResponse.json({ success: false, error: 'Forbidden: Cross-tenant access denied.' }, { status: 403 });
     }
 

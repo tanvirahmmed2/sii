@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { clearAdminSessionCookie } from 'src/lib/middleware/developer';
+import { clearDeveloperSessionCookie } from 'src/lib/middleware/developer';
 import { DEVELOPER_TOKEN } from 'src/lib/database/secret';
 import { queryDb } from 'src/lib/database/db';
 
@@ -17,7 +17,7 @@ export async function POST(request) {
     }
 
     const response = NextResponse.json({ success: true, message: 'Logged out successfully.' });
-    await clearAdminSessionCookie(response);
+    await clearDeveloperSessionCookie(response);
 
     return response;
   } catch (error) {

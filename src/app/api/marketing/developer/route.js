@@ -212,7 +212,7 @@ export async function PUT(request) {
 
     if (newEmail !== currentDev.email.toLowerCase()) {
       try {
-        const { generateToken, setAdminSessionCookie } = await import('src/lib/middleware/developer');
+        const { generateToken, setDeveloperSessionCookie } = await import('src/lib/middleware/developer');
         const refreshedToken = generateToken(
           { id: updatedDev.id, email: newEmail, designation: updatedDev.designation },
           '7d'
@@ -221,7 +221,7 @@ export async function PUT(request) {
           refreshedToken,
           updatedDev.id,
         ]).catch(() => {});
-        await setAdminSessionCookie(response, refreshedToken);
+        await setDeveloperSessionCookie(response, refreshedToken);
       } catch (cErr) {
         console.warn('Could not refresh session cookie in api/developer/route.js:', cErr);
       }

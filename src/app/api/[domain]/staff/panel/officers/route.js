@@ -3,7 +3,6 @@ import crypto from 'crypto';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { getStaffSession, hasStaffModulePermission, isGeneralStaff, hashPassword } from 'src/lib/middleware/staff.js';
-import { isAdmin } from 'src/lib/middleware/developer.js';
 import { ensureOfficerSchema, revokeAllOfficerSessions } from 'src/lib/middleware/officer.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
 
@@ -16,10 +15,9 @@ async function verifyStaffOfficerAccess(request, context, action = 'view') {
     return { error: 'Educational institution portal not found.', status: 404 };
   }
 
-  const devAdmin = await isAdmin();
   const staffSession = await getStaffSession(request);
 
-  if (!staffSession && !devAdmin) {
+  if (!staffSession) {
     return { error: 'Unauthorized: Staff credentials required.', status: 401 };
   }
 
@@ -29,12 +27,8 @@ async function verifyStaffOfficerAccess(request, context, action = 'view') {
     staffSession?.staff?.websiteId ||
     staffSession?.staff?.website_id;
 
-  if (!devAdmin && staffSession && staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
+  if (staffSession && staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
     return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
-  }
-
-  if (devAdmin) {
-    return { website, staffSession, devAdmin, allowed: true };
   }
 
   // Check if staff has permissions for staff-payroll, sis, or general staff
@@ -46,7 +40,7 @@ async function verifyStaffOfficerAccess(request, context, action = 'view') {
     return { error: `Forbidden: Insufficient privileges to ${action} officer records.`, status: 403 };
   }
 
-  return { website, staffSession, devAdmin, allowed: true };
+  return { website, staffSession, allowed: true };
 }
 
 /**

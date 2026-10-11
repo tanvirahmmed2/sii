@@ -4,7 +4,7 @@ import {
   hashPassword,
   comparePassword,
   generateToken,
-  setAdminSessionCookie,
+  setDeveloperSessionCookie,
 } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
@@ -281,7 +281,7 @@ export async function PUT(request) {
           updatedDev.id,
         ]).catch(() => {});
 
-        await setAdminSessionCookie(response, refreshedToken);
+        await setDeveloperSessionCookie(response, refreshedToken);
       } catch (cookieErr) {
         console.warn('Could not refresh session cookie after email change:', cookieErr);
       }

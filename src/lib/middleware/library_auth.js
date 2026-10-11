@@ -1,14 +1,12 @@
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { getStaffSession, hasStaffModulePermission, isGeneralStaff } from 'src/lib/middleware/staff.js';
 import { getOfficerSession } from 'src/lib/middleware/officer.js';
-import { isAdmin } from 'src/lib/middleware/developer.js';
 
 /**
  * Validates whether the incoming request is authorized to perform library operations.
  * Allows:
- *  1. Developer Admins
- *  2. Allowed Staff (General staff or staff with library/sis module permission)
- *  3. Allowed Officers (Officers in Library department or with library module permissions)
+ *  1. Allowed Staff (General staff or staff with library/sis module permission)
+ *  2. Allowed Officers (Officers in Library department or with library module permissions)
  *
  * @param {Request} request
  * @param {Object} context
@@ -21,22 +19,7 @@ export async function verifyLibraryAccess(request, context, action = 'view') {
     return { error: 'Educational institution portal not found.', status: 404 };
   }
 
-  // 1. Check Developer Admin
-  const devAdmin = await isAdmin();
-  if (devAdmin) {
-    return {
-      website,
-      actor: {
-        type: 'developer',
-        id: null,
-        name: 'Developer Admin',
-        email: 'developer@antigravity.internal'
-      },
-      allowed: true
-    };
-  }
-
-  // 2. Check Staff Session
+  // 1. Check Staff Session
   const staffSession = await getStaffSession(request);
   if (staffSession) {
     const staffWebsiteId =

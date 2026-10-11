@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { getStaffSession } from 'src/lib/middleware/staff.js';
-import { isAdmin } from 'src/lib/middleware/developer.js';
 import { sendWebsiteEmail, getWebsiteBrevoConfig } from 'src/lib/database/websiteBrevo.js';
 import { buildStyledEmail } from 'src/lib/database/brevo.js';
 
@@ -12,10 +11,8 @@ async function verifyContactsStaffAccess(request, context) {
     return { error: 'Educational institution portal not found.', status: 404 };
   }
 
-  const devAdmin = await isAdmin();
   const staffSession = await getStaffSession(request);
-
-  if (!staffSession && !devAdmin) {
+  if (!staffSession) {
     return { error: 'Unauthorized: Staff credentials required.', status: 401 };
   }
 
@@ -25,11 +22,11 @@ async function verifyContactsStaffAccess(request, context) {
     staffSession?.staff?.websiteId ||
     staffSession?.staff?.website_id;
 
-  if (!devAdmin && staffSession && staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
+  if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
     return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
   }
 
-  return { website, staffSession, devAdmin, allowed: true };
+  return { website, staffSession, allowed: true };
 }
 
 // GET: Fetch replies history for a contact
@@ -81,7 +78,7 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, message: auth.error }, { status: auth.status });
     }
 
-    const { website, staffSession, devAdmin } = auth;
+    const { website, staffSession } = auth;
     const body = await request.json();
 
     const contactId = body.contact_id;
@@ -106,7 +103,7 @@ export async function POST(request, context) {
 
     // Determine staff info
     const staffId = staffSession?.staff?.id || staffSession?.staff_id || null;
-    const staffName = staffSession?.staff?.name || (devAdmin ? 'System Administrator' : 'Staff Desk');
+    const staffName = staffSession?.staff?.name || 'Staff Desk';
 
     // Mailer configuration resolution: website mailer or main mailer fallback
     const brevoConfig = await getWebsiteBrevoConfig(website.id);

@@ -1,15 +1,15 @@
 import { redirect } from 'next/navigation';
-import { isStaff } from 'src/lib/middleware/developer';
+import { isDeveloper } from 'src/lib/middleware/developer';
 import { SITE_NAME } from 'src/lib/database/secret';
 
 export const metadata = {
-  title: `Staff Profile | ${SITE_NAME}`,
-  description: `Manage administrator profile, credentials, and access tokens on ${SITE_NAME}.`,
+  title: `Developer Profile | ${SITE_NAME}`,
+  description: `Manage developer profile, credentials, and access tokens on ${SITE_NAME}.`,
 };
 
 export default async function ProfileLayout({ children }) {
-  const auth = await isStaff();
-  if (!auth || !auth.success) {
+  const isDev = await isDeveloper();
+  if (!isDev) {
     redirect('/developer');
   }
 

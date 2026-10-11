@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { getStaffSession, isGeneralStaff } from 'src/lib/middleware/staff.js';
-import { isAdmin } from 'src/lib/middleware/developer.js';
 
 async function verifyContactsStaffAccess(request, context) {
   const website = await resolveWebsiteFromRequest(request, context);
@@ -10,10 +9,8 @@ async function verifyContactsStaffAccess(request, context) {
     return { error: 'Educational institution portal not found.', status: 404 };
   }
 
-  const devAdmin = await isAdmin();
   const staffSession = await getStaffSession(request);
-
-  if (!staffSession && !devAdmin) {
+  if (!staffSession) {
     return { error: 'Unauthorized: Staff credentials required.', status: 401 };
   }
 
@@ -23,11 +20,11 @@ async function verifyContactsStaffAccess(request, context) {
     staffSession?.staff?.websiteId ||
     staffSession?.staff?.website_id;
 
-  if (!devAdmin && staffSession && staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
+  if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
     return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
   }
 
-  return { website, staffSession, devAdmin, allowed: true };
+  return { website, staffSession, allowed: true };
 }
 
 // GET: List contacts with filters and stats

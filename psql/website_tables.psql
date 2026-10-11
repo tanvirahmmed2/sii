@@ -1838,3 +1838,148 @@ CREATE TRIGGER update_website_book_shelves_updated_at
 CREATE INDEX IF NOT EXISTS idx_ws_bk_shelves_web ON website_book_shelves(website_id);
 CREATE INDEX IF NOT EXISTS idx_ws_books_shelf ON website_books(shelf_id);
 
+-- ============================================================================
+-- 52. WEBSITE EXAMS & CANDIDATES SUBSYSTEM
+-- ============================================================================
+
+-- 1. Exams Table (Scoped to Class and Session)
+CREATE TABLE IF NOT EXISTS website_exams (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    class_id BIGINT NOT NULL REFERENCES website_classes(id) ON DELETE CASCADE,
+    session_id BIGINT NOT NULL REFERENCES website_sessions(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    term VARCHAR(100) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    application_start_date DATE,
+    application_end_date DATE,
+    status VARCHAR(50) NOT NULL DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'current', 'completed', 'published', 'cancelled')),
+    is_published BOOLEAN NOT NULL DEFAULT TRUE,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_exams_updated_at ON website_exams;
+CREATE TRIGGER update_website_exams_updated_at
+    BEFORE UPDATE ON website_exams
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_exams_web ON website_exams(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_exams_cls ON website_exams(website_id, class_id);
+CREATE INDEX IF NOT EXISTS idx_ws_exams_ses ON website_exams(website_id, session_id);
+CREATE INDEX IF NOT EXISTS idx_ws_exams_status ON website_exams(website_id, status);
+
+-- 2. Exam Grades Table (Grade Scale / Grade List)
+CREATE TABLE IF NOT EXISTS website_exam_grades (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    grade_name VARCHAR(50) NOT NULL,
+    point_numeric NUMERIC(4, 2) NOT NULL,
+    mark_from NUMERIC(5, 2) NOT NULL,
+    mark_to NUMERIC(5, 2) NOT NULL,
+    comment VARCHAR(255),
+    status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, grade_name)
+);
+
+DROP TRIGGER IF EXISTS update_website_exam_grades_updated_at ON website_exam_grades;
+CREATE TRIGGER update_website_exam_grades_updated_at
+    BEFORE UPDATE ON website_exam_grades
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_grades_web ON website_exam_grades(website_id);
+
+-- 3. Exam Fees Table (Exam specific fee charges)
+CREATE TABLE IF NOT EXISTS website_exam_fees (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    exam_id BIGINT NOT NULL REFERENCES website_exams(id) ON DELETE CASCADE,
+    class_id BIGINT REFERENCES website_classes(id) ON DELETE CASCADE,
+    fee_title VARCHAR(255) NOT NULL,
+    amount NUMERIC(10, 2) NOT NULL CHECK (amount >= 0),
+    late_fee NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (late_fee >= 0),
+    due_date DATE,
+    description TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_exam_fees_updated_at ON website_exam_fees;
+CREATE TRIGGER update_website_exam_fees_updated_at
+    BEFORE UPDATE ON website_exam_fees
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_fees_web ON website_exam_fees(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_fees_exam ON website_exam_fees(website_id, exam_id);
+
+-- 4. Exam Candidates Table (Student registrations for an exam)
+CREATE TABLE IF NOT EXISTS website_exam_candidates (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    exam_id BIGINT NOT NULL REFERENCES website_exams(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    class_id BIGINT REFERENCES website_classes(id) ON DELETE SET NULL,
+    session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
+    roll_no VARCHAR(50),
+    registration_no VARCHAR(100),
+    candidate_status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (candidate_status IN ('pending', 'approved', 'rejected', 'admit_issued')),
+    admit_card_number VARCHAR(100),
+    applied_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    approved_by BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    approved_at TIMESTAMPTZ,
+    remarks TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, exam_id, student_id)
+);
+
+DROP TRIGGER IF EXISTS update_website_exam_candidates_updated_at ON website_exam_candidates;
+CREATE TRIGGER update_website_exam_candidates_updated_at
+    BEFORE UPDATE ON website_exam_candidates
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_candidates_web ON website_exam_candidates(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_candidates_exam ON website_exam_candidates(website_id, exam_id);
+CREATE INDEX IF NOT EXISTS idx_ws_candidates_stu ON website_exam_candidates(website_id, student_id);
+CREATE INDEX IF NOT EXISTS idx_ws_candidates_stat ON website_exam_candidates(website_id, candidate_status);
+
+-- 5. Exam Fee Payments Table (Tracking candidate fee payments: exam, fee, student id)
+CREATE TABLE IF NOT EXISTS website_exam_fee_payments (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    exam_id BIGINT NOT NULL REFERENCES website_exams(id) ON DELETE CASCADE,
+    fee_id BIGINT REFERENCES website_exam_fees(id) ON DELETE SET NULL,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    candidate_id BIGINT REFERENCES website_exam_candidates(id) ON DELETE SET NULL,
+    amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount >= 0),
+    paid_amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (paid_amount >= 0),
+    fine_amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (fine_amount >= 0),
+    payment_status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid', 'partially_paid', 'waived', 'failed')),
+    payment_method VARCHAR(50) DEFAULT 'cash',
+    transaction_id VARCHAR(100),
+    paid_date TIMESTAMPTZ,
+    received_by VARCHAR(255),
+    invoice_no VARCHAR(100),
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_exam_fee_payments_updated_at ON website_exam_fee_payments;
+CREATE TRIGGER update_website_exam_fee_payments_updated_at
+    BEFORE UPDATE ON website_exam_fee_payments
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_payments_web ON website_exam_fee_payments(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_payments_exam ON website_exam_fee_payments(website_id, exam_id);
+CREATE INDEX IF NOT EXISTS idx_ws_payments_fee ON website_exam_fee_payments(website_id, fee_id);
+CREATE INDEX IF NOT EXISTS idx_ws_payments_stu ON website_exam_fee_payments(website_id, student_id);
+CREATE INDEX IF NOT EXISTS idx_ws_payments_cand ON website_exam_fee_payments(website_id, candidate_id);
+CREATE INDEX IF NOT EXISTS idx_ws_payments_status ON website_exam_fee_payments(website_id, payment_status);
+
+

@@ -159,10 +159,22 @@ const FeesPage = () => {
                 {fees.map((fee) => (
                   <tr key={fee.id} className="hover:bg-slate-50/60 transition-colors">
                     <td className="py-3.5 px-4 font-bold text-slate-800">
-                      {fee.title}
+                      <div className="flex items-center gap-2">
+                        <span>{fee.title}</span>
+                        {fee.type === 'Exam Fee' && (
+                          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            Exam
+                          </span>
+                        )}
+                      </div>
+                      {fee.invoice_no && (
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                          Invoice: {fee.invoice_no}
+                        </div>
+                      )}
                     </td>
                     <td className="py-3.5 px-4 text-xs text-slate-500 font-medium">
-                      {new Date(fee.due_date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {fee.due_date ? new Date(fee.due_date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
                     </td>
                     <td className="py-3.5 px-4">
                       {getStatusBadge(fee.status)}

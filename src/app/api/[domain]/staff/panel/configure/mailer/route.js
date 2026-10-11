@@ -2,26 +2,24 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { getStaffSession } from 'src/lib/middleware/staff';
-import { isAdmin } from 'src/lib/middleware/developer';
 
 async function verifyStaffAccess(request, context) {
   const website = await resolveWebsiteFromRequest(request, context);
   if (!website) {
     return { error: 'Educational institution portal not found.', status: 404 };
   }
-  const devAdmin = await isAdmin();
   const staffSession = await getStaffSession(request);
 
-  if (!staffSession && !devAdmin) {
+  if (!staffSession) {
     return { error: 'Unauthorized: Staff access required.', status: 401 };
   }
 
   const staffWebsiteId = staffSession?.website_id || staffSession?.websiteId || staffSession?.staff?.websiteId || staffSession?.staff?.website_id;
-  if (!devAdmin && staffSession && staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
+  if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
     return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
   }
 
-  return { website, staffSession, devAdmin };
+  return { website, staffSession };
 }
 
 function maskApiKey(key) {

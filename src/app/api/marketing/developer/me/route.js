@@ -4,7 +4,7 @@ import {
   hashPassword,
   comparePassword,
   generateToken,
-  setAdminSessionCookie,
+  setDeveloperSessionCookie,
 } from 'src/lib/middleware/developer';
 import { query } from 'src/lib/database/db';
 
@@ -188,7 +188,7 @@ export async function PUT(request) {
           [refreshedToken, updated.id]
         ).catch(() => {});
 
-        await setAdminSessionCookie(response, refreshedToken);
+        await setDeveloperSessionCookie(response, refreshedToken);
       } catch (cookieErr) {
         console.warn('Cookie refresh warning in /api/developer/me:', cookieErr);
       }

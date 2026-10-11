@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { authenticateAdmin } from 'src/lib/middleware/developer';
+import { authenticateDeveloper } from 'src/lib/middleware/developer';
 import { DEVELOPER_TOKEN } from 'src/lib/database/secret';
 
 export async function POST(request) {
@@ -16,10 +16,11 @@ export async function POST(request) {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || '127.0.0.1';
     const userAgent = request.headers.get('user-agent') || 'Unknown';
 
-    const result = await authenticateAdmin(email, password, { ip, userAgent });
+    const result = await authenticateDeveloper(email, password, { ip, userAgent });
 
     const response = NextResponse.json({
       success: true,
+      developer: result.developer,
       admin: result.admin,
       token: result.token,
       message: 'Logged in successfully.',
