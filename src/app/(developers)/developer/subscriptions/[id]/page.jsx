@@ -969,9 +969,7 @@ export default function SubscriptionDetailsPage({ params }) {
                           className="px-4 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-1.5 transition-colors"
                         >
                           {websiteUpdating ? (
-                            <>
-                              <FiRefreshCw className="animate-spin text-xs" /> Saving...
-                            </>
+                            <div className="loader loader-sm loader-white" />
                           ) : (
                             <>
                               <FiCheckCircle className="text-xs" /> Save Changes
@@ -1644,9 +1642,7 @@ export default function SubscriptionDetailsPage({ params }) {
                   className="px-5 py-2 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-1.5 transition-colors"
                 >
                   {renewalSubmitting ? (
-                    <>
-                      <FiRefreshCw className="animate-spin" /> Processing Renewal...
-                    </>
+                    <div className="loader loader-sm loader-white" />
                   ) : (
                     <>
                       <FiCheckCircle /> Confirm &amp; Apply Renewal

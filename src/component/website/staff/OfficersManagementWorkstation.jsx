@@ -377,8 +377,10 @@ export default function OfficersManagementWorkstation({ title = 'Officers Manage
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-8 text-center text-xs text-slate-400">
-                    Loading officers roster...
+                  <td colSpan={6} className="px-3 py-12 text-center">
+                    <div className="flex justify-center items-center py-2">
+                      <div className="loader loader-sm" />
+                    </div>
                   </td>
                 </tr>
               ) : officers.length === 0 ? (
@@ -706,9 +708,13 @@ export default function OfficersManagementWorkstation({ title = 'Officers Manage
                 <button
                   type="submit"
                   disabled={createSubmitting}
-                  className="px-4 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition disabled:opacity-50"
+                  className="px-4 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition disabled:opacity-50 min-w-[240px] flex items-center justify-center"
                 >
-                  {createSubmitting ? 'Dispatching Invitation...' : 'Create Officer & Send Verification Email'}
+                  {createSubmitting ? (
+                    <div className="loader loader-sm loader-white" />
+                  ) : (
+                    'Create Officer & Send Verification Email'
+                  )}
                 </button>
               </div>
             </form>
@@ -922,9 +928,13 @@ export default function OfficersManagementWorkstation({ title = 'Officers Manage
                 <button
                   type="submit"
                   disabled={editSubmitting}
-                  className="px-4 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition disabled:opacity-50"
+                  className="px-4 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition disabled:opacity-50 min-w-[200px] flex items-center justify-center"
                 >
-                  {editSubmitting ? 'Saving Changes...' : 'Save Officer Profile & Permissions'}
+                  {editSubmitting ? (
+                    <div className="loader loader-sm loader-white" />
+                  ) : (
+                    'Save Officer Profile & Permissions'
+                  )}
                 </button>
               </div>
             </form>

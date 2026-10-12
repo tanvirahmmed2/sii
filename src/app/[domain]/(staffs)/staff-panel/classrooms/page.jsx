@@ -303,10 +303,8 @@ export default function StaffClassroomsPage() {
 
       {/* Classrooms Grid / List */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-56 bg-slate-100 dark:bg-slate-800/60 rounded-2xl animate-pulse" />
-          ))}
+        <div className="py-16 flex justify-center items-center">
+          <div className="loader loader-md" />
         </div>
       ) : filteredClassrooms.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center flex flex-col items-center justify-center space-y-3">
@@ -577,9 +575,15 @@ export default function StaffClassroomsPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition-all shadow-sm disabled:opacity-60 cursor-pointer flex items-center gap-1.5"
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition-all shadow-sm disabled:opacity-60 cursor-pointer flex items-center justify-center min-w-[130px]"
                 >
-                  {saving ? 'Saving...' : modalMode === 'create' ? 'Create Classroom' : 'Save Changes'}
+                  {saving ? (
+                    <div className="loader loader-sm loader-white" />
+                  ) : modalMode === 'create' ? (
+                    'Create Classroom'
+                  ) : (
+                    'Save Changes'
+                  )}
                 </button>
               </div>
             </form>

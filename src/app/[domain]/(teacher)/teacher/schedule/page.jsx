@@ -64,7 +64,9 @@ const SchedulePage = () => {
       {/* Table */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         {loading ? (
-          <div className="py-10 text-center text-xs text-slate-400">Loading schedule...</div>
+          <div className="py-16 flex justify-center items-center">
+            <div className="loader loader-md" />
+          </div>
         ) : dailyClasses.length === 0 ? (
           <div className="py-10 text-center text-xs text-slate-400">No classes scheduled on {activeTab}.</div>
         ) : (

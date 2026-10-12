@@ -320,8 +320,10 @@ export default function OfficerLibraryPage() {
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-xs text-slate-500">
-                    Loading records...
+                  <td colSpan={6} className="py-8 text-center">
+                    <div className="flex justify-center items-center">
+                      <div className="loader loader-sm" />
+                    </div>
                   </td>
                 </tr>
               ) : activeTab === 'overview' ? (

@@ -339,8 +339,8 @@ export default function LibraryShelvesWorkstation() {
 
       {/* Main View Area */}
       {loading ? (
-        <div className="p-8 text-center text-xs text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded">
-          Loading book shelves and live inventory counts...
+        <div className="p-12 flex justify-center items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded">
+          <div className="loader loader-md" />
         </div>
       ) : shelves.length === 0 ? (
         <div className="p-8 text-center text-xs text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded space-y-2">
@@ -643,7 +643,9 @@ export default function LibraryShelvesWorkstation() {
             {/* Books Roster Table */}
             <div className="flex-1 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded">
               {rosterLoading ? (
-                <div className="p-6 text-center text-xs text-slate-400">Loading shelf inventory...</div>
+                <div className="p-8 flex items-center justify-center">
+                  <div className="loader loader-sm" />
+                </div>
               ) : rosterBooks.length === 0 ? (
                 <div className="p-6 text-center text-xs text-slate-400">
                   No books are currently assigned to this shelf rack. You can allocate books to this rack from the Catalog workstation.
@@ -832,9 +834,9 @@ export default function LibraryShelvesWorkstation() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-3.5 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer disabled:opacity-50"
+                  className="px-3.5 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer disabled:opacity-50 flex items-center justify-center min-w-[100px]"
                 >
-                  {submitting ? 'Saving...' : modalMode === 'add' ? 'Create Shelf' : 'Save Changes'}
+                  {submitting ? <div className="loader loader-sm loader-white" /> : modalMode === 'add' ? 'Create Shelf' : 'Save Changes'}
                 </button>
               </div>
             </form>

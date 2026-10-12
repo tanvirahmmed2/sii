@@ -270,14 +270,16 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
             {loading ? (
               <tr>
-                <td colSpan={10} className="py-8 text-center text-slate-400">
-                  Loading payroll scales...
+                <td colSpan={10} className="py-12 text-center">
+                  <div className="flex justify-center items-center py-2">
+                    <div className="loader loader-sm" />
+                  </div>
                 </td>
               </tr>
             ) : payrolls.length === 0 ? (
               <tr>
                 <td colSpan={10} className="py-8 text-center text-slate-400">
-                  No payroll scales found. Click "+ New Payroll Scale" to create one.
+                  No payroll scales found. Click &quot;+ New Payroll Scale&quot; to create one.
                 </td>
               </tr>
             ) : (
@@ -565,9 +567,15 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-3.5 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 rounded transition-colors disabled:opacity-50"
+                  className="px-3.5 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 rounded transition-colors disabled:opacity-50 min-w-[100px] flex items-center justify-center"
                 >
-                  {saving ? 'Saving...' : editingPayroll ? 'Save Changes' : 'Create Scale'}
+                  {saving ? (
+                    <div className="loader loader-sm loader-white" />
+                  ) : editingPayroll ? (
+                    'Save Changes'
+                  ) : (
+                    'Create Scale'
+                  )}
                 </button>
               </div>
             </form>

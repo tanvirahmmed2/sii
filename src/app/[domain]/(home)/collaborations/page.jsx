@@ -46,8 +46,8 @@ export default function CollaborationsPage() {
       {/* Partners Grid */}
       <div className="max-w-5xl mx-auto">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-2">
-            <span className="text-xs font-medium text-slate-400">Loading collaborations...</span>
+          <div className="flex justify-center items-center py-20">
+            <div className="loader loader-md" />
           </div>
         ) : partners.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

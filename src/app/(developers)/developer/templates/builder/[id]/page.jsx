@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import dynamic from 'next/dynamic';
+import LoadingScreen from 'src/component/common/LoadingScreen';
 
 // Dynamically import GrapesStudio with SSR disabled since GrapesJS accesses window and DOM
 const GrapesStudio = dynamic(
@@ -55,12 +56,7 @@ export default function TemplateBuilderPage() {
   };
 
   if (loading) {
-    return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-950 text-white gap-3">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs text-slate-400 font-mono">Loading Template &amp; Canvas...</p>
-      </div>
-    );
+    return <LoadingScreen fullScreen={true} />;
   }
 
   if (error || !template) {

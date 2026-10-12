@@ -34,8 +34,8 @@ const TiptapEditor = ({ value, onChange, placeholder = 'Write description...' })
 
   if (!editor) {
     return (
-      <div className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-400 font-medium animate-pulse">
-        Loading editor...
+      <div className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-6 flex justify-center items-center">
+        <div className="loader loader-sm" />
       </div>
     );
   }

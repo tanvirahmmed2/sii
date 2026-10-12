@@ -28,8 +28,8 @@ import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor.jsx'), {
   ssr: false,
   loading: () => (
-    <div className="h-44 w-full bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 animate-pulse flex items-center justify-center text-xs text-slate-400">
-      Loading rich text editor...
+    <div className="h-44 w-full bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+      <div className="loader loader-sm" />
     </div>
   )
 });

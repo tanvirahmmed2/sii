@@ -232,7 +232,13 @@ export default function TeacherRecoveryPage() {
   return (
     <div className="w-full min-h-[80vh] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-6 sm:p-8 shadow-xs">
-        <Suspense fallback={<div className="py-12 text-center text-xs text-slate-400">Loading...</div>}>
+        <Suspense
+          fallback={
+            <div className="py-12 flex justify-center items-center">
+              <div className="loader loader-md" />
+            </div>
+          }
+        >
           <TeacherRecoveryInner />
         </Suspense>
       </div>

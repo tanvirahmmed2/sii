@@ -60,7 +60,9 @@ export default function TransferredRoster() {
           </form>
 
           {loading ? (
-            <div className="py-12 text-center text-xs text-slate-400 font-semibold animate-pulse">Loading transferred students...</div>
+            <div className="py-12 flex items-center justify-center">
+              <div className="loader loader-sm" />
+            </div>
           ) : students.length === 0 ? (
             <div className="py-12 text-center text-xs text-slate-400 italic">No transferred students found.</div>
           ) : (

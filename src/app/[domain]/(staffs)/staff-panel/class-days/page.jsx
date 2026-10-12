@@ -184,7 +184,9 @@ export default function ClassDaysPage() {
         {/* Days Table */}
         <div className="overflow-x-auto">
           {loading ? (
-            <div className="py-12 text-center text-xs text-slate-500">Loading academic days...</div>
+            <div className="py-12 flex justify-center items-center">
+              <div className="loader loader-sm" />
+            </div>
           ) : days.length === 0 ? (
             <div className="py-12 text-center space-y-2">
               <BiCalendarCheck className="mx-auto text-3xl text-slate-400" />

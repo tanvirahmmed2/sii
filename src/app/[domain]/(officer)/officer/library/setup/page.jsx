@@ -259,8 +259,10 @@ export default function OfficerLibrarySetupPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-3 py-8 text-center text-xs text-slate-400">
-                    Loading classification records...
+                  <td colSpan={5} className="px-3 py-10 text-center">
+                    <div className="flex justify-center items-center">
+                      <div className="loader loader-sm" />
+                    </div>
                   </td>
                 </tr>
               ) : paginatedData.length === 0 ? (

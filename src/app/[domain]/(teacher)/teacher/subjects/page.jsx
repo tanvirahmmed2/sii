@@ -36,7 +36,9 @@ const SubjectsPage = () => {
       </div>
 
       {loading ? (
-        <div className="w-full py-10 text-center text-xs text-slate-400">Loading subjects...</div>
+        <div className="w-full py-16 flex justify-center items-center">
+          <div className="loader loader-md" />
+        </div>
       ) : subjects.length === 0 ? (
         <div className="bg-white border border-slate-200 rounded-xl py-12 text-center text-xs text-slate-400">
           No subjects assigned yet.

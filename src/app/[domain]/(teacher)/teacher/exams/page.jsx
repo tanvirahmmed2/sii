@@ -54,7 +54,9 @@ const TeacherExamsPage = () => {
       </div>
 
       {loading ? (
-        <div className="py-10 text-center text-xs text-slate-400">Loading exams...</div>
+        <div className="py-16 flex justify-center items-center">
+          <div className="loader loader-md" />
+        </div>
       ) : filteredExams.length === 0 ? (
         <div className="bg-white border border-slate-200 rounded-xl py-10 text-center text-xs text-slate-400">
           No exam routines found for "{selectedStatus}".

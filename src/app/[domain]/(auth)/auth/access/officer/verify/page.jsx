@@ -153,11 +153,8 @@ function OfficerVerifyContent() {
         </div>
 
         {validating ? (
-          <div className="py-12 text-center space-y-2">
-            <div className="text-xs text-slate-600 dark:text-slate-300 font-medium">
-              Validating verification credentials...
-            </div>
-            <p className="text-[11px] text-slate-400">Please wait while we verify your invitation.</p>
+          <div className="py-12 flex items-center justify-center">
+            <div className="loader loader-md" />
           </div>
         ) : errorMsg ? (
           <div className="space-y-4">
@@ -304,8 +301,8 @@ export default function OfficerVerifyPage() {
   return (
     <Suspense
       fallback={
-        <div className="w-full min-h-[60vh] flex items-center justify-center text-xs text-slate-500">
-          Loading verification portal...
+        <div className="w-full min-h-[60vh] flex items-center justify-center">
+          <div className="loader loader-md" />
         </div>
       }
     >

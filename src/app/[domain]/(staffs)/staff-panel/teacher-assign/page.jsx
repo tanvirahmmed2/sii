@@ -432,9 +432,10 @@ function TeacherAssignContent() {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="px-3 py-8 text-center text-slate-400">
-                      <FiRefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-slate-400" />
-                      <span>Loading assigned subjects...</span>
+                    <td colSpan={5} className="px-3 py-10 text-center">
+                      <div className="flex justify-center items-center">
+                        <div className="loader loader-sm" />
+                      </div>
                     </td>
                   </tr>
                 ) : assignedSubjects.length === 0 ? (
@@ -507,9 +508,10 @@ function TeacherAssignContent() {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="px-3 py-8 text-center text-slate-400">
-                      <FiRefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-slate-400" />
-                      <span>Loading timetable periods...</span>
+                    <td colSpan={5} className="px-3 py-10 text-center">
+                      <div className="flex justify-center items-center">
+                        <div className="loader loader-sm" />
+                      </div>
                     </td>
                   </tr>
                 ) : assignedPeriods.length === 0 ? (
@@ -762,9 +764,8 @@ export default function TeacherAssignPage() {
   return (
     <Suspense
       fallback={
-        <div className="p-8 text-center text-slate-400">
-          <FiRefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-slate-400" />
-          <span>Loading teacher assignments workstation...</span>
+        <div className="p-12 flex justify-center items-center">
+          <div className="loader loader-md" />
         </div>
       }
     >

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import TenantLoader from 'src/component/tenant/TenantLoader';
 import { toast } from 'react-hot-toast';
 import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
@@ -713,10 +714,7 @@ export default function ResidenceAllocationsPage() {
 
         {/* Allocations Table */}
         {loading ? (
-          <div className="text-center py-12 text-xs text-slate-500">
-            <div className="inline-block w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2" />
-            <p>Loading student seat allocations...</p>
-          </div>
+          <TenantLoader fullScreen={false} size="sm" />
         ) : allocations.length === 0 ? (
           <div className="text-center py-12 text-xs text-slate-400">
             <p className="text-base mb-1">🛏️</p>

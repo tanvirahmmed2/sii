@@ -160,11 +160,13 @@ export default function StaffCategoryTemplatePicker({
                 disabled={activating || activeTemplate?.system_template_id === currentTpl.id}
                 className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 font-medium text-xs transition-colors cursor-pointer disabled:opacity-50"
               >
-                {activeTemplate?.system_template_id === currentTpl.id
-                  ? 'Active Default Template'
-                  : activating
-                  ? 'Activating...'
-                  : 'Activate Selected Template'}
+                {activating ? (
+                  <div className="loader loader-sm loader-white" />
+                ) : activeTemplate?.system_template_id === currentTpl.id ? (
+                  'Active Default Template'
+                ) : (
+                  'Activate Selected Template'
+                )}
               </button>
             </div>
           )}
@@ -173,7 +175,9 @@ export default function StaffCategoryTemplatePicker({
 
       {/* Main Split View: Template Cards & Live Sample Preview */}
       {loading ? (
-        <div className="p-8 text-center text-slate-400 text-xs">Loading templates...</div>
+        <div className="p-12 flex items-center justify-center">
+          <div className="loader loader-md" />
+        </div>
       ) : systemTemplates.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-10 text-center space-y-2">
           <h3 className="text-sm font-semibold text-slate-900 dark:text-white">

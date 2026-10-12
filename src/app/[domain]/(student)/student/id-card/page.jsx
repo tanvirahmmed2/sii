@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import TenantLoader from 'src/component/tenant/TenantLoader';
 import { FiCreditCard, FiPrinter, FiLock, FiCheckCircle, FiUser, FiClock, FiCalendar, FiShield, FiHash } from 'react-icons/fi';
 import { printStudentIDCard } from 'src/lib/receipts/student_id_card';
 
@@ -35,12 +36,7 @@ const StudentIDCardPage = () => {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-        <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-        <p className="text-sm font-medium text-slate-400">Loading student ID card...</p>
-      </div>
-    );
+    return <TenantLoader fullScreen={false} />;
   }
 
   const cardNumber = idCard?.id_card_no || idCard?.card_number || `ID-${student?.registration_number || student?.id || 'STUDENT'}`;

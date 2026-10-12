@@ -220,9 +220,8 @@ function CircularUpdateContent() {
 
   if (loading) {
     return (
-      <div className="w-full p-12 text-center space-y-3">
-        <FiRefreshCw className="w-6 h-6 animate-spin text-sky-600 dark:text-sky-400 mx-auto" />
-        <p className="text-xs text-slate-500 dark:text-slate-400">Loading admission circular information...</p>
+      <div className="w-full p-16 flex justify-center items-center">
+        <div className="loader loader-md" />
       </div>
     );
   }
@@ -335,10 +334,16 @@ function CircularUpdateContent() {
           <button
             type="submit"
             disabled={saving || !selectedId}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white transition shadow-2xs disabled:opacity-50 cursor-pointer"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white transition shadow-2xs disabled:opacity-50 cursor-pointer min-w-[140px]"
           >
-            <FiSave className={`w-3.5 h-3.5 ${saving ? 'animate-spin' : ''}`} />
-            {saving ? 'Saving Changes...' : 'Save Circular Updates'}
+            {saving ? (
+              <div className="loader loader-sm loader-white" />
+            ) : (
+              <>
+                <FiSave className="w-3.5 h-3.5" />
+                <span>Save Circular Updates</span>
+              </>
+            )}
           </button>
         </div>
 
@@ -648,10 +653,16 @@ function CircularUpdateContent() {
           <button
             type="submit"
             disabled={saving || !selectedId}
-            className="inline-flex items-center gap-1.5 px-5 py-2 rounded text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white transition shadow-sm disabled:opacity-50 cursor-pointer"
+            className="inline-flex items-center justify-center gap-1.5 px-5 py-2 rounded text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white transition shadow-sm disabled:opacity-50 cursor-pointer min-w-[140px]"
           >
-            <FiSave className={`w-3.5 h-3.5 ${saving ? 'animate-spin' : ''}`} />
-            {saving ? 'Updating Circular...' : 'Save Circular Updates'}
+            {saving ? (
+              <div className="loader loader-sm loader-white" />
+            ) : (
+              <>
+                <FiSave className="w-3.5 h-3.5" />
+                <span>Save Circular Updates</span>
+              </>
+            )}
           </button>
         </div>
       </form>
@@ -663,9 +674,8 @@ export default function AdmissionCircularUpdatePage() {
   return (
     <Suspense
       fallback={
-        <div className="w-full p-12 text-center text-xs text-slate-500 space-y-2">
-          <FiRefreshCw className="w-5 h-5 animate-spin mx-auto text-sky-600" />
-          <p>Loading circular editor workstation...</p>
+        <div className="w-full p-16 flex justify-center items-center">
+          <div className="loader loader-md" />
         </div>
       }
     >

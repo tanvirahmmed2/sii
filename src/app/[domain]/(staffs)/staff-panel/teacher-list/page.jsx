@@ -316,9 +316,10 @@ export default function TeacherListPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
               {loading && teachers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-8 text-center text-slate-400">
-                    <FiRefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-slate-400" />
-                    <span>Loading teachers roster...</span>
+                  <td colSpan={7} className="px-3 py-8 text-center">
+                    <div className="flex justify-center items-center">
+                      <div className="loader loader-sm" />
+                    </div>
                   </td>
                 </tr>
               ) : teachers.length === 0 ? (
@@ -498,9 +499,8 @@ export default function TeacherListPage() {
             </div>
 
             {loadingDetails ? (
-              <div className="py-8 text-center text-slate-400">
-                <FiRefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-slate-400" />
-                <span>Loading complete teacher record...</span>
+              <div className="py-12 flex justify-center items-center">
+                <div className="loader loader-sm" />
               </div>
             ) : (
               <div className="space-y-4 text-xs">

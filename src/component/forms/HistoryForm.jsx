@@ -182,10 +182,7 @@ const HistoryForm = ({ initialData, onSuccess, onCancel, onDelete }) => {
           className="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-200 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
         >
           {submitting ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              Saving...
-            </>
+            <div className="loader loader-sm loader-white" />
           ) : (
             <>
               <FiSave className="text-sm" />

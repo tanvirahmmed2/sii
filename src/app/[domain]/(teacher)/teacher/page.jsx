@@ -38,7 +38,11 @@ const TeacherHomePage = () => {
   }, []);
 
   if (loading) {
-    return <div className="w-full py-16 text-center text-xs text-slate-400">Loading dashboard...</div>;
+    return (
+      <div className="w-full py-20 flex justify-center items-center">
+        <div className="loader loader-md" />
+      </div>
+    );
   }
 
   const welcomeMessage = () => {

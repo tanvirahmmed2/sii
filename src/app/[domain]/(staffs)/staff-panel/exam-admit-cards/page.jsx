@@ -284,10 +284,9 @@ export default function ExamAdmitCardsPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan="8" className="px-3 py-8 text-center text-slate-400">
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                      <span>Loading exam candidates...</span>
+                  <td colSpan="8" className="px-3 py-10 text-center">
+                    <div className="flex items-center justify-center">
+                      <div className="loader loader-sm" />
                     </div>
                   </td>
                 </tr>

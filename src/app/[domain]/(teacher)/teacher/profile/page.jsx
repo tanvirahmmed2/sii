@@ -263,7 +263,13 @@ const ProfilePage = () => {
     return new Date(date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   };
 
-  if (loading) return <div className="w-full py-16 text-center text-xs text-slate-400">Loading profile...</div>;
+  if (loading) {
+    return (
+      <div className="w-full py-20 flex justify-center items-center">
+        <div className="loader loader-md" />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-5 pb-12">

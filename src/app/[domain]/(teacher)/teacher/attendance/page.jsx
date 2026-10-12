@@ -209,7 +209,9 @@ const AttendanceViewPage = () => {
       {/* Attendance Table */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
         {loading ? (
-          <div className="w-full py-12 text-center text-xs text-slate-400">Loading attendance records...</div>
+          <div className="w-full py-16 flex justify-center items-center">
+            <div className="loader loader-md" />
+          </div>
         ) : records.length === 0 ? (
           <div className="w-full py-12 text-center text-xs text-slate-400">No attendance records found.</div>
         ) : (

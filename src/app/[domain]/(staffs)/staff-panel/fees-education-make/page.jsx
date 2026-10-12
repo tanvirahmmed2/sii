@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import TenantLoader from 'src/component/tenant/TenantLoader';
 import {
   FiDollarSign,
   FiSend,
@@ -330,7 +331,9 @@ export default function FeesEducationMakePage() {
                   Configured Education Fee <span className="text-rose-500">*</span>
                 </label>
                 {loadingFees ? (
-                  <div className="text-xs text-slate-400 py-2.5">Loading fees for selected class...</div>
+                  <div className="py-2.5 flex items-center">
+                    <div className="loader loader-sm" />
+                  </div>
                 ) : classFees.length === 0 ? (
                   <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
                     <FiAlertCircle className="shrink-0" />
@@ -431,10 +434,14 @@ export default function FeesEducationMakePage() {
                 disabled={submitting || classFees.length === 0 || (previewData?.eligibleStudentsCount || 0) === 0}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-md transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <FiSend className="text-base" />
-                {submitting
-                  ? 'Generating Invoices...'
-                  : `Make Due Fees for ${previewData?.eligibleStudentsCount || 0} Students`}
+                {submitting ? (
+                  <div className="loader loader-sm loader-white" />
+                ) : (
+                  <>
+                    <FiSend className="text-base" />
+                    <span>Make Due Fees for {previewData?.eligibleStudentsCount || 0} Students</span>
+                  </>
+                )}
               </button>
             </div>
           </form>
@@ -448,10 +455,7 @@ export default function FeesEducationMakePage() {
             </h3>
 
             {previewLoading ? (
-              <div className="py-12 flex flex-col items-center justify-center gap-2">
-                <div className="w-8 h-8 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-                <p className="text-xs text-slate-400">Inspecting student enrollments...</p>
-              </div>
+              <TenantLoader fullScreen={false} size="sm" />
             ) : previewData ? (
               <div className="space-y-3">
                 <div className="p-4 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40">

@@ -93,7 +93,7 @@ export default function Package({
         }`}
       >
         {wishlistLoading ? (
-          <BiLoaderAlt className="animate-spin text-base" />
+          <div className="loader loader-sm" />
         ) : isWishlisted ? (
           <BiSolidHeart className="text-base text-rose-500 animate-scale-up" />
         ) : (

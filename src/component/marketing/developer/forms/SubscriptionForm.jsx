@@ -508,7 +508,9 @@ export default function SubscriptionForm({
                     Select Package (Includes Public &amp; Custom Plans)
                   </label>
                   {loadingPackages ? (
-                    <div className="text-xs text-slate-400 py-1.5 font-normal">Loading packages catalog...</div>
+                    <div className="py-1.5 flex items-center">
+                      <div className="loader loader-sm" />
+                    </div>
                   ) : (
                     <select
                       value={selectedPackageId}
@@ -768,13 +770,15 @@ export default function SubscriptionForm({
               <button
                 type="submit"
                 disabled={submitting || !isCreatorReady}
-                className="px-4 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium disabled:opacity-50 transition-colors cursor-pointer"
+                className="px-4 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium disabled:opacity-50 transition-colors cursor-pointer flex items-center justify-center min-w-[160px]"
               >
-                {submitting
-                  ? 'Processing Subscription...'
-                  : paymentStatus === 'PAID'
-                  ? 'Grant Paid Subscription'
-                  : 'Issue Unpaid Invoice'}
+                {submitting ? (
+                  <div className="loader loader-sm loader-white" />
+                ) : paymentStatus === 'PAID' ? (
+                  'Grant Paid Subscription'
+                ) : (
+                  'Issue Unpaid Invoice'
+                )}
               </button>
             </div>
           </>

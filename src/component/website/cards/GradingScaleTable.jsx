@@ -45,8 +45,8 @@ const GradingScaleTable = ({
       </div>
 
       {loading ? (
-        <div className="py-8 text-center text-xs text-slate-400">
-          Loading grading system...
+        <div className="py-12 flex justify-center items-center">
+          <div className="loader loader-sm" />
         </div>
       ) : grades.length === 0 ? (
         <div className="py-8 text-center text-xs text-slate-400">

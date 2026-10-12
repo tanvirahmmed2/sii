@@ -221,9 +221,8 @@ export default function UpdateAwardPage() {
 
   if (loading) {
     return (
-      <div className="w-full py-24 text-center text-slate-400">
-        <FiRefreshCw className="inline-block animate-spin text-2xl mb-3 text-secondary" />
-        <p className="text-xs font-semibold">Loading award details...</p>
+      <div className="w-full py-24 flex justify-center items-center">
+        <div className="loader loader-md" />
       </div>
     );
   }
@@ -395,7 +394,7 @@ export default function UpdateAwardPage() {
                 <div className="flex flex-col items-center justify-center space-y-2 pointer-events-none">
                   <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
                     {uploadingImage ? (
-                      <FiRefreshCw className="animate-spin text-xl text-secondary" />
+                      <div className="loader loader-sm" />
                     ) : (
                       <FiUploadCloud className="text-2xl" />
                     )}
@@ -455,10 +454,7 @@ export default function UpdateAwardPage() {
               className="px-5 py-2 rounded-xl text-xs font-semibold bg-secondary hover:bg-secondary-dark text-white shadow-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-2"
             >
               {saving ? (
-                <>
-                  <FiRefreshCw className="animate-spin text-xs" />
-                  <span>Saving Updates...</span>
-                </>
+                <div className="loader loader-sm loader-white" />
               ) : (
                 <>
                   <FiSave className="text-xs" />
@@ -497,8 +493,11 @@ export default function UpdateAwardPage() {
                 onClick={handleDelete}
                 className="px-5 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
               >
-                {deleting && <FiRefreshCw className="animate-spin text-xs" />}
-                <span>Delete Permanently</span>
+                {deleting ? (
+                  <div className="loader loader-sm loader-white" />
+                ) : (
+                  <span>Delete Permanently</span>
+                )}
               </button>
             </div>
           </div>

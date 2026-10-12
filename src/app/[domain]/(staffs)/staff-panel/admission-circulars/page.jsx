@@ -324,9 +324,10 @@ export default function AdmissionCircularsPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-10 text-slate-400">
-                    <FiRefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-sky-500" />
-                    Loading admission circulars...
+                  <td colSpan="7" className="text-center py-12">
+                    <div className="flex justify-center items-center py-2">
+                      <div className="loader loader-sm" />
+                    </div>
                   </td>
                 </tr>
               ) : filteredCirculars.length === 0 ? (
@@ -598,9 +599,15 @@ export default function AdmissionCircularsPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded disabled:opacity-50"
+                  className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded disabled:opacity-50 min-w-[120px] flex items-center justify-center"
                 >
-                  {saving ? 'Saving...' : editingCircular ? 'Update Circular' : 'Create Circular'}
+                  {saving ? (
+                    <div className="loader loader-sm loader-white" />
+                  ) : editingCircular ? (
+                    'Update Circular'
+                  ) : (
+                    'Create Circular'
+                  )}
                 </button>
               </div>
             </form>

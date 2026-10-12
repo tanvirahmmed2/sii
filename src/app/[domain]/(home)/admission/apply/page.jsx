@@ -150,8 +150,8 @@ const ApplyFormContent = () => {
 
   if (loading) {
     return (
-      <div className="w-full min-h-[40vh] flex flex-col items-center justify-center gap-2">
-        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Loading intake application form...</span>
+      <div className="w-full min-h-[40vh] flex justify-center items-center">
+        <div className="loader loader-md" />
       </div>
     );
   }
@@ -297,7 +297,13 @@ const ApplyFormContent = () => {
 
 export default function AdmissionApplyPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-400">Preparing admission form...</div>}>
+    <Suspense
+      fallback={
+        <div className="p-16 flex justify-center items-center">
+          <div className="loader loader-md" />
+        </div>
+      }
+    >
       <ApplyFormContent />
     </Suspense>
   );

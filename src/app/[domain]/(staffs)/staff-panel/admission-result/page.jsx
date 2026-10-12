@@ -241,9 +241,10 @@ function ResultsContent() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-10 text-slate-400">
-                    <FiRefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-amber-500" />
-                    Loading published merit results...
+                  <td colSpan="7" className="text-center py-12">
+                    <div className="flex justify-center items-center py-2">
+                      <div className="loader loader-sm" />
+                    </div>
                   </td>
                 </tr>
               ) : results.length === 0 ? (
@@ -311,7 +312,13 @@ function ResultsContent() {
 
 export default function AdmissionResultPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-xs text-slate-400">Loading results workstation...</div>}>
+    <Suspense
+      fallback={
+        <div className="p-12 flex justify-center items-center">
+          <div className="loader loader-md" />
+        </div>
+      }
+    >
       <ResultsContent />
     </Suspense>
   );

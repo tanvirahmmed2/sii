@@ -130,8 +130,8 @@ export default function TenantPoliciesPage() {
 
         {/* Content */}
         {loading ? (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-8 text-center">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Loading regulatory documentation...</span>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 text-center flex items-center justify-center">
+            <div className="loader loader-md" />
           </div>
         ) : filteredPolicies.length === 0 ? (
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-8 text-center space-y-2">

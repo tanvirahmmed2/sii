@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import TenantLoader from 'src/component/tenant/TenantLoader';
 import {
   FiCheckCircle,
   FiSearch,
@@ -146,10 +147,7 @@ export default function PaymentEducationPaidPage() {
 
         {/* Table Area */}
         {loading ? (
-          <div className="py-16 flex flex-col items-center justify-center gap-3">
-            <div className="w-10 h-10 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
-            <p className="text-xs text-slate-400 font-medium">Loading settled payments...</p>
-          </div>
+          <TenantLoader fullScreen={false} />
         ) : payments.length === 0 ? (
           <div className="py-16 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
             <FiCheckCircle className="text-3xl text-slate-300 mx-auto mb-2" />

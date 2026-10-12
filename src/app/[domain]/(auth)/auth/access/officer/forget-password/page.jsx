@@ -208,8 +208,8 @@ export default function OfficerForgetPasswordPage() {
   return (
     <Suspense
       fallback={
-        <div className="w-full min-h-[60vh] flex items-center justify-center text-xs text-slate-500">
-          Loading password recovery portal...
+        <div className="w-full min-h-[60vh] flex items-center justify-center">
+          <div className="loader loader-md" />
         </div>
       }
     >

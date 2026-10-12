@@ -131,7 +131,9 @@ export default function OfficerDashboardPage() {
         </div>
 
         {loading ? (
-          <div className="py-8 text-center text-xs text-slate-400">Loading module access rights...</div>
+          <div className="py-12 flex justify-center items-center">
+            <div className="loader loader-sm" />
+          </div>
         ) : allowedCount === 0 ? (
           <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-600 dark:text-slate-400">
             No specific operational modules have been granted yet. Please contact campus administration to adjust your package module permissions.

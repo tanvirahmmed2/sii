@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import TenantLoader from 'src/component/tenant/TenantLoader';
 import { toast } from 'react-hot-toast';
 import { useSearchParams } from 'next/navigation';
 import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
@@ -543,10 +544,7 @@ export default function ResidenceRoomPage() {
 
           {/* Seats Grid */}
           {loadingSeats ? (
-            <div className="text-center py-6 text-xs text-slate-500">
-              <div className="inline-block w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mb-1" />
-              <p>Loading seats...</p>
-            </div>
+            <TenantLoader fullScreen={false} size="sm" />
           ) : roomSeats.length === 0 ? (
             <div className="text-center py-6 text-xs text-slate-400">
               No seats generated for this room yet. Enter a seat identifier above to add one.
@@ -661,10 +659,7 @@ export default function ResidenceRoomPage() {
 
         {/* Table */}
         {loading ? (
-          <div className="text-center py-12 text-xs text-slate-500">
-            <div className="inline-block w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2" />
-            <p>Loading rooms...</p>
-          </div>
+          <TenantLoader fullScreen={false} size="sm" />
         ) : rooms.length === 0 ? (
           <div className="text-center py-12 text-xs text-slate-400">
             <p className="text-base mb-1">🚪</p>

@@ -377,9 +377,10 @@ export default function NoticesPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="py-12 text-center text-slate-400 dark:text-slate-500">
-                    <FiRefreshCw className="inline-block animate-spin text-lg mr-2 text-secondary" />
-                    Loading notices data...
+                  <td colSpan="6" className="py-12 text-center">
+                    <div className="flex justify-center items-center">
+                      <div className="loader loader-sm" />
+                    </div>
                   </td>
                 </tr>
               ) : notices.length === 0 ? (
@@ -599,8 +600,11 @@ export default function NoticesPage() {
                   disabled={submitting}
                   className="px-5 py-2 rounded-xl text-xs font-semibold bg-secondary hover:bg-secondary-dark text-white shadow-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                 >
-                  {submitting && <FiRefreshCw className="animate-spin text-xs" />}
-                  <span>{editingNotice ? 'Update Notice' : 'Save Notice'}</span>
+                  {submitting ? (
+                    <div className="loader loader-sm loader-white" />
+                  ) : (
+                    <span>{editingNotice ? 'Update Notice' : 'Save Notice'}</span>
+                  )}
                 </button>
               </div>
             </form>
@@ -637,8 +641,11 @@ export default function NoticesPage() {
                 onClick={handleDeleteNotice}
                 className="px-5 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
               >
-                {deleting && <FiRefreshCw className="animate-spin text-xs" />}
-                <span>Delete Permanently</span>
+                {deleting ? (
+                  <div className="loader loader-sm loader-white" />
+                ) : (
+                  <span>Delete Permanently</span>
+                )}
               </button>
             </div>
           </div>

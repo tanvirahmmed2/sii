@@ -117,7 +117,7 @@ const GenericForm = ({
           className="px-5 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-sm font-semibold transition-all duration-150 flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
         >
           {submitting ? (
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            <div className="loader loader-sm loader-white" />
           ) : (
             submitText
           )}

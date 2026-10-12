@@ -323,9 +323,10 @@ function TeacherQualificationsContent() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-8 text-center text-slate-400">
-                    <FiRefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-slate-400" />
-                    <span>Loading qualifications...</span>
+                  <td colSpan={6} className="px-3 py-8 text-center">
+                    <div className="flex justify-center items-center">
+                      <div className="loader loader-sm" />
+                    </div>
                   </td>
                 </tr>
               ) : qualifications.length === 0 ? (
@@ -486,9 +487,15 @@ function TeacherQualificationsContent() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-4 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-50 transition"
+                  className="px-4 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-50 transition min-w-[110px] flex items-center justify-center"
                 >
-                  {saving ? 'Saving...' : modalMode === 'create' ? 'Add Degree' : 'Save Changes'}
+                  {saving ? (
+                    <div className="loader loader-sm loader-white" />
+                  ) : modalMode === 'create' ? (
+                    'Add Degree'
+                  ) : (
+                    'Save Changes'
+                  )}
                 </button>
               </div>
             </form>
@@ -540,9 +547,8 @@ export default function TeacherQualificationsPage() {
   return (
     <Suspense
       fallback={
-        <div className="p-8 text-center text-slate-400">
-          <FiRefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-slate-400" />
-          <span>Loading qualifications manager...</span>
+        <div className="p-12 flex justify-center items-center">
+          <div className="loader loader-md" />
         </div>
       }
     >

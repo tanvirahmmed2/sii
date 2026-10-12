@@ -120,7 +120,7 @@ const AnnouncementForm = ({ initialData, onSubmit, onDelete, submitting }) => {
           className="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
         >
           {submitting ? (
-            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <div className="loader loader-sm loader-white mx-auto" />
           ) : (
             <>
               <FiSave />

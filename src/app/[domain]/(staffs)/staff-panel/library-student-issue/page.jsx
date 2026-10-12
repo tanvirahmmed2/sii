@@ -334,8 +334,10 @@ export default function LibraryStudentIssuePage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-8 text-center text-xs text-slate-400">
-                    Loading student borrowing records...
+                  <td colSpan={7} className="px-3 py-10 text-center">
+                    <div className="flex justify-center items-center">
+                      <div className="loader loader-sm" />
+                    </div>
                   </td>
                 </tr>
               ) : paginatedIssues.length === 0 ? (

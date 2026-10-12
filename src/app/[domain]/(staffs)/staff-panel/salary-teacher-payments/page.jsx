@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import SalaryPaymentsManager from 'src/component/website/admin/payroll/SalaryPaymentsManager';
+import SalaryPaymentsManager from 'src/component/website/staff/payroll/SalaryPaymentsManager';
 
 export default function SalaryTeacherPaymentsPage() {
   return (

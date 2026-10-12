@@ -166,7 +166,9 @@ export default function StudentDataPage() {
               </div>
 
               {detailLoading ? (
-                <div className="py-12 text-center text-xs text-slate-400">Loading student details...</div>
+                <div className="py-12 flex justify-center items-center">
+                  <div className="loader loader-sm" />
+                </div>
               ) : (
                 <div className="space-y-4 text-xs">
                   {/* Academic & Identity Box */}

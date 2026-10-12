@@ -229,7 +229,13 @@ function StudentRecoveryContent() {
 
 export default function StudentRecoveryPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-400">Loading account recovery...</div>}>
+    <Suspense
+      fallback={
+        <div className="p-12 flex justify-center items-center">
+          <div className="loader loader-md" />
+        </div>
+      }
+    >
       <StudentRecoveryContent />
     </Suspense>
   );

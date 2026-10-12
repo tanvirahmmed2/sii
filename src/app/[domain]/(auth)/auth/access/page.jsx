@@ -1,22 +1,32 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React from 'react';
 import Link from 'next/link';
 import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
 export default function AccessPortalSelectionPage() {
-  const router = useRouter();
   const { website, tenantUrl } = useTenantWebsite();
-  const [selectedRole, setSelectedRole] = useState('');
 
-  const handleNext = () => {
-    if (selectedRole === 'teacher') {
-      router.push(tenantUrl('/auth/access/teacher/login'));
-    } else if (selectedRole === 'staff') {
-      router.push(tenantUrl('/auth/access/staff/login'));
-    }
-  };
+  const accessOptions = [
+    {
+      title: 'Teacher / Faculty Portal',
+      description: 'Manage assigned classes, attendance logs, exam questions, grading, and schedules.',
+      tag: '[Faculty]',
+      href: tenantUrl('/auth/access/teacher/login'),
+    },
+    {
+      title: 'Staff / Operations Desk',
+      description: 'Access cashier ledger, registrar student archives, admissions, and library management.',
+      tag: '[Staff]',
+      href: tenantUrl('/auth/access/staff/login'),
+    },
+    {
+      title: 'Officer Access Portal',
+      description: 'Direct sign-in for assigned department officers, approvals, and administrative duties.',
+      tag: '[Officer]',
+      href: tenantUrl('/auth/access/officer/login'),
+    },
+  ];
 
   return (
     <div className="w-full min-h-[80vh] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -31,91 +41,49 @@ export default function AccessPortalSelectionPage() {
             Institutional Access
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Select your assigned faculty or administrative role to proceed.
+            Select your assigned faculty, staff, or department officer desk.
           </p>
         </div>
 
-        {/* Roles Selection */}
+        {/* Direct Access Options */}
         <div className="space-y-3">
-          {/* Teacher Option */}
-          <label
-            className={`flex items-start gap-3 p-4 rounded-md border transition-colors cursor-pointer ${
-              selectedRole === 'teacher'
-                ? 'border-primary bg-primary/5 dark:bg-primary/10'
-                : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50 dark:bg-slate-950'
-            }`}
-          >
-            <input
-              type="radio"
-              name="accessRole"
-              value="teacher"
-              checked={selectedRole === 'teacher'}
-              onChange={() => setSelectedRole('teacher')}
-              className="mt-1"
-            />
-            <div className="flex-1">
-              <span className="text-sm font-semibold text-slate-900 dark:text-white block">
-                Teacher / Faculty Portal
+          {accessOptions.map((option) => (
+            <Link
+              key={option.title}
+              href={option.href}
+              className="group flex items-start justify-between gap-3 p-4 rounded-md border border-slate-200 dark:border-slate-800 hover:border-primary/60 hover:bg-primary/5 dark:hover:bg-primary/10 bg-slate-50 dark:bg-slate-950 transition-all cursor-pointer block"
+            >
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-primary transition-colors">
+                    {option.title}
+                  </span>
+                  <span className="text-[10px] font-semibold text-primary uppercase ml-2">
+                    {option.tag}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                  {option.description}
+                </p>
+              </div>
+              <span className="text-slate-400 group-hover:text-primary group-hover:translate-x-0.5 transition-all text-sm mt-0.5">
+                &rarr;
               </span>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                Manage assigned classes, attendance logs, exam questions, grading, and schedules.
-              </p>
-            </div>
-            <span className="text-[10px] font-semibold text-primary uppercase">
-              [Faculty]
-            </span>
-          </label>
-
-          {/* Staff Option */}
-          <label
-            className={`flex items-start gap-3 p-4 rounded-md border transition-colors cursor-pointer ${
-              selectedRole === 'staff'
-                ? 'border-primary bg-primary/5 dark:bg-primary/10'
-                : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50 dark:bg-slate-950'
-            }`}
-          >
-            <input
-              type="radio"
-              name="accessRole"
-              value="staff"
-              checked={selectedRole === 'staff'}
-              onChange={() => setSelectedRole('staff')}
-              className="mt-1"
-            />
-            <div className="flex-1">
-              <span className="text-sm font-semibold text-slate-900 dark:text-white block">
-                Staff / Operations Desk
-              </span>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                Access cashier ledger, registrar student archives, admissions, and library management.
-              </p>
-            </div>
-            <span className="text-[10px] font-semibold text-primary uppercase">
-              [Staff]
-            </span>
-          </label>
+            </Link>
+          ))}
         </div>
 
-        {/* Action Button */}
-        {selectedRole && (
-          <button
-            onClick={handleNext}
-            className="w-full py-2.5 rounded bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-colors cursor-pointer text-center"
-          >
-            Proceed to {selectedRole === 'teacher' ? 'Faculty Login' : 'Staff Login'} →
-          </button>
-        )}
-
+        {/* Footer Navigation */}
         <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
           <Link
             href={tenantUrl('/auth')}
-            className="font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+            className="font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
           >
-            ← Change Portal
+            &larr; Change Portal
           </Link>
           <Link
             href={tenantUrl('/')}
-            className="font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+            className="font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
           >
             Home
           </Link>

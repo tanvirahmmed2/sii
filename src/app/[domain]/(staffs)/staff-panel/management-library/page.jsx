@@ -330,8 +330,10 @@ export default function ManagementLibraryPage() {
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-xs text-slate-500">
-                    Loading circulation ledger records...
+                  <td colSpan={6} className="py-10 text-center">
+                    <div className="flex items-center justify-center">
+                      <div className="loader loader-sm" />
+                    </div>
                   </td>
                 </tr>
               ) : paginatedRecords.length === 0 ? (

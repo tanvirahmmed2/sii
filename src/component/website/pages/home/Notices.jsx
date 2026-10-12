@@ -52,8 +52,8 @@ const Notices = () => {
         </div>
 
         {loading ? (
-          <div className="py-8 text-center text-xs text-slate-400">
-            Loading recent notices...
+          <div className="py-12 flex justify-center items-center">
+            <div className="loader loader-sm" />
           </div>
         ) : notices.length === 0 ? (
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 text-center text-xs text-slate-500 dark:text-slate-400">

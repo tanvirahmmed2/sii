@@ -445,7 +445,9 @@ const AttendanceRecordPage = () => {
                 Select date, class and period above to load students.
               </div>
             ) : loadingStudents ? (
-              <div className="w-full py-12 text-center text-xs text-slate-400">Loading students...</div>
+              <div className="w-full py-16 flex justify-center items-center">
+                <div className="loader loader-md" />
+              </div>
             ) : studentRows.length === 0 ? (
               <div className="w-full py-12 text-center text-xs text-slate-400">No students found for this class.</div>
             ) : (

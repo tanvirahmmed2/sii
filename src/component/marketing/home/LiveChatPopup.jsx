@@ -653,10 +653,7 @@ export default function LiveChatPopup() {
                     className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 mt-4"
                   >
                     {loading ? (
-                      <>
-                        <BiLoaderAlt className="animate-spin text-sm" />
-                        <span>Connecting to Support...</span>
-                      </>
+                      <div className="loader loader-sm loader-white" />
                     ) : (
                       <span>Start Live Chat →</span>
                     )}
@@ -739,7 +736,7 @@ export default function LiveChatPopup() {
                   aria-label="Send message"
                 >
                   {sending ? (
-                    <BiLoaderAlt className="animate-spin text-base" />
+                    <div className="loader loader-sm loader-white" />
                   ) : (
                     <BiSend className="text-base" />
                   )}

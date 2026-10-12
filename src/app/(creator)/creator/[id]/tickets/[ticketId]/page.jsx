@@ -372,16 +372,10 @@ export default function CreatorSingleTicketPage() {
           <button
             type="submit"
             disabled={sendingReply || (!replyMessage.trim() && !selectedImage)}
-            className="px-3.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+            className="px-3.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5 min-w-[60px]"
           >
             {sendingReply ? (
-              <>
-                <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                <span>Sending...</span>
-              </>
+              <div className="loader loader-sm loader-white" />
             ) : (
               'Send'
             )}

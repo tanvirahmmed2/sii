@@ -69,8 +69,8 @@ const PublicMonthlyFeesPage = () => {
         </div>
 
         {loading ? (
-          <div className="py-8 text-center text-xs text-slate-400">
-            Loading tuition rates...
+          <div className="py-12 flex justify-center items-center">
+            <div className="loader loader-sm" />
           </div>
         ) : fees.length === 0 ? (
           <div className="py-8 text-center text-xs text-slate-400">

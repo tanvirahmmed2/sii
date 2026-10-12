@@ -377,8 +377,10 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-8 text-slate-400">
-                    Loading circulation logs...
+                  <td colSpan="7" className="text-center py-12">
+                    <div className="flex justify-center items-center py-2">
+                      <div className="loader loader-sm" />
+                    </div>
                   </td>
                 </tr>
               ) : issues.length === 0 ? (
@@ -711,9 +713,13 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
                 <button
                   type="submit"
                   disabled={submitting || !selectedTarget || !selectedBook}
-                  className="px-3 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer disabled:opacity-50"
+                  className="px-3 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer disabled:opacity-50 min-w-[85px] flex items-center justify-center"
                 >
-                  {submitting ? 'Issuing...' : 'Issue Book'}
+                  {submitting ? (
+                    <div className="loader loader-sm loader-white" />
+                  ) : (
+                    'Issue Book'
+                  )}
                 </button>
               </div>
             </form>
@@ -814,9 +820,13 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-3 py-1.5 rounded text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer disabled:opacity-50"
+                  className="px-3 py-1.5 rounded text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer disabled:opacity-50 min-w-[105px] flex items-center justify-center"
                 >
-                  {submitting ? 'Processing...' : 'Confirm Return'}
+                  {submitting ? (
+                    <div className="loader loader-sm loader-white" />
+                  ) : (
+                    'Confirm Return'
+                  )}
                 </button>
               </div>
             </form>
@@ -851,9 +861,13 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
                 type="button"
                 disabled={submitting}
                 onClick={handleDeleteIssue}
-                className="px-3 py-1.5 rounded text-xs font-medium bg-rose-600 hover:bg-rose-700 text-white cursor-pointer disabled:opacity-50"
+                className="px-3 py-1.5 rounded text-xs font-medium bg-rose-600 hover:bg-rose-700 text-white cursor-pointer disabled:opacity-50 min-w-[65px] flex items-center justify-center"
               >
-                {submitting ? 'Deleting...' : 'Delete'}
+                {submitting ? (
+                  <div className="loader loader-sm loader-white" />
+                ) : (
+                  'Delete'
+                )}
               </button>
             </div>
           </div>

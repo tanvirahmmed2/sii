@@ -546,8 +546,8 @@ export default function PackageForm({
           </div>
 
           {loadingModules ? (
-            <div className="py-6 text-center text-slate-400 text-xs font-normal">
-              Loading tenant modules catalog...
+            <div className="py-8 flex justify-center items-center">
+              <div className="loader loader-sm" />
             </div>
           ) : filteredTenantModules.length === 0 ? (
             <div className="p-4 text-center text-slate-400 text-xs">

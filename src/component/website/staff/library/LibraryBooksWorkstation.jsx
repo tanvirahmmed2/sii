@@ -384,8 +384,10 @@ export default function LibraryBooksWorkstation() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
               {loading ? (
                 <tr>
-                  <td colSpan="8" className="text-center py-8 text-slate-400">
-                    Loading books catalog...
+                  <td colSpan="8" className="text-center py-12">
+                    <div className="flex justify-center items-center py-2">
+                      <div className="loader loader-sm" />
+                    </div>
                   </td>
                 </tr>
               ) : books.length === 0 ? (
@@ -774,9 +776,13 @@ export default function LibraryBooksWorkstation() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-3 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer disabled:opacity-50"
+                  className="px-3 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer disabled:opacity-50 min-w-[85px] flex items-center justify-center"
                 >
-                  {submitting ? 'Saving...' : 'Save Book'}
+                  {submitting ? (
+                    <div className="loader loader-sm loader-white" />
+                  ) : (
+                    'Save Book'
+                  )}
                 </button>
               </div>
             </form>
@@ -858,9 +864,13 @@ export default function LibraryBooksWorkstation() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-3 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer disabled:opacity-50"
+                  className="px-3 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer disabled:opacity-50 min-w-[95px] flex items-center justify-center"
                 >
-                  {submitting ? 'Updating...' : 'Update Stock'}
+                  {submitting ? (
+                    <div className="loader loader-sm loader-white" />
+                  ) : (
+                    'Update Stock'
+                  )}
                 </button>
               </div>
             </form>

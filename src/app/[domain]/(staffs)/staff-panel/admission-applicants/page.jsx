@@ -365,9 +365,10 @@ function ApplicantsContent() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-10 text-slate-400">
-                    <FiRefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-sky-500" />
-                    Loading applicants...
+                  <td colSpan="7" className="text-center py-12">
+                    <div className="flex justify-center items-center">
+                      <div className="loader loader-sm" />
+                    </div>
                   </td>
                 </tr>
               ) : applicants.length === 0 ? (
@@ -706,9 +707,13 @@ function ApplicantsContent() {
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded disabled:opacity-50"
+                  className="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded disabled:opacity-50 min-w-[90px] flex items-center justify-center"
                 >
-                  {actionLoading ? 'Saving...' : 'Save Score'}
+                  {actionLoading ? (
+                    <div className="loader loader-sm loader-white" />
+                  ) : (
+                    'Save Score'
+                  )}
                 </button>
               </div>
             </form>
@@ -721,7 +726,13 @@ function ApplicantsContent() {
 
 export default function AdmissionApplicantsPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-xs text-slate-400">Loading applicants workstation...</div>}>
+    <Suspense
+      fallback={
+        <div className="p-12 flex justify-center items-center">
+          <div className="loader loader-md" />
+        </div>
+      }
+    >
       <ApplicantsContent />
     </Suspense>
   );

@@ -458,10 +458,7 @@ export default function StudentRegistrationPage() {
                 className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-white rounded text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-2"
               >
                 {submittingSingle ? (
-                  <>
-                    <span className="animate-spin text-sm">⏳</span>
-                    <span>Registering Student...</span>
-                  </>
+                  <div className="loader loader-sm loader-white" />
                 ) : (
                   <>
                     <span>👤 Register Student</span>
@@ -581,10 +578,7 @@ export default function StudentRegistrationPage() {
                   className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-white rounded text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-2"
                 >
                   {uploadingBulk ? (
-                    <>
-                      <span className="animate-spin text-sm">⏳</span>
-                      <span>Processing Batch Registration...</span>
-                    </>
+                    <div className="loader loader-sm loader-white" />
                   ) : (
                     <>
                       <span>📊 Import &amp; Register {bulkRows.length} Students</span>

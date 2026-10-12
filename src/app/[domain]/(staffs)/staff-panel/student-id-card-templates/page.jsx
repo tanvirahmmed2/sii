@@ -211,7 +211,9 @@ export default function StudentIdCardTemplatesPage() {
             </div>
 
             {templatesLoading ? (
-              <div className="p-4 text-center text-xs text-slate-400">Loading templates...</div>
+              <div className="p-8 flex justify-center items-center">
+                <div className="loader loader-sm" />
+              </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {systemTemplates.map((tpl) => {

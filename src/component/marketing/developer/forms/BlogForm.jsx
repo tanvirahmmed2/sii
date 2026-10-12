@@ -745,8 +745,8 @@ export default function BlogForm({
 
             <div className="p-4 flex-1 overflow-y-auto">
               {loadingAssets ? (
-                <div className="p-12 text-center text-slate-400 text-xs">
-                  Loading Cloudinary assets...
+                <div className="p-12 flex justify-center items-center">
+                  <div className="loader loader-sm" />
                 </div>
               ) : cloudinaryAssets.length === 0 ? (
                 <div className="p-12 text-center text-slate-400 text-xs">

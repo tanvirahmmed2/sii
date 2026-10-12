@@ -214,9 +214,10 @@ export default function StudentAssignmentsPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400">
-                    <FiRefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-emerald-600" />
-                    Loading coursework assignments...
+                  <td colSpan={6} className="py-12 text-center">
+                    <div className="flex justify-center items-center">
+                      <div className="loader loader-sm" />
+                    </div>
                   </td>
                 </tr>
               ) : filteredAssignments.length === 0 ? (

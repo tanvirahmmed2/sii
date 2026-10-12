@@ -326,10 +326,9 @@ export default function LibraryTeacherReturnPage() {
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-xs text-slate-500">
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
-                      <span>Loading faculty return circulation records...</span>
+                  <td colSpan={7} className="py-10 text-center">
+                    <div className="flex items-center justify-center">
+                      <div className="loader loader-sm" />
                     </div>
                   </td>
                 </tr>

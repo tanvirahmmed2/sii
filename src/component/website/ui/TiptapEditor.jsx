@@ -73,10 +73,10 @@ export default function TiptapEditor({
   if (!editor) {
     return (
       <div
-        className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-xs text-slate-400 dark:text-slate-500 animate-pulse flex items-center justify-center"
+        className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex items-center justify-center"
         style={{ minHeight }}
       >
-        Loading rich text editor...
+        <div className="loader loader-sm" />
       </div>
     );
   }

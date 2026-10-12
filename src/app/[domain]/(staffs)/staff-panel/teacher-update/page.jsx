@@ -337,9 +337,8 @@ function TeacherUpdateContent() {
       </div>
 
       {loading ? (
-        <div className="p-12 text-center text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded">
-          <FiRefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-slate-400" />
-          <span>Loading teacher profile data...</span>
+        <div className="p-16 flex justify-center items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded">
+          <div className="loader loader-md" />
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -657,9 +656,8 @@ export default function TeacherUpdatePage() {
   return (
     <Suspense
       fallback={
-        <div className="p-8 text-center text-slate-400">
-          <FiRefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-slate-400" />
-          <span>Loading teacher update form...</span>
+        <div className="p-16 flex justify-center items-center">
+          <div className="loader loader-md" />
         </div>
       }
     >

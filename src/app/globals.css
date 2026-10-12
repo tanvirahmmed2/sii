@@ -31,3 +31,47 @@
   border-radius: 4px;
   width: 100%;
 }
+
+/* HTML: <div class="loader"></div> */
+.loader {
+  width: 40px;
+  aspect-ratio: 1;
+  --loader-color: var(--primary, currentColor);
+  --c: linear-gradient(var(--loader-color, #000) 0 0);
+  --m: radial-gradient(farthest-side, var(--loader-color, #000) 92%, #0000);
+  background: 
+    var(--c),var(--m),
+    var(--c),var(--m), 
+    var(--c),var(--m);
+  background-size: calc(100% * 0.2) calc(100% * 0.375), calc(100% * 0.2) calc(100% * 0.2);
+  background-repeat: no-repeat;
+  animation: l14 1s infinite alternate;
+}
+
+.loader.loader-sm {
+  width: 24px;
+}
+
+.loader.loader-md {
+  width: 40px;
+}
+
+.loader.loader-lg {
+  width: 56px;
+}
+
+.loader.loader-white {
+  --loader-color: #ffffff;
+  --c: linear-gradient(#ffffff 0 0);
+  --m: radial-gradient(farthest-side, #ffffff 92%, #0000);
+}
+
+@keyframes l14 {
+  0%,
+  10% {background-position: 0 0   ,0 100%,50% 0   ,50% 100%,100% 0   ,100% 100%}
+  33% {background-position: 0 100%,0 0   ,50% 0   ,50% 100%,100% 0   ,100% 100%}
+  66% {background-position: 0 100%,0 0   ,50% 100%,50% 0   ,100% 0   ,100% 100%}
+  90%,
+  100%{background-position: 0 100%,0 0   ,50% 100%,50% 0   ,100% 100%,100% 0   }
+}
+

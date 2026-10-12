@@ -277,7 +277,9 @@ export default function AcademicYearPage() {
         {/* Sessions Table */}
         <div className="overflow-x-auto">
           {loading ? (
-            <div className="py-12 text-center text-xs text-slate-500">Loading academic sessions...</div>
+            <div className="py-16 flex justify-center items-center">
+              <div className="loader loader-md" />
+            </div>
           ) : filteredSessions.length === 0 ? (
             <div className="py-12 text-center space-y-2">
               <BiCalendar className="mx-auto text-3xl text-slate-400" />

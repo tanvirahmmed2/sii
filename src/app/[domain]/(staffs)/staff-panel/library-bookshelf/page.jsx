@@ -360,7 +360,9 @@ export default function LibraryBookshelfPage() {
 
         {/* Shelves Content */}
         {loading ? (
-          <div className="py-8 text-center text-xs text-slate-400">Loading shelf records and book metrics...</div>
+          <div className="py-12 flex justify-center items-center">
+            <div className="loader loader-md" />
+          </div>
         ) : paginatedShelves.length === 0 ? (
           <div className="py-8 text-center text-xs text-slate-400">
             No shelves found matching criteria. Click "+ New Shelf Rack" to register one.
@@ -650,7 +652,9 @@ export default function LibraryBookshelfPage() {
 
             <div className="flex-1 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded">
               {rosterLoading ? (
-                <div className="p-6 text-center text-xs text-slate-400">Loading shelf inventory...</div>
+                <div className="p-8 flex justify-center items-center">
+                  <div className="loader loader-sm" />
+                </div>
               ) : rosterBooks.length === 0 ? (
                 <div className="p-6 text-center text-xs text-slate-400">
                   No books are currently assigned to this shelf rack.
@@ -839,9 +843,15 @@ export default function LibraryBookshelfPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-3.5 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer disabled:opacity-50"
+                  className="px-3.5 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer disabled:opacity-50 min-w-[100px] flex items-center justify-center"
                 >
-                  {submitting ? 'Saving...' : modalMode === 'add' ? 'Create Shelf' : 'Save Changes'}
+                  {submitting ? (
+                    <div className="loader loader-sm loader-white" />
+                  ) : modalMode === 'add' ? (
+                    'Create Shelf'
+                  ) : (
+                    'Save Changes'
+                  )}
                 </button>
               </div>
             </form>

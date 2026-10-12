@@ -2910,5 +2910,185 @@ CREATE TABLE IF NOT EXISTS website_issued_documents (
 
 CREATE INDEX IF NOT EXISTS idx_web_issued_doc_serial ON website_issued_documents(website_id, category, document_serial);
 
+-- ============================================================================
+-- SECTION 25: CAMPUS EVENTS & STUDENT APPLICANTS
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 1. EVENTS TABLE
+-- Holds institutional events, sports, workshops, symposiums, cultural meets.
+-- is_applicable flag determines whether students can register/apply.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS events (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255),
+    description TEXT,
+    location VARCHAR(255),
+    event_date TIMESTAMPTZ NOT NULL,
+    end_date TIMESTAMPTZ,
+    image TEXT,
+    image_id VARCHAR(255),
+    is_applicable BOOLEAN DEFAULT TRUE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_by_type VARCHAR(50) DEFAULT 'staff',
+    created_by_id BIGINT,
+    created_by_name VARCHAR(255),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_events_website ON events(website_id);
+CREATE INDEX IF NOT EXISTS idx_events_date ON events(event_date);
+CREATE INDEX IF NOT EXISTS idx_events_active ON events(is_active);
+CREATE INDEX IF NOT EXISTS idx_events_applicable ON events(is_applicable);
+
+DROP TRIGGER IF EXISTS update_events_updated_at ON events;
+CREATE TRIGGER update_events_updated_at
+    BEFORE UPDATE ON events
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 2. EVENTS APPLICANTS TABLE
+-- Only enrolled students can apply for applicable campus events.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS events_applicants (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    event_id BIGINT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    applied_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(50) DEFAULT 'registered',
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(event_id, student_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_events_applicants_website ON events_applicants(website_id);
+CREATE INDEX IF NOT EXISTS idx_events_applicants_event ON events_applicants(event_id);
+CREATE INDEX IF NOT EXISTS idx_events_applicants_student ON events_applicants(student_id);
+
+DROP TRIGGER IF EXISTS update_events_applicants_updated_at ON events_applicants;
+CREATE TRIGGER update_events_applicants_updated_at
+    BEFORE UPDATE ON events_applicants
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE OR REPLACE VIEW website_events AS SELECT * FROM events;
+CREATE OR REPLACE VIEW website_events_applicants AS SELECT * FROM events_applicants;
+
+-- ============================================================================
+-- SECTION 26: INSTITUTION PROFILE (MISSIONS, VISIONS, MILESTONES, INFRASTRUCTURE)
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 1. WEBSITE MISSIONS TABLE
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_missions (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    order_no INT NOT NULL DEFAULT 0,
+    icon VARCHAR(100),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_website_missions_web ON website_missions(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_missions_active ON website_missions(is_active);
+CREATE INDEX IF NOT EXISTS idx_website_missions_order ON website_missions(order_no);
+
+DROP TRIGGER IF EXISTS update_website_missions_updated_at ON website_missions;
+CREATE TRIGGER update_website_missions_updated_at
+    BEFORE UPDATE ON website_missions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 2. WEBSITE VISIONS TABLE
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_visions (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    order_no INT NOT NULL DEFAULT 0,
+    icon VARCHAR(100),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_website_visions_web ON website_visions(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_visions_active ON website_visions(is_active);
+CREATE INDEX IF NOT EXISTS idx_website_visions_order ON website_visions(order_no);
+
+DROP TRIGGER IF EXISTS update_website_visions_updated_at ON website_visions;
+CREATE TRIGGER update_website_visions_updated_at
+    BEFORE UPDATE ON website_visions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 3. WEBSITE MILESTONES TABLE
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_milestons (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    year VARCHAR(50) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    image TEXT,
+    image_id VARCHAR(255),
+    order_no INT NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_website_milestons_web ON website_milestons(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_milestons_active ON website_milestons(is_active);
+CREATE INDEX IF NOT EXISTS idx_website_milestons_order ON website_milestons(order_no);
+
+CREATE OR REPLACE VIEW website_milestones AS SELECT * FROM website_milestons;
+
+DROP TRIGGER IF EXISTS update_website_milestons_updated_at ON website_milestons;
+CREATE TRIGGER update_website_milestons_updated_at
+    BEFORE UPDATE ON website_milestons
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 4. WEBSITE INFRASTRUCTURE TABLE
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_insfrastructure (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    subtitle VARCHAR(255),
+    description TEXT NOT NULL,
+    facility_type VARCHAR(100) DEFAULT 'Campus Facility',
+    image TEXT,
+    image_id VARCHAR(255),
+    order_no INT NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_website_insfra_web ON website_insfrastructure(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_insfra_active ON website_insfrastructure(is_active);
+CREATE INDEX IF NOT EXISTS idx_website_insfra_order ON website_insfrastructure(order_no);
+
+CREATE OR REPLACE VIEW website_infrastructure AS SELECT * FROM website_insfrastructure;
+
+DROP TRIGGER IF EXISTS update_website_insfrastructure_updated_at ON website_insfrastructure;
+CREATE TRIGGER update_website_insfrastructure_updated_at
+    BEFORE UPDATE ON website_insfrastructure
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+
+
 
 

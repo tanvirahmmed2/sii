@@ -141,7 +141,7 @@ const AdminLoginForm = () => {
           className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white text-sm font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
         >
           {loading ? (
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            <div className="loader loader-sm loader-white" />
           ) : (
             <>
               Verify & Log In <FiArrowRight className="text-lg" />
@@ -218,7 +218,7 @@ const AdminLoginForm = () => {
         className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white text-sm font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
       >
         {loading ? (
-          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          <div className="loader loader-sm loader-white" />
         ) : (
           <>
             <FiShield className="text-lg" /> Access Portal <FiArrowRight className="text-lg" />

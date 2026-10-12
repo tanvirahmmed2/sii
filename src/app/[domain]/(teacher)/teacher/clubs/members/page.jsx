@@ -127,7 +127,7 @@ const TeacherClubMembersPage = () => {
   if (loading) {
     return (
       <div className="w-full min-h-[300px] flex items-center justify-center">
-        <span className="text-xs text-slate-400">Loading Club Members...</span>
+        <div className="loader loader-md" />
       </div>
     );
   }
@@ -229,9 +229,9 @@ const TeacherClubMembersPage = () => {
             <button
               type="submit"
               disabled={addingMember}
-              className="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold cursor-pointer disabled:opacity-50 transition-colors mt-2"
+              className="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold cursor-pointer disabled:opacity-50 transition-colors mt-2 flex items-center justify-center"
             >
-              {addingMember ? 'Adding...' : '+ Add Student to Club'}
+              {addingMember ? <div className="loader loader-sm loader-white" /> : '+ Add Student to Club'}
             </button>
           </form>
         </div>

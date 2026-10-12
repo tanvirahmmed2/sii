@@ -365,7 +365,9 @@ export default function DeveloperTemplatesPage() {
 
       {/* Templates Grid */}
       {loading ? (
-        <div className="p-8 text-center text-slate-400 text-xs">Loading templates...</div>
+        <div className="py-16 flex justify-center items-center">
+          <div className="loader loader-md" />
+        </div>
       ) : templates.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-10 text-center space-y-2">
           <h3 className="text-sm font-semibold text-slate-900 dark:text-white">No templates found</h3>

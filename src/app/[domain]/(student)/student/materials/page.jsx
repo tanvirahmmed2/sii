@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, Suspense } from 'react';
+import TenantLoader from 'src/component/tenant/TenantLoader';
 import { useSearchParams } from 'next/navigation';
 import { FiFile, FiInfo, FiBookOpen, FiDownload, FiClock, FiArrowLeft } from 'react-icons/fi';
 import Link from 'next/link';
@@ -32,11 +33,7 @@ const StudentMaterialsPageContent = () => {
   }, [classSubjectId]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-10 h-10 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
-      </div>
-    );
+    return <TenantLoader fullScreen={false} />;
   }
 
   return (
@@ -115,11 +112,7 @@ const StudentMaterialsPageContent = () => {
 };
 
 const StudentMaterialsPage = () => (
-  <Suspense fallback={
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <div className="w-10 h-10 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
-    </div>
-  }>
+  <Suspense fallback={<TenantLoader fullScreen={false} />}>
     <StudentMaterialsPageContent />
   </Suspense>
 );

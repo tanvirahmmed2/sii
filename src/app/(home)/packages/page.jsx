@@ -688,10 +688,13 @@ ${inquiryMessage}`,
                   <button
                     type="submit"
                     disabled={inquirySubmitting}
-                    className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-secondary hover:bg-secondary-dark transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5 shadow-md shadow-secondary/25"
+                    className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-secondary hover:bg-secondary-dark transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-secondary/25 min-w-[140px]"
                   >
-                    {inquirySubmitting && <BiLoaderAlt className="animate-spin text-sm" />}
-                    <span>{inquirySubmitting ? 'Sending...' : 'Send Inquiry to Support'}</span>
+                    {inquirySubmitting ? (
+                      <div className="loader loader-sm loader-white" />
+                    ) : (
+                      <span>Send Inquiry to Support</span>
+                    )}
                   </button>
                 </div>
               </form>

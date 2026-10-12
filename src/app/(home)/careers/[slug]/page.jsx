@@ -493,10 +493,7 @@ export default function CareerDetailPage({ params }) {
                       className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md shadow-indigo-200 dark:shadow-none transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
                     >
                       {submitting ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          <span>Submitting Application...</span>
-                        </>
+                        <div className="loader loader-sm loader-white" />
                       ) : (
                         <span>Submit Application</span>
                       )}

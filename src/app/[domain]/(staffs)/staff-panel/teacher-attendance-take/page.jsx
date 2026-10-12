@@ -284,9 +284,10 @@ export default function TeacherAttendanceTakePage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-8 text-center text-slate-400">
-                    <FiRefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-slate-400" />
-                    <span>Loading attendance roster...</span>
+                  <td colSpan={6} className="px-3 py-10 text-center">
+                    <div className="flex justify-center items-center">
+                      <div className="loader loader-sm" />
+                    </div>
                   </td>
                 </tr>
               ) : teachers.length === 0 ? (

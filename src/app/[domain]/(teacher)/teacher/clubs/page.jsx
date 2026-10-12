@@ -46,7 +46,7 @@ const TeacherClubsOverviewPage = () => {
   if (loading) {
     return (
       <div className="w-full min-h-[300px] flex items-center justify-center">
-        <span className="text-xs text-slate-400">Loading Club Overview...</span>
+        <div className="loader loader-md" />
       </div>
     );
   }

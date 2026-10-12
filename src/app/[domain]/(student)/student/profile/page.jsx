@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import TenantLoader from 'src/component/tenant/TenantLoader';
 import { toast } from 'react-hot-toast';
 import {
   FiUser, FiMail, FiPhone, FiMapPin, FiCalendar, FiBookOpen,
@@ -182,12 +183,7 @@ const StudentProfilePage = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-        <div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-xs font-semibold text-slate-400">Loading student profile...</p>
-      </div>
-    );
+    return <TenantLoader fullScreen={false} />;
   }
 
   return (

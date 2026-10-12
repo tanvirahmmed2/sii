@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import TenantLoader from 'src/component/tenant/TenantLoader';
 import Link from 'next/link';
 import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 import { toast } from 'react-hot-toast';
@@ -39,12 +40,7 @@ export default function StaffProfilePage() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="w-full min-h-[60vh] flex flex-col items-center justify-center space-y-3">
-        <div className="w-6 h-6 border-2 border-slate-300 dark:border-slate-700 border-t-primary rounded-full animate-spin"></div>
-        <p className="text-xs text-slate-500 dark:text-slate-400">Loading staff dossier...</p>
-      </div>
-    );
+    return <TenantLoader fullScreen={false} />;
   }
 
   if (!staff) {

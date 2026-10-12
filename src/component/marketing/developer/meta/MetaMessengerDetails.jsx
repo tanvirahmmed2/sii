@@ -314,8 +314,8 @@ export default function MetaMessengerDetails({
       {/* Conversations List */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden">
         {loading && conversations.length === 0 ? (
-          <div className="p-12 text-center text-slate-400">
-            <span className="text-xs font-normal">Loading {title} conversations...</span>
+          <div className="p-12 flex items-center justify-center">
+            <div className="loader loader-md" />
           </div>
         ) : filteredConvs.length === 0 ? (
           <div className="p-12 text-center text-slate-400 space-y-1">

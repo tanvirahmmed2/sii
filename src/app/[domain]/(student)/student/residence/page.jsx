@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import TenantLoader from 'src/component/tenant/TenantLoader';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { 
@@ -86,10 +87,7 @@ export default function StudentHostelsPage() {
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
-          <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
-          <p className="text-sm font-medium text-slate-400">Loading hostel details...</p>
-        </div>
+        <TenantLoader fullScreen={false} />
       ) : (
         <div className="flex flex-col gap-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">

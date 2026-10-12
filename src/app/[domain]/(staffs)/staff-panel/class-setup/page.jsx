@@ -246,7 +246,9 @@ export default function ClassSetupPage() {
         {/* Classes Table */}
         <div className="overflow-x-auto">
           {loading ? (
-            <div className="py-12 text-center text-xs text-slate-500">Loading classes...</div>
+            <div className="py-12 flex justify-center items-center">
+              <div className="loader loader-sm" />
+            </div>
           ) : filteredClasses.length === 0 ? (
             <div className="py-12 text-center space-y-2">
               <BiLayer className="mx-auto text-3xl text-slate-400" />
@@ -433,9 +435,15 @@ export default function ClassSetupPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-3.5 py-1.5 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer disabled:opacity-50"
+                  className="px-3.5 py-1.5 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer disabled:opacity-50 min-w-[100px] flex items-center justify-center"
                 >
-                  {submitting ? 'Saving...' : editingClass ? 'Update Class' : 'Create Class'}
+                  {submitting ? (
+                    <div className="loader loader-sm loader-white" />
+                  ) : editingClass ? (
+                    'Update Class'
+                  ) : (
+                    'Create Class'
+                  )}
                 </button>
               </div>
             </form>

@@ -309,9 +309,8 @@ export default function UpdateNewsPage() {
 
   if (loading) {
     return (
-      <div className="w-full py-24 text-center text-slate-400">
-        <FiRefreshCw className="inline-block animate-spin text-2xl mb-3 text-secondary" />
-        <p className="text-xs font-semibold">Loading news article...</p>
+      <div className="w-full py-24 flex justify-center items-center">
+        <div className="loader loader-md" />
       </div>
     );
   }
@@ -566,10 +565,7 @@ export default function UpdateNewsPage() {
               className="px-5 py-2 rounded-xl text-xs font-semibold bg-secondary hover:bg-secondary-dark text-white shadow-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-2"
             >
               {saving ? (
-                <>
-                  <FiRefreshCw className="animate-spin text-xs" />
-                  <span>Saving Updates...</span>
-                </>
+                <div className="loader loader-sm loader-white" />
               ) : (
                 <>
                   <FiSave className="text-xs" />
@@ -608,8 +604,11 @@ export default function UpdateNewsPage() {
                 onClick={handleDelete}
                 className="px-5 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
               >
-                {deleting && <FiRefreshCw className="animate-spin text-xs" />}
-                <span>Delete Permanently</span>
+                {deleting ? (
+                  <div className="loader loader-sm loader-white" />
+                ) : (
+                  <span>Delete Permanently</span>
+                )}
               </button>
             </div>
           </div>

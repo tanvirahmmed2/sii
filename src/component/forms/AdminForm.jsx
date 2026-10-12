@@ -170,10 +170,7 @@ const AdminForm = ({ title, fields = [], apiEndpoint, onSuccess, onCancel, icon:
             className="inline-flex items-center gap-1.5 bg-primary hover:bg-primary-dark text-white font-bold px-4 py-2 rounded-xl text-xs shadow-xs disabled:opacity-50 transition-colors"
           >
             {submitting ? (
-              <>
-                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Saving...</span>
-              </>
+              <div className="loader loader-sm loader-white" />
             ) : (
               <>
                 <span>Publish Details</span>

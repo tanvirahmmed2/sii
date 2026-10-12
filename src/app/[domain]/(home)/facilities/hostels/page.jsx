@@ -47,8 +47,8 @@ const HostelFacilities = () => {
         </div>
 
         {loading ? (
-          <div className="w-full py-12 flex justify-center bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-xs">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Loading residential dormitories...</span>
+          <div className="w-full py-16 flex justify-center items-center bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-xs">
+            <div className="loader loader-md" />
           </div>
         ) : hostels.length === 0 ? (
           <div className="w-full py-12 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-center p-6 shadow-xs space-y-1">

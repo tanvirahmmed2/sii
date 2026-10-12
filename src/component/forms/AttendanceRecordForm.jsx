@@ -255,10 +255,16 @@ const AttendanceRecordForm = () => {
         <button
           onClick={handleLoadSheet}
           disabled={!selectedSlot || loadingStudents}
-          className="flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-secondary disabled:bg-slate-100 disabled:text-slate-400 rounded-2xl text-sm font-bold shadow-md transition-all cursor-pointer whitespace-nowrap"
+          className="flex items-center justify-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-secondary disabled:bg-slate-100 disabled:text-slate-400 rounded-2xl text-sm font-bold shadow-md transition-all cursor-pointer whitespace-nowrap min-w-[120px]"
         >
-          <FiRefreshCw className={`text-sm ${loadingStudents ? 'animate-spin' : ''}`} />
-          <span>{loadingStudents ? 'Loading...' : 'Load Sheet'}</span>
+          {loadingStudents ? (
+            <div className="loader loader-sm" />
+          ) : (
+            <>
+              <FiRefreshCw className="text-sm" />
+              <span>Load Sheet</span>
+            </>
+          )}
         </button>
       </div>
 

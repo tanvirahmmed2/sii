@@ -1178,10 +1178,16 @@ export default function WebsiteDetailsPage({ params }) {
               <button
                 type="submit"
                 disabled={saving}
-                className="px-5 py-2 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-1.5 transition-colors"
+                className="px-5 py-2 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5 transition-colors min-w-[160px]"
               >
-                {saving ? <FiRefreshCw className="animate-spin" /> : <FiSave />}
-                <span>Save Website Changes</span>
+                {saving ? (
+                  <div className="loader loader-sm loader-white" />
+                ) : (
+                  <>
+                    <FiSave />
+                    <span>Save Website Changes</span>
+                  </>
+                )}
               </button>
             </div>
           </form>
@@ -1280,10 +1286,16 @@ export default function WebsiteDetailsPage({ params }) {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="w-full py-2 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5 transition-colors"
+                  className="w-full py-2 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5 transition-colors min-h-[34px]"
                 >
-                  {saving ? <FiRefreshCw className="animate-spin" /> : <FiSave />}
-                  <span>Save Creator Details</span>
+                  {saving ? (
+                    <div className="loader loader-sm loader-white" />
+                  ) : (
+                    <>
+                      <FiSave />
+                      <span>Save Creator Details</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

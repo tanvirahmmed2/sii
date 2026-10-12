@@ -49,6 +49,11 @@ export default function OfficerSidebar({ isOpen, onClose }) {
     moduleLinks.push({ label: 'Clubs & Student Activities', href: '/officer/club' });
   }
 
+  const hasEvents = permissions['events'] ? permissions['events']?.can_view : true;
+  if (hasEvents) {
+    moduleLinks.push({ label: 'Campus Events & Applicants', href: '/officer/events' });
+  }
+
   const accountLinks = [
     { label: 'Officer Profile & Security', href: '/officer/profile' },
     { label: 'Panel Preferences', href: '/officer/settings' },

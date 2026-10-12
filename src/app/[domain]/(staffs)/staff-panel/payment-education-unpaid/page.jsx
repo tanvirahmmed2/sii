@@ -235,9 +235,8 @@ export default function PaymentEducationUnpaidPage() {
 
         {/* Table Area */}
         {loading ? (
-          <div className="py-16 flex flex-col items-center justify-center gap-3">
-            <div className="w-10 h-10 border-4 border-rose-200 border-t-rose-600 rounded-full animate-spin"></div>
-            <p className="text-xs text-slate-400 font-medium">Loading pending invoices...</p>
+          <div className="py-16 flex justify-center items-center">
+            <div className="loader loader-md" />
           </div>
         ) : payments.length === 0 ? (
           <div className="py-16 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">

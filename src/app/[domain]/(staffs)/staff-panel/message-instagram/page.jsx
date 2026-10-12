@@ -408,8 +408,8 @@ export default function MessageInstagramPage() {
               {/* Message Feed */}
               <div className="flex-1 p-4 overflow-y-auto space-y-3 max-h-[420px] bg-slate-50/20 dark:bg-slate-950/10">
                 {messagesLoading ? (
-                  <div className="py-12 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
-                    <FiRefreshCw className="animate-spin" /> Loading messages...
+                  <div className="py-12 flex justify-center items-center">
+                    <div className="loader loader-sm" />
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="py-12 text-center text-xs text-slate-400">

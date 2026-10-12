@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
+import TenantLoader from 'src/component/tenant/TenantLoader';
 import { 
   FiCheckCircle, FiXCircle, FiClock, FiActivity, 
   FiCalendar, FiFileText, FiSearch, FiFilter, FiAlertCircle 
@@ -88,12 +89,7 @@ const AttendancePage = () => {
   }, [history, statusFilter, searchTerm]);
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-        <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
-        <p className="text-sm font-medium text-slate-400">Loading attendance register...</p>
-      </div>
-    );
+    return <TenantLoader fullScreen={false} />;
   }
 
   const summaryCards = [

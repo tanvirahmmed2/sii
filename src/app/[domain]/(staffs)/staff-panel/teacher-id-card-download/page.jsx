@@ -211,7 +211,9 @@ export default function TeacherIdCardDownloadPage() {
       </div>
 
       {loading ? (
-        <div className="p-12 text-center text-xs text-slate-400">Loading faculty members...</div>
+        <div className="p-16 flex justify-center items-center">
+          <div className="loader loader-md" />
+        </div>
       ) : filteredTeachers.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 text-center text-slate-500 text-xs">
           No faculty members found.
@@ -248,7 +250,9 @@ export default function TeacherIdCardDownloadPage() {
                         />
                       </>
                     ) : (
-                      <div className="p-4 text-center text-xs text-slate-400">Loading card...</div>
+                      <div className="w-full h-full flex items-center justify-center p-4">
+                        <div className="loader loader-sm" />
+                      </div>
                     )}
                   </div>
                 </div>

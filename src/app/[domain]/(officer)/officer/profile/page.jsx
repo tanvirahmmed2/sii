@@ -90,7 +90,9 @@ export default function OfficerProfilePage() {
       </div>
 
       {loading ? (
-        <div className="py-12 text-center text-xs text-slate-400">Loading profile data...</div>
+        <div className="py-16 flex justify-center items-center">
+          <div className="loader loader-md" />
+        </div>
       ) : !officer ? (
         <div className="p-4 bg-rose-50 text-rose-700 border border-rose-200 rounded text-xs">
           Unable to load officer profile records.
@@ -214,9 +216,13 @@ export default function OfficerProfilePage() {
                   <button
                     type="submit"
                     disabled={savingProfile}
-                    className="px-4 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition disabled:opacity-50"
+                    className="px-4 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition disabled:opacity-50 min-w-[130px] flex items-center justify-center"
                   >
-                    {savingProfile ? 'Saving Details...' : 'Save Profile Details'}
+                    {savingProfile ? (
+                      <div className="loader loader-sm loader-white" />
+                    ) : (
+                      'Save Profile Details'
+                    )}
                   </button>
                 </div>
               </form>

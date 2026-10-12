@@ -45,7 +45,7 @@ const NewsDetailPage = () => {
   if (loading) {
     return (
       <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-12 px-4 flex items-center justify-center">
-        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Loading news article...</span>
+        <div className="loader loader-md" />
       </div>
     );
   }

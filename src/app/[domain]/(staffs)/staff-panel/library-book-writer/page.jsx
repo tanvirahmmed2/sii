@@ -282,8 +282,10 @@ export default function LibraryBookWriterPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-xs text-slate-400">
-                    Loading author records...
+                  <td colSpan={6} className="px-3 py-10 text-center">
+                    <div className="flex justify-center items-center">
+                      <div className="loader loader-sm" />
+                    </div>
                   </td>
                 </tr>
               ) : paginatedWriters.length === 0 ? (
@@ -493,9 +495,15 @@ export default function LibraryBookWriterPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-3.5 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer disabled:opacity-50"
+                  className="px-3.5 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer disabled:opacity-50 min-w-[100px] flex items-center justify-center"
                 >
-                  {submitting ? 'Saving...' : modalMode === 'add' ? 'Create Author' : 'Save Changes'}
+                  {submitting ? (
+                    <div className="loader loader-sm loader-white" />
+                  ) : modalMode === 'add' ? (
+                    'Create Author'
+                  ) : (
+                    'Save Changes'
+                  )}
                 </button>
               </div>
             </form>

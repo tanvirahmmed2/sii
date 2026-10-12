@@ -377,7 +377,9 @@ export default function StudentIdCardDownloadPage() {
                           />
                         </>
                       ) : (
-                        <div className="p-4 text-center text-xs text-slate-400">Loading card layout...</div>
+                        <div className="p-8 flex justify-center items-center">
+                          <div className="loader loader-sm" />
+                        </div>
                       )}
                     </div>
                   </div>

@@ -335,8 +335,10 @@ export default function OfficerLibraryShelvesPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-8 text-center text-xs text-slate-400">
-                    Loading shelf racks...
+                  <td colSpan={7} className="px-3 py-10 text-center">
+                    <div className="flex justify-center items-center">
+                      <div className="loader loader-sm" />
+                    </div>
                   </td>
                 </tr>
               ) : paginatedShelves.length === 0 ? (
@@ -619,7 +621,9 @@ export default function OfficerLibraryShelvesPage() {
 
             <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
               {rosterLoading ? (
-                <div className="py-8 text-center text-xs text-slate-400">Loading shelf roster...</div>
+                <div className="py-12 flex justify-center items-center">
+                  <div className="loader loader-sm" />
+                </div>
               ) : rosterBooks.length === 0 ? (
                 <div className="py-8 text-center text-xs text-slate-400">
                   No books are currently assigned to this shelf rack.

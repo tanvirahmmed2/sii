@@ -77,9 +77,8 @@ const ClubNewsCreateForm = ({ onSuccess, onCancel }) => {
 
   if (loadingClubs) {
     return (
-      <div className="py-6 flex justify-center items-center gap-2">
-        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-        <span className="text-xs text-slate-400">Loading clubs list...</span>
+      <div className="py-8 flex justify-center items-center">
+        <div className="loader loader-sm" />
       </div>
     );
   }

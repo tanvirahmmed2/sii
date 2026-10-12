@@ -227,8 +227,10 @@ function PublicResultsContent() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="text-center py-10 text-slate-400">
-                    Loading merit results...
+                  <td colSpan="6" className="text-center py-12">
+                    <div className="flex justify-center items-center py-2">
+                      <div className="loader loader-sm" />
+                    </div>
                   </td>
                 </tr>
               ) : results.length === 0 ? (
@@ -275,7 +277,13 @@ function PublicResultsContent() {
 
 export default function PublicAdmissionResultsPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-400">Loading merit publication...</div>}>
+    <Suspense
+      fallback={
+        <div className="p-16 flex justify-center items-center">
+          <div className="loader loader-md" />
+        </div>
+      }
+    >
       <PublicResultsContent />
     </Suspense>
   );

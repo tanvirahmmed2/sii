@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import OfficersManagementWorkstation from 'src/component/website/admin/OfficersManagementWorkstation';
+import OfficersManagementWorkstation from 'src/component/website/staff/OfficersManagementWorkstation';
 
 export default function ManagementOthersPage() {
   return (

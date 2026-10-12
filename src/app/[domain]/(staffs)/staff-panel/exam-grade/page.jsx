@@ -234,10 +234,9 @@ export default function ExamGradePage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="px-3 py-8 text-center text-slate-400">
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                      <span>Loading grade scales...</span>
+                  <td colSpan="6" className="px-3 py-10 text-center">
+                    <div className="flex items-center justify-center">
+                      <div className="loader loader-sm" />
                     </div>
                   </td>
                 </tr>
@@ -451,9 +450,15 @@ export default function ExamGradePage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition cursor-pointer disabled:opacity-50 min-w-[100px] flex items-center justify-center"
                 >
-                  {submitting ? 'Saving...' : editingGrade ? 'Update Grade' : 'Save Grade'}
+                  {submitting ? (
+                    <div className="loader loader-sm loader-white" />
+                  ) : editingGrade ? (
+                    'Update Grade'
+                  ) : (
+                    'Save Grade'
+                  )}
                 </button>
               </div>
             </form>

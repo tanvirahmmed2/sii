@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import TenantLoader from 'src/component/tenant/TenantLoader';
 import {
   FiDollarSign,
   FiPlus,
@@ -363,10 +364,7 @@ export default function FeesEducationConfigurePage() {
 
         {/* Table Area */}
         {loading ? (
-          <div className="py-16 flex flex-col items-center justify-center gap-3">
-            <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-            <p className="text-xs text-slate-400 font-medium">Loading configured fee structures...</p>
-          </div>
+          <TenantLoader fullScreen={false} />
         ) : filteredFees.length === 0 ? (
           <div className="py-16 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
             <FiLayers className="text-3xl text-slate-300 mx-auto mb-2" />
@@ -641,9 +639,15 @@ export default function FeesEducationConfigurePage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50 flex items-center justify-center min-w-[140px]"
                 >
-                  {saving ? 'Saving...' : editingFee ? 'Save Changes' : 'Create Fee Structure'}
+                  {saving ? (
+                    <div className="loader loader-sm loader-white" />
+                  ) : editingFee ? (
+                    'Save Changes'
+                  ) : (
+                    'Create Fee Structure'
+                  )}
                 </button>
               </div>
             </form>

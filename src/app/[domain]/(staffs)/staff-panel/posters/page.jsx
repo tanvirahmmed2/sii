@@ -230,7 +230,9 @@ export default function PostersPage() {
                 <div dangerouslySetInnerHTML={{ __html: compiled.html }} />
               </div>
             ) : (
-              <div className="p-12 text-center text-xs text-slate-400">Loading poster preview...</div>
+              <div className="p-16 flex justify-center items-center">
+                <div className="loader loader-md" />
+              </div>
             )}
           </div>
         </div>

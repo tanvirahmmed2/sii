@@ -226,8 +226,8 @@ export default function MetaMessenger({
 
       {/* Main Content Area */}
       {loadingConvs && conversations.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 text-center text-slate-400">
-          <span className="text-xs font-normal">Loading {title} conversations...</span>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 flex items-center justify-center">
+          <div className="loader loader-md" />
         </div>
       ) : conversations.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 text-center">
@@ -331,8 +331,8 @@ export default function MetaMessenger({
           {/* Messages Stream */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/30 dark:bg-slate-900/30">
             {loadingMsgs && messages.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-slate-400 text-xs">
-                Loading messages...
+              <div className="h-full flex items-center justify-center p-8">
+                <div className="loader loader-sm" />
               </div>
             ) : messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs">

@@ -727,7 +727,11 @@ export default function ConfigurePaymentsPage() {
           </div>
 
           {/* Accounts Grid */}
-          {filteredAccounts.length === 0 ? (
+          {loading && accounts.length === 0 ? (
+            <div className="py-20 flex justify-center items-center">
+              <div className="loader loader-md" />
+            </div>
+          ) : filteredAccounts.length === 0 ? (
             <div className="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl p-12 text-center space-y-3">
               <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
                 <FiCreditCard className="w-6 h-6" />
@@ -1023,10 +1027,7 @@ export default function ConfigurePaymentsPage() {
                       className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                     >
                       {savingRoute === purpose.code ? (
-                        <>
-                          <FiRefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Saving Route...</span>
-                        </>
+                        <div className="loader loader-sm loader-white" />
                       ) : (
                         <>
                           <FiCheck className="w-3.5 h-3.5 text-emerald-400" />
@@ -1124,10 +1125,7 @@ export default function ConfigurePaymentsPage() {
                 className="w-full py-2.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {simulating ? (
-                  <>
-                    <FiRefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Resolving Route & Initiating Gateway...</span>
-                  </>
+                  <div className="loader loader-sm loader-white" />
                 ) : (
                   <>
                     <FiPlay className="w-3.5 h-3.5" />
@@ -1621,10 +1619,7 @@ export default function ConfigurePaymentsPage() {
                 className="px-5 py-2 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
               >
                 {actionLoading ? (
-                  <>
-                    <FiRefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Saving...</span>
-                  </>
+                  <div className="loader loader-sm loader-white" />
                 ) : (
                   <span>{modalMode === 'create' ? 'Create Gateway Account' : 'Save Changes'}</span>
                 )}

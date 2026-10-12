@@ -78,10 +78,8 @@ const HistoryPage = () => {
 
         {/* Timeline */}
         {loading ? (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-8 text-center">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              Loading historical archive records...
-            </span>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 flex justify-center items-center">
+            <div className="loader loader-md" />
           </div>
         ) : histories.length === 0 ? (
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-8 text-center space-y-1">

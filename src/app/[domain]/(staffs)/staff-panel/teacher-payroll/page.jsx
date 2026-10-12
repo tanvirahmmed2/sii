@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import PayrollsScaleManager from 'src/component/website/admin/payroll/PayrollsScaleManager';
+import PayrollsScaleManager from 'src/component/website/staff/payroll/PayrollsScaleManager';
 
 export default function TeacherPayrollPage() {
   return (

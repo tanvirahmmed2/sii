@@ -83,9 +83,8 @@ const SyllabusCreateForm = ({ initialClassId = '', onSuccess, onCancel }) => {
 
   if (loadingLists) {
     return (
-      <div className="w-full bg-white border border-slate-100 rounded-3xl p-8 flex items-center justify-center gap-3">
-        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-        <span className="text-sm font-semibold text-slate-400">Loading form options...</span>
+      <div className="w-full bg-white border border-slate-100 rounded-3xl p-8 flex items-center justify-center">
+        <div className="loader loader-sm" />
       </div>
     );
   }

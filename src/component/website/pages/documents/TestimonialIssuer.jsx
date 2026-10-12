@@ -92,7 +92,9 @@ export default function TestimonialIssuer() {
           </form>
 
           {loading ? (
-            <div className="py-12 text-center text-xs text-slate-400 font-semibold animate-pulse">Loading students...</div>
+            <div className="py-12 flex items-center justify-center">
+              <div className="loader loader-sm" />
+            </div>
           ) : students.length === 0 ? (
             <div className="py-12 text-center text-xs text-slate-400 italic">No matching students found.</div>
           ) : (
@@ -159,8 +161,8 @@ export default function TestimonialIssuer() {
                 </div>
 
                 <button type="submit" disabled={submitting}
-                  className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-60 shadow-sm">
-                  <FiPrinter /> {submitting ? 'Generating...' : 'Issue & Print Testimonial'}
+                  className="flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-60 shadow-sm min-w-[180px]">
+                  {submitting ? <div className="loader loader-sm loader-white" /> : <><FiPrinter /> Issue &amp; Print Testimonial</>}
                 </button>
               </div>
             )}

@@ -52,8 +52,8 @@ const Events = () => {
         </div>
 
         {loading ? (
-          <div className="py-8 text-center text-xs text-slate-400">
-            Loading scheduled events...
+          <div className="py-12 flex justify-center items-center">
+            <div className="loader loader-sm" />
           </div>
         ) : events.length === 0 ? (
           <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded p-6 text-center text-xs text-slate-500 dark:text-slate-400">

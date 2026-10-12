@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import TenantLoader from 'src/component/tenant/TenantLoader';
 import Link from 'next/link';
 import {
   FiCalendar,
@@ -78,12 +79,7 @@ export default function StudentExamsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-        <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
-        <p className="text-sm font-medium text-slate-400">Loading your examination portal...</p>
-      </div>
-    );
+    return <TenantLoader fullScreen={false} />;
   }
 
   return (
@@ -305,10 +301,7 @@ export default function StudentExamsPage() {
                         className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-colors cursor-pointer disabled:opacity-50"
                       >
                         {isApplying ? (
-                          <>
-                            <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            <span>Submitting Application...</span>
-                          </>
+                          <div className="loader loader-sm loader-white" />
                         ) : (
                           <>
                             <FiCheckCircle className="text-sm" /> Apply for Exam

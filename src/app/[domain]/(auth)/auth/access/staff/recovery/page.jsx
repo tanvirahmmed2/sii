@@ -192,7 +192,13 @@ export default function StaffRecoveryPage() {
           </p>
         </div>
 
-        <Suspense fallback={<div className="py-12 text-center text-xs text-slate-400">Loading...</div>}>
+        <Suspense
+          fallback={
+            <div className="py-12 flex justify-center items-center">
+              <div className="loader loader-md" />
+            </div>
+          }
+        >
           <StaffRecoveryInner />
         </Suspense>
 

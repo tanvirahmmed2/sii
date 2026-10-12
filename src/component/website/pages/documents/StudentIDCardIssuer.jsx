@@ -182,8 +182,8 @@ export default function StudentIDCardIssuer() {
       {/* Clean Table View */}
       <div className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-2xs">
         {loading ? (
-          <div className="py-16 text-center text-xs text-slate-400 font-semibold animate-pulse">
-            Loading students...
+          <div className="py-16 flex justify-center items-center">
+            <div className="loader loader-md" />
           </div>
         ) : students.length === 0 ? (
           <div className="py-16 text-center text-xs text-slate-400 italic">
@@ -284,8 +284,15 @@ export default function StudentIDCardIssuer() {
             </button>
 
             <button type="button" onClick={() => handleIssueIDCards()} disabled={submitting}
-              className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer shadow-sm flex items-center gap-1.5">
-              <FiPrinter /> {submitting ? 'Processing...' : 'Provide & Print Selected'}
+              className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer shadow-sm flex items-center justify-center gap-1.5 min-w-[180px]">
+              {submitting ? (
+                <div className="loader loader-sm loader-white" />
+              ) : (
+                <>
+                  <FiPrinter />
+                  <span>Provide & Print Selected</span>
+                </>
+              )}
             </button>
           </div>
         </div>

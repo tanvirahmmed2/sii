@@ -142,8 +142,8 @@ export default function AdmitCardIssuer() {
           </div>
 
           {loadingExams ? (
-            <div className="py-16 text-center text-xs text-slate-400 font-semibold animate-pulse">
-              Loading available examinations...
+            <div className="py-16 flex justify-center items-center">
+              <div className="loader loader-md" />
             </div>
           ) : exams.length === 0 ? (
             <div className="py-16 text-center text-xs text-slate-400 italic bg-white border border-slate-200 rounded-3xl p-8">
@@ -198,9 +198,15 @@ export default function AdmitCardIssuer() {
 
             <div className="flex items-center gap-3">
               <button onClick={handleIssueAdmitCards} disabled={submitting || selectedStudentIds.length === 0}
-                className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50">
-                <FiPrinter className="text-sm" />
-                {submitting ? 'Generating...' : `Print Admit Cards (${selectedStudentIds.length})`}
+                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50 min-w-[150px]">
+                {submitting ? (
+                  <div className="loader loader-sm loader-white" />
+                ) : (
+                  <>
+                    <FiPrinter className="text-sm" />
+                    <span>Print Admit Cards ({selectedStudentIds.length})</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -235,8 +241,8 @@ export default function AdmitCardIssuer() {
             </div>
 
             {loadingStudents ? (
-              <div className="py-16 text-center text-xs text-slate-400 font-semibold animate-pulse">
-                Fetching students who cleared exam fees...
+              <div className="py-16 flex justify-center items-center">
+                <div className="loader loader-sm" />
               </div>
             ) : filteredStudents.length === 0 ? (
               <div className="py-12 text-center text-xs text-slate-400 italic">

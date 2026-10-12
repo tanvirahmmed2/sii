@@ -71,7 +71,7 @@ const TeacherClubNoticePage = () => {
   if (loading) {
     return (
       <div className="w-full min-h-[300px] flex items-center justify-center">
-        <span className="text-xs text-slate-400">Loading Notice Manager...</span>
+        <div className="loader loader-md" />
       </div>
     );
   }
@@ -137,9 +137,9 @@ const TeacherClubNoticePage = () => {
             <button
               type="submit"
               disabled={savingNotice}
-              className="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+              className="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50 min-w-[170px]"
             >
-              <FiSave /> {savingNotice ? 'Saving Notice...' : 'Save & Publish Notice'}
+              {savingNotice ? <div className="loader loader-sm loader-white" /> : <><FiSave /> Save &amp; Publish Notice</>}
             </button>
           </div>
         </form>
