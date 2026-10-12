@@ -112,6 +112,76 @@ export const staffNavData = [
         ]
       },
       {
+        title: 'Certificates & Documents',
+        children: [
+          {
+            title: 'Transfer Certificate (TC)',
+            children: [
+              {
+                title: 'Templates',
+                path: '/tc-templates'
+              },
+              {
+                title: 'Issue & Download',
+                path: '/tc'
+              }
+            ]
+          },
+          {
+            title: 'Testimonials',
+            children: [
+              {
+                title: 'Templates',
+                path: '/testimonial-templates'
+              },
+              {
+                title: 'Issue & Download',
+                path: '/testimonials'
+              }
+            ]
+          },
+          {
+            title: 'Academic Certificates',
+            children: [
+              {
+                title: 'Templates',
+                path: '/certificate-templates'
+              },
+              {
+                title: 'Issue & Download',
+                path: '/certificates'
+              }
+            ]
+          },
+          {
+            title: 'Payment Receipts',
+            children: [
+              {
+                title: 'Templates',
+                path: '/payment-receipt-templates'
+              },
+              {
+                title: 'Issue & Download',
+                path: '/payment-receipt'
+              }
+            ]
+          },
+          {
+            title: 'Website Posters',
+            children: [
+              {
+                title: 'Templates',
+                path: '/poster-templates'
+              },
+              {
+                title: 'Generate & Export',
+                path: '/posters'
+              }
+            ]
+          }
+        ]
+      },
+      {
         title: 'Search',
         children: [
           {
@@ -226,12 +296,17 @@ export const staffNavData = [
         path: '/teacher-qualifications'
       },
       {
-        title: 'Id Card',
-        path: '/teacher-id-card'
-      },
-      {
-        title: 'Id Card Download',
-        path: '/teacher-id-card-download'
+        title: 'ID Card',
+        children: [
+          {
+            title: 'Templates',
+            path: '/teacher-id-card'
+          },
+          {
+            title: 'Download',
+            path: '/teacher-id-card-download'
+          }
+        ]
       },
       {
         title: 'List',

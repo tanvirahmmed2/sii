@@ -20,6 +20,7 @@ export default function StudentBasicInfoPage() {
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
+    email: '',
     roll_no: '',
     gender: 'Male',
     blood_group: 'A+',
@@ -65,6 +66,7 @@ export default function StudentBasicInfoPage() {
     setEditingStudent(student);
     setFormData({
       name: student.name || '',
+      email: student.email || '',
       roll_no: student.roll_no || '',
       gender: student.gender || 'Male',
       blood_group: student.blood_group || 'A+',
@@ -85,6 +87,7 @@ export default function StudentBasicInfoPage() {
         body: JSON.stringify({
           id: editingStudent.id,
           name: formData.name.trim() || null,
+          email: formData.email.trim() || null,
           roll_no: formData.roll_no.trim() || null,
           gender: formData.gender,
           blood_group: formData.blood_group,
@@ -204,7 +207,7 @@ export default function StudentBasicInfoPage() {
               </div>
 
               <form onSubmit={handleSave} className="space-y-3 text-xs">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       Full Name
@@ -215,6 +218,19 @@ export default function StudentBasicInfoPage() {
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="e.g. Tanvir Ahmmed"
                       className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="e.g. student@institution.edu"
+                      className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary font-mono text-[11px]"
                     />
                   </div>
 
@@ -323,6 +339,7 @@ export default function StudentBasicInfoPage() {
                     <th className="px-3 py-2.5">Reg No</th>
                     <th className="px-3 py-2.5">Roll No</th>
                     <th className="px-3 py-2.5">Full Name</th>
+                    <th className="px-3 py-2.5">Email</th>
                     <th className="px-3 py-2.5">Gender</th>
                     <th className="px-3 py-2.5">Blood Group</th>
                     <th className="px-3 py-2.5">Date of Birth</th>
@@ -341,6 +358,9 @@ export default function StudentBasicInfoPage() {
                       </td>
                       <td className="px-3 py-2 font-medium text-slate-900 dark:text-white">
                         {s.name || <span className="text-slate-400 italic">Not set</span>}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-[11px] text-slate-600 dark:text-slate-300">
+                        {s.email || <span className="text-slate-400 italic">Not set</span>}
                       </td>
                       <td className="px-3 py-2 text-slate-600 dark:text-slate-400">{s.gender || '—'}</td>
                       <td className="px-3 py-2 font-mono text-[11px] text-slate-600 dark:text-slate-400">

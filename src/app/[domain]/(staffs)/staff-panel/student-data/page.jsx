@@ -257,6 +257,7 @@ export default function StudentDataPage() {
                     <th className="px-3 py-2.5">Roll</th>
                     <th className="px-3 py-2.5">Student Unique ID</th>
                     <th className="px-3 py-2.5">Full Name</th>
+                    <th className="px-3 py-2.5">Email</th>
                     <th className="px-3 py-2.5">Class / Section</th>
                     <th className="px-3 py-2.5">Status</th>
                     <th className="px-3 py-2.5 text-right">Actions</th>
@@ -276,6 +277,9 @@ export default function StudentDataPage() {
                       </td>
                       <td className="px-3 py-2 font-medium text-slate-900 dark:text-white">
                         {s.name || <span className="text-slate-400 italic">Not set</span>}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-[11px] text-slate-600 dark:text-slate-300">
+                        {s.email || <span className="text-slate-400 italic">None</span>}
                       </td>
                       <td className="px-3 py-2 text-slate-600 dark:text-slate-400">
                         {s.class_name} {s.section_name ? `(${s.section_name})` : ''}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import {
@@ -19,6 +20,10 @@ import {
 } from 'react-icons/fi';
 
 function EnrollmentContent() {
+  const params = useParams();
+  const domain = params?.domain || '';
+  const apiBase = domain ? `/api/${domain}` : '/api';
+
   const [candidates, setCandidates] = useState([]);
   const [circulars, setCirculars] = useState([]);
   const [selectedCircularId, setSelectedCircularId] = useState('');
@@ -39,24 +44,30 @@ function EnrollmentContent() {
 
   // Load circulars
   useEffect(() => {
-    fetch('/api/domain/staff/panel/admissions')
-      .then((res) => res.json())
+    fetch(`${apiBase}/staff/panel/admissions`)
+      .then(async (res) => {
+        if (!res.ok) return { success: false };
+        return res.json();
+      })
       .then((data) => {
-        if (data.success && data.circulars) {
+        if (data?.success && data?.circulars) {
           setCirculars(data.circulars);
         }
       })
       .catch((err) => console.error(err));
-  }, []);
+  }, [apiBase]);
 
   // Fetch candidates awaiting enrollment
   const fetchCandidates = async () => {
     setLoading(true);
     try {
-      const url = `/api/domain/staff/panel/admissions/enrollment${
+      const url = `${apiBase}/staff/panel/admissions/enrollment${
         selectedCircularId ? `?circular_id=${selectedCircularId}` : ''
       }`;
       const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`Server error (${res.status})`);
+      }
       const data = await res.json();
       if (data.success) {
         setCandidates(data.candidates || []);
@@ -73,7 +84,7 @@ function EnrollmentContent() {
 
   useEffect(() => {
     fetchCandidates();
-  }, [selectedCircularId]);
+  }, [selectedCircularId, apiBase]);
 
   const openEnrollModal = (cand) => {
     setEnrollingCandidate(cand);
@@ -94,7 +105,7 @@ function EnrollmentContent() {
 
     setEnrolling(true);
     try {
-      const res = await fetch('/api/domain/staff/panel/admissions/enrollment', {
+      const res = await fetch(`${apiBase}/staff/panel/admissions/enrollment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

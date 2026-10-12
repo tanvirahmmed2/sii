@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import {
@@ -24,6 +24,9 @@ import {
 
 function ApplicantsContent() {
   const searchParams = useSearchParams();
+  const params = useParams();
+  const domain = params?.domain || '';
+  const apiBase = domain ? `/api/${domain}` : '/api';
   const initialCircularId = searchParams.get('circular_id') || '';
 
   const [applicants, setApplicants] = useState([]);
@@ -43,21 +46,24 @@ function ApplicantsContent() {
 
   // Fetch circulars for filter dropdown
   useEffect(() => {
-    fetch('/api/domain/staff/panel/admissions')
-      .then((res) => res.json())
+    fetch(`${apiBase}/staff/panel/admissions`)
+      .then(async (res) => {
+        if (!res.ok) return { success: false };
+        return res.json();
+      })
       .then((data) => {
-        if (data.success) {
+        if (data?.success) {
           setCirculars(data.circulars || []);
         }
       })
       .catch((err) => console.error('Error fetching circulars:', err));
-  }, []);
+  }, [apiBase]);
 
   // Fetch applicants
   const fetchApplicants = async () => {
     setLoading(true);
     try {
-      let url = `/api/domain/staff/panel/admissions/applicants?status=${statusFilter}`;
+      let url = `${apiBase}/staff/panel/admissions/applicants?status=${statusFilter}`;
       if (selectedCircularId) {
         url += `&circular_id=${selectedCircularId}`;
       }
@@ -66,6 +72,9 @@ function ApplicantsContent() {
       }
 
       const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`Server error (${res.status})`);
+      }
       const data = await res.json();
       if (data.success) {
         setApplicants(data.applicants || []);
@@ -85,7 +94,7 @@ function ApplicantsContent() {
 
   useEffect(() => {
     fetchApplicants();
-  }, [statusFilter, selectedCircularId]);
+  }, [statusFilter, selectedCircularId, apiBase]);
 
   // Handle Search Submission
   const handleSearchSubmit = (e) => {
@@ -97,7 +106,7 @@ function ApplicantsContent() {
   const handleEvaluate = async (applicantId, newStatus) => {
     setActionLoading(true);
     try {
-      const res = await fetch('/api/domain/staff/panel/admissions/applicants', {
+      const res = await fetch(`${apiBase}/staff/panel/admissions/applicants`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -131,7 +140,7 @@ function ApplicantsContent() {
 
     setActionLoading(true);
     try {
-      const res = await fetch('/api/domain/staff/panel/admissions/applicants', {
+      const res = await fetch(`${apiBase}/staff/panel/admissions/applicants`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -159,7 +168,7 @@ function ApplicantsContent() {
 
   // Trigger CSV Download
   const handleDownloadCsv = (filterType) => {
-    const downloadUrl = `/api/domain/staff/panel/admissions/applicants/export?filter=${filterType}${
+    const downloadUrl = `${apiBase}/staff/panel/admissions/applicants/export?filter=${filterType}${
       selectedCircularId ? `&circular_id=${selectedCircularId}` : ''
     }`;
     window.open(downloadUrl, '_blank');

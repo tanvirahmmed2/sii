@@ -42,6 +42,7 @@ export default function DeveloperLayout({ children }) {
     moduleName === 'overview' ||
     moduleName === 'profile' ||
     moduleName === 'settings' ||
+    moduleName === 'templates' ||
     allowedModules.includes(moduleName);
 
   if (!isAllowed) {
@@ -76,6 +77,12 @@ export default function DeveloperLayout({ children }) {
         </div>
       </div>
     );
+  }
+
+  // If in GrapesJS Studio builder, render full screen for optimum canvas space
+  const isBuilder = pathname.includes('/templates/builder');
+  if (isBuilder) {
+    return <div className="h-screen w-screen overflow-hidden">{children}</div>;
   }
 
   return (

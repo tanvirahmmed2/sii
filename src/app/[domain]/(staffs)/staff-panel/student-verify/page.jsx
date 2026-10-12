@@ -123,7 +123,7 @@ export default function StudentVerifyPage() {
             Verify Student Profiles | Staff Management
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Review submitted student records, addresses, guardian verifications, and digital signatures. Approve verified students for portal access.
+            Students with pre-registered emails verified via mailer OTP are automatically active. Students whose emails were not pre-registered submit their profiles here for staff review and manual verification.
           </p>
         </div>
 

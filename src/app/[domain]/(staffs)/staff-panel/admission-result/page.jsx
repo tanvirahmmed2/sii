@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import {
@@ -17,6 +18,10 @@ import {
 } from 'react-icons/fi';
 
 function ResultsContent() {
+  const params = useParams();
+  const domain = params?.domain || '';
+  const apiBase = domain ? `/api/${domain}` : '/api';
+
   const [results, setResults] = useState([]);
   const [circulars, setCirculars] = useState([]);
   const [selectedCircularId, setSelectedCircularId] = useState('');
@@ -26,10 +31,13 @@ function ResultsContent() {
 
   // Load circulars
   useEffect(() => {
-    fetch('/api/domain/staff/panel/admissions')
-      .then((res) => res.json())
+    fetch(`${apiBase}/staff/panel/admissions`)
+      .then(async (res) => {
+        if (!res.ok) return { success: false };
+        return res.json();
+      })
       .then((data) => {
-        if (data.success && data.circulars) {
+        if (data?.success && data?.circulars) {
           setCirculars(data.circulars);
           if (data.circulars.length > 0 && !selectedCircularId) {
             setSelectedCircularId(String(data.circulars[0].id));
@@ -37,16 +45,19 @@ function ResultsContent() {
         }
       })
       .catch((err) => console.error(err));
-  }, []);
+  }, [apiBase]);
 
   // Fetch results for the selected circular
   const fetchResults = async () => {
     setLoading(true);
     try {
-      const url = `/api/domain/staff/panel/admissions/results/publish${
+      const url = `${apiBase}/staff/panel/admissions/results/publish${
         selectedCircularId ? `?circular_id=${selectedCircularId}` : ''
       }`;
       const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`Server error (${res.status})`);
+      }
       const data = await res.json();
       if (data.success) {
         setResults(data.results || []);
@@ -67,7 +78,7 @@ function ResultsContent() {
 
   useEffect(() => {
     fetchResults();
-  }, [selectedCircularId]);
+  }, [selectedCircularId, apiBase]);
 
   // Handle 1-Click Auto-Publish
   const handleAutoPublish = async () => {
@@ -82,7 +93,7 @@ function ResultsContent() {
 
     setPublishing(true);
     try {
-      const res = await fetch('/api/domain/staff/panel/admissions/results/publish', {
+      const res = await fetch(`${apiBase}/staff/panel/admissions/results/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

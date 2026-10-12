@@ -127,7 +127,10 @@ export async function POST(request, context) {
       // Check duplicate email if email was provided
       if (email) {
         const emailCheck = await queryDb(
-          `SELECT id FROM website_student_info WHERE website_id = $1 AND LOWER(email) = $2 LIMIT 1`,
+          `SELECT s.id FROM website_students s
+           LEFT JOIN website_student_info i ON s.id = i.student_id
+           WHERE s.website_id = $1 AND (LOWER(s.email) = $2 OR LOWER(i.email) = $2)
+           LIMIT 1`,
           [website.id, email]
         );
         if (emailCheck.rows.length > 0) {
@@ -163,13 +166,13 @@ export async function POST(request, context) {
         const insertRes = await queryDb(
           `INSERT INTO website_students (
               website_id, registration_no, roll_no, student_unique_id,
-              class_id, section_id, session_id, is_active
+              class_id, section_id, session_id, email, is_active
            )
            VALUES (
               $1, $2, $3, $4,
-              $5, $6, $7, FALSE
+              $5, $6, $7, $8, FALSE
            )
-           RETURNING id, registration_no, student_unique_id`,
+           RETURNING id, registration_no, student_unique_id, email`,
           [
             website.id,
             regNo,
@@ -178,6 +181,7 @@ export async function POST(request, context) {
             resolvedClassId,
             resolvedSectionId,
             resolvedSessionId,
+            email || null,
           ]
         );
 
@@ -217,46 +221,48 @@ export async function POST(request, context) {
 
         const newInfo = insertInfoRes.rows[0];
 
-        // Build setup URL and dispatch Brevo invitation email
-        const setupUrl = buildStudentSetupUrl(website, verificationToken, request);
+        // Build setup URL and dispatch Brevo invitation email if email exists
+        if (email) {
+          const setupUrl = buildStudentSetupUrl(website, verificationToken, request);
 
-        try {
-          const emailHtml = buildStyledEmail({
-            title: `Welcome to ${website.name || 'Institutional Portal'}`,
-            preheader: `Complete your student account setup and enrollment credentials.`,
-            websiteName: website.name || 'Educational Management Platform',
-            bodyContent: `
-              <p>Dear <strong>${newStudent.name}</strong>,</p>
-              <p>You have been enrolled as a student at <strong>${website.name || 'our institution'}</strong>. Please finalize your enrollment and set your personal account password by clicking the button below.</p>
-              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px; margin: 16px 0; font-size: 13px;">
-                <p style="margin: 0 0 6px 0;"><strong>Registration Number:</strong> <span style="font-family: monospace;">${newStudent.registration_no}</span></p>
-                <p style="margin: 0 0 6px 0;"><strong>Student Unique ID:</strong> <span style="font-family: monospace;">${newStudent.student_unique_id}</span></p>
-                <p style="margin: 0;"><strong>Initial Demo Password:</strong> <span style="font-family: monospace; color: #475569;">${demoPassword}</span></p>
-              </div>
-              <p style="font-size: 13px; color: #64748b;">Once you submit your profile details, our staff administration will review and verify your account for Student Portal access.</p>
-            `,
-            ctaButton: {
-              label: 'Setup Student Account →',
-              url: setupUrl,
-            },
-          });
+          try {
+            const emailHtml = buildStyledEmail({
+              title: `Welcome to ${website.name || 'Institutional Portal'}`,
+              preheader: `Complete your student account setup and enrollment credentials.`,
+              websiteName: website.name || 'Educational Management Platform',
+              bodyContent: `
+                <p>Dear <strong>${name || 'Student'}</strong>,</p>
+                <p>You have been enrolled as a student at <strong>${website.name || 'our institution'}</strong>. Please finalize your enrollment and set your personal account password by clicking the button below.</p>
+                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px; margin: 16px 0; font-size: 13px;">
+                  <p style="margin: 0 0 6px 0;"><strong>Registration Number:</strong> <span style="font-family: monospace;">${newStudent.registration_no}</span></p>
+                  <p style="margin: 0 0 6px 0;"><strong>Student Unique ID:</strong> <span style="font-family: monospace;">${newStudent.student_unique_id}</span></p>
+                  <p style="margin: 0;"><strong>Initial Demo Password:</strong> <span style="font-family: monospace; color: #475569;">${demoPassword}</span></p>
+                </div>
+                <p style="font-size: 13px; color: #64748b;">Verify your email via one-time code to activate your account for Student Portal access.</p>
+              `,
+              ctaButton: {
+                label: 'Setup Student Account →',
+                url: setupUrl,
+              },
+            });
 
-          await sendEmail({
-            to: email,
-            toName: newStudent.name,
-            subject: `Complete Your Student Account Setup - ${website.name || 'Portal'}`,
-            html: emailHtml,
-            websiteId: website.id,
-          });
-        } catch (emailErr) {
-          console.warn(`Bulk email dispatch failed for ${email}:`, emailErr.message);
+            await sendEmail({
+              to: email,
+              toName: name || 'Student',
+              subject: `Complete Your Student Account Setup - ${website.name || 'Portal'}`,
+              html: emailHtml,
+              websiteId: website.id,
+            });
+          } catch (emailErr) {
+            console.warn(`Bulk email dispatch failed for ${email}:`, emailErr.message);
+          }
         }
 
         results.successful++;
         results.created.push({
           id: newStudent.id,
-          name: newStudent.name,
-          email: newStudent.email,
+          name: name || null,
+          email: email || null,
           registration_no: newStudent.registration_no,
         });
       } catch (insertErr) {

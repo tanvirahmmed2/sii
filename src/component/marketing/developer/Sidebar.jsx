@@ -35,6 +35,19 @@ export const ADMIN_NAV_SECTIONS = [
     ],
   },
   {
+    title: 'Template Studio & Design',
+    links: [
+      { href: '/developer/templates', label: 'All Templates', exact: true },
+      { href: '/developer/templates/student-id-card', label: 'Student ID Cards' },
+      { href: '/developer/templates/teacher-id-card', label: 'Teacher ID Cards' },
+      { href: '/developer/templates/tc', label: 'Transfer Certificates (TC)' },
+      { href: '/developer/templates/testimonial', label: 'Testimonials' },
+      { href: '/developer/templates/certificate', label: 'Academic Certificates' },
+      { href: '/developer/templates/payment-receipt', label: 'Payment Receipts' },
+      { href: '/developer/templates/poster', label: 'Website Posters' },
+    ],
+  },
+  {
     title: 'Content & Policies',
     links: [
       { href: '/developer/blogs', label: 'Blogs' },
@@ -88,15 +101,17 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
   const router = useRouter();
 
   const userPerms = Array.isArray(currentUser?.permissions) ? currentUser.permissions : null;
-  const allowedModules = userPerms && userPerms.length > 0 ? userPerms : ['overview', 'profile', 'settings'];
+  const allowedModules = userPerms && userPerms.length > 0 ? userPerms : ['overview', 'profile', 'settings', 'templates'];
 
   const isLinkAllowed = (link) => {
-    const segments = link.href.split('/').filter(Boolean);
+    const rawPath = link.href.split('?')[0];
+    const segments = rawPath.split('/').filter(Boolean);
     const moduleName = segments[1] || 'overview';
     return (
       moduleName === 'overview' ||
       moduleName === 'profile' ||
       moduleName === 'settings' ||
+      moduleName === 'templates' ||
       allowedModules.includes(moduleName)
     );
   };
@@ -114,8 +129,9 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
   };
 
   const isLinkActive = (link) => {
-    if (link.exact) return pathname === link.href;
-    return pathname === link.href || pathname.startsWith(`${link.href}/`);
+    const linkBase = link.href.split('?')[0];
+    if (link.exact) return pathname === linkBase && (!link.href.includes('?') || typeof window !== 'undefined' && window.location.search === link.href.slice(link.href.indexOf('?')));
+    return pathname === linkBase || pathname.startsWith(`${linkBase}/`);
   };
 
   const navContent = (

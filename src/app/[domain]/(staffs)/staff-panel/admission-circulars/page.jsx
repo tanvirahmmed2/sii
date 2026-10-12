@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import {
@@ -22,6 +23,10 @@ import {
 } from 'react-icons/fi';
 
 export default function AdmissionCircularsPage() {
+  const params = useParams();
+  const domain = params?.domain || '';
+  const apiBase = domain ? `/api/${domain}` : '/api';
+
   const [circulars, setCirculars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,7 +54,10 @@ export default function AdmissionCircularsPage() {
   const fetchCirculars = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/domain/staff/panel/admissions');
+      const res = await fetch(`${apiBase}/staff/panel/admissions`);
+      if (!res.ok) {
+        throw new Error(`Server error (${res.status})`);
+      }
       const data = await res.json();
       if (data.success) {
         setCirculars(data.circulars || []);
@@ -125,7 +133,7 @@ export default function AdmissionCircularsPage() {
       };
 
       const method = editingCircular ? 'PUT' : 'POST';
-      const res = await fetch('/api/domain/staff/panel/admissions', {
+      const res = await fetch(`${apiBase}/staff/panel/admissions`, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -151,7 +159,7 @@ export default function AdmissionCircularsPage() {
     if (!window.confirm(`Are you sure you want to delete "${title}"?`)) return;
 
     try {
-      const res = await fetch(`/api/domain/staff/panel/admissions?id=${id}`, {
+      const res = await fetch(`${apiBase}/staff/panel/admissions?id=${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();
@@ -380,13 +388,13 @@ export default function AdmissionCircularsPage() {
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => openEditModal(circ)}
+                        <Link
+                          href={`/staff-panel/admission-circular-update?id=${circ.id}`}
                           className="p-1.5 text-slate-600 hover:text-sky-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
-                          title="Edit Circular"
+                          title="Update Circular"
                         >
                           <FiEdit3 className="w-3.5 h-3.5" />
-                        </button>
+                        </Link>
                         <button
                           onClick={() => handleDelete(circ.id, circ.title)}
                           className="p-1.5 text-slate-600 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"

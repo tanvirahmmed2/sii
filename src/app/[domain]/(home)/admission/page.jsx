@@ -15,14 +15,18 @@ import {
 } from 'react-icons/fi';
 
 export default function AdmissionPortalPage() {
-  const { tenantUrl } = useContext(TenantWebsiteContext);
+  const { tenantUrl, getApiEndpoint } = useContext(TenantWebsiteContext);
   const [circulars, setCirculars] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchActiveCirculars = async () => {
       try {
-        const res = await fetch('/api/domain/admissions/apply');
+        const endpoint = getApiEndpoint ? getApiEndpoint('admissions/apply') : '/api/admissions/apply';
+        const res = await fetch(endpoint);
+        if (!res.ok) {
+          throw new Error(`Server returned ${res.status}`);
+        }
         const data = await res.json();
         if (data.success && data.circulars) {
           setCirculars(data.circulars);
@@ -35,7 +39,7 @@ export default function AdmissionPortalPage() {
     };
 
     fetchActiveCirculars();
-  }, []);
+  }, [getApiEndpoint]);
 
   return (
     <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8 space-y-6 transition-colors max-w-6xl mx-auto">

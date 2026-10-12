@@ -1,164 +1,283 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { toast } from 'react-hot-toast';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
+import { exportElementAsJpeg, exportElementAsPdf } from 'src/lib/export/documentExporter';
 
-export default function Page() {
+export default function TestimonialPage() {
+  const { website, getApiEndpoint } = useTenantWebsite();
+
+  const [students, setStudents] = useState([]);
+  const [selectedStudent, setSelectedStudent] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [activeTab, setActiveTab] = useState('overview');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
-  const handleAction = (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitted(true);
-      setTimeout(() => setSubmitted(false), 3000);
-    }, 600);
+  // Active Template
+  const [activeTemplate, setActiveTemplate] = useState(null);
+  const printDocRef = useRef(null);
+
+  // Testimonial Specific Fields
+  const [examName, setExamName] = useState('Secondary School Certificate (SSC)');
+  const [passingYear, setPassingYear] = useState(new Date().getFullYear().toString());
+  const [gpa, setGpa] = useState('5.00 (A+)');
+  const [sessionName, setSessionName] = useState('2024 - 2026');
+  const [conduct, setConduct] = useState('praiseworthy, disciplined and exemplary');
+  const [fatherName, setFatherName] = useState('');
+  const [motherName, setMotherName] = useState('');
+
+  // Fetch template and students
+  useEffect(() => {
+    async function initData() {
+      try {
+        const tplRes = await fetch(getApiEndpoint('staff/panel/templates?category=testimonial'));
+        const tplData = await tplRes.json();
+        if (tplRes.ok && tplData.success && tplData.active_template) {
+          setActiveTemplate(tplData.active_template);
+        }
+
+        const stuRes = await fetch(getApiEndpoint('staff/panel/students?limit=50'));
+        const stuData = await stuRes.json();
+        if (stuRes.ok && stuData.success) {
+          const list = stuData.payload?.students || [];
+          setStudents(list);
+          if (list[0]) {
+            handleSelectStudent(list[0]);
+          }
+        }
+      } catch (e) {
+        console.warn('Notice loading testimonial data:', e);
+      }
+    }
+    initData();
+  }, []);
+
+  const handleSelectStudent = (student) => {
+    setSelectedStudent(student);
+    setFatherName(student.guardian_name || student.father_name || 'Carlos Alverez');
+    setMotherName(student.mother_name || 'Maria Alverez');
+    setSessionName(student.session_name || '2024 - 2026');
   };
+
+  // Compile Testimonial document HTML
+  const compileTestimonial = () => {
+    if (!activeTemplate || !selectedStudent) return null;
+    let html = activeTemplate.html_content || '';
+    const css = activeTemplate.css_content || '';
+
+    const replacements = {
+      '{{student_name}}': selectedStudent.name || 'Student Name',
+      '{{father_name}}': fatherName,
+      '{{mother_name}}': motherName,
+      '{{registration_no}}': selectedStudent.registration_no || selectedStudent.student_unique_id || 'REG-0001',
+      '{{examination_name}}': examName,
+      '{{passing_year}}': passingYear,
+      '{{gpa}}': gpa,
+      '{{session_name}}': sessionName,
+      '{{conduct}}': conduct,
+      '{{issue_date}}': new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+      '{{school_name}}': website?.name || 'Educational Institution',
+    };
+
+    Object.entries(replacements).forEach(([k, v]) => {
+      const reg = new RegExp(k.replace(/([{}])/g, '\\$1'), 'g');
+      html = html.replace(reg, v);
+    });
+
+    return { html, css };
+  };
+
+  const handleExportJpeg = async () => {
+    if (!printDocRef.current) return;
+    setIsExporting(true);
+    toast.loading('Exporting High-Res JPEG...', { id: 'tm-export' });
+    try {
+      await exportElementAsJpeg(printDocRef.current, `Testimonial_${selectedStudent?.name || 'Document'}`);
+      toast.success('Testimonial JPEG downloaded!', { id: 'tm-export' });
+    } catch {
+      toast.error('Failed to export JPEG', { id: 'tm-export' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportPdf = async () => {
+    if (!printDocRef.current) return;
+    setIsExporting(true);
+    toast.loading('Generating Official A4 PDF...', { id: 'tm-export' });
+    try {
+      await exportElementAsPdf(printDocRef.current, `Testimonial_${selectedStudent?.name || 'Document'}`, {
+        widthMm: 210,
+        heightMm: 297,
+        orientation: 'portrait',
+      });
+      toast.success('Official Testimonial PDF downloaded!', { id: 'tm-export' });
+    } catch {
+      toast.error('Failed to export PDF', { id: 'tm-export' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const compiled = compileTestimonial();
 
   return (
     <div className="w-full space-y-4">
-      {/* Metric KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Records</p>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">1,248</span>
-            <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">+12% vs last term</span>
-          </div>
+      {/* Page Header */}
+      <div className="pb-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-base font-semibold text-slate-900 dark:text-white">
+            Academic Testimonial Issuance
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Issue formal character and academic commendation testimonials with instant PDF and JPEG export.
+          </p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Active Status</p>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">98.4%</span>
-            <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400">Synchronized</span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Pending Action</p>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">14</span>
-            <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">Needs review</span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">System Cycle</p>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-semibold text-slate-900 dark:text-white font-mono">2026-T1</span>
-            <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">Current Session</span>
-          </div>
+        <div className="flex items-center gap-2">
+          <a
+            href="/staff-panel/testimonial-templates"
+            className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 transition-colors"
+          >
+            Change Template
+          </a>
+          {selectedStudent && (
+            <>
+              <button
+                type="button"
+                onClick={handleExportJpeg}
+                disabled={isExporting}
+                className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer disabled:opacity-50"
+              >
+                Export JPEG
+              </button>
+              <button
+                type="button"
+                onClick={handleExportPdf}
+                disabled={isExporting}
+                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 rounded text-xs font-medium shadow-xs cursor-pointer disabled:opacity-50"
+              >
+                Download A4 PDF
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Main Interactive Workstation Area */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
-        {/* Action & Filter Toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2 flex-1 max-w-md">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Form: Select Student & Testimonial Details */}
+        <div className="lg:col-span-5 space-y-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+              1. Select Student
+            </h3>
             <input
               type="text"
-              placeholder="Search testimonials..."
+              placeholder="Search by student name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 transition"
+              className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:border-slate-800 dark:focus:border-slate-400"
             />
+            <div className="max-h-44 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded">
+              {students
+                .filter((s) => (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()))
+                .map((s) => (
+                  <div
+                    key={s.id}
+                    onClick={() => handleSelectStudent(s)}
+                    className={`p-2 text-xs flex items-center justify-between cursor-pointer transition ${
+                      selectedStudent?.id === s.id
+                        ? 'bg-slate-100 dark:bg-slate-800 font-medium text-slate-900 dark:text-white'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    <div>
+                      <p className="font-medium">{s.name}</p>
+                      <p className="text-[10px] text-slate-400 font-mono">{s.registration_no}</p>
+                    </div>
+                    <span className="text-[10px] text-slate-500">{s.class_name}</span>
+                  </div>
+                ))}
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-            </select>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+              2. Academic Commendation Particulars
+            </h3>
 
-            <button
-              onClick={handleAction}
-              disabled={isSubmitting}
-              className="px-3 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition-colors cursor-pointer disabled:opacity-50"
-            >
-              {isSubmitting ? 'Processing...' : 'Apply Filters'}
-            </button>
+            <div className="text-xs">
+              <label className="block text-[11px] font-medium text-slate-500 mb-1">Examination Name</label>
+              <input
+                type="text"
+                value={examName}
+                onChange={(e) => setExamName(e.target.value)}
+                className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <label className="block text-[11px] font-medium text-slate-500 mb-1">Passing Year</label>
+                <input
+                  type="text"
+                  value={passingYear}
+                  onChange={(e) => setPassingYear(e.target.value)}
+                  className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-slate-500 mb-1">GPA / Result</label>
+                <input
+                  type="text"
+                  value={gpa}
+                  onChange={(e) => setGpa(e.target.value)}
+                  className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-medium text-emerald-600"
+                />
+              </div>
+            </div>
+
+            <div className="text-xs">
+              <label className="block text-[11px] font-medium text-slate-500 mb-1">Session</label>
+              <input
+                type="text"
+                value={sessionName}
+                onChange={(e) => setSessionName(e.target.value)}
+                className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+              />
+            </div>
+
+            <div className="text-xs">
+              <label className="block text-[11px] font-medium text-slate-500 mb-1">Moral Conduct Statement</label>
+              <input
+                type="text"
+                value={conduct}
+                onChange={(e) => setConduct(e.target.value)}
+                className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+              />
+            </div>
           </div>
         </div>
 
-        {submitted && (
-          <div className="p-2.5 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
-            <span>Action processed successfully for Testimonials.</span>
-            <span className="text-[10px] font-mono">OK</span>
-          </div>
-        )}
-
-        {/* Dynamic Context Surface */}
-        
-        {/* High-Density Data Table */}
-        <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
-          <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
-            <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
-              <tr>
-                <th className="px-3 py-2">ID / Code</th>
-                <th className="px-3 py-2">Entity Name</th>
-                <th className="px-3 py-2">Category</th>
-                <th className="px-3 py-2">Last Updated</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
-              {[
-                { id: 'REC-101', name: 'Testimonials Primary Entry', category: 'TC & Testimonials', date: '2026-10-08', status: 'Active' },
-                { id: 'REC-102', name: 'Testimonials Secondary Batch', category: 'TC & Testimonials', date: '2026-10-07', status: 'Pending' },
-                { id: 'REC-103', name: 'Testimonials Fallback Registry', category: 'TC & Testimonials', date: '2026-10-05', status: 'Active' },
-                { id: 'REC-104', name: 'Testimonials Archive Log', category: 'TC & Testimonials', date: '2026-09-28', status: 'Completed' },
-              ].map((row, idx) => (
-                <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                  <td className="px-3 py-2 font-mono text-slate-900 dark:text-slate-200">{row.id}</td>
-                  <td className="px-3 py-2 font-medium text-slate-900 dark:text-white">{row.name}</td>
-                  <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{row.category}</td>
-                  <td className="px-3 py-2 font-mono text-[11px] text-slate-500 dark:text-slate-400">{row.date}</td>
-                  <td className="px-3 py-2">
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border ${
-                      row.status === 'Active'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
-                        : row.status === 'Pending'
-                        ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
-                        : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
-                    }`}>
-                      {row.status}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-right space-x-1">
-                    <button className="px-2 py-0.5 rounded text-[10px] font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
-                      Edit
-                    </button>
-                    <button className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:opacity-90 cursor-pointer">
-                      View
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-
-        {/* Micro Pagination Footer */}
-        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <span>Showing 1 to 4 of 1,248 entries</span>
-          <div className="flex items-center gap-1 font-mono">
-            <button className="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40">Previous</button>
-            <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-semibold text-slate-900 dark:text-white">1</span>
-            <button className="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800">Next</button>
+        {/* Right Preview */}
+        <div className="lg:col-span-7 flex flex-col items-center">
+          <div className="w-full bg-slate-100 dark:bg-slate-950 p-4 rounded border border-slate-200 dark:border-slate-800 overflow-auto flex justify-center">
+            {compiled ? (
+              <div
+                ref={printDocRef}
+                className="bg-white shadow-md text-slate-900"
+                style={{
+                  width: '595px',
+                  minHeight: '842px',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <style dangerouslySetInnerHTML={{ __html: compiled.css }} />
+                <div dangerouslySetInnerHTML={{ __html: compiled.html }} />
+              </div>
+            ) : (
+              <div className="p-12 text-center text-xs text-slate-400">Select a student to generate testimonial preview</div>
+            )}
           </div>
         </div>
       </div>

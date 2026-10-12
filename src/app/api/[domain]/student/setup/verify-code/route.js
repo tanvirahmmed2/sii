@@ -25,9 +25,10 @@ export async function POST(request, context) {
 
     const cleanEmail = email.trim().toLowerCase();
     const cleanCode = code.trim();
+    const cleanRegNo = registration_no?.trim() || null;
 
-    // Look up student
-    const studentRes = await queryDb(
+    // Look up student by email or registration number
+    let studentRes = await queryDb(
       `SELECT s.id, s.registration_no, s.roll_no, s.email, s.student_unique_id,
               s.class_id, s.section_id, s.session_id,
               i.name, i.number, i.gender, i.blood_group, i.date_of_birth, i.religion,
@@ -40,15 +41,34 @@ export async function POST(request, context) {
        LEFT JOIN website_sessions ses ON s.session_id = ses.id
        WHERE s.website_id = $1 
          AND LOWER(TRIM(COALESCE(s.email, i.email))) = $2
-         ${registration_no ? 'AND (s.registration_no = $3 OR s.roll_no = $3)' : ''}
+         ${cleanRegNo ? 'AND (s.registration_no = $3 OR s.roll_no = $3 OR s.student_unique_id = $3)' : ''}
        LIMIT 1`,
-      registration_no ? [website.id, cleanEmail, registration_no.trim()] : [website.id, cleanEmail]
+      cleanRegNo ? [website.id, cleanEmail, cleanRegNo] : [website.id, cleanEmail]
     );
+
+    if (studentRes.rows.length === 0 && cleanRegNo) {
+      studentRes = await queryDb(
+        `SELECT s.id, s.registration_no, s.roll_no, s.email, s.student_unique_id,
+                s.class_id, s.section_id, s.session_id,
+                i.name, i.number, i.gender, i.blood_group, i.date_of_birth, i.religion,
+                i.two_factor_code, i.two_factor_expires, i.verification_token,
+                c.name AS class_name, sec.name AS section_name, ses.name AS session_name
+         FROM website_students s
+         LEFT JOIN website_student_info i ON s.id = i.student_id
+         LEFT JOIN website_classes c ON s.class_id = c.id
+         LEFT JOIN website_sections sec ON s.section_id = sec.id
+         LEFT JOIN website_sessions ses ON s.session_id = ses.id
+         WHERE s.website_id = $1 
+           AND (s.registration_no = $2 OR s.roll_no = $2 OR s.student_unique_id = $2)
+         LIMIT 1`,
+        [website.id, cleanRegNo]
+      );
+    }
 
     if (studentRes.rows.length === 0) {
       return NextResponse.json({
         success: false,
-        error: 'No student record found matching this email.'
+        error: 'No student record found matching these details.'
       }, { status: 404 });
     }
 

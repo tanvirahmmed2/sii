@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useContext } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import {
   FiAward,
   FiSearch,
@@ -15,6 +17,11 @@ import {
 } from 'react-icons/fi';
 
 function PublicResultsContent() {
+  const params = useParams();
+  const domain = params?.domain || '';
+  const { getApiEndpoint } = useContext(TenantWebsiteContext) || {};
+  const apiBase = domain ? `/api/${domain}` : '/api';
+
   const [query, setQuery] = useState('');
   const [selectedCircularId, setSelectedCircularId] = useState('');
   const [circulars, setCirculars] = useState([]);
@@ -25,30 +32,37 @@ function PublicResultsContent() {
 
   // Load circulars & initial merit list
   useEffect(() => {
-    fetch('/api/domain/admissions/apply')
-      .then((res) => res.json())
+    const applyUrl = getApiEndpoint ? getApiEndpoint('admissions/apply') : `${apiBase}/admissions/apply`;
+    fetch(applyUrl)
+      .then(async (res) => {
+        if (!res.ok) return { success: false };
+        return res.json();
+      })
       .then((data) => {
-        if (data.success && data.circulars) {
+        if (data?.success && data?.circulars) {
           setCirculars(data.circulars);
         }
       })
       .catch((err) => console.error(err));
 
     fetchResults();
-  }, []);
+  }, [apiBase]);
 
   const fetchResults = async (searchParam = '') => {
     setLoading(true);
     try {
-      let url = '/api/domain/admissions/results';
-      const params = new URLSearchParams();
-      if (searchParam.trim()) params.append('query', searchParam.trim());
-      if (selectedCircularId) params.append('circular_id', selectedCircularId);
+      let url = getApiEndpoint ? getApiEndpoint('admissions/results') : `${apiBase}/admissions/results`;
+      const queryParams = new URLSearchParams();
+      if (searchParam.trim()) queryParams.append('query', searchParam.trim());
+      if (selectedCircularId) queryParams.append('circular_id', selectedCircularId);
 
-      const qs = params.toString();
+      const qs = queryParams.toString();
       if (qs) url += `?${qs}`;
 
       const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`Server returned ${res.status}`);
+      }
       const data = await res.json();
       if (data.success) {
         setResults(data.results || []);

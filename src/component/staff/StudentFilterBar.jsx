@@ -103,11 +103,11 @@ export default function StudentFilterBar({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-3">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-3">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-2 border-b border-slate-100 dark:border-slate-800">
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-            <span>🔍</span> {title}
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+            {title}
           </h3>
           <p className="text-[11px] text-slate-500 dark:text-slate-400">
             {description}
@@ -125,7 +125,7 @@ export default function StudentFilterBar({
             value={selectedSession}
             onChange={(e) => setSelectedSession(e.target.value)}
             disabled={loadingMetadata}
-            className="w-full text-xs px-2.5 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer disabled:opacity-50"
+            className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-slate-800 dark:focus:border-slate-400 cursor-pointer disabled:opacity-50"
           >
             <option value="">Select Session</option>
             {sessions.map((ses) => (
@@ -148,7 +148,7 @@ export default function StudentFilterBar({
               setSelectedSection(''); // Reset section when class changes
             }}
             disabled={loadingMetadata}
-            className="w-full text-xs px-2.5 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer disabled:opacity-50"
+            className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-slate-800 dark:focus:border-slate-400 cursor-pointer disabled:opacity-50"
           >
             <option value="">Select Class</option>
             {classes.map((cls) => (
@@ -168,7 +168,7 @@ export default function StudentFilterBar({
             value={selectedSection}
             onChange={(e) => setSelectedSection(e.target.value)}
             disabled={loadingMetadata || availableSections.length === 0}
-            className="w-full text-xs px-2.5 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer disabled:opacity-50"
+            className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-slate-800 dark:focus:border-slate-400 cursor-pointer disabled:opacity-50"
           >
             <option value="">All Sections</option>
             {availableSections.map((sec) => (
@@ -187,28 +187,18 @@ export default function StudentFilterBar({
           <button
             type="submit"
             disabled={loading || loadingMetadata}
-            className="flex-1 py-2 px-3 bg-primary hover:bg-primary/90 text-white rounded text-xs font-semibold shadow-2xs transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+            className="flex-1 py-1.5 px-3 bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 rounded text-xs font-medium shadow-2xs transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
           >
-            {loading ? (
-              <>
-                <span className="animate-spin text-xs">⏳</span>
-                <span>Loading...</span>
-              </>
-            ) : (
-              <>
-                <span>⚡</span>
-                <span>{submitLabel}</span>
-              </>
-            )}
+            {loading ? 'Loading...' : submitLabel}
           </button>
 
           <button
             type="button"
             onClick={handleReset}
-            className="py-2 px-2.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 rounded text-xs transition-colors cursor-pointer"
+            className="py-1.5 px-2.5 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 rounded text-xs font-medium transition-colors cursor-pointer"
             title="Clear filters"
           >
-            ↺
+            Reset
           </button>
         </div>
       </form>

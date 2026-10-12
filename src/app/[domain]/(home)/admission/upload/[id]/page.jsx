@@ -22,7 +22,8 @@ import {
 export default function CandidateUploadPage() {
   const params = useParams();
   const id = params?.id;
-  const { tenantUrl } = useContext(TenantWebsiteContext);
+  const domain = params?.domain || '';
+  const { tenantUrl, getApiEndpoint } = useContext(TenantWebsiteContext);
 
   const [applicant, setApplicant] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -32,14 +33,19 @@ export default function CandidateUploadPage() {
   const [imagePreview, setImagePreview] = useState('');
   const [signaturePreview, setSignaturePreview] = useState('');
 
+  const uploadEndpoint = getApiEndpoint ? getApiEndpoint('admissions/upload') : (domain ? `/api/${domain}/admissions/upload` : '/api/admissions/upload');
+
   useEffect(() => {
     if (!id) return;
 
     const fetchApplicant = async () => {
       try {
-        const res = await fetch(`/api/domain/admissions/upload?id=${id}`);
+        const res = await fetch(`${uploadEndpoint}?id=${id}`);
+        if (!res.ok) {
+          throw new Error(`Server returned ${res.status}`);
+        }
         const data = await res.json();
-        if (res.ok && data.success && data.applicant) {
+        if (data.success && data.applicant) {
           const app = data.applicant;
           setApplicant(app);
           if (app.photo_url || app.image) setImagePreview(app.photo_url || app.image);
@@ -102,7 +108,7 @@ export default function CandidateUploadPage() {
 
     setUploading(true);
     try {
-      const res = await fetch('/api/domain/admissions/upload', {
+      const res = await fetch(uploadEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -28,6 +28,7 @@ const Sidebar = () => {
   const studentLinks = [
     { label: 'Overview Dashboard', href: '/student' },
     { label: 'My Classrooms & LMS', href: '/student/classrooms' },
+    { label: 'Assignments & Tasks', href: '/student/assignments' },
     { label: 'Class Routine', href: '/student/routine' },
     { label: 'Attendance Records', href: '/student/attendance' },
     { label: 'Subjects & Syllabus', href: '/student/subjects' },
@@ -37,9 +38,9 @@ const Sidebar = () => {
     { label: 'Institutional Testimonial', href: '/student/testimonial' },
     { label: 'Academic Results & Marks', href: '/student/results' },
     { label: 'Tuition Fees & Invoices', href: '/student/fees' },
-    { label: 'Hostel Accommodation', href: '/student/hostels' },
+    { label: 'Hostel Accommodation', href: '/student/residence' },
+    { label: 'Campus Clubs', href: '/student/clubs' },
     { label: 'Campus Events', href: '/student/events' },
-    ...(isClubMember ? [{ label: 'Club Dashboard', href: '/student/clubs' }] : []),
     { label: 'Student Profile', href: '/student/profile' },
   ];
 

@@ -17,8 +17,9 @@ export default function StudentRegistrationPage() {
   const [sessions, setSessions] = useState([]);
   const [loadingMetadata, setLoadingMetadata] = useState(false);
 
-  // Single Registration Form State (reginumber, class are primary)
+  // Single Registration Form State (reginumber, class are primary, email for auto-activation)
   const [singleRegNo, setSingleRegNo] = useState('');
+  const [singleEmail, setSingleEmail] = useState('');
   const [singleClassId, setSingleClassId] = useState('');
   const [singleSectionId, setSingleSectionId] = useState('');
   const [singleSessionId, setSingleSessionId] = useState('');
@@ -97,6 +98,7 @@ export default function StudentRegistrationPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           registration_no: singleRegNo.trim(),
+          email: singleEmail.trim() || null,
           class_id: singleClassId,
           section_id: singleSectionId || null,
           session_id: singleSessionId || null,
@@ -115,6 +117,7 @@ export default function StudentRegistrationPage() {
 
       // Reset form
       setSingleRegNo('');
+      setSingleEmail('');
       setSingleRollNo('');
     } catch (err) {
       toast.error(err.message);
@@ -141,9 +144,10 @@ export default function StudentRegistrationPage() {
         const worksheet = workbook.Sheets[firstSheetName];
         const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
-        // Normalize rows (primarily registration number and class)
+        // Normalize rows (primarily registration number, class, and email)
         const normalized = jsonRows.map((row, idx) => {
           const regNo = (row['Registration No'] || row.Registration || row['Registration Number'] || row.registration_no || row.reginumber || row['Reg No'] || '').trim();
+          const email = (row['Email Address'] || row.Email || row['Student Email'] || row.email || '').trim().toLowerCase();
           const className = (row['Class Code'] || row.Class || row['Class Name'] || row.class || '').trim();
           const sectionName = (row['Section Name'] || row.Section || row.section || '').trim();
           const sessionName = (row['Session Name'] || row.Session || row.session || '').trim();
@@ -156,6 +160,7 @@ export default function StudentRegistrationPage() {
           return {
             rowIdx: idx + 1,
             regNo,
+            email,
             className,
             sectionName,
             sessionName,
@@ -301,12 +306,15 @@ export default function StudentRegistrationPage() {
                   ✕
                 </button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 font-mono text-[11px] pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 font-mono text-[11px] pt-1">
                 <div>
                   <span className="text-emerald-700 dark:text-emerald-400 font-sans">Reg No:</span> {singleSuccessResult.student?.registration_no}
                 </div>
                 <div>
                   <span className="text-emerald-700 dark:text-emerald-400 font-sans">Unique ID:</span> {singleSuccessResult.student?.student_unique_id}
+                </div>
+                <div>
+                  <span className="text-emerald-700 dark:text-emerald-400 font-sans">Email:</span> {singleSuccessResult.student?.email || 'None'}
                 </div>
                 <div>
                   <span className="text-emerald-700 dark:text-emerald-400 font-sans">Demo Password:</span> {singleSuccessResult.demoPassword}
@@ -349,6 +357,21 @@ export default function StudentRegistrationPage() {
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
                 />
                 <span className="text-[10px] text-slate-400 mt-1 block">Unique student institutional registration code</span>
+              </div>
+
+              {/* Student Email Address */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Student Email (Recommended)
+                </label>
+                <input
+                  type="email"
+                  value={singleEmail}
+                  onChange={(e) => setSingleEmail(e.target.value)}
+                  placeholder="e.g. student@institution.edu"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
+                />
+                <span className="text-[10px] text-slate-400 mt-1 block">Enables student to auto-activate via mailer OTP without staff approval</span>
               </div>
 
               {/* Class Selection */}
@@ -509,6 +532,7 @@ export default function StudentRegistrationPage() {
                     <tr>
                       <th className="px-3 py-2">#</th>
                       <th className="px-3 py-2">Registration No</th>
+                      <th className="px-3 py-2">Email</th>
                       <th className="px-3 py-2">Class</th>
                       <th className="px-3 py-2">Section</th>
                       <th className="px-3 py-2">Session</th>
@@ -522,6 +546,9 @@ export default function StudentRegistrationPage() {
                         <td className="px-3 py-1.5 font-mono text-[10px] text-slate-400">{row.rowIdx}</td>
                         <td className="px-3 py-1.5 font-mono font-medium text-slate-900 dark:text-white">
                           {row.regNo || <span className="text-rose-500 font-sans italic">Missing</span>}
+                        </td>
+                        <td className="px-3 py-1.5 text-slate-600 dark:text-slate-300 font-mono text-[11px]">
+                          {row.email || <span className="text-slate-400 italic">None</span>}
                         </td>
                         <td className="px-3 py-1.5">
                           {row.className || <span className="text-rose-500 italic">Missing</span>}

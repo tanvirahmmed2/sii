@@ -44,6 +44,7 @@ function StudentSetupContent() {
   const [submitting, setSubmitting] = useState(false);
   const [studentData, setStudentData] = useState(null);
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
+  const [submissionResult, setSubmissionResult] = useState(null);
 
   // Multi-step form: 1 = Password & Personal, 2 = Addresses, 3 = Guardians, 4 = Media & Submit
   const [step, setStep] = useState(1);
@@ -135,7 +136,8 @@ function StudentSetupContent() {
 
     setSendingOtp(true);
     try {
-      const res = await fetch('/api/domain/student/setup/send-code', {
+      const sendUrl = getApiEndpoint ? getApiEndpoint('student/setup/send-code') : '/api/student/setup/send-code';
+      const res = await fetch(sendUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -172,7 +174,8 @@ function StudentSetupContent() {
 
     setVerifyingOtp(true);
     try {
-      const res = await fetch('/api/domain/student/setup/verify-code', {
+      const verifyUrl = getApiEndpoint ? getApiEndpoint('student/setup/verify-code') : '/api/student/setup/verify-code';
+      const res = await fetch(verifyUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -308,7 +311,8 @@ function StudentSetupContent() {
         throw new Error(data.error || 'Failed to submit profile setup.');
       }
 
-      toast.success('Profile setup submitted successfully!');
+      toast.success(data.message || 'Profile setup submitted successfully!');
+      setSubmissionResult(data.payload || data);
       setSubmittedSuccess(true);
     } catch (err) {
       toast.error(err.message);
@@ -329,7 +333,7 @@ function StudentSetupContent() {
             Student Account Setup & Verification
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-            Verify your registered institutional email, initialize your password, and submit your profile for admission verification.
+            Verify your email via one-time code (OTP), set your password, and finalize your enrollment profile.
           </p>
         </div>
 
@@ -338,16 +342,16 @@ function StudentSetupContent() {
           <div className="space-y-5 max-w-md mx-auto py-2">
             <div className="p-4 bg-sky-50/50 dark:bg-sky-950/20 rounded-xl border border-sky-200 dark:border-sky-800/60 space-y-3">
               <div className="flex items-center gap-2 text-sky-800 dark:text-sky-300 font-bold text-xs">
-                <FiShield className="w-4 h-4 text-sky-600" /> Security Step: Email Identity Match
+                <FiShield className="w-4 h-4 text-sky-600" /> Security Step: Email OTP Verification
               </div>
               <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-                As required by institutional policy, your email must match the official record in <code>website_students</code> and be verified via web mailer before continuing.
+                Enter your institutional email address to receive a 6-digit verification code. If email was not added by school administration during admission, also enter your Registration Number to verify and link your email.
               </p>
 
               <form onSubmit={handleSendOtp} className="space-y-3 pt-1">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                    Registered Student Email *
+                    Student Email Address *
                   </label>
                   <input
                     type="email"
@@ -359,20 +363,19 @@ function StudentSetupContent() {
                   />
                 </div>
 
-                {!activeToken && (
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                      Registration Number (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={tokenInput}
-                      onChange={(e) => setTokenInput(e.target.value)}
-                      placeholder="e.g. REG-2026-1001"
-                      className="w-full px-3 py-2 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg outline-none focus:ring-1 focus:ring-sky-500 text-slate-900 dark:text-white"
-                    />
-                  </div>
-                )}
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                    Registration Number (Required if email was not added by staff)
+                  </label>
+                  <input
+                    type="text"
+                    value={tokenInput}
+                    onChange={(e) => setTokenInput(e.target.value)}
+                    placeholder="e.g. REG-2026-1001"
+                    className="w-full px-3 py-2 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg outline-none focus:ring-1 focus:ring-sky-500 text-slate-900 dark:text-white"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-1 block">Found on your admission receipt or circular</span>
+                </div>
 
                 <button
                   type="submit"
@@ -380,7 +383,7 @@ function StudentSetupContent() {
                   className="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                 >
                   <FiMail className="w-4 h-4" />
-                  {sendingOtp ? 'Sending One-Time Code...' : otpSent ? 'Resend Verification Code' : 'Send Verification Code via Brevo'}
+                  {sendingOtp ? 'Sending One-Time Code...' : otpSent ? 'Resend Verification Code' : 'Send Verification Code via Email'}
                 </button>
               </form>
             </div>
@@ -424,32 +427,65 @@ function StudentSetupContent() {
           </div>
         )}
 
-        {/* Submitted Success Screen */}
-        {submittedSuccess && studentData && (
+        {/* Dynamic Success Screen (Auto-Verified vs Sent to Staff) */}
+        {submittedSuccess && (
           <div className="py-8 space-y-6 text-center">
-            <div className="w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto text-2xl font-bold">
-              ✓
-            </div>
+            {submissionResult?.requires_staff_verification ? (
+              // Case: Email was not pre-registered by staff, submitted for staff verification
+              <>
+                <div className="w-14 h-14 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto text-2xl font-bold">
+                  ⏳
+                </div>
 
-            <div className="space-y-2 max-w-md mx-auto">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                Profile Submitted for Verification!
-              </h2>
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                Thank you, <span className="font-semibold">{studentData.name}</span>. Your student profile, password, addresses, and guardian details have been successfully submitted.
-              </p>
-            </div>
+                <div className="space-y-2 max-w-md mx-auto">
+                  <div className="inline-block px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-[10px] font-bold uppercase tracking-wider mb-1">
+                    Submitted for Staff Verification
+                  </div>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                    Profile Sent to Staff for Verification
+                  </h2>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Thank you, <span className="font-semibold">{name || studentData?.name || 'Student'}</span>. Since your email address was not pre-registered by school administration, your profile has been submitted for staff review.
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Staff can verify your account in the institution panel. Once approved, you will be able to log in to the Student Portal.
+                  </p>
+                </div>
+              </>
+            ) : (
+              // Case: Email was pre-registered by staff, auto-verified immediately
+              <>
+                <div className="w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto text-2xl font-bold">
+                  ✓
+                </div>
+
+                <div className="space-y-2 max-w-md mx-auto">
+                  <div className="inline-block px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 text-[10px] font-bold uppercase tracking-wider mb-1">
+                    Account Verified &amp; Active
+                  </div>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                    Account Setup Complete!
+                  </h2>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Congratulations, <span className="font-semibold">{name || studentData?.name || 'Student'}</span>. Your email was verified via one-time code and your student account is now fully active. No staff approval is needed!
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    You can now log in immediately using your Registration Number / Email and your new password.
+                  </p>
+                </div>
+              </>
+            )}
 
             <div className="pt-2 flex items-center justify-center gap-3">
               <Link
                 href={tenantUrl('/auth/student/login')}
-                className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition"
+                className="px-5 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition"
               >
-                Go to Student Login
+                Go to Student Login →
               </Link>
               <Link
                 href={tenantUrl('/')}
-                className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                className="px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition"
               >
                 Return to Homepage
               </Link>

@@ -1,25 +1,20 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import {
-  FiUsers, FiFileText, FiTrash2, FiEdit2,
-  FiAlertCircle, FiInfo, FiCalendar, FiShield
+  FiUsers, FiUserCheck, FiPlusCircle, FiSearch, 
+  FiInfo, FiCheckCircle, FiShield, FiTag, FiClock, FiX
 } from 'react-icons/fi';
 
 const StudentClubsDashboardPage = () => {
   const [loading, setLoading] = useState(true);
-  const [isClubMember, setIsClubMember] = useState(false);
   const [clubs, setClubs] = useState([]);
-  const [selectedClubId, setSelectedClubId] = useState('');
-
-  // News management states for moderators
-  const [editingNewsId, setEditingNewsId] = useState(null);
-  const [newsTitle, setNewsTitle] = useState('');
-  const [newsContent, setNewsContent] = useState('');
-  const [newsImage, setNewsImage] = useState('');
-  const [savingNews, setSavingNews] = useState(false);
+  const [joiningClubId, setJoiningClubId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [selectedClub, setSelectedClub] = useState(null);
 
   useEffect(() => {
     fetchStudentClubs();
@@ -29,286 +24,238 @@ const StudentClubsDashboardPage = () => {
     setLoading(true);
     try {
       const response = await axios.get('/api/student/clubs');
-      const payload = response.data?.paylod || {};
-      if (payload.isClubMember && payload.clubs?.length > 0) {
-        setIsClubMember(true);
-        setClubs(payload.clubs);
-        const firstClub = payload.clubs[0];
-        setSelectedClubId(String(firstClub.id));
-      } else {
-        setIsClubMember(false);
-        setClubs([]);
-      }
+      const payload = response.data?.payload || response.data?.paylod || {};
+      setClubs(payload.clubs || response.data?.clubs || []);
     } catch (error) {
-      toast.error('Failed to load club details.');
+      toast.error('Failed to load campus clubs.');
     } finally {
       setLoading(false);
     }
   };
 
-  const currentClub = clubs.find(c => String(c.id) === String(selectedClubId));
-
-  useEffect(() => {
-    if (currentClub) {
-      setEditingNewsId(null);
-      setNewsTitle('');
-      setNewsContent('');
-      setNewsImage('');
-    }
-  }, [selectedClubId]);
-
-  // Image handler
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 4 * 1024 * 1024) {
-        toast.error('Image size must be less than 4MB');
-        return;
+  const handleJoinClub = async (clubId) => {
+    setJoiningClubId(clubId);
+    try {
+      const res = await axios.post('/api/student/clubs', { club_id: clubId });
+      if (res.data?.success) {
+        toast.success(res.data.message || 'Joined club successfully!');
+        fetchStudentClubs();
+      } else {
+        toast.error(res.data?.error || 'Failed to join club.');
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewsImage(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // Save News (Moderators only)
-  const handleSaveNews = async (e) => {
-    e.preventDefault();
-    if (!newsTitle || !newsContent) {
-      toast.error('Title and content are required.');
-      return;
-    }
-
-    setSavingNews(true);
-    try {
-      const res = await axios.post('/api/student/clubs', {
-        action: 'manage_news',
-        club_id: selectedClubId,
-        news_id: editingNewsId,
-        title: newsTitle,
-        content: newsContent,
-        image: newsImage
-      });
-      toast.success(res.data.message || 'Club news saved!');
-      setEditingNewsId(null);
-      setNewsTitle('');
-      setNewsContent('');
-      setNewsImage('');
-      fetchStudentClubs();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to save news');
+      toast.error(err.response?.data?.error || 'Failed to join club.');
     } finally {
-      setSavingNews(false);
+      setJoiningClubId(null);
     }
   };
 
-  // Delete News
-  const handleDeleteNews = async (newsId) => {
-    if (!confirm('Delete this news post?')) return;
-    try {
-      const res = await axios.post('/api/student/clubs', {
-        action: 'delete_news',
-        club_id: selectedClubId,
-        news_id: newsId
-      });
-      toast.success(res.data.message || 'News deleted');
-      fetchStudentClubs();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to delete news');
-    }
-  };
+  const myClubs = useMemo(() => {
+    return clubs.filter(c => c.my_membership_status === 'active');
+  }, [clubs]);
 
-  const handleEditNewsClick = (item) => {
-    setEditingNewsId(item.id);
-    setNewsTitle(item.title);
-    setNewsContent(item.content);
-    setNewsImage(item.image_url || '');
-  };
+  const categories = useMemo(() => {
+    const set = new Set(clubs.map(c => c.category).filter(Boolean));
+    return ['all', ...Array.from(set)];
+  }, [clubs]);
+
+  const filteredClubs = useMemo(() => {
+    return clubs.filter((c) => {
+      const matchCat = categoryFilter === 'all' || (c.category || '').toLowerCase() === categoryFilter.toLowerCase();
+      const matchSearch = searchTerm === '' ||
+        (c.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (c.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (c.moderator_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+      return matchCat && matchSearch;
+    });
+  }, [clubs, categoryFilter, searchTerm]);
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
         <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
-        <p className="text-sm font-medium text-slate-400">Loading club details...</p>
+        <p className="text-sm font-medium text-slate-400">Loading campus clubs directory...</p>
       </div>
     );
   }
-
-  if (!isClubMember || clubs.length === 0) {
-    return (
-      <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-8">
-        <div className="bg-white border border-slate-200/70 rounded-3xl p-12 text-center flex flex-col items-center justify-center shadow-xs">
-          <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-400 mb-3">
-            <FiAlertCircle className="text-3xl text-slate-400" />
-          </div>
-          <h2 className="text-lg font-bold text-slate-800 mb-1">Not Enrolled in Any Club</h2>
-          <p className="text-slate-400 text-xs max-w-xs">You are not currently registered as an active member of any student club.</p>
-        </div>
-      </div>
-    );
-  }
-
-  const isModerator = currentClub?.student_role === 'moderator';
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-8">
-      {/* Header Banner */}
-      <div className="bg-white border border-slate-200/70 rounded-3xl p-6 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-12 animate-fade-up">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/70 shadow-xs">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100">
-              <FiUsers className="text-xl" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-slate-800">{currentClub?.name}</h1>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                  isModerator 
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' 
-                    : 'bg-slate-100 text-slate-600'
-                }`}>
-                  {isModerator ? 'Club Moderator' : 'Club Member'}
-                </span>
-              </div>
-              {currentClub?.motto && (
-                <p className="text-xs italic text-emerald-600 font-medium mt-0.5">"{currentClub.motto}"</p>
-              )}
-            </div>
+          <div className="flex items-center gap-2 text-emerald-600 text-xs font-bold uppercase tracking-wider mb-1">
+            <FiUsers /> Co-Curricular &amp; Campus Life
           </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">Student Clubs &amp; Societies</h1>
+          <p className="text-slate-500 text-xs sm:text-sm font-normal mt-0.5">
+            Discover student organizations, participate in extracurricular activities, and collaborate with peers.
+          </p>
         </div>
 
-        {clubs.length > 1 && (
-          <select
-            value={selectedClubId}
-            onChange={(e) => setSelectedClubId(e.target.value)}
-            className="px-3.5 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none"
-          >
-            {clubs.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        )}
+        <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-4 py-2 rounded-2xl text-xs font-bold text-emerald-700 shrink-0">
+          <FiUserCheck className="text-sm" /> My Enrolled Clubs: {myClubs.length}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        
-        {/* Left Column: Notice Info & Moderator News Publisher */}
-        <div className="flex flex-col gap-6">
-          
-          {/* Member Notice Card */}
-          <div className="bg-white border border-slate-200/70 rounded-3xl p-6 shadow-xs flex flex-col gap-3">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-              <FiInfo className="text-emerald-600" /> Club Notice & Announcements
-            </h2>
-            {currentClub?.notice_info ? (
-              <div
-                className="text-xs text-slate-700 leading-relaxed bg-slate-50 border border-slate-200/60 p-4 rounded-2xl whitespace-pre-wrap font-medium"
-                dangerouslySetInnerHTML={{ __html: currentClub.notice_info }}
-              />
-            ) : (
-              <p className="text-xs text-slate-400 py-3">No active notice posted for members.</p>
-            )}
+      {/* My Enrolled Clubs Table */}
+      {myClubs.length > 0 && (
+        <div className="bg-white border border-slate-200/70 rounded-3xl p-6 sm:p-8 shadow-xs">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-lg font-bold text-slate-800">My Active Club Memberships</h2>
+              <p className="text-xs text-slate-400 font-medium">Clubs where your official student membership is active</p>
+            </div>
+            <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+              {myClubs.length} Active
+            </span>
           </div>
 
-          {/* Moderator Form if role === 'moderator' */}
-          {isModerator && (
-            <div className="bg-white border border-slate-200/70 rounded-3xl p-6 shadow-xs flex flex-col gap-4">
-              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <FiFileText className="text-emerald-600" /> {editingNewsId ? 'Edit Article' : 'Publish Article'}
-                </h2>
-                {editingNewsId && (
-                  <button
-                    onClick={() => {
-                      setEditingNewsId(null);
-                      setNewsTitle('');
-                      setNewsContent('');
-                      setNewsImage('');
-                    }}
-                    className="text-xs text-slate-400 hover:text-slate-600 font-medium"
-                  >
-                    Cancel
-                  </button>
-                )}
-              </div>
-
-              <form onSubmit={handleSaveNews} className="flex flex-col gap-3">
-                <input
-                  type="text"
-                  placeholder="Article Title..."
-                  value={newsTitle}
-                  onChange={(e) => setNewsTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none"
-                />
-
-                <textarea
-                  rows={4}
-                  placeholder="Article Content..."
-                  value={newsContent}
-                  onChange={(e) => setNewsContent(e.target.value)}
-                  className="w-full p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none resize-none"
-                />
-
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="text-xs text-slate-500 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-slate-100"
-                />
-
-                <button
-                  type="submit"
-                  disabled={savingNews}
-                  className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold cursor-pointer disabled:opacity-50 transition-colors"
-                >
-                  {savingNews ? 'Publishing...' : editingNewsId ? 'Update Article' : 'Publish Article'}
-                </button>
-              </form>
-            </div>
-          )}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[650px]">
+              <thead>
+                <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50">
+                  <th className="py-3 px-4 rounded-l-xl">Club Name</th>
+                  <th className="py-3 px-4">Category</th>
+                  <th className="py-3 px-4">My Role</th>
+                  <th className="py-3 px-4">Joined Date</th>
+                  <th className="py-3 px-4">Faculty Moderator</th>
+                  <th className="py-3 px-4 text-right rounded-r-xl">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-sm">
+                {myClubs.map((club) => (
+                  <tr key={club.id} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-slate-800">
+                      {club.name}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                        {club.category || 'General'}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 font-semibold text-emerald-700 capitalize">
+                      {club.my_role || 'Member'}
+                    </td>
+                    <td className="py-3.5 px-4 text-xs text-slate-500 font-mono">
+                      {club.my_joined_date ? new Date(club.my_joined_date).toLocaleDateString('en-GB') : 'Active Member'}
+                    </td>
+                    <td className="py-3.5 px-4 text-xs text-slate-600">
+                      {club.moderator_name || 'Faculty Advisor'}
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <FiCheckCircle className="text-xs" /> Enrolled
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
+      )}
 
-        {/* Right Column: News Posts List */}
-        <div className="lg:col-span-2">
-          <div className="bg-white border border-slate-200/70 rounded-3xl p-6 shadow-xs flex flex-col gap-4">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-3">
-              Club News & Activity Posts
-            </h2>
+      {/* Clubs Catalog Table */}
+      <div className="bg-white border border-slate-200/70 rounded-3xl p-6 sm:p-8 shadow-xs">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 className="text-lg font-bold text-slate-800">Campus Clubs &amp; Societies Directory</h2>
+            <p className="text-xs text-slate-400 font-medium">Browse available campus organizations and enroll to participate</p>
+          </div>
 
-            <div className="flex flex-col gap-4">
-              {currentClub?.news?.map(item => (
-                <div key={item.id} className="p-5 bg-slate-50/60 rounded-2xl border border-slate-200/60 flex flex-col gap-2">
-                  <div className="flex justify-between items-start">
-                    <h3 className="text-sm font-bold text-slate-800">{item.title}</h3>
-                    {isModerator && (
-                      <div className="flex gap-2">
-                        <button onClick={() => handleEditNewsClick(item)} className="p-1 text-slate-400 hover:text-slate-700">
-                          <FiEdit2 className="text-sm" />
-                        </button>
-                        <button onClick={() => handleDeleteNews(item.id)} className="p-1 text-slate-400 hover:text-rose-600">
-                          <FiTrash2 className="text-sm" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <div
-                    className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap"
-                    dangerouslySetInnerHTML={{ __html: item.content }}
-                  />
-                </div>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            {/* Category Filter */}
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-emerald-500"
+            >
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c === 'all' ? 'All Categories' : c}
+                </option>
               ))}
+            </select>
 
-              {(!currentClub?.news || currentClub.news.length === 0) && (
-                <p className="text-center text-xs text-slate-400 py-8 border border-dashed border-slate-200 rounded-2xl">
-                  No news articles published yet.
-                </p>
-              )}
+            {/* Search */}
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs w-full sm:w-60">
+              <FiSearch className="text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search clubs or advisors..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="bg-transparent text-slate-800 placeholder-slate-400 focus:outline-none w-full"
+              />
             </div>
           </div>
         </div>
 
+        {filteredClubs.length === 0 ? (
+          <div className="text-center py-12 text-slate-400 font-medium text-xs border border-dashed border-slate-200 rounded-2xl">
+            No campus clubs match your filter criteria.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[750px]">
+              <thead>
+                <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50">
+                  <th className="py-3 px-4 rounded-l-xl">Club Name</th>
+                  <th className="py-3 px-4">Category</th>
+                  <th className="py-3 px-4">Description</th>
+                  <th className="py-3 px-4">Faculty Advisor</th>
+                  <th className="py-3 px-4 text-center">Members</th>
+                  <th className="py-3 px-4 text-right rounded-r-xl">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-sm">
+                {filteredClubs.map((club) => {
+                  const isMember = club.my_membership_status === 'active';
+                  const isJoining = joiningClubId === club.id;
+
+                  return (
+                    <tr key={club.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-3.5 px-4 font-bold text-slate-800">
+                        {club.name}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                          {club.category || 'General'}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-xs text-slate-500 max-w-xs truncate">
+                        {club.description || 'Campus student activity society.'}
+                      </td>
+                      <td className="py-3.5 px-4 text-xs text-slate-700 font-medium">
+                        {club.moderator_name || 'Faculty Member'}
+                      </td>
+                      <td className="py-3.5 px-4 text-center font-mono font-bold text-xs text-slate-600">
+                        {club.total_members || 1}
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        {isMember ? (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold">
+                            <FiCheckCircle className="text-xs" /> Enrolled
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleJoinClub(club.id)}
+                            disabled={isJoining}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            <FiPlusCircle className="text-xs" />
+                            {isJoining ? 'Joining...' : 'Join Club'}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

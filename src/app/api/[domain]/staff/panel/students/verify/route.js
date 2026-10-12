@@ -194,14 +194,15 @@ export async function PUT(request, context) {
         [staffId, notes || null, student_id, website.id]
       );
 
-      // 2. Update website_students: set is_active = TRUE
+      // 2. Update website_students: set is_active = TRUE and sync email if previously null
       const stuUpdate = await queryDb(
         `UPDATE website_students
          SET is_active = TRUE,
+             email = COALESCE(email, $3),
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $1 AND website_id = $2
          RETURNING *`,
-        [student_id, website.id]
+        [student_id, website.id, student.email || null]
       );
 
       const updatedStudent = stuUpdate.rows[0];

@@ -174,15 +174,33 @@ async function handleSetupSubmission(request, context) {
 
     const student = studentCheck.rows[0];
 
-    // Enforce matching registered student email
+    // Determine whether student had email pre-registered by staff in website_students or website_student_info
     const registeredEmail = (student.registered_student_email || student.info_email || '').trim().toLowerCase();
     const inputEmail = email.trim().toLowerCase();
+    const hadPreRegisteredEmail = Boolean(registeredEmail);
 
-    if (registeredEmail && registeredEmail !== inputEmail) {
+    if (hadPreRegisteredEmail && registeredEmail !== inputEmail) {
       return NextResponse.json({
         success: false,
         error: `Email address mismatch! You must provide your registered institutional email address (${registeredEmail}).`
       }, { status: 400 });
+    }
+
+    // If student did NOT have pre-registered email, ensure inputEmail is not already in use by another student
+    if (!hadPreRegisteredEmail) {
+      const emailDup = await queryDb(
+        `SELECT s.id FROM website_students s
+         LEFT JOIN website_student_info i ON s.id = i.student_id
+         WHERE s.website_id = $1 AND s.id != $2 AND (LOWER(s.email) = $3 OR LOWER(i.email) = $3)
+         LIMIT 1`,
+        [website.id, student.id, inputEmail]
+      );
+      if (emailDup.rows.length > 0) {
+        return NextResponse.json({
+          success: false,
+          error: `The email address "${inputEmail}" is already associated with another student.`
+        }, { status: 409 });
+      }
     }
 
     // Enforce email verification via web mailer before continuing setup
@@ -202,7 +220,17 @@ async function handleSetupSubmission(request, context) {
 
     const hashedPassword = await hashPassword(password);
 
-    // 1. Update website_student_info: set password, name, email, mark is_registered = true, verification_status = 'submitted'
+    // Business Logic:
+    // If student had pre-registered email and verified it by OTP:
+    // -> Automatically verified and active! No staff verification needed.
+    // If email was NOT added during staff registration:
+    // -> Student added email during setup -> Sent for staff verification in staff panel.
+    const isAutoVerified = hadPreRegisteredEmail;
+    const verificationStatus = isAutoVerified ? 'verified' : 'submitted';
+    const isActive = isAutoVerified;
+    const isVerified = isAutoVerified;
+
+    // 1. Update website_student_info: credentials, personal info, verification status
     await queryDb(
       `UPDATE website_student_info
        SET password = $1,
@@ -214,9 +242,12 @@ async function handleSetupSubmission(request, context) {
            date_of_birth = COALESCE($7, date_of_birth),
            religion = COALESCE($8, religion),
            is_registered = TRUE,
-           verification_status = 'submitted',
+           is_verified = $9,
+           verification_status = $10,
+           verified_at = CASE WHEN $9 = TRUE THEN CURRENT_TIMESTAMP ELSE NULL END,
+           verification_notes = CASE WHEN $9 = TRUE THEN 'Verified via institutional email mailer OTP' ELSE NULL END,
            updated_at = CURRENT_TIMESTAMP
-       WHERE student_id = $9 AND website_id = $10`,
+       WHERE student_id = $11 AND website_id = $12`,
       [
         hashedPassword,
         name?.trim() || null,
@@ -226,19 +257,21 @@ async function handleSetupSubmission(request, context) {
         blood_group || null,
         date_of_birth || null,
         religion || null,
+        isVerified,
+        verificationStatus,
         student.id,
         website.id,
       ]
     );
 
-    // 2. In website_students, update email and keep is_active = false waiting for staff approval
+    // 2. In website_students, update email and activate if auto-verified
     await queryDb(
       `UPDATE website_students
        SET email = $1,
-           is_active = FALSE,
+           is_active = $2,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2 AND website_id = $3`,
-      [inputEmail, student.id, website.id]
+       WHERE id = $3 AND website_id = $4`,
+      [inputEmail, isActive, student.id, website.id]
     );
 
     // 3. Upsert website_student_addresses
@@ -336,13 +369,18 @@ async function handleSetupSubmission(request, context) {
       );
     }
 
+    const responseMessage = isAutoVerified
+      ? 'Account setup completed successfully! Your student account is now verified and active. You can log in directly to your student portal.'
+      : 'Profile setup submitted for staff verification! Since your email was not pre-registered by school administration, your profile has been sent to staff for verification. You will be able to log in once staff approves your account in staff panel.';
+
     return NextResponse.json({
       success: true,
-      message:
-        'Account setup submitted successfully! Your student profile is now under review by institution staff. You will be able to log in once staff approves your account.',
+      message: responseMessage,
       payload: {
         student_id: student.id,
-        verification_status: 'submitted',
+        verification_status: verificationStatus,
+        is_active: isActive,
+        requires_staff_verification: !isAutoVerified,
       },
     });
   } catch (error) {

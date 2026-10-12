@@ -22,11 +22,12 @@ export async function POST(request, context) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
+    const cleanRegNo = registration_no?.trim() || null;
 
-    // Verify student exists in website_students matching the email
-    const studentRes = await queryDb(
+    // Verify student exists in website_students matching the email or registration number
+    let studentRes = await queryDb(
       `SELECT s.id, s.registration_no, s.roll_no, s.email, s.is_active,
-              i.name, i.is_registered, i.is_verified,
+              i.name, i.email AS info_email, i.is_registered, i.is_verified,
               c.name AS class_name, ses.name AS session_name
        FROM website_students s
        LEFT JOIN website_student_info i ON s.id = i.student_id
@@ -34,15 +35,45 @@ export async function POST(request, context) {
        LEFT JOIN website_sessions ses ON s.session_id = ses.id
        WHERE s.website_id = $1 
          AND LOWER(TRIM(COALESCE(s.email, i.email))) = $2
-         ${registration_no ? 'AND (s.registration_no = $3 OR s.roll_no = $3)' : ''}
+         ${cleanRegNo ? 'AND (s.registration_no = $3 OR s.roll_no = $3 OR s.student_unique_id = $3)' : ''}
        LIMIT 1`,
-      registration_no ? [website.id, cleanEmail, registration_no.trim()] : [website.id, cleanEmail]
+      cleanRegNo ? [website.id, cleanEmail, cleanRegNo] : [website.id, cleanEmail]
     );
+
+    // Fallback: If not found by email, check if student was registered without email using registration number
+    if (studentRes.rows.length === 0 && cleanRegNo) {
+      studentRes = await queryDb(
+        `SELECT s.id, s.registration_no, s.roll_no, s.email, s.is_active,
+                i.name, i.email AS info_email, i.is_registered, i.is_verified,
+                c.name AS class_name, ses.name AS session_name
+         FROM website_students s
+         LEFT JOIN website_student_info i ON s.id = i.student_id
+         LEFT JOIN website_classes c ON s.class_id = c.id
+         LEFT JOIN website_sessions ses ON s.session_id = ses.id
+         WHERE s.website_id = $1 
+           AND (s.registration_no = $2 OR s.roll_no = $2 OR s.student_unique_id = $2)
+         LIMIT 1`,
+        [website.id, cleanRegNo]
+      );
+
+      if (studentRes.rows.length > 0) {
+        const found = studentRes.rows[0];
+        const registeredEmail = (found.email || found.info_email || '').trim().toLowerCase();
+        if (registeredEmail && registeredEmail !== cleanEmail) {
+          return NextResponse.json({
+            success: false,
+            error: `Registration number matches student with pre-registered email (${registeredEmail}). Please enter that email address.`
+          }, { status: 400 });
+        }
+      }
+    }
 
     if (studentRes.rows.length === 0) {
       return NextResponse.json({
         success: false,
-        error: 'No student record found matching this email address. Please make sure you are entering the exact email provided during admission or enrollment.'
+        error: cleanRegNo
+          ? 'No student record found matching this registration number and email.'
+          : 'No student record found matching this email address. If email was not added during admission, please provide your registration number.'
       }, { status: 404 });
     }
 

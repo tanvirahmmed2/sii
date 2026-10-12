@@ -33,7 +33,8 @@ export async function GET(request, context) {
         `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
                 s.class_id, s.section_id, s.session_id, s.is_active,
                 s.created_at, s.updated_at,
-                i.name, i.email, i.number, i.gender, i.blood_group,
+                COALESCE(s.email, i.email) AS email, s.email AS registered_email,
+                i.name, i.number, i.gender, i.blood_group,
                 i.date_of_birth, i.religion, i.admission_date,
                 i.is_registered, i.is_verified, i.verification_status,
                 i.verification_token, i.verification_notes, i.rejection_reason, i.verified_at,
@@ -122,7 +123,8 @@ export async function GET(request, context) {
       SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
              s.class_id, s.section_id, s.session_id, s.is_active,
              s.created_at, s.updated_at,
-             i.name, i.email, i.number, i.gender, i.blood_group, i.date_of_birth,
+             COALESCE(s.email, i.email) AS email, s.email AS registered_email,
+             i.name, i.number, i.gender, i.blood_group, i.date_of_birth,
              i.admission_date, i.is_registered, i.is_verified,
              i.verification_status, i.verification_token, i.verification_notes,
              c.name AS class_name, c.code AS class_code,
@@ -215,6 +217,29 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Class is required.' }, { status: 400 });
     }
 
+    const cleanEmail = email?.trim() ? email.trim().toLowerCase() : null;
+    if (cleanEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(cleanEmail)) {
+        return NextResponse.json({ success: false, error: 'Please enter a valid student email address.' }, { status: 400 });
+      }
+
+      // Check duplicate email in website_students or website_student_info
+      const duplicateEmail = await queryDb(
+        `SELECT s.id FROM website_students s
+         LEFT JOIN website_student_info i ON s.id = i.student_id
+         WHERE s.website_id = $1 AND (LOWER(s.email) = $2 OR LOWER(i.email) = $2)
+         LIMIT 1`,
+        [website.id, cleanEmail]
+      );
+      if (duplicateEmail.rows.length > 0) {
+        return NextResponse.json(
+          { success: false, error: `A student with email "${cleanEmail}" already exists in this institution.` },
+          { status: 409 }
+        );
+      }
+    }
+
     const regNo = registration_no.trim();
 
     // Check duplicate registration_no in website_students
@@ -229,21 +254,6 @@ export async function POST(request, context) {
       );
     }
 
-    // Optional email check in website_student_info
-    const cleanEmail = email?.trim() ? email.trim().toLowerCase() : null;
-    if (cleanEmail) {
-      const duplicateEmail = await queryDb(
-        `SELECT id FROM website_student_info WHERE website_id = $1 AND LOWER(email) = $2 LIMIT 1`,
-        [website.id, cleanEmail]
-      );
-      if (duplicateEmail.rows.length > 0) {
-        return NextResponse.json(
-          { success: false, error: 'A student with this email address already exists.' },
-          { status: 409 }
-        );
-      }
-    }
-
     // Unique student identifier
     const studentUniqueId = `STU-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
 
@@ -255,13 +265,13 @@ export async function POST(request, context) {
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const tokenExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-    // 1. Insert into website_students (is_active is FALSE until setup & verification are complete)
+    // 1. Insert into website_students (including email, is_active is FALSE until setup verification is complete)
     const insertRes = await queryDb(
       `INSERT INTO website_students (
           website_id, registration_no, roll_no, student_unique_id,
-          class_id, section_id, session_id, is_active
+          class_id, section_id, session_id, email, is_active
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE)
        RETURNING *`,
       [
         website.id,
@@ -271,6 +281,7 @@ export async function POST(request, context) {
         class_id,
         section_id || null,
         session_id || null,
+        cleanEmail,
       ]
     );
 
@@ -446,7 +457,7 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Student ID is required.' }, { status: 400 });
     }
 
-    // Academic Fields in website_students
+    // Academic & Core Fields in website_students
     const sFields = [];
     const sValues = [website.id, studentId];
     let sIdx = 3;
@@ -472,6 +483,32 @@ export async function PUT(request, context) {
       sValues.push(Boolean(body.is_active));
     }
 
+    let cleanUpdateEmail = undefined;
+    if (body.email !== undefined) {
+      cleanUpdateEmail = body.email?.trim() ? body.email.trim().toLowerCase() : null;
+      if (cleanUpdateEmail) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(cleanUpdateEmail)) {
+          return NextResponse.json({ success: false, error: 'Please enter a valid student email address.' }, { status: 400 });
+        }
+        const dup = await queryDb(
+          `SELECT s.id FROM website_students s
+           LEFT JOIN website_student_info i ON s.id = i.student_id
+           WHERE s.website_id = $1 AND s.id != $2 AND (LOWER(s.email) = $3 OR LOWER(i.email) = $3)
+           LIMIT 1`,
+          [website.id, studentId, cleanUpdateEmail]
+        );
+        if (dup.rows.length > 0) {
+          return NextResponse.json(
+            { success: false, error: `Email "${cleanUpdateEmail}" is already in use by another student.` },
+            { status: 409 }
+          );
+        }
+      }
+      sFields.push(`email = $${sIdx++}`);
+      sValues.push(cleanUpdateEmail);
+    }
+
     if (sFields.length > 0) {
       sFields.push(`updated_at = CURRENT_TIMESTAMP`);
       await queryDb(
@@ -489,9 +526,9 @@ export async function PUT(request, context) {
       iFields.push(`name = $${iIdx++}`);
       iValues.push(body.name?.trim() || null);
     }
-    if (body.email !== undefined) {
+    if (cleanUpdateEmail !== undefined) {
       iFields.push(`email = $${iIdx++}`);
-      iValues.push(body.email?.trim()?.toLowerCase() || null);
+      iValues.push(cleanUpdateEmail);
     }
     if (body.number !== undefined) {
       iFields.push(`number = $${iIdx++}`);
@@ -599,6 +636,26 @@ export async function PUT(request, context) {
           g.guardian_email || null,
           g.guardian_address || null,
         ]
+      );
+    }
+
+    // Media: Student Picture upsert
+    if (body.image_url !== undefined && body.image_url?.trim()) {
+      await queryDb(
+        `INSERT INTO website_student_pictures (website_id, student_id, image_url, is_primary)
+         VALUES ($1, $2, $3, TRUE)`,
+        [website.id, studentId, body.image_url.trim()]
+      );
+    }
+
+    // Media: Student Signature upsert
+    if (body.signature_url !== undefined && body.signature_url?.trim()) {
+      await queryDb(
+        `INSERT INTO website_student_signatures (website_id, student_id, signature_url, updated_at)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+         ON CONFLICT (student_id)
+         DO UPDATE SET signature_url = EXCLUDED.signature_url, updated_at = CURRENT_TIMESTAMP`,
+        [website.id, studentId, body.signature_url.trim()]
       );
     }
 

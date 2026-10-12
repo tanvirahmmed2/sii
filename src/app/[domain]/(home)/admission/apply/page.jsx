@@ -32,7 +32,11 @@ const ApplyFormContent = () => {
     const loadCirculars = async () => {
       setLoading(true);
       try {
-        const res = await fetch('/api/domain/admissions/apply');
+        const endpoint = getApiEndpoint ? getApiEndpoint('admissions/apply') : '/api/admissions/apply';
+        const res = await fetch(endpoint);
+        if (!res.ok) {
+          throw new Error(`Server returned ${res.status}`);
+        }
         const data = await res.json();
         if (data.success && data.circulars) {
           const list = data.circulars;
@@ -55,7 +59,7 @@ const ApplyFormContent = () => {
     };
 
     loadCirculars();
-  }, [admissionIdParam]);
+  }, [admissionIdParam, getApiEndpoint]);
 
   const handleCircularChange = (id) => {
     const found = circulars.find((c) => c.id.toString() === id);
@@ -92,7 +96,8 @@ const ApplyFormContent = () => {
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/domain/admissions/apply', {
+      const postEndpoint = getApiEndpoint ? getApiEndpoint('admissions/apply') : '/api/admissions/apply';
+      const res = await fetch(postEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
