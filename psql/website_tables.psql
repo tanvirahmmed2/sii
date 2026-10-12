@@ -3082,10 +3082,33 @@ CREATE INDEX IF NOT EXISTS idx_website_insfra_order ON website_insfrastructure(o
 
 CREATE OR REPLACE VIEW website_infrastructure AS SELECT * FROM website_insfrastructure;
 
-DROP TRIGGER IF EXISTS update_website_insfrastructure_updated_at ON website_insfrastructure;
-CREATE TRIGGER update_website_insfrastructure_updated_at
-    BEFORE UPDATE ON website_insfrastructure
+-- ----------------------------------------------------------------------------
+-- 5. WEBSITE BOARD MEMBERS TABLE (Governing Body / Board of Trustees / Directors)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_board_members (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    title VARCHAR(255),
+    designation VARCHAR(255) NOT NULL,
+    image TEXT,
+    image_id VARCHAR(255),
+    bio TEXT,
+    order_no INT NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_website_board_members_web ON website_board_members(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_board_members_active ON website_board_members(is_active);
+CREATE INDEX IF NOT EXISTS idx_website_board_members_order ON website_board_members(order_no);
+
+DROP TRIGGER IF EXISTS update_website_board_members_updated_at ON website_board_members;
+CREATE TRIGGER update_website_board_members_updated_at
+    BEFORE UPDATE ON website_board_members
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 
 
 

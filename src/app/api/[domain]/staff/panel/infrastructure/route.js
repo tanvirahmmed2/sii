@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { getStaffSession } from 'src/lib/middleware/staff.js';
+import { deleteImage } from 'src/lib/database/cloudinary.js';
 
 async function verifyStaffAccess(request, context) {
   const website = await resolveWebsiteFromRequest(request, context);
@@ -156,14 +157,21 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Facility ID is required for update.' }, { status: 400 });
     }
 
+    // Retrieve previous record to clean up old Cloudinary image if replaced
+    const existingResult = await queryDb(
+      `SELECT image_id FROM website_insfrastructure WHERE id = $1 AND website_id = $2`,
+      [id, auth.website.id]
+    );
+    const oldImageId = existingResult.rows[0]?.image_id;
+
     const updateResult = await queryDb(
       `UPDATE website_insfrastructure
        SET title = COALESCE($1, title),
            subtitle = COALESCE($2, subtitle),
            description = COALESCE($3, description),
            facility_type = COALESCE($4, facility_type),
-           image = COALESCE($5, image),
-           image_id = COALESCE($6, image_id),
+           image = CASE WHEN $5::text IS NOT NULL THEN $5::text ELSE image END,
+           image_id = CASE WHEN $6::text IS NOT NULL THEN $6::text ELSE image_id END,
            order_no = COALESCE($7, order_no),
            is_active = COALESCE($8, is_active),
            updated_at = CURRENT_TIMESTAMP
@@ -174,8 +182,8 @@ export async function PUT(request, context) {
         subtitle !== undefined ? (subtitle ? String(subtitle).trim() : null) : null,
         description !== undefined ? String(description).trim() : null,
         facility_type !== undefined ? String(facility_type).trim() : null,
-        image !== undefined ? (image ? String(image).trim() : null) : null,
-        image_id !== undefined ? (image_id ? String(image_id).trim() : null) : null,
+        image !== undefined ? (image ? String(image).trim() : '') : null,
+        image_id !== undefined ? (image_id ? String(image_id).trim() : '') : null,
         order_no !== undefined ? parseInt(order_no, 10) : null,
         is_active !== undefined ? Boolean(is_active) : null,
         id,
@@ -185,6 +193,13 @@ export async function PUT(request, context) {
 
     if (updateResult.rowCount === 0) {
       return NextResponse.json({ success: false, error: 'Infrastructure facility not found.' }, { status: 404 });
+    }
+
+    // If image_id was replaced and old image_id exists, clean up old Cloudinary asset
+    if (image_id !== undefined && oldImageId && oldImageId !== image_id) {
+      deleteImage(oldImageId).catch((err) =>
+        console.warn('Could not clean up replaced infrastructure image on Cloudinary:', err.message)
+      );
     }
 
     return NextResponse.json({
@@ -214,7 +229,7 @@ export async function DELETE(request, context) {
     }
 
     const deleteResult = await queryDb(
-      `DELETE FROM website_insfrastructure WHERE id = $1 AND website_id = $2 RETURNING id, title`,
+      `DELETE FROM website_insfrastructure WHERE id = $1 AND website_id = $2 RETURNING id, title, image_id`,
       [id, auth.website.id]
     );
 
@@ -222,9 +237,16 @@ export async function DELETE(request, context) {
       return NextResponse.json({ success: false, error: 'Facility not found or already deleted.' }, { status: 404 });
     }
 
+    const deletedRecord = deleteResult.rows[0];
+    if (deletedRecord.image_id) {
+      deleteImage(deletedRecord.image_id).catch((err) =>
+        console.warn('Could not delete infrastructure image on Cloudinary:', err.message)
+      );
+    }
+
     return NextResponse.json({
       success: true,
-      message: `Facility "${deleteResult.rows[0].title}" deleted successfully.`,
+      message: `Facility "${deletedRecord.title}" deleted successfully.`,
     });
   } catch (error) {
     console.error('Error deleting infrastructure:', error);

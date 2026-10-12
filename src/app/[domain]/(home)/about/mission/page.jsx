@@ -1,12 +1,41 @@
 'use client';
 
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { FiCheckCircle } from 'react-icons/fi';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 const MissionPage = () => {
-  const { website, tenantUrl } = useContext(TenantWebsiteContext);
+  const { website, tenantUrl, getApiEndpoint } = useContext(TenantWebsiteContext);
   const schoolName = website?.name || 'Our Institution';
+
+  const [missions, setMissions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let ignore = false;
+    const fetchMissions = async () => {
+      try {
+        const endpoint = getApiEndpoint('home/institutional?type=missions');
+        const res = await fetch(endpoint);
+        if (!ignore && res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.missions)) {
+            setMissions(data.missions);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching institutional missions:', err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+
+    fetchMissions();
+    return () => {
+      ignore = true;
+    };
+  }, [getApiEndpoint]);
 
   const strategies = [
     {
@@ -95,6 +124,40 @@ const MissionPage = () => {
             )}
           </div>
         </div>
+
+        {/* Curated Institutional Missions from Database */}
+        {!loading && missions.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <FiCheckCircle className="text-primary w-4 h-4" />
+              <span>Core Institutional Missions & Commitments</span>
+            </h2>
+
+            <div className="grid grid-cols-1 gap-3.5">
+              {missions.map((m, idx) => (
+                <div
+                  key={m.id || idx}
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                      {m.title}
+                    </h3>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                      Mission #{m.order_no ?? idx + 1}
+                    </span>
+                  </div>
+                  {m.description && (
+                    <div
+                      className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed prose dark:prose-invert max-w-none"
+                      dangerouslySetInnerHTML={{ __html: m.description }}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Strategic Pillars */}
         <div className="space-y-3">

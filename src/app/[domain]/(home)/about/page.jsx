@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import React, { useContext, useEffect, useState } from 'react';
@@ -14,12 +15,14 @@ const About = () => {
     totalClubs: 0,
   });
   const [chairman, setChairman] = useState(null);
+  const [boardMembers, setBoardMembers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const schoolName = website?.name || 'Institution Academic Office';
   const logoSrc = website?.logo;
 
   useEffect(() => {
+    let ignore = false;
     const fetchAboutData = async () => {
       setLoading(true);
       try {
@@ -50,11 +53,26 @@ const About = () => {
           // ignore
         }
 
-        setStatsData({
-          totalStudents: studentsCount,
-          totalTeachers: teachersCount,
-          totalClubs: clubsCount,
-        });
+        if (!ignore) {
+          setStatsData({
+            totalStudents: studentsCount,
+            totalTeachers: teachersCount,
+            totalClubs: clubsCount,
+          });
+        }
+
+        // Fetch official board members
+        try {
+          const boardRes = await fetch(getApiEndpoint('home/institutional?type=board_members'));
+          if (boardRes.ok) {
+            const bData = await boardRes.json();
+            if (!ignore && bData.success && Array.isArray(bData.board_members)) {
+              setBoardMembers(bData.board_members);
+            }
+          }
+        } catch {
+          // ignore
+        }
 
         try {
           const chairmanRes = await fetch(getApiEndpoint('authorities/role/chairman'));
@@ -62,20 +80,22 @@ const About = () => {
             const cData = await chairmanRes.json();
             const payload = cData.payload || cData.paylod || {};
             const authList = payload.authorities || [];
-            if (authList.length > 0) {
-              setChairman(authList[0]);
-            } else {
-              const allAuthRes = await fetch(getApiEndpoint('authorities'));
-              if (allAuthRes.ok) {
-                const allData = await allAuthRes.json();
-                const allPayload = allData.payload || allData.paylod || {};
-                const allAuths = allPayload.authorities || [];
-                const foundChairman = allAuths.find((a) =>
-                  a.title?.toLowerCase().includes('chairman') ||
-                  a.designation?.toLowerCase().includes('chairman') ||
-                  a.designation_title?.toLowerCase().includes('chairman')
-                );
-                if (foundChairman) setChairman(foundChairman);
+            if (!ignore) {
+              if (authList.length > 0) {
+                setChairman(authList[0]);
+              } else {
+                const allAuthRes = await fetch(getApiEndpoint('authorities'));
+                if (allAuthRes.ok) {
+                  const allData = await allAuthRes.json();
+                  const allPayload = allData.payload || allData.paylod || {};
+                  const allAuths = allPayload.authorities || [];
+                  const foundChairman = allAuths.find((a) =>
+                    a.title?.toLowerCase().includes('chairman') ||
+                    a.designation?.toLowerCase().includes('chairman') ||
+                    a.designation_title?.toLowerCase().includes('chairman')
+                  );
+                  if (foundChairman) setChairman(foundChairman);
+                }
               }
             }
           }
@@ -85,11 +105,14 @@ const About = () => {
       } catch (err) {
         console.error('Error fetching about page data:', err);
       } finally {
-        setLoading(false);
+        if (!ignore) setLoading(false);
       }
     };
 
     fetchAboutData();
+    return () => {
+      ignore = true;
+    };
   }, [getApiEndpoint]);
 
   const stats = [
@@ -239,32 +262,62 @@ const About = () => {
         </div>
 
         {/* Chairman & Governance */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                Institutional Governance
+                Institutional Governance & Board of Members
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Board leadership and executive guidance.
+                Board leadership, trustees, and executive guidance.
               </p>
             </div>
             <Link 
-              href={tenantUrl('/authorities')} 
+              href={boardMembers.length > 0 ? tenantUrl('/about/board') : tenantUrl('/authorities')} 
               className="text-xs text-primary font-medium hover:underline"
             >
               All Board Members →
             </Link>
           </div>
 
-          {chairman ? (
+          {boardMembers.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {boardMembers.slice(0, 6).map((member, idx) => (
+                <div
+                  key={member.id || idx}
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs flex items-center gap-3.5"
+                >
+                  {member.image ? (
+                    <img
+                      src={member.image}
+                      alt={member.name}
+                      className="w-14 h-14 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 shrink-0 font-bold text-xs">
+                      {member.name?.slice(0, 2)?.toUpperCase() || 'BM'}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <span className="text-[10px] font-semibold text-primary block truncate">
+                      {member.designation}
+                    </span>
+                    <h3 className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                      {member.title ? `${member.title} ` : ''}
+                      {member.name}
+                    </h3>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : chairman ? (
             <div className="flex justify-start">
               <div className="w-full max-w-sm">
                 <AuthorityCard authority={chairman} />
               </div>
             </div>
           ) : (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 text-center text-xs text-slate-500 dark:text-slate-400">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 text-center text-xs text-slate-500 dark:text-slate-400">
               Institutional leadership profiles are listed in the Authorities Directory.
             </div>
           )}

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { getStaffSession } from 'src/lib/middleware/staff.js';
+import { deleteImage } from 'src/lib/database/cloudinary.js';
 
 async function verifyStaffAccess(request, context) {
   const website = await resolveWebsiteFromRequest(request, context);
@@ -131,13 +132,20 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Milestone ID is required for update.' }, { status: 400 });
     }
 
+    // Retrieve previous milestone to clean up old Cloudinary image if replaced
+    const existingResult = await queryDb(
+      `SELECT image_id FROM website_milestons WHERE id = $1 AND website_id = $2`,
+      [id, auth.website.id]
+    );
+    const oldImageId = existingResult.rows[0]?.image_id;
+
     const updateResult = await queryDb(
       `UPDATE website_milestons
        SET year = COALESCE($1, year),
            title = COALESCE($2, title),
            description = COALESCE($3, description),
-           image = COALESCE($4, image),
-           image_id = COALESCE($5, image_id),
+           image = CASE WHEN $4::text IS NOT NULL THEN $4::text ELSE image END,
+           image_id = CASE WHEN $5::text IS NOT NULL THEN $5::text ELSE image_id END,
            order_no = COALESCE($6, order_no),
            is_active = COALESCE($7, is_active),
            updated_at = CURRENT_TIMESTAMP
@@ -147,8 +155,8 @@ export async function PUT(request, context) {
         year !== undefined ? String(year).trim() : null,
         title !== undefined ? String(title).trim() : null,
         description !== undefined ? String(description).trim() : null,
-        image !== undefined ? (image ? String(image).trim() : null) : null,
-        image_id !== undefined ? (image_id ? String(image_id).trim() : null) : null,
+        image !== undefined ? (image ? String(image).trim() : '') : null,
+        image_id !== undefined ? (image_id ? String(image_id).trim() : '') : null,
         order_no !== undefined ? parseInt(order_no, 10) : null,
         is_active !== undefined ? Boolean(is_active) : null,
         id,
@@ -158,6 +166,13 @@ export async function PUT(request, context) {
 
     if (updateResult.rowCount === 0) {
       return NextResponse.json({ success: false, error: 'Milestone not found.' }, { status: 404 });
+    }
+
+    // If image_id was replaced and old image_id exists, clean up old Cloudinary asset
+    if (image_id !== undefined && oldImageId && oldImageId !== image_id) {
+      deleteImage(oldImageId).catch((err) =>
+        console.warn('Could not clean up replaced milestone image on Cloudinary:', err.message)
+      );
     }
 
     return NextResponse.json({
@@ -187,7 +202,7 @@ export async function DELETE(request, context) {
     }
 
     const deleteResult = await queryDb(
-      `DELETE FROM website_milestons WHERE id = $1 AND website_id = $2 RETURNING id, title`,
+      `DELETE FROM website_milestons WHERE id = $1 AND website_id = $2 RETURNING id, title, image_id`,
       [id, auth.website.id]
     );
 
@@ -195,9 +210,16 @@ export async function DELETE(request, context) {
       return NextResponse.json({ success: false, error: 'Milestone not found or already deleted.' }, { status: 404 });
     }
 
+    const deletedRecord = deleteResult.rows[0];
+    if (deletedRecord.image_id) {
+      deleteImage(deletedRecord.image_id).catch((err) =>
+        console.warn('Could not delete milestone image on Cloudinary:', err.message)
+      );
+    }
+
     return NextResponse.json({
       success: true,
-      message: `Milestone "${deleteResult.rows[0].title}" deleted successfully.`,
+      message: `Milestone "${deletedRecord.title}" deleted successfully.`,
     });
   } catch (error) {
     console.error('Error deleting milestone:', error);

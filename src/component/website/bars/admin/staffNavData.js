@@ -658,6 +658,31 @@ export const staffNavData = [
     ]
   },
   {
+    title: 'Institution Profile',
+    children: [
+      {
+        title: 'Missions',
+        path: '/institutional-missions'
+      },
+      {
+        title: 'Visions',
+        path: '/institutional-visions'
+      },
+      {
+        title: 'Milestones',
+        path: '/institutional-milestones'
+      },
+      {
+        title: 'Infrastructure',
+        path: '/institutional-infrastructure'
+      },
+      {
+        title: 'Board Members',
+        path: '/institutional-board-members'
+      }
+    ]
+  },
+  {
     title: 'Officers',
     children: [
       {

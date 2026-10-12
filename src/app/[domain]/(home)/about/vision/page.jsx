@@ -1,12 +1,41 @@
 'use client';
 
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { FiCompass } from 'react-icons/fi';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 const VisionPage = () => {
-  const { website, tenantUrl } = useContext(TenantWebsiteContext);
+  const { website, tenantUrl, getApiEndpoint } = useContext(TenantWebsiteContext);
   const schoolName = website?.name || 'Our Institution';
+
+  const [visions, setVisions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let ignore = false;
+    const fetchVisions = async () => {
+      try {
+        const endpoint = getApiEndpoint('home/institutional?type=visions');
+        const res = await fetch(endpoint);
+        if (!ignore && res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.visions)) {
+            setVisions(data.visions);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching institutional visions:', err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+
+    fetchVisions();
+    return () => {
+      ignore = true;
+    };
+  }, [getApiEndpoint]);
 
   const values = [
     {
@@ -70,6 +99,40 @@ const VisionPage = () => {
             </p>
           )}
         </div>
+
+        {/* Dynamic Visions from Database */}
+        {!loading && visions.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <FiCompass className="text-primary w-4 h-4" />
+              <span>Institutional Pillars of Vision</span>
+            </h2>
+
+            <div className="grid grid-cols-1 gap-3.5">
+              {visions.map((v, idx) => (
+                <div
+                  key={v.id || idx}
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                      {v.title}
+                    </h3>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                      Vision #{v.order_no ?? idx + 1}
+                    </span>
+                  </div>
+                  {v.description && (
+                    <div
+                      className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed prose dark:prose-invert max-w-none"
+                      dangerouslySetInnerHTML={{ __html: v.description }}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Core Values Grid */}
         <div className="space-y-3">
