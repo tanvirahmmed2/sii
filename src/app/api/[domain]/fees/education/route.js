@@ -44,7 +44,7 @@ export async function GET(request, context) {
       params.push(status);
     }
 
-    queryText += ` ORDER BY c.numeric_name ASC NULLS LAST, c.name ASC, f.id DESC`;
+    queryText += ` ORDER BY c.name ASC, f.id DESC`;
 
     const res = await queryDb(queryText, params);
 

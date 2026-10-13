@@ -10,27 +10,30 @@ export default function StudentFilterBar({
   loading = false,
   extraFilters = null,
   title = 'Filter Student Records',
-  description = 'Filter by Academic Session, Class, and Section to view data',
+  description = 'Filter by Department, Session, Class, and Section to view records',
   submitLabel = 'View Data',
 }) {
   const { getApiEndpoint } = useTenantWebsite();
 
+  const [departments, setDepartments] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
   const [loadingMetadata, setLoadingMetadata] = useState(false);
 
+  const [selectedDepartment, setSelectedDepartment] = useState('');
   const [selectedSession, setSelectedSession] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
 
-  // Fetch sessions, classes, sections on mount
+  // Fetch departments, sessions, classes, sections on mount
   useEffect(() => {
     let isMounted = true;
     const loadAcademicMetadata = async () => {
       setLoadingMetadata(true);
       try {
-        const [cRes, sRes, sesRes] = await Promise.all([
+        const [dRes, cRes, sRes, sesRes] = await Promise.all([
+          fetch(getApiEndpoint('staff/panel/departments')).then((r) => r.json()).catch(() => ({})),
           fetch(getApiEndpoint('staff/panel/classes')).then((r) => r.json()).catch(() => ({})),
           fetch(getApiEndpoint('staff/panel/sections')).then((r) => r.json()).catch(() => ({})),
           fetch(getApiEndpoint('staff/panel/sessions')).then((r) => r.json()).catch(() => ({})),
@@ -38,10 +41,12 @@ export default function StudentFilterBar({
 
         if (!isMounted) return;
 
+        const depts = dRes?.payload?.departments || dRes?.payload || dRes?.departments || [];
         const cls = cRes?.payload?.classes || cRes?.payload || cRes?.classes || [];
         const secs = sRes?.payload?.sections || sRes?.payload || sRes?.sections || [];
         const sess = sesRes?.payload?.sessions || sesRes?.payload || sesRes?.sessions || [];
 
+        setDepartments(depts);
         setClasses(cls);
         setSections(secs);
         setSessions(sess);
@@ -64,6 +69,13 @@ export default function StudentFilterBar({
     };
   }, [getApiEndpoint]);
 
+  // Cascaded classes by selectedDepartment and selectedSession
+  const availableClasses = classes.filter((c) => {
+    if (selectedDepartment && c.department_id && String(c.department_id) !== String(selectedDepartment)) return false;
+    if (selectedSession && c.session_id && String(c.session_id) !== String(selectedSession)) return false;
+    return true;
+  });
+
   // Cascaded sections by selectedClass
   const availableSections = sections.filter(
     (s) => !selectedClass || String(s.class_id) === String(selectedClass)
@@ -72,31 +84,25 @@ export default function StudentFilterBar({
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!selectedSession) {
-      toast.error('Please select an Academic Session.');
-      return;
-    }
-
-    if (!selectedClass) {
-      toast.error('Please select a Class.');
-      return;
-    }
-
+    const deptObj = departments.find((d) => String(d.id) === String(selectedDepartment));
     const sessionObj = sessions.find((s) => String(s.id) === String(selectedSession));
     const classObj = classes.find((c) => String(c.id) === String(selectedClass));
     const sectionObj = sections.find((s) => String(s.id) === String(selectedSection));
 
     onFilter?.({
-      sessionId: selectedSession,
-      classId: selectedClass,
+      departmentId: selectedDepartment || '',
+      sessionId: selectedSession || '',
+      classId: selectedClass || '',
       sectionId: selectedSection || '',
-      sessionName: sessionObj?.name || '',
-      className: classObj?.name || '',
+      departmentName: deptObj?.name || 'All Departments',
+      sessionName: sessionObj?.name || 'All Sessions',
+      className: classObj?.name || 'All Classes',
       sectionName: sectionObj?.name || 'All Sections',
     });
   };
 
   const handleReset = () => {
+    setSelectedDepartment('');
     setSelectedClass('');
     setSelectedSection('');
     onReset?.();
@@ -115,19 +121,47 @@ export default function StudentFilterBar({
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 items-end">
-        {/* Session Dropdown */}
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 items-end">
+        {/* Department Dropdown */}
         <div>
           <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
-            Session *
+            Department
           </label>
           <select
-            value={selectedSession}
-            onChange={(e) => setSelectedSession(e.target.value)}
+            value={selectedDepartment}
+            onChange={(e) => {
+              setSelectedDepartment(e.target.value);
+              setSelectedClass('');
+              setSelectedSection('');
+            }}
             disabled={loadingMetadata}
             className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-slate-800 dark:focus:border-slate-400 cursor-pointer disabled:opacity-50"
           >
-            <option value="">Select Session</option>
+            <option value="">All Departments</option>
+            {departments.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name} {d.code ? `(${d.code})` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Session Dropdown */}
+        <div>
+          <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
+            Session
+          </label>
+          <select
+            value={selectedSession}
+            onChange={(e) => {
+              setSelectedSession(e.target.value);
+              setSelectedClass('');
+              setSelectedSection('');
+            }}
+            disabled={loadingMetadata}
+            className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-slate-800 dark:focus:border-slate-400 cursor-pointer disabled:opacity-50"
+          >
+            <option value="">All Sessions</option>
             {sessions.map((ses) => (
               <option key={ses.id} value={ses.id}>
                 {ses.name} {ses.is_current ? '(Current)' : ''}
@@ -139,19 +173,19 @@ export default function StudentFilterBar({
         {/* Class Dropdown */}
         <div>
           <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
-            Class *
+            Class
           </label>
           <select
             value={selectedClass}
             onChange={(e) => {
               setSelectedClass(e.target.value);
-              setSelectedSection(''); // Reset section when class changes
+              setSelectedSection('');
             }}
             disabled={loadingMetadata}
             className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-slate-800 dark:focus:border-slate-400 cursor-pointer disabled:opacity-50"
           >
-            <option value="">Select Class</option>
-            {classes.map((cls) => (
+            <option value="">All Classes</option>
+            {availableClasses.map((cls) => (
               <option key={cls.id} value={cls.id}>
                 {cls.name} {cls.code ? `(${cls.code})` : ''}
               </option>

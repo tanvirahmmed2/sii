@@ -30,7 +30,7 @@ export async function GET(request, context) {
     const sql = `
       SELECT c.*,
              cls.name AS class_name,
-             cls.numeric_name AS class_numeric_name,
+             cls.code AS class_code,
              sess.name AS session_name,
              (SELECT COUNT(*) FROM website_classroom_syllabus s WHERE s.classroom_id = c.id)::int AS syllabus_count,
              (SELECT COUNT(*) FROM website_classroom_assignments a WHERE a.classroom_id = c.id)::int AS assignment_count,
@@ -40,7 +40,7 @@ export async function GET(request, context) {
       LEFT JOIN website_classes cls ON cls.id = c.class_id
       LEFT JOIN website_sessions sess ON sess.id = c.session_id
       ${whereClause}
-      ORDER BY cls.numeric_name ASC, c.name ASC
+      ORDER BY cls.name ASC, c.name ASC
     `;
 
     const res = await query(sql, params);

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
+import { autoPublishDueResults } from 'src/app/api/[domain]/staff/panel/admissions/results/publish/route.js';
 
 /**
  * GET /api/[domain]/admissions/results
@@ -12,6 +13,9 @@ export async function GET(request, context) {
     if (!website) {
       return NextResponse.json({ success: false, error: 'Institution portal not found.' }, { status: 404 });
     }
+
+    // Auto-publish any circular whose result_date has arrived
+    await autoPublishDueResults(website.id);
 
     const { searchParams } = new URL(request.url);
     const admissionId = searchParams.get('admission_id') || searchParams.get('circular_id');

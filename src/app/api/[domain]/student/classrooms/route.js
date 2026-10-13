@@ -31,7 +31,7 @@ export async function GET(request, context) {
     const sql = `
       SELECT c.*,
              cls.name AS class_name,
-             cls.numeric_name AS class_numeric_name,
+             cls.code AS class_code,
              sess.name AS session_name,
              (SELECT COUNT(*) FROM website_classroom_syllabus s WHERE s.classroom_id = c.id)::int AS syllabus_count,
              (SELECT COUNT(*) FROM website_classroom_assignments a WHERE a.classroom_id = c.id)::int AS assignment_count,

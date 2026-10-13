@@ -295,7 +295,58 @@ CREATE TRIGGER update_website_staff_applications_updated_at
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- 12. WEBSITE SESSIONS TABLE (Academic Sessions e.g., 2021-2022, 2025-2026)
+-- 12. WEBSITE DEPARTMENTS TABLE (Academic Departments / Disciplines)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_departments (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    name VARCHAR(150) NOT NULL,
+    code VARCHAR(50),
+    description TEXT,
+    order_no INT DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_website_depts_web ON website_departments(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_depts_active ON website_departments(is_active);
+CREATE INDEX IF NOT EXISTS idx_website_depts_order ON website_departments(order_no);
+
+DROP TRIGGER IF EXISTS update_website_departments_updated_at ON website_departments;
+CREATE TRIGGER update_website_departments_updated_at
+    BEFORE UPDATE ON website_departments
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 12B. WEBSITE DEPARTMENT INFORMATION TABLE (Department Profiles, Motto, Costs)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_department_information (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    department_id BIGINT NOT NULL REFERENCES website_departments(id) ON DELETE CASCADE,
+    motto VARCHAR(255),
+    summary TEXT,
+    description TEXT,
+    expected_cost NUMERIC(12, 2) DEFAULT 0.00,
+    created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, department_id)
+);
+CREATE INDEX IF NOT EXISTS idx_website_dept_info_web ON website_department_information(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_dept_info_dept ON website_department_information(department_id);
+
+DROP TRIGGER IF EXISTS update_website_department_information_updated_at ON website_department_information;
+CREATE TRIGGER update_website_department_information_updated_at
+    BEFORE UPDATE ON website_department_information
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE OR REPLACE VIEW website_depart_information AS SELECT * FROM website_department_information;
+CREATE OR REPLACE VIEW website_depart_infomrtaion AS SELECT * FROM website_department_information;
+
+-- ----------------------------------------------------------------------------
+-- 12C. WEBSITE SESSIONS TABLE (Academic Sessions / Years - Independent Entity)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_sessions (
     id BIGSERIAL PRIMARY KEY,
@@ -316,13 +367,14 @@ CREATE TRIGGER update_website_sessions_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 13. WEBSITE CLASSES TABLE (Grades / Classes in the School)
+-- 13. WEBSITE CLASSES TABLE (Grades / Classes under Sessions & Departments)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_classes (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
+    department_id BIGINT REFERENCES website_departments(id) ON DELETE SET NULL,
     name VARCHAR(100) NOT NULL,
-    numeric_name INT NOT NULL,
     code VARCHAR(50) NOT NULL,
     max_seats INT DEFAULT 40,
     description TEXT,
@@ -331,6 +383,8 @@ CREATE TABLE IF NOT EXISTS website_classes (
     UNIQUE(website_id, name),
     UNIQUE(website_id, code)
 );
+CREATE INDEX IF NOT EXISTS idx_website_classes_session ON website_classes(session_id);
+CREATE INDEX IF NOT EXISTS idx_website_classes_dept ON website_classes(department_id);
 
 DROP TRIGGER IF EXISTS update_website_classes_updated_at ON website_classes;
 CREATE TRIGGER update_website_classes_updated_at
@@ -989,10 +1043,11 @@ CREATE INDEX IF NOT EXISTS idx_ws_news_images_news ON website_news_images(news_i
 CREATE TABLE IF NOT EXISTS website_students (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    registration_no VARCHAR(100) NOT NULL,
+    department_id BIGINT REFERENCES website_departments(id) ON DELETE SET NULL,
     class_id BIGINT REFERENCES website_classes(id) ON DELETE SET NULL,
     section_id BIGINT REFERENCES website_sections(id) ON DELETE SET NULL,
     session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
+    registration_no VARCHAR(100) NOT NULL,
     roll_no VARCHAR(50),
     email VARCHAR(255),
     student_unique_id VARCHAR(100) NOT NULL,
@@ -2340,6 +2395,7 @@ CREATE INDEX IF NOT EXISTS idx_ws_pay_tx_student ON website_payment_transactions
 CREATE TABLE IF NOT EXISTS website_admissions (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    department_id BIGINT REFERENCES website_departments(id) ON DELETE SET NULL,
     session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
     class_id BIGINT REFERENCES website_classes(id) ON DELETE SET NULL,
     title VARCHAR(255) NOT NULL,
@@ -2348,6 +2404,7 @@ CREATE TABLE IF NOT EXISTS website_admissions (
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     exam_date DATE,
+    result_date DATE,
     min_age INT,
     max_age INT,
     capacity INT DEFAULT 100,
@@ -3108,10 +3165,5 @@ DROP TRIGGER IF EXISTS update_website_board_members_updated_at ON website_board_
 CREATE TRIGGER update_website_board_members_updated_at
     BEFORE UPDATE ON website_board_members
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-
-
-
-
 
 

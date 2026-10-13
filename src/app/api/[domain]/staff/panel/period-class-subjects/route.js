@@ -46,7 +46,7 @@ export async function GET(request, context) {
              cs.class_id,
              cs.subject_id,
              c.name AS class_name,
-             c.numeric_name AS class_numeric,
+             c.code AS class_code,
              s.name AS subject_name,
              s.code AS subject_code,
              sec.name AS section_name,
@@ -80,7 +80,7 @@ export async function GET(request, context) {
       queryText += ` AND pcs.session_id = $${params.length}`;
     }
 
-    queryText += ` ORDER BY d.day_order ASC, p.start_time ASC, c.numeric_name ASC`;
+    queryText += ` ORDER BY d.day_order ASC, p.start_time ASC, c.name ASC`;
 
     const result = await queryDb(queryText, params);
 

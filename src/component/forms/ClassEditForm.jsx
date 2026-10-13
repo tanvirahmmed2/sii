@@ -7,7 +7,6 @@ import TiptapEditor from 'src/component/helper/TiptapEditor';
 
 const ClassEditForm = ({ cls, onSuccess, onCancel }) => {
   const [name, setName] = useState(cls.name);
-  const [numericName, setNumericName] = useState(cls.numeric_name);
   const [code, setCode] = useState(cls.code);
   const [maxSeats, setMaxSeats] = useState(cls.max_seats || '40');
   const [description, setDescription] = useState(cls.description || '');
@@ -15,8 +14,8 @@ const ClassEditForm = ({ cls, onSuccess, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name || !numericName || !code) {
-      toast.error('All fields are required.');
+    if (!name || !code) {
+      toast.error('All required fields must be filled.');
       return;
     }
 
@@ -25,7 +24,7 @@ const ClassEditForm = ({ cls, onSuccess, onCancel }) => {
       const response = await fetch(`/api/classes/${cls.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, numeric_name: numericName, code, max_seats: maxSeats, description }),
+        body: JSON.stringify({ name, code, max_seats: maxSeats, description }),
       });
 
       const data = await response.json();
@@ -49,7 +48,7 @@ const ClassEditForm = ({ cls, onSuccess, onCancel }) => {
         <FiEdit2 className="text-primary" /> Edit Class: {cls.name}
       </h2>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-5">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
             Class Name
@@ -59,20 +58,6 @@ const ClassEditForm = ({ cls, onSuccess, onCancel }) => {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            disabled={updating}
-            className="w-full px-3.5 py-2.5 bg-slate-55 border border-slate-200 rounded-xl text-sm text-slate-900 outline-none transition-all duration-200 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 bg-slate-50"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            Numeric Name
-          </label>
-          <input
-            type="number"
-            required
-            value={numericName}
-            onChange={(e) => setNumericName(e.target.value)}
             disabled={updating}
             className="w-full px-3.5 py-2.5 bg-slate-55 border border-slate-200 rounded-xl text-sm text-slate-900 outline-none transition-all duration-200 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 bg-slate-50"
           />

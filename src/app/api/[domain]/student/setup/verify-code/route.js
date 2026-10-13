@@ -30,15 +30,18 @@ export async function POST(request, context) {
     // Look up student by email or registration number
     let studentRes = await queryDb(
       `SELECT s.id, s.registration_no, s.roll_no, s.email, s.student_unique_id,
-              s.class_id, s.section_id, s.session_id,
+              s.class_id, s.section_id, s.session_id, s.department_id,
+              s.two_factor_code AS student_two_factor_code, s.two_factor_expires AS student_two_factor_expires,
               i.name, i.number, i.gender, i.blood_group, i.date_of_birth, i.religion,
               i.two_factor_code, i.two_factor_expires, i.verification_token,
-              c.name AS class_name, sec.name AS section_name, ses.name AS session_name
+              c.name AS class_name, sec.name AS section_name, ses.name AS session_name,
+              d.name AS department_name
        FROM website_students s
        LEFT JOIN website_student_info i ON s.id = i.student_id
        LEFT JOIN website_classes c ON s.class_id = c.id
        LEFT JOIN website_sections sec ON s.section_id = sec.id
        LEFT JOIN website_sessions ses ON s.session_id = ses.id
+       LEFT JOIN website_departments d ON s.department_id = d.id
        WHERE s.website_id = $1 
          AND LOWER(TRIM(COALESCE(s.email, i.email))) = $2
          ${cleanRegNo ? 'AND (s.registration_no = $3 OR s.roll_no = $3 OR s.student_unique_id = $3)' : ''}
@@ -49,15 +52,18 @@ export async function POST(request, context) {
     if (studentRes.rows.length === 0 && cleanRegNo) {
       studentRes = await queryDb(
         `SELECT s.id, s.registration_no, s.roll_no, s.email, s.student_unique_id,
-                s.class_id, s.section_id, s.session_id,
+                s.class_id, s.section_id, s.session_id, s.department_id,
+                s.two_factor_code AS student_two_factor_code, s.two_factor_expires AS student_two_factor_expires,
                 i.name, i.number, i.gender, i.blood_group, i.date_of_birth, i.religion,
                 i.two_factor_code, i.two_factor_expires, i.verification_token,
-                c.name AS class_name, sec.name AS section_name, ses.name AS session_name
+                c.name AS class_name, sec.name AS section_name, ses.name AS session_name,
+                d.name AS department_name
          FROM website_students s
          LEFT JOIN website_student_info i ON s.id = i.student_id
          LEFT JOIN website_classes c ON s.class_id = c.id
          LEFT JOIN website_sections sec ON s.section_id = sec.id
          LEFT JOIN website_sessions ses ON s.session_id = ses.id
+         LEFT JOIN website_departments d ON s.department_id = d.id
          WHERE s.website_id = $1 
            AND (s.registration_no = $2 OR s.roll_no = $2 OR s.student_unique_id = $2)
          LIMIT 1`,
@@ -74,41 +80,73 @@ export async function POST(request, context) {
 
     const student = studentRes.rows[0];
 
-    // Check code match
-    if (!student.two_factor_code || student.two_factor_code !== cleanCode) {
+    // Check code match from website_students or website_student_info
+    const activeCode = student.student_two_factor_code || student.two_factor_code;
+    const activeExpires = student.student_two_factor_expires || student.two_factor_expires;
+
+    let isCodeValid = false;
+    if (activeCode && activeCode === cleanCode) {
+      if (!activeExpires || new Date() <= new Date(activeExpires)) {
+        isCodeValid = true;
+      }
+    }
+
+    // Fallback: Check website_email_verifications
+    if (!isCodeValid) {
+      try {
+        const verCheck = await queryDb(
+          `SELECT id FROM website_email_verifications
+           WHERE website_id = $1 AND LOWER(email) = $2 AND otp_code = $3 AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+           ORDER BY id DESC LIMIT 1`,
+          [website.id, cleanEmail, cleanCode]
+        );
+        if (verCheck.rows.length > 0) {
+          isCodeValid = true;
+        }
+      } catch (_) {}
+    }
+
+    if (!isCodeValid) {
       return NextResponse.json({
         success: false,
-        error: 'Invalid verification code. Please check your email and try again.'
+        error: 'Invalid or expired verification code. Please check your email and try again.'
       }, { status: 400 });
     }
 
-    // Check expiration
-    if (student.two_factor_expires && new Date() > new Date(student.two_factor_expires)) {
-      return NextResponse.json({
-        success: false,
-        error: 'Verification code has expired. Please request a new code.'
-      }, { status: 410 });
-    }
-
-    // Update student as email verified and clear temporary OTP
-    await queryDb(
-      `UPDATE website_student_info
-       SET is_verified = TRUE,
-           two_factor_code = NULL,
-           two_factor_expires = NULL,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE student_id = $1 AND website_id = $2`,
-      [student.id, website.id]
-    );
-
-    // Also ensure website_students email is synced if it was null
+    // Update website_students: clear temporary OTP and ensure email is recorded
     await queryDb(
       `UPDATE website_students
-       SET email = COALESCE(email, $1),
+       SET two_factor_code = NULL,
+           two_factor_expires = NULL,
+           email = COALESCE(email, $1),
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $2 AND website_id = $3`,
       [cleanEmail, student.id, website.id]
     );
+
+    // If website_student_info exists, update it as well
+    try {
+      await queryDb(
+        `UPDATE website_student_info
+         SET is_verified = TRUE,
+             two_factor_code = NULL,
+             two_factor_expires = NULL,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE student_id = $1 AND website_id = $2`,
+        [student.id, website.id]
+      );
+    } catch (_) {}
+
+    // Mark website_email_verifications as verified
+    try {
+      await queryDb(
+        `UPDATE website_email_verifications
+         SET is_verified = TRUE,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE website_id = $1 AND LOWER(email) = $2 AND otp_code = $3`,
+        [website.id, cleanEmail, cleanCode]
+      );
+    } catch (_) {}
 
     // Fetch address, guardian, picture if any
     const [addrRes, guardRes, picRes, sigRes] = await Promise.all([

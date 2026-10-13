@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyStaffPaymentAccess } from 'src/lib/database/paymentGateways.js';
+import { autoPublishDueResults } from '../results/publish/route.js';
 
 /**
  * GET /api/[domain]/staff/panel/admissions/applicants
@@ -13,6 +14,9 @@ export async function GET(request, context) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
 
+    // Automatically check and publish any circulars whose result_date has arrived
+    await autoPublishDueResults(auth.website.id);
+
     const { searchParams } = new URL(request.url);
     const admissionId = searchParams.get('admission_id');
     const status = searchParams.get('status') || 'all';
@@ -23,7 +27,9 @@ export async function GET(request, context) {
       SELECT a.*,
              adm.title AS circular_title, adm.circular_number,
              c.name AS class_name,
-             inf.father_name, inf.father_phone, inf.mother_name,
+             ses.name AS session_name,
+             dept.name AS department_name,
+             inf.father_name, inf.father_phone, inf.mother_name, inf.mother_phone,
              inf.guardian_name, inf.guardian_phone, inf.guardian_relation,
              inf.present_address, inf.permanent_address,
              inf.previous_school, inf.previous_gpa,
@@ -31,6 +37,8 @@ export async function GET(request, context) {
       FROM website_admission_applicants a
       JOIN website_admissions adm ON adm.id = a.admission_id
       LEFT JOIN website_classes c ON c.id = adm.class_id
+      LEFT JOIN website_sessions ses ON ses.id = adm.session_id
+      LEFT JOIN website_departments dept ON dept.id = adm.department_id
       LEFT JOIN website_admission_applicant_info inf ON inf.applicant_id = a.id
       WHERE a.website_id = $1
     `;
@@ -74,14 +82,15 @@ export async function GET(request, context) {
       SELECT
         COUNT(*)::int AS total,
         COUNT(CASE WHEN status = 'pending' THEN 1 END)::int AS pending,
-        COUNT(CASE WHEN status = 'selected' THEN 1 END)::int AS selected,
+        COUNT(CASE WHEN status = 'completed' THEN 1 END)::int AS completed,
+        COUNT(CASE WHEN status IN ('selected', 'accepted') THEN 1 END)::int AS selected,
         COUNT(CASE WHEN status = 'rejected' THEN 1 END)::int AS rejected,
         COUNT(CASE WHEN status = 'enrolled' THEN 1 END)::int AS enrolled
       FROM website_admission_applicants
       WHERE website_id = $1 ${admissionId ? 'AND admission_id = $2' : ''}
     `, admissionId ? [auth.website.id, parseInt(admissionId, 10)] : [auth.website.id]);
 
-    const stats = statsRes.rows[0] || { total: 0, pending: 0, selected: 0, rejected: 0, enrolled: 0 };
+    const stats = statsRes.rows[0] || { total: 0, pending: 0, completed: 0, selected: 0, rejected: 0, enrolled: 0 };
     return NextResponse.json({
       success: true,
       applicants: res.rows,
@@ -89,7 +98,9 @@ export async function GET(request, context) {
       status_counts: {
         all: stats.total || 0,
         pending: stats.pending || 0,
+        completed: stats.completed || 0,
         selected: stats.selected || 0,
+        accepted: stats.selected || 0,
         rejected: stats.rejected || 0,
         enrolled: stats.enrolled || 0
       }

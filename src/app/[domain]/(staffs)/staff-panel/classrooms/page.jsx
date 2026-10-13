@@ -477,7 +477,7 @@ export default function StaffClassroomsPage() {
                     <option value="">Select Class</option>
                     {metaClasses.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.class_name} ({c.code || `Class ${c.numeric_name}`})
+                        {c.class_name} ({c.code || `Class ${c.id}`})
                       </option>
                     ))}
                   </select>

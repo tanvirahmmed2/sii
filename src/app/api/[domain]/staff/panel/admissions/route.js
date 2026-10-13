@@ -4,7 +4,7 @@ import { verifyStaffPaymentAccess } from 'src/lib/database/paymentGateways.js';
 
 /**
  * GET /api/[domain]/staff/panel/admissions
- * Fetches all admission circulars, classes, sessions, and applicant count breakdown.
+ * Fetches all admission circulars, departments, classes, sessions, and applicant count breakdown.
  */
 export async function GET(request, context) {
   try {
@@ -15,9 +15,11 @@ export async function GET(request, context) {
 
     const websiteId = auth.website.id;
 
-    // 1. Fetch circulars with fee info, class info, session info, and stats
+    // 1. Fetch circulars with fee info, dept info, class info, session info, and stats
     const circularsRes = await queryDb(`
       SELECT a.*,
+             d.name AS department_name,
+             d.code AS department_code,
              c.name AS class_name,
              s.name AS session_name,
              af.id AS fee_id, af.fee_title, af.amount AS fee_amount, af.currency AS fee_currency, af.late_fee,
@@ -27,6 +29,7 @@ export async function GET(request, context) {
              COALESCE(st.rejected_applicants, 0)::int AS rejected_applicants,
              COALESCE(st.enrolled_applicants, 0)::int AS enrolled_applicants
       FROM website_admissions a
+      LEFT JOIN website_departments d ON d.id = a.department_id
       LEFT JOIN website_classes c ON c.id = a.class_id
       LEFT JOIN website_sessions s ON s.id = a.session_id
       LEFT JOIN website_admission_fees af ON af.admission_id = a.id AND af.status = 'active'
@@ -45,15 +48,17 @@ export async function GET(request, context) {
       ORDER BY a.created_at DESC
     `, [websiteId]);
 
-    // 2. Fetch classes and sessions for selectors
-    const [classesRes, sessionsRes] = await Promise.all([
-      queryDb(`SELECT id, name FROM website_classes WHERE website_id = $1 ORDER BY name ASC`, [websiteId]),
-      queryDb(`SELECT id, name FROM website_sessions WHERE website_id = $1 ORDER BY id DESC`, [websiteId])
+    // 2. Fetch departments, classes and sessions for selectors
+    const [departmentsRes, classesRes, sessionsRes] = await Promise.all([
+      queryDb(`SELECT id, name, code FROM website_departments WHERE website_id = $1 ORDER BY order_no ASC, name ASC`, [websiteId]),
+      queryDb(`SELECT id, name, department_id, session_id FROM website_classes WHERE website_id = $1 ORDER BY name ASC`, [websiteId]),
+      queryDb(`SELECT id, name, is_current FROM website_sessions WHERE website_id = $1 ORDER BY id DESC`, [websiteId])
     ]);
 
     return NextResponse.json({
       success: true,
       circulars: circularsRes.rows,
+      departments: departmentsRes.rows,
       classes: classesRes.rows,
       sessions: sessionsRes.rows
     });
@@ -65,7 +70,7 @@ export async function GET(request, context) {
 
 /**
  * POST /api/[domain]/staff/panel/admissions
- * Creates a new admission circular with application fee structure.
+ * Creates a new admission circular with department, session, class, result date, and fee.
  */
 export async function POST(request, context) {
   try {
@@ -79,11 +84,13 @@ export async function POST(request, context) {
       title,
       circular_number,
       description,
-      class_id,
+      department_id,
       session_id,
+      class_id,
       start_date,
       end_date,
       exam_date,
+      result_date,
       min_age,
       max_age,
       capacity = 100,
@@ -107,16 +114,17 @@ export async function POST(request, context) {
     // 1. Insert admission circular
     const insertRes = await queryDb(`
       INSERT INTO website_admissions (
-        website_id, session_id, class_id, title, circular_number, description,
-        start_date, end_date, exam_date, min_age, max_age, capacity,
+        website_id, department_id, session_id, class_id, title, circular_number, description,
+        start_date, end_date, exam_date, result_date, min_age, max_age, capacity,
         status, is_published, created_by_staff_id
       ) VALUES (
-        $1, $2, $3, $4, $5, $6,
-        $7, $8, $9, $10, $11, $12,
-        $13, $14, $15
+        $1, $2, $3, $4, $5, $6, $7,
+        $8, $9, $10, $11, $12, $13, $14,
+        $15, $16, $17
       ) RETURNING *
     `, [
       auth.website.id,
+      department_id ? parseInt(department_id, 10) : null,
       session_id ? parseInt(session_id, 10) : null,
       class_id ? parseInt(class_id, 10) : null,
       title.trim(),
@@ -125,6 +133,7 @@ export async function POST(request, context) {
       start_date,
       end_date,
       exam_date || null,
+      result_date || null,
       min_age ? parseInt(min_age, 10) : null,
       max_age ? parseInt(max_age, 10) : null,
       parseInt(capacity, 10) || 100,
@@ -182,11 +191,13 @@ export async function PUT(request, context) {
       title,
       circular_number,
       description,
+      department_id,
       class_id,
       session_id,
       start_date,
       end_date,
       exam_date,
+      result_date,
       min_age,
       max_age,
       capacity,
@@ -214,28 +225,32 @@ export async function PUT(request, context) {
       SET title = COALESCE($1, title),
           circular_number = COALESCE($2, circular_number),
           description = COALESCE($3, description),
-          class_id = $4,
+          department_id = $4,
           session_id = $5,
-          start_date = COALESCE($6, start_date),
-          end_date = COALESCE($7, end_date),
-          exam_date = $8,
-          min_age = $9,
-          max_age = $10,
-          capacity = COALESCE($11, capacity),
-          status = COALESCE($12, status),
-          is_published = COALESCE($13, is_published),
+          class_id = $6,
+          start_date = COALESCE($7, start_date),
+          end_date = COALESCE($8, end_date),
+          exam_date = $9,
+          result_date = $10,
+          min_age = $11,
+          max_age = $12,
+          capacity = COALESCE($13, capacity),
+          status = COALESCE($14, status),
+          is_published = COALESCE($15, is_published),
           updated_at = CURRENT_TIMESTAMP
-      WHERE id = $14 AND website_id = $15
+      WHERE id = $16 AND website_id = $17
       RETURNING *
     `, [
       title ? title.trim() : null,
       circular_number ? circular_number.trim() : null,
       description !== undefined ? description : null,
-      class_id ? parseInt(class_id, 10) : null,
+      department_id ? parseInt(department_id, 10) : null,
       session_id ? parseInt(session_id, 10) : null,
+      class_id ? parseInt(class_id, 10) : null,
       start_date || null,
       end_date || null,
       exam_date || null,
+      result_date || null,
       min_age ? parseInt(min_age, 10) : null,
       max_age ? parseInt(max_age, 10) : null,
       capacity ? parseInt(capacity, 10) : null,
@@ -247,26 +262,43 @@ export async function PUT(request, context) {
 
     // Upsert or update fee
     if (fee_amount !== undefined) {
-      await queryDb(`
-        INSERT INTO website_admission_fees (
-          website_id, admission_id, fee_title, amount, currency, late_fee, status
-        ) VALUES (
-          $1, $2, $3, $4, $5, $6, 'active'
-        )
-        ON CONFLICT (id) DO UPDATE SET
-          fee_title = EXCLUDED.fee_title,
-          amount = EXCLUDED.amount,
-          currency = EXCLUDED.currency,
-          late_fee = EXCLUDED.late_fee,
-          updated_at = CURRENT_TIMESTAMP
-      `, [
-        auth.website.id,
-        id,
-        fee_title ? fee_title.trim() : 'Application Form Fee',
-        parseFloat(fee_amount) || 0.00,
-        String(fee_currency || 'BDT').toUpperCase().trim(),
-        parseFloat(late_fee) || 0.00
-      ]);
+      const existingFee = await queryDb(
+        `SELECT id FROM website_admission_fees WHERE admission_id = $1 AND website_id = $2 LIMIT 1`,
+        [id, auth.website.id]
+      );
+
+      if (existingFee.rows.length > 0) {
+        await queryDb(`
+          UPDATE website_admission_fees
+          SET fee_title = COALESCE($1, fee_title),
+              amount = $2,
+              currency = COALESCE($3, currency),
+              late_fee = COALESCE($4, late_fee),
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = $5
+        `, [
+          fee_title ? fee_title.trim() : null,
+          parseFloat(fee_amount) || 0.00,
+          fee_currency ? String(fee_currency).toUpperCase().trim() : null,
+          late_fee !== undefined ? parseFloat(late_fee) || 0.00 : null,
+          existingFee.rows[0].id
+        ]);
+      } else {
+        await queryDb(`
+          INSERT INTO website_admission_fees (
+            website_id, admission_id, fee_title, amount, currency, late_fee, status
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6, 'active'
+          )
+        `, [
+          auth.website.id,
+          id,
+          fee_title ? fee_title.trim() : 'Application Form Fee',
+          parseFloat(fee_amount) || 0.00,
+          String(fee_currency || 'BDT').toUpperCase().trim(),
+          parseFloat(late_fee) || 0.00
+        ]);
+      }
     }
 
     return NextResponse.json({

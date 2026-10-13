@@ -10,36 +10,36 @@ export async function GET(request, context) {
       return NextResponse.json({ success: false, error: 'Institution not found.' }, { status: 404 });
     }
 
-    // Fetch classes, sections, and sessions to provide reference hints
-    const [classesRes, sessionsRes] = await Promise.all([
+    // Fetch departments, classes, sections, and sessions to provide reference hints
+    const [deptsRes, classesRes, sessionsRes] = await Promise.all([
+      queryDb(`SELECT name, code FROM website_departments WHERE website_id = $1 LIMIT 5`, [website.id]),
       queryDb(`SELECT name, code FROM website_classes WHERE website_id = $1 LIMIT 5`, [website.id]),
       queryDb(`SELECT name FROM website_sessions WHERE website_id = $1 LIMIT 5`, [website.id]),
     ]);
 
-    const sampleClass = classesRes.rows[0]?.code || classesRes.rows[0]?.name || 'Class 10';
+    const sampleDept = deptsRes.rows[0]?.name || 'Science';
+    const sampleClass = classesRes.rows[0]?.name || 'Class 10';
     const sampleSession = sessionsRes.rows[0]?.name || '2026-2027';
 
-    // Sample data rows (Registration No and Class are primary)
+    // Required columns according to specification: Department, Session, Class, Section, Registration No, Roll No, Email
     const data = [
       {
+        'Department': sampleDept,
+        'Session': sampleSession,
+        'Class': sampleClass,
+        'Section': 'Section A',
         'Registration No': 'REG-2026-001',
-        'Class Code': sampleClass,
-        'Section Name': 'Section A',
-        'Session Name': sampleSession,
         'Roll No': '101',
-        'Student Name': 'Tanvir Rahman',
-        'Email Address': 'tanvir.student@example.com',
-        'Phone Number': '01711000111',
+        'Email': 'student1@institution.edu',
       },
       {
+        'Department': sampleDept,
+        'Session': sampleSession,
+        'Class': sampleClass,
+        'Section': 'Section B',
         'Registration No': 'REG-2026-002',
-        'Class Code': sampleClass,
-        'Section Name': 'Section A',
-        'Session Name': sampleSession,
         'Roll No': '102',
-        'Student Name': 'Sadia Akter',
-        'Email Address': 'sadia.student@example.com',
-        'Phone Number': '01822000222',
+        'Email': 'student2@institution.edu',
       },
     ];
 
@@ -47,14 +47,13 @@ export async function GET(request, context) {
 
     // Set column widths
     worksheet['!cols'] = [
+      { wch: 20 }, // Department
+      { wch: 18 }, // Session
+      { wch: 18 }, // Class
+      { wch: 16 }, // Section
       { wch: 20 }, // Registration No
-      { wch: 16 }, // Class Code
-      { wch: 16 }, // Section Name
-      { wch: 16 }, // Session Name
       { wch: 12 }, // Roll No
-      { wch: 20 }, // Student Name (optional)
-      { wch: 28 }, // Email Address (optional)
-      { wch: 16 }, // Phone Number (optional)
+      { wch: 28 }, // Email
     ];
 
     const workbook = XLSX.utils.book_new();

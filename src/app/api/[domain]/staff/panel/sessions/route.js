@@ -14,7 +14,12 @@ async function verifyStaffAccess(request, context) {
     return { error: 'Unauthorized: Staff access required.', status: 401 };
   }
 
-  const staffWebsiteId = staffSession?.website_id || staffSession?.websiteId || staffSession?.staff?.websiteId || staffSession?.staff?.website_id;
+  const staffWebsiteId =
+    staffSession?.website_id ||
+    staffSession?.websiteId ||
+    staffSession?.staff?.websiteId ||
+    staffSession?.staff?.website_id;
+
   if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
     return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
   }
@@ -22,18 +27,31 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET: List all academic sessions
+// GET: List all academic sessions (independent entity)
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
-    const result = await queryDb(
-      `SELECT * FROM website_sessions 
-       WHERE website_id = $1 
-       ORDER BY is_current DESC, start_date DESC NULLS LAST, id DESC`,
-      [auth.website.id]
-    );
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get('search')?.trim();
+
+    let query = `
+      SELECT s.*,
+             COALESCE((SELECT COUNT(*) FROM website_classes c WHERE c.session_id = s.id), 0)::int AS class_count
+      FROM website_sessions s
+      WHERE s.website_id = $1
+    `;
+    const params = [auth.website.id];
+
+    if (search) {
+      params.push(`%${search}%`);
+      query += ` AND s.name ILIKE $${params.length}`;
+    }
+
+    query += ` ORDER BY s.is_current DESC, s.start_date DESC NULLS LAST, s.id DESC`;
+
+    const result = await queryDb(query, params);
 
     return NextResponse.json({
       success: true,
@@ -82,9 +100,11 @@ export async function POST(request, context) {
       ]
     );
 
+    const savedRow = insertRes.rows[0];
+
     return NextResponse.json({
       success: true,
-      session: insertRes.rows[0],
+      session: { ...savedRow, class_count: 0 },
       message: 'Academic session created successfully.'
     });
   } catch (error) {
@@ -127,7 +147,7 @@ export async function PUT(request, context) {
        WHERE id = $6 AND website_id = $7
        RETURNING *`,
       [
-        name !== undefined ? String(name).trim() : null,
+        name !== undefined ? (name ? String(name).trim() : null) : null,
         start_date !== undefined ? start_date : null,
         end_date !== undefined ? end_date : null,
         is_current !== undefined ? Boolean(is_current) : null,
@@ -141,21 +161,23 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Session not found.' }, { status: 404 });
     }
 
+    const countRes = await queryDb(
+      `SELECT COUNT(*)::int AS class_count FROM website_classes WHERE session_id = $1`,
+      [id]
+    );
+
     return NextResponse.json({
       success: true,
-      session: updateRes.rows[0],
+      session: { ...updateRes.rows[0], class_count: countRes.rows[0]?.class_count || 0 },
       message: 'Academic session updated successfully.'
     });
   } catch (error) {
     console.error('Error in PUT session:', error);
-    if (error.code === '23505') {
-      return NextResponse.json({ success: false, error: 'Another academic session already uses this name.' }, { status: 409 });
-    }
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
-// DELETE: Remove academic session
+// DELETE: Delete academic session
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -165,7 +187,7 @@ export async function DELETE(request, context) {
     const id = searchParams.get('id');
 
     if (!id) {
-      return NextResponse.json({ success: false, error: 'Session ID query parameter required.' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Session ID is required.' }, { status: 400 });
     }
 
     const delRes = await queryDb(
@@ -174,7 +196,7 @@ export async function DELETE(request, context) {
     );
 
     if (delRes.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Academic session not found.' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Session not found.' }, { status: 404 });
     }
 
     return NextResponse.json({

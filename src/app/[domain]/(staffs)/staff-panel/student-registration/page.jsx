@@ -12,17 +12,19 @@ export default function StudentRegistrationPage() {
   const [activeTab, setActiveTab] = useState('single');
 
   // Academic references
+  const [departments, setDepartments] = useState([]);
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [loadingMetadata, setLoadingMetadata] = useState(false);
 
-  // Single Registration Form State (reginumber, class are primary, email for auto-activation)
+  // Single Registration Form State
   const [singleRegNo, setSingleRegNo] = useState('');
   const [singleEmail, setSingleEmail] = useState('');
+  const [singleDepartmentId, setSingleDepartmentId] = useState('');
+  const [singleSessionId, setSingleSessionId] = useState('');
   const [singleClassId, setSingleClassId] = useState('');
   const [singleSectionId, setSingleSectionId] = useState('');
-  const [singleSessionId, setSingleSessionId] = useState('');
   const [singleRollNo, setSingleRollNo] = useState('');
   const [submittingSingle, setSubmittingSingle] = useState(false);
   const [singleSuccessResult, setSingleSuccessResult] = useState(null);
@@ -35,21 +37,27 @@ export default function StudentRegistrationPage() {
   const [bulkResults, setBulkResults] = useState(null);
   const fileInputRef = useRef(null);
 
-  // Fetch classes, sections, sessions
+  // Fetch departments, classes, sections, sessions
   useEffect(() => {
     const fetchAcademicData = async () => {
       setLoadingMetadata(true);
       try {
-        const [cRes, sRes, sesRes] = await Promise.all([
+        const [dRes, cRes, sRes, sesRes] = await Promise.all([
+          fetch(getApiEndpoint('staff/panel/departments')).then((r) => r.json()).catch(() => ({})),
           fetch(getApiEndpoint('staff/panel/classes')).then((r) => r.json()).catch(() => ({})),
           fetch(getApiEndpoint('staff/panel/sections')).then((r) => r.json()).catch(() => ({})),
           fetch(getApiEndpoint('staff/panel/sessions')).then((r) => r.json()).catch(() => ({})),
         ]);
 
+        if (dRes?.payload?.departments || dRes?.payload || dRes?.departments) {
+          const depts = dRes.payload?.departments || dRes.payload || dRes.departments || [];
+          setDepartments(depts);
+          if (depts[0]) setSingleDepartmentId(String(depts[0].id));
+        }
+
         if (cRes?.payload?.classes || cRes?.payload || cRes?.classes) {
           const cls = cRes.payload?.classes || cRes.payload || cRes.classes || [];
           setClasses(cls);
-          if (cls[0]) setSingleClassId(String(cls[0].id));
         }
 
         if (sRes?.payload?.sections || sRes?.payload || sRes?.sections) {
@@ -72,6 +80,13 @@ export default function StudentRegistrationPage() {
     fetchAcademicData();
   }, [getApiEndpoint]);
 
+  // Filter classes by Department and Session if chosen
+  const availableClasses = classes.filter((c) => {
+    if (singleDepartmentId && c.department_id && String(c.department_id) !== String(singleDepartmentId)) return false;
+    if (singleSessionId && c.session_id && String(c.session_id) !== String(singleSessionId)) return false;
+    return true;
+  });
+
   // Filter sections by singleClassId
   const availableSections = sections.filter(
     (sec) => !singleClassId || String(sec.class_id) === String(singleClassId)
@@ -86,8 +101,18 @@ export default function StudentRegistrationPage() {
       return;
     }
 
+    if (!singleDepartmentId) {
+      toast.error('Please select a Department.');
+      return;
+    }
+
+    if (!singleSessionId) {
+      toast.error('Please select an Academic Session.');
+      return;
+    }
+
     if (!singleClassId) {
-      toast.error('Please select a Class.');
+      toast.error('Please select an Academic Class.');
       return;
     }
 
@@ -98,11 +123,12 @@ export default function StudentRegistrationPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           registration_no: singleRegNo.trim(),
-          email: singleEmail.trim() || null,
+          department_id: singleDepartmentId,
+          session_id: singleSessionId,
           class_id: singleClassId,
           section_id: singleSectionId || null,
-          session_id: singleSessionId || null,
           roll_no: singleRollNo.trim() || null,
+          email: singleEmail.trim() || null,
         }),
       });
 
@@ -112,7 +138,7 @@ export default function StudentRegistrationPage() {
         throw new Error(data.error || 'Failed to register student.');
       }
 
-      toast.success(data.message || 'Student registered successfully!');
+      toast.success(data.message || 'Student registered successfully in website_students!');
       setSingleSuccessResult(data.payload);
 
       // Reset form
@@ -144,13 +170,14 @@ export default function StudentRegistrationPage() {
         const worksheet = workbook.Sheets[firstSheetName];
         const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
-        // Normalize rows (primarily registration number, class, and email)
+        // Normalize rows (primarily registration number, department, session, class, and email)
         const normalized = jsonRows.map((row, idx) => {
           const regNo = (row['Registration No'] || row.Registration || row['Registration Number'] || row.registration_no || row.reginumber || row['Reg No'] || '').trim();
           const email = (row['Email Address'] || row.Email || row['Student Email'] || row.email || '').trim().toLowerCase();
+          const deptName = (row['Department'] || row.department || row['Department Name'] || row.dept || '').trim();
+          const sessionName = (row['Session Name'] || row.Session || row.session || '').trim();
           const className = (row['Class Code'] || row.Class || row['Class Name'] || row.class || '').trim();
           const sectionName = (row['Section Name'] || row.Section || row.section || '').trim();
-          const sessionName = (row['Session Name'] || row.Session || row.session || '').trim();
           const rollNo = (row['Roll No'] || row.Roll || row['Roll Number'] || row.roll_no || '').trim();
 
           const errors = [];
@@ -161,9 +188,10 @@ export default function StudentRegistrationPage() {
             rowIdx: idx + 1,
             regNo,
             email,
+            deptName,
+            sessionName,
             className,
             sectionName,
-            sessionName,
             rollNo,
             isValid: errors.length === 0,
             errors,
@@ -296,7 +324,7 @@ export default function StudentRegistrationPage() {
             <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-xs text-emerald-900 dark:text-emerald-200 space-y-2">
               <div className="flex items-center justify-between font-bold">
                 <span className="flex items-center gap-1.5">
-                  <span className="text-emerald-600 font-bold">✓</span> Student Registered Successfully!
+                  <span className="text-emerald-600 font-bold">✓</span> Student Enrolled in website_students!
                 </span>
                 <button
                   type="button"
@@ -306,7 +334,10 @@ export default function StudentRegistrationPage() {
                   ✕
                 </button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 font-mono text-[11px] pt-1">
+              <p className="text-[11px] text-emerald-800 dark:text-emerald-300">
+                The student record has been added to <code>website_students</code> without dummy profile data. The student will now verify their email and create their account password &amp; full profile at the setup page.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 font-mono text-[11px] pt-1">
                 <div>
                   <span className="text-emerald-700 dark:text-emerald-400 font-sans">Reg No:</span> {singleSuccessResult.student?.registration_no}
                 </div>
@@ -316,13 +347,10 @@ export default function StudentRegistrationPage() {
                 <div>
                   <span className="text-emerald-700 dark:text-emerald-400 font-sans">Email:</span> {singleSuccessResult.student?.email || 'None'}
                 </div>
-                <div>
-                  <span className="text-emerald-700 dark:text-emerald-400 font-sans">Demo Password:</span> {singleSuccessResult.demoPassword}
-                </div>
               </div>
               {singleSuccessResult.setupUrl && (
                 <div className="pt-1 flex items-center gap-2">
-                  <span className="font-semibold text-emerald-800 dark:text-emerald-300 font-sans">Setup Link:</span>
+                  <span className="font-semibold text-emerald-800 dark:text-emerald-300 font-sans">Student Setup Link:</span>
                   <input
                     type="text"
                     readOnly
@@ -343,35 +371,46 @@ export default function StudentRegistrationPage() {
 
           <form onSubmit={handleSingleRegister} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Registration Number */}
+              {/* Department Selection */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Registration Number *
+                  Department *
                 </label>
-                <input
-                  type="text"
+                <select
                   required
-                  value={singleRegNo}
-                  onChange={(e) => setSingleRegNo(e.target.value)}
-                  placeholder="e.g. REG-2026-1001"
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
-                />
-                <span className="text-[10px] text-slate-400 mt-1 block">Unique student institutional registration code</span>
+                  value={singleDepartmentId}
+                  onChange={(e) => setSingleDepartmentId(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer"
+                >
+                  <option value="">Select Department</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} {d.code ? `(${d.code})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[10px] text-slate-400 mt-1 block">Assigned academic department</span>
               </div>
 
-              {/* Student Email Address */}
+              {/* Academic Session */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Student Email (Recommended)
+                  Academic Session *
                 </label>
-                <input
-                  type="email"
-                  value={singleEmail}
-                  onChange={(e) => setSingleEmail(e.target.value)}
-                  placeholder="e.g. student@institution.edu"
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
-                />
-                <span className="text-[10px] text-slate-400 mt-1 block">Enables student to auto-activate via mailer OTP without staff approval</span>
+                <select
+                  required
+                  value={singleSessionId}
+                  onChange={(e) => setSingleSessionId(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer"
+                >
+                  <option value="">Select Session</option>
+                  {sessions.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} {s.is_current ? '(Current)' : ''}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[10px] text-slate-400 mt-1 block">Term / enrollment academic year</span>
               </div>
 
               {/* Class Selection */}
@@ -386,33 +425,15 @@ export default function StudentRegistrationPage() {
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer"
                 >
                   <option value="">Select Academic Class</option>
-                  {classes.map((c) => (
+                  {availableClasses.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name} {c.code ? `(${c.code})` : ''}
                     </option>
                   ))}
                 </select>
-                <span className="text-[10px] text-slate-400 mt-1 block">Assigned academic standard</span>
-              </div>
-
-              {/* Academic Session */}
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Academic Session
-                </label>
-                <select
-                  value={singleSessionId}
-                  onChange={(e) => setSingleSessionId(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer"
-                >
-                  <option value="">Select Session</option>
-                  {sessions.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} {s.is_current ? '(Current)' : ''}
-                    </option>
-                  ))}
-                </select>
-                <span className="text-[10px] text-slate-400 mt-1 block">Term / enrollment academic year</span>
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  {availableClasses.length === 0 ? 'No classes found for chosen Department & Session' : 'Assigned academic class'}
+                </span>
               </div>
 
               {/* Section */}
@@ -435,6 +456,22 @@ export default function StudentRegistrationPage() {
                 <span className="text-[10px] text-slate-400 mt-1 block">Class division group</span>
               </div>
 
+              {/* Registration Number */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Registration Number *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={singleRegNo}
+                  onChange={(e) => setSingleRegNo(e.target.value)}
+                  placeholder="e.g. REG-2026-1001"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
+                />
+                <span className="text-[10px] text-slate-400 mt-1 block">Unique student institutional registration code</span>
+              </div>
+
               {/* Roll Number */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
@@ -447,7 +484,24 @@ export default function StudentRegistrationPage() {
                   placeholder="e.g. 01"
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
                 />
-                <span className="text-[10px] text-slate-400 mt-1 block">Class roster seat sequence</span>
+                <span className="text-[10px] text-slate-400 mt-1 block">Class roster sequence</span>
+              </div>
+
+              {/* Student Email Address */}
+              <div className="sm:col-span-2 lg:col-span-3">
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Student Email Address (Required for Brevo OTP Setup Verification)
+                </label>
+                <input
+                  type="email"
+                  value={singleEmail}
+                  onChange={(e) => setSingleEmail(e.target.value)}
+                  placeholder="e.g. student@institution.edu"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
+                />
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  The student will enter this email on <code>/auth/student/setup</code> to receive their Brevo OTP code.
+                </span>
               </div>
             </div>
 
@@ -529,11 +583,12 @@ export default function StudentRegistrationPage() {
                     <tr>
                       <th className="px-3 py-2">#</th>
                       <th className="px-3 py-2">Registration No</th>
-                      <th className="px-3 py-2">Email</th>
+                      <th className="px-3 py-2">Department</th>
+                      <th className="px-3 py-2">Session</th>
                       <th className="px-3 py-2">Class</th>
                       <th className="px-3 py-2">Section</th>
-                      <th className="px-3 py-2">Session</th>
                       <th className="px-3 py-2">Roll</th>
+                      <th className="px-3 py-2">Email</th>
                       <th className="px-3 py-2">Status</th>
                     </tr>
                   </thead>
@@ -544,15 +599,18 @@ export default function StudentRegistrationPage() {
                         <td className="px-3 py-1.5 font-mono font-medium text-slate-900 dark:text-white">
                           {row.regNo || <span className="text-rose-500 font-sans italic">Missing</span>}
                         </td>
-                        <td className="px-3 py-1.5 text-slate-600 dark:text-slate-300 font-mono text-[11px]">
-                          {row.email || <span className="text-slate-400 italic">None</span>}
+                        <td className="px-3 py-1.5 text-slate-700 dark:text-slate-300">
+                          {row.deptName || '—'}
                         </td>
+                        <td className="px-3 py-1.5 text-slate-500">{row.sessionName || '—'}</td>
                         <td className="px-3 py-1.5">
                           {row.className || <span className="text-rose-500 italic">Missing</span>}
                         </td>
                         <td className="px-3 py-1.5 text-slate-500">{row.sectionName || '—'}</td>
-                        <td className="px-3 py-1.5 text-slate-500">{row.sessionName || '—'}</td>
                         <td className="px-3 py-1.5 font-mono text-[11px]">{row.rollNo || '—'}</td>
+                        <td className="px-3 py-1.5 text-slate-600 dark:text-slate-300 font-mono text-[11px]">
+                          {row.email || <span className="text-slate-400 italic">None</span>}
+                        </td>
                         <td className="px-3 py-1.5">
                           {row.isValid ? (
                             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">

@@ -1,24 +1,41 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { BiLayer, BiPlus, BiEdit, BiTrash, BiSearch, BiRefresh, BiBook, BiGridAlt } from 'react-icons/bi';
+import {
+  BiLayer,
+  BiPlus,
+  BiEdit,
+  BiTrash,
+  BiSearch,
+  BiRefresh,
+  BiBook,
+  BiGridAlt,
+  BiX,
+  BiCheck,
+  BiAlertTriangle
+} from 'react-icons/bi';
 
 export default function ClassSetupPage() {
   const params = useParams();
   const domain = params?.domain || '';
 
   const [classes, setClasses] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDepartmentFilter, setSelectedDepartmentFilter] = useState('all');
+  const [selectedSessionFilter, setSelectedSessionFilter] = useState('all');
 
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Inline Workstation Form State (NO popup modal)
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingClass, setEditingClass] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
-    numeric_name: 1,
     code: '',
+    session_id: '',
+    department_id: '',
     max_seats: 40,
     description: ''
   });
@@ -26,21 +43,25 @@ export default function ClassSetupPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Delete State
-  const [deleteId, setDeleteId] = useState(null);
-  const [deleting, setDeleting] = useState(false);
+  // Inline Delete Confirmation State (NO popup modal)
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
-  const fetchClasses = useCallback(async () => {
+  const formSectionRef = useRef(null);
+
+  const fetchClasses = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await fetch(`/api/${domain}/staff/panel/classes`);
       const data = await res.json();
       if (data.success) {
         setClasses(data.classes || []);
+        setDepartments(data.available_departments || []);
+        setSessions(data.available_sessions || []);
       } else {
         setErrorMsg(data.error || 'Failed to fetch classes.');
       }
-    } catch (err) {
+    } catch {
       setErrorMsg('Network error fetching classes.');
     } finally {
       setLoading(false);
@@ -48,19 +69,45 @@ export default function ClassSetupPage() {
   }, [domain]);
 
   useEffect(() => {
-    fetchClasses();
-  }, [fetchClasses]);
+    let ignore = false;
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/${domain}/staff/panel/classes`);
+        const data = await res.json();
+        if (!ignore && data.success) {
+          setClasses(data.classes || []);
+          setDepartments(data.available_departments || []);
+          setSessions(data.available_sessions || []);
+        }
+      } catch {
+        if (!ignore) setErrorMsg('Network error fetching classes.');
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, [domain]);
 
   const filteredClasses = useMemo(() => {
     return classes.filter((c) => {
+      if (selectedDepartmentFilter !== 'all' && String(c.department_id) !== String(selectedDepartmentFilter)) {
+        return false;
+      }
+      if (selectedSessionFilter !== 'all' && String(c.session_id) !== String(selectedSessionFilter)) {
+        return false;
+      }
       const q = searchTerm.toLowerCase();
       return (
         c.name.toLowerCase().includes(q) ||
         (c.code && c.code.toLowerCase().includes(q)) ||
-        String(c.numeric_name).includes(q)
+        (c.department_name && c.department_name.toLowerCase().includes(q)) ||
+        (c.session_name && c.session_name.toLowerCase().includes(q))
       );
     });
-  }, [classes, searchTerm]);
+  }, [classes, searchTerm, selectedDepartmentFilter, selectedSessionFilter]);
 
   const totalSeats = useMemo(() => {
     return classes.reduce((sum, c) => sum + (parseInt(c.max_seats, 10) || 0), 0);
@@ -70,36 +117,61 @@ export default function ClassSetupPage() {
     return classes.reduce((sum, c) => sum + (parseInt(c.section_count, 10) || 0), 0);
   }, [classes]);
 
-  const openCreateModal = () => {
+  const openCreateForm = () => {
     setEditingClass(null);
+    const currentSession = sessions.find((s) => s.is_current);
     setFormData({
       name: '',
-      numeric_name: classes.length + 1,
       code: `CLS-${classes.length + 1}`,
+      session_id: currentSession ? String(currentSession.id) : sessions[0]?.id ? String(sessions[0].id) : '',
+      department_id: departments[0]?.id ? String(departments[0].id) : '',
       max_seats: 40,
       description: ''
     });
     setErrorMsg('');
-    setIsModalOpen(true);
+    setIsFormOpen(true);
+    setDeleteConfirmId(null);
+    setTimeout(() => {
+      formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
-  const openEditModal = (classItem) => {
+  const openEditForm = (classItem) => {
     setEditingClass(classItem);
     setFormData({
       name: classItem.name,
-      numeric_name: classItem.numeric_name,
       code: classItem.code,
-      max_seats: classItem.max_seats,
+      session_id: classItem.session_id ? String(classItem.session_id) : '',
+      department_id: classItem.department_id ? String(classItem.department_id) : '',
+      max_seats: classItem.max_seats || 40,
       description: classItem.description || ''
     });
     setErrorMsg('');
-    setIsModalOpen(true);
+    setIsFormOpen(true);
+    setDeleteConfirmId(null);
+    setTimeout(() => {
+      formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
+  const closeForm = () => {
+    setIsFormOpen(false);
+    setEditingClass(null);
+    setErrorMsg('');
   };
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name.trim()) {
       setErrorMsg('Class Name is required.');
+      return;
+    }
+    if (!formData.department_id) {
+      setErrorMsg('Department is required to create a class.');
+      return;
+    }
+    if (!formData.session_id) {
+      setErrorMsg('Academic Session is required to create a class.');
       return;
     }
 
@@ -121,12 +193,13 @@ export default function ClassSetupPage() {
       if (data.success) {
         setSuccessMsg(data.message || 'Class saved successfully.');
         setTimeout(() => setSuccessMsg(''), 4000);
-        setIsModalOpen(false);
-        fetchClasses();
+        setIsFormOpen(false);
+        setEditingClass(null);
+        fetchClasses(true);
       } else {
         setErrorMsg(data.error || 'Failed to save class.');
       }
-    } catch (err) {
+    } catch {
       setErrorMsg('Network error saving class.');
     } finally {
       setSubmitting(false);
@@ -135,7 +208,7 @@ export default function ClassSetupPage() {
 
   const handleDelete = async (id) => {
     try {
-      setDeleting(true);
+      setDeletingId(id);
       const res = await fetch(`/api/${domain}/staff/panel/classes?id=${id}`, {
         method: 'DELETE'
       });
@@ -143,15 +216,15 @@ export default function ClassSetupPage() {
       if (data.success) {
         setSuccessMsg('Class deleted successfully.');
         setTimeout(() => setSuccessMsg(''), 4000);
-        setDeleteId(null);
-        fetchClasses();
+        setDeleteConfirmId(null);
+        fetchClasses(true);
       } else {
         setErrorMsg(data.error || 'Failed to delete class.');
       }
-    } catch (err) {
+    } catch {
       setErrorMsg('Network error deleting class.');
     } finally {
-      setDeleting(false);
+      setDeletingId(null);
     }
   };
 
@@ -184,12 +257,12 @@ export default function ClassSetupPage() {
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Curriculum Breadth</p>
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Hierarchy Position</p>
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-              {classes.reduce((sum, c) => sum + (c.subject_count || 0), 0)} Subject Mappings
+              Step 3 of 4
             </span>
-            <span className="text-[10px] font-medium text-slate-400">Total Enrolled</span>
+            <span className="text-[10px] font-medium text-slate-400">Under Sessions</span>
           </div>
         </div>
       </div>
@@ -197,14 +270,214 @@ export default function ClassSetupPage() {
       {/* Notifications */}
       {successMsg && (
         <div className="p-3 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
-          <span>{successMsg}</span>
-          <span className="text-[10px] font-mono">OK</span>
+          <span className="flex items-center gap-1.5">
+            <BiCheck className="text-base text-emerald-600" />
+            {successMsg}
+          </span>
+          <button onClick={() => setSuccessMsg('')} className="text-[10px] font-mono cursor-pointer hover:underline">DISMISS</button>
         </div>
       )}
       {errorMsg && (
         <div className="p-3 rounded text-xs bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 flex items-center justify-between">
-          <span>{errorMsg}</span>
-          <button onClick={() => setErrorMsg('')} className="text-[10px] font-mono cursor-pointer">DISMISS</button>
+          <span className="flex items-center gap-1.5">
+            <BiAlertTriangle className="text-base text-rose-600" />
+            {errorMsg}
+          </span>
+          <button onClick={() => setErrorMsg('')} className="text-[10px] font-mono cursor-pointer hover:underline">DISMISS</button>
+        </div>
+      )}
+
+      {/* Inline Delete Confirmation Alert (NO popup modal) */}
+      {deleteConfirmId && (
+        <div className="p-4 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 text-slate-900 dark:text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
+          <div className="flex items-start gap-2.5">
+            <BiAlertTriangle className="text-lg text-rose-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-bold text-rose-900 dark:text-rose-200">
+                Confirm Deleting Class: {classes.find((c) => c.id === deleteConfirmId)?.name || `#${deleteConfirmId}`}?
+              </p>
+              <p className="text-[11px] text-rose-700 dark:text-rose-300/80 mt-0.5">
+                This will permanently remove this class, its section configurations, and curriculum mappings.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+            <button
+              onClick={() => setDeleteConfirmId(null)}
+              className="px-3 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => handleDelete(deleteConfirmId)}
+              disabled={deletingId === deleteConfirmId}
+              className="px-3.5 py-1.5 rounded text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {deletingId === deleteConfirmId ? (
+                <>
+                  <div className="loader loader-xs loader-white" />
+                  <span>Deleting...</span>
+                </>
+              ) : (
+                <>
+                  <BiTrash className="text-sm" />
+                  <span>Confirm Delete</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Workstation Form (NO popup modal) */}
+      {isFormOpen && (
+        <div ref={formSectionRef} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 shadow-sm space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-600" />
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                {editingClass ? `Edit Class: ${editingClass.name}` : 'Create New Academic Class'}
+              </h3>
+            </div>
+            <button
+              onClick={closeForm}
+              className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              title="Close form"
+            >
+              <BiX className="text-lg" />
+            </button>
+          </div>
+
+          <form onSubmit={handleFormSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Class Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Class 1, Grade 10, Standard 5"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Class Code / Identifier <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. CLS-01, G-10"
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  required
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono uppercase"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Parent Department (Academic Discipline)
+                </label>
+                <select
+                  value={formData.department_id}
+                  onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
+                >
+                  <option value="">No Department (General / Common Discipline)</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} {d.code ? `(${d.code})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Parent Academic Session / Term
+                </label>
+                <select
+                  value={formData.session_id}
+                  onChange={(e) => setFormData({ ...formData, session_id: e.target.value })}
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
+                >
+                  <option value="">No Session (Available in all sessions)</option>
+                  {sessions.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} {s.is_current ? '• [Current]' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Maximum Seat Capacity
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="2000"
+                  value={formData.max_seats}
+                  onChange={(e) => setFormData({ ...formData, max_seats: e.target.value })}
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Description / Remarks
+                </label>
+                <input
+                  type="text"
+                  placeholder="Optional notes or details about this academic grade..."
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={closeForm}
+                className="px-3.5 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-4 py-1.5 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer disabled:opacity-50 min-w-[110px] flex items-center justify-center gap-1.5"
+              >
+                {submitting ? (
+                  <>
+                    <div className="loader loader-xs loader-white" />
+                    <span>Saving...</span>
+                  </>
+                ) : editingClass ? (
+                  <>
+                    <BiCheck className="text-sm" />
+                    <span>Update Class</span>
+                  </>
+                ) : (
+                  <>
+                    <BiPlus className="text-sm" />
+                    <span>Create Class</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
@@ -212,29 +485,61 @@ export default function ClassSetupPage() {
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2 flex-1 max-w-md">
-            <div className="relative w-full">
+          <div className="flex items-center gap-2 flex-1 max-w-xl flex-wrap">
+            <div className="relative flex-1 min-w-[160px]">
               <BiSearch className="absolute left-2.5 top-2.5 text-slate-400 text-sm" />
               <input
                 type="text"
-                placeholder="Search class by name, code or grade number..."
+                placeholder="Search class, department or session..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full text-xs pl-8 pr-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900"
               />
             </div>
+            {departments.length > 0 && (
+              <div className="w-36">
+                <select
+                  value={selectedDepartmentFilter}
+                  onChange={(e) => setSelectedDepartmentFilter(e.target.value)}
+                  className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
+                >
+                  <option value="all">All Departments</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {sessions.length > 0 && (
+              <div className="w-36">
+                <select
+                  value={selectedSessionFilter}
+                  onChange={(e) => setSelectedSessionFilter(e.target.value)}
+                  className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
+                >
+                  <option value="all">All Sessions</option>
+                  {sessions.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
             <button
-              onClick={fetchClasses}
+              onClick={() => fetchClasses(false)}
               className="p-1.5 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition cursor-pointer"
               title="Refresh"
             >
               <BiRefresh className="text-base" />
             </button>
             <button
-              onClick={openCreateModal}
+              onClick={openCreateForm}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer"
             >
               <BiPlus className="text-base" />
@@ -254,7 +559,7 @@ export default function ClassSetupPage() {
               <BiLayer className="mx-auto text-3xl text-slate-400" />
               <p className="text-xs font-medium text-slate-600 dark:text-slate-400">No classes configured yet.</p>
               <button
-                onClick={openCreateModal}
+                onClick={openCreateForm}
                 className="text-xs text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
               >
                 Set up your first school class
@@ -265,7 +570,8 @@ export default function ClassSetupPage() {
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider">
                   <th className="py-2.5 px-3">Class / Grade</th>
-                  <th className="py-2.5 px-3">Numeric Value</th>
+                  <th className="py-2.5 px-3">Department</th>
+                  <th className="py-2.5 px-3">Academic Session</th>
                   <th className="py-2.5 px-3">Class Code</th>
                   <th className="py-2.5 px-3">Max Seats</th>
                   <th className="py-2.5 px-3">Sections</th>
@@ -276,19 +582,36 @@ export default function ClassSetupPage() {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
                 {filteredClasses.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3 px-3 font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                      <div className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-[11px] text-slate-700 dark:text-slate-300">
-                        {item.numeric_name}
-                      </div>
-                      <div>
-                        <div>{item.name}</div>
-                        {item.description && (
-                          <div className="text-[10px] text-slate-400 font-normal truncate max-w-xs">{item.description}</div>
-                        )}
+                    <td className="py-3 px-3 font-semibold text-slate-900 dark:text-white">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-[11px] text-slate-700 dark:text-slate-300 shrink-0">
+                          {item.name?.slice(0, 2).toUpperCase() || 'CL'}
+                        </div>
+                        <div>
+                          <div>{item.name}</div>
+                          {item.description && (
+                            <div className="text-[10px] text-slate-400 font-normal truncate max-w-xs">{item.description}</div>
+                          )}
+                        </div>
                       </div>
                     </td>
-                    <td className="py-3 px-3 font-mono text-[11px] text-slate-600 dark:text-slate-400">
-                      Grade {item.numeric_name}
+                    <td className="py-3 px-3">
+                      {item.department_name ? (
+                        <span className="font-semibold text-blue-600 dark:text-blue-400">
+                          {item.department_name}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 italic">General / Common</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-3">
+                      {item.session_name ? (
+                        <span className="font-medium text-slate-700 dark:text-slate-300">
+                          {item.session_name}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 italic">All Sessions</span>
+                      )}
                     </td>
                     <td className="py-3 px-3">
                       <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
@@ -313,15 +636,15 @@ export default function ClassSetupPage() {
                     <td className="py-3 px-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
-                          onClick={() => openEditModal(item)}
-                          className="p-1 rounded text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                          onClick={() => openEditForm(item)}
+                          className="p-1.5 rounded text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                           title="Edit"
                         >
                           <BiEdit className="text-sm" />
                         </button>
                         <button
-                          onClick={() => setDeleteId(item.id)}
-                          className="p-1 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
+                          onClick={() => setDeleteConfirmId(item.id)}
+                          className="p-1.5 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
                           title="Delete"
                         >
                           <BiTrash className="text-sm" />
@@ -335,148 +658,6 @@ export default function ClassSetupPage() {
           )}
         </div>
       </div>
-
-      {/* Create / Edit Class Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg max-w-md w-full p-5 shadow-xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                {editingClass ? 'Edit Class Configuration' : 'Create New Class'}
-              </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white text-sm cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleFormSubmit} className="space-y-3">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Class Name *
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Class 1, Grade 10, Standard 5"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                  className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Numeric Grade Value *
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.numeric_name}
-                    onChange={(e) => setFormData({ ...formData, numeric_name: e.target.value })}
-                    required
-                    className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Class Code / Identifier *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. CLS-01, G-10"
-                    value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                    required
-                    className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono uppercase"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Maximum Seat Capacity
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="1000"
-                  value={formData.max_seats}
-                  onChange={(e) => setFormData({ ...formData, max_seats: e.target.value })}
-                  className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Description / Remarks
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Optional details about this academic grade..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full text-xs p-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-3 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-3.5 py-1.5 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer disabled:opacity-50 min-w-[100px] flex items-center justify-center"
-                >
-                  {submitting ? (
-                    <div className="loader loader-sm loader-white" />
-                  ) : editingClass ? (
-                    'Update Class'
-                  ) : (
-                    'Create Class'
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {deleteId && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg max-w-sm w-full p-4 shadow-xl space-y-3">
-            <h4 className="text-xs font-bold text-slate-900 dark:text-white">Delete Class?</h4>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
-              Are you sure you want to delete this class? This will also remove its associated sections and subject mappings.
-            </p>
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                onClick={() => setDeleteId(null)}
-                className="px-3 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDelete(deleteId)}
-                disabled={deleting}
-                className="px-3 py-1.5 rounded text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer disabled:opacity-50"
-              >
-                {deleting ? 'Deleting...' : 'Confirm Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

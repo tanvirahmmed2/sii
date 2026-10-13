@@ -13,10 +13,10 @@ export async function GET(request, context) {
 
     // Fetch classes
     const classesRes = await queryDb(
-      `SELECT id, name AS class_name, numeric_name AS numeric_value
+      `SELECT id, name AS class_name, code AS code
        FROM website_classes
        WHERE website_id = $1
-       ORDER BY numeric_name ASC NULLS LAST, name ASC`,
+       ORDER BY name ASC`,
       [website.id]
     );
 

@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import {
   FiFileText,
@@ -15,11 +14,10 @@ import {
   FiSearch,
   FiEdit3,
   FiTrash2,
-  FiEye,
   FiRefreshCw,
   FiX,
   FiLayers,
-  FiArrowUpRight
+  FiCheck
 } from 'react-icons/fi';
 
 export default function AdmissionCircularsPage() {
@@ -28,31 +26,44 @@ export default function AdmissionCircularsPage() {
   const apiBase = domain ? `/api/${domain}` : '/api';
 
   const [circulars, setCirculars] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [sessions, setSessions] = useState([]);
+  const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [departmentFilter, setDepartmentFilter] = useState('all');
+
+  // Inline Workstation Form State (NO popup modal)
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCircular, setEditingCircular] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+
+  const formSectionRef = useRef(null);
 
   // Form State
   const [form, setForm] = useState({
     title: '',
-    session_name: '2026-2027',
-    class_name: 'Class 6',
+    department_id: '',
+    session_id: '',
+    class_id: '',
     start_date: new Date().toISOString().split('T')[0],
     end_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+    result_date: new Date(Date.now() + 35 * 86400000).toISOString().split('T')[0],
     min_age: '10',
-    max_age: '14',
-    total_seats: '120',
-    status: 'published',
+    max_age: '16',
+    capacity: '100',
+    status: 'open',
+    is_published: true,
     fee_amount: '500',
     currency: 'BDT',
     description: '',
   });
 
-  const fetchCirculars = async () => {
-    setLoading(true);
+  const fetchCirculars = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await fetch(`${apiBase}/staff/panel/admissions`);
       if (!res.ok) {
@@ -61,6 +72,9 @@ export default function AdmissionCircularsPage() {
       const data = await res.json();
       if (data.success) {
         setCirculars(data.circulars || []);
+        setDepartments(data.departments || []);
+        setSessions(data.sessions || []);
+        setClasses(data.classes || []);
       } else {
         toast.error(data.error || 'Failed to fetch admission circulars.');
       }
@@ -70,48 +84,82 @@ export default function AdmissionCircularsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiBase]);
 
   useEffect(() => {
     fetchCirculars();
-  }, []);
+  }, [fetchCirculars]);
 
-  const openNewModal = () => {
+  // Filter classes based on selected department & session in form
+  const availableClassesForForm = useMemo(() => {
+    return classes.filter((cls) => {
+      if (form.department_id && String(cls.department_id) !== String(form.department_id)) {
+        return false;
+      }
+      if (form.session_id && String(cls.session_id) !== String(form.session_id)) {
+        return false;
+      }
+      return true;
+    });
+  }, [classes, form.department_id, form.session_id]);
+
+  const openNewForm = () => {
     setEditingCircular(null);
+    const activeSession = sessions.find((s) => s.is_current) || sessions[0];
+    const firstDept = departments[0];
     setForm({
       title: '',
-      session_name: '2026-2027',
-      class_name: 'Class 6',
+      department_id: firstDept ? String(firstDept.id) : '',
+      session_id: activeSession ? String(activeSession.id) : '',
+      class_id: '',
       start_date: new Date().toISOString().split('T')[0],
       end_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+      result_date: new Date(Date.now() + 35 * 86400000).toISOString().split('T')[0],
       min_age: '10',
-      max_age: '14',
-      total_seats: '120',
-      status: 'published',
+      max_age: '16',
+      capacity: '100',
+      status: 'open',
+      is_published: true,
       fee_amount: '500',
       currency: 'BDT',
       description: '',
     });
-    setIsModalOpen(true);
+    setIsFormOpen(true);
+    setDeleteConfirmId(null);
+    setTimeout(() => {
+      formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
-  const openEditModal = (circ) => {
+  const openEditForm = (circ) => {
     setEditingCircular(circ);
     setForm({
       title: circ.title || '',
-      session_name: circ.session_name || '',
-      class_name: circ.class_name || '',
+      department_id: circ.department_id ? String(circ.department_id) : '',
+      session_id: circ.session_id ? String(circ.session_id) : '',
+      class_id: circ.class_id ? String(circ.class_id) : '',
       start_date: circ.start_date ? circ.start_date.split('T')[0] : '',
       end_date: circ.end_date ? circ.end_date.split('T')[0] : '',
+      result_date: circ.result_date ? circ.result_date.split('T')[0] : '',
       min_age: circ.min_age !== null ? String(circ.min_age) : '',
       max_age: circ.max_age !== null ? String(circ.max_age) : '',
-      total_seats: circ.total_seats !== null ? String(circ.total_seats) : '',
-      status: circ.status || 'published',
-      fee_amount: circ.fee_amount !== null ? String(circ.fee_amount) : '0',
+      capacity: circ.capacity !== null ? String(circ.capacity) : '100',
+      status: circ.status || 'open',
+      is_published: circ.is_published !== undefined ? Boolean(circ.is_published) : true,
+      fee_amount: circ.fee_amount !== null && circ.fee_amount !== undefined ? String(circ.fee_amount) : '0',
       currency: circ.fee_currency || 'BDT',
       description: circ.description || '',
     });
-    setIsModalOpen(true);
+    setIsFormOpen(true);
+    setDeleteConfirmId(null);
+    setTimeout(() => {
+      formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
+  const closeForm = () => {
+    setIsFormOpen(false);
+    setEditingCircular(null);
   };
 
   const handleSave = async (e) => {
@@ -120,15 +168,30 @@ export default function AdmissionCircularsPage() {
       toast.error('Circular title is required.');
       return;
     }
+    if (!form.department_id) {
+      toast.error('Department selection is required.');
+      return;
+    }
+    if (!form.session_id) {
+      toast.error('Academic Session selection is required.');
+      return;
+    }
+    if (!form.class_id) {
+      toast.error('Class selection is required.');
+      return;
+    }
 
     setSaving(true);
     try {
       const payload = {
         ...form,
         id: editingCircular?.id,
+        department_id: form.department_id ? parseInt(form.department_id, 10) : null,
+        session_id: form.session_id ? parseInt(form.session_id, 10) : null,
+        class_id: form.class_id ? parseInt(form.class_id, 10) : null,
         min_age: form.min_age ? parseInt(form.min_age, 10) : null,
         max_age: form.max_age ? parseInt(form.max_age, 10) : null,
-        total_seats: form.total_seats ? parseInt(form.total_seats, 10) : null,
+        capacity: form.capacity ? parseInt(form.capacity, 10) : 100,
         fee_amount: form.fee_amount ? parseFloat(form.fee_amount) : 0,
       };
 
@@ -141,267 +204,571 @@ export default function AdmissionCircularsPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        toast.success(editingCircular ? 'Circular updated successfully!' : 'Circular created successfully!');
-        setIsModalOpen(false);
-        fetchCirculars();
+        toast.success(data.message || (editingCircular ? 'Circular updated.' : 'Circular created.'));
+        setIsFormOpen(false);
+        setEditingCircular(null);
+        fetchCirculars(true);
       } else {
         toast.error(data.error || 'Failed to save admission circular.');
       }
     } catch (err) {
       console.error(err);
-      toast.error('An error occurred while saving.');
+      toast.error('Network error during save operation.');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (id, title) => {
-    if (!window.confirm(`Are you sure you want to delete "${title}"?`)) return;
-
+  const handleDelete = async (id) => {
     try {
+      setDeletingId(id);
       const res = await fetch(`${apiBase}/staff/panel/admissions?id=${id}`, {
         method: 'DELETE',
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        toast.success('Circular deleted successfully.');
-        fetchCirculars();
+        toast.success('Admission circular deleted.');
+        setDeleteConfirmId(null);
+        fetchCirculars(true);
       } else {
-        toast.error(data.error || 'Failed to delete circular.');
+        toast.error(data.error || 'Failed to delete admission circular.');
       }
-    } catch (err) {
-      console.error(err);
-      toast.error('Error deleting circular.');
+    } catch {
+      toast.error('Network error deleting circular.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
   const filteredCirculars = useMemo(() => {
-    return circulars.filter((c) => {
-      const matchSearch =
-        c.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.session_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.class_name?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchStatus = statusFilter === 'all' || c.status === statusFilter;
-      return matchSearch && matchStatus;
+    return circulars.filter((circ) => {
+      const q = searchTerm.toLowerCase();
+      const matchesSearch =
+        circ.title.toLowerCase().includes(q) ||
+        (circ.class_name && circ.class_name.toLowerCase().includes(q)) ||
+        (circ.department_name && circ.department_name.toLowerCase().includes(q));
+      const matchesStatus = statusFilter === 'all' || circ.status === statusFilter;
+      const matchesDept = departmentFilter === 'all' || String(circ.department_id) === String(departmentFilter);
+      return matchesSearch && matchesStatus && matchesDept;
     });
-  }, [circulars, searchTerm, statusFilter]);
-
-  const stats = useMemo(() => {
-    const total = circulars.length;
-    const active = circulars.filter((c) => c.status === 'published').length;
-    const totalApplicants = circulars.reduce((acc, c) => acc + parseInt(c.applicant_count || 0, 10), 0);
-    const totalSeats = circulars.reduce((acc, c) => acc + parseInt(c.total_seats || 0, 10), 0);
-    return { total, active, totalApplicants, totalSeats };
-  }, [circulars]);
+  }, [circulars, searchTerm, statusFilter, departmentFilter]);
 
   return (
-    <div className="w-full space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <FiLayers className="text-sky-600 dark:text-sky-400" />
-            Admission Circulars & Fee Schedules
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Publish academic intake circulars, configure application fees, and supervise candidate capacity.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={fetchCirculars}
-            className="p-2 border border-slate-200 dark:border-slate-800 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
-            title="Refresh List"
-          >
-            <FiRefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          <button
-            onClick={openNewModal}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded shadow-sm transition"
-          >
-            <FiPlus className="w-4 h-4" />
-            Create Admission Circular
-          </button>
-        </div>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[10px] uppercase font-bold tracking-wider">Active Circulars</span>
-            <FiCheckCircle className="text-emerald-500" />
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900 dark:text-white font-mono">{stats.active}</span>
-            <span className="text-xs text-slate-500">of {stats.total} total</span>
+    <div className="w-full space-y-4">
+      {/* Header and KPIs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Circulars</p>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-xl font-bold text-slate-900 dark:text-white font-mono">{circulars.length}</span>
+            <span className="text-[10px] font-medium text-slate-500">Admissions</span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[10px] uppercase font-bold tracking-wider">Total Seat Capacity</span>
-            <FiUsers className="text-sky-500" />
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900 dark:text-white font-mono">{stats.totalSeats}</span>
-            <span className="text-xs text-sky-600 dark:text-sky-400">Intake quota</span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[10px] uppercase font-bold tracking-wider">Total Submissions</span>
-            <FiFileText className="text-indigo-500" />
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900 dark:text-white font-mono">{stats.totalApplicants}</span>
-            <span className="text-xs text-indigo-600 dark:text-indigo-400">Registered applicants</span>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Open Circulars</p>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+              {circulars.filter((c) => c.status === 'open').length}
+            </span>
+            <span className="text-[10px] font-medium text-emerald-600">Active Intake</span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[10px] uppercase font-bold tracking-wider">Payment Status</span>
-            <FiDollarSign className="text-amber-500" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Applicants</p>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-xl font-bold text-blue-600 dark:text-blue-400 font-mono">
+              {circulars.reduce((acc, c) => acc + (parseInt(c.total_applicants, 10) || 0), 0)}
+            </span>
+            <span className="text-[10px] font-medium text-blue-500">Submissions</span>
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900 dark:text-white font-mono">Gateway Ready</span>
-            <span className="text-xs text-emerald-600">Assigned</span>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Departments Covered</p>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 font-mono">
+              {departments.length}
+            </span>
+            <span className="text-[10px] font-medium text-slate-400">Academic Units</span>
           </div>
         </div>
       </div>
 
-      {/* Filter and Action Toolbar */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-md">
-          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
-          <input
-            type="text"
-            placeholder="Search by title, session, or class..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full text-xs pl-9 pr-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-sky-500"
-          />
+      {/* Inline Delete Confirmation Alert (NO popup modal) */}
+      {deleteConfirmId && (
+        <div className="p-4 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 text-slate-900 dark:text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
+          <div className="flex items-start gap-2.5">
+            <FiAlertCircle className="text-lg text-rose-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-bold text-rose-900 dark:text-rose-200">
+                Confirm Deleting Admission Circular: {circulars.find((c) => c.id === deleteConfirmId)?.title || `#${deleteConfirmId}`}?
+              </p>
+              <p className="text-[11px] text-rose-700 dark:text-rose-300/80 mt-0.5">
+                This will delete the circular configuration and associated application fee records.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+            <button
+              onClick={() => setDeleteConfirmId(null)}
+              className="px-3 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => handleDelete(deleteConfirmId)}
+              disabled={deletingId === deleteConfirmId}
+              className="px-3.5 py-1.5 rounded text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {deletingId === deleteConfirmId ? (
+                <>
+                  <div className="loader loader-xs loader-white" />
+                  <span>Deleting...</span>
+                </>
+              ) : (
+                <>
+                  <FiTrash2 className="text-sm" />
+                  <span>Confirm Delete</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
+      )}
 
-        <div className="flex items-center gap-2">
+      {/* Inline Workstation Form (NO popup modal) */}
+      {isFormOpen && (
+        <div ref={formSectionRef} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 shadow-sm space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-600" />
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                {editingCircular ? `Edit Admission Circular: ${editingCircular.title}` : 'Create New Admission Circular'}
+              </h3>
+            </div>
+            <button
+              onClick={closeForm}
+              className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              title="Close form"
+            >
+              <FiX className="text-lg" />
+            </button>
+          </div>
+
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="md:col-span-2">
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Circular Title <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Admission 2026 - Science & General Intake"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  required
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Target Department <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={form.department_id}
+                  onChange={(e) => setForm({ ...form, department_id: e.target.value })}
+                  required
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
+                >
+                  <option value="">Select Department...</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} {d.code ? `(${d.code})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Academic Session <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={form.session_id}
+                  onChange={(e) => setForm({ ...form, session_id: e.target.value })}
+                  required
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
+                >
+                  <option value="">Select Session...</option>
+                  {sessions.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} {s.is_current ? '(Current)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Target Class <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={form.class_id}
+                  onChange={(e) => setForm({ ...form, class_id: e.target.value })}
+                  required
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
+                >
+                  <option value="">Select Target Class...</option>
+                  {availableClassesForForm.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Start Date <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={form.start_date}
+                  onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+                  required
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Application Deadline <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={form.end_date}
+                  onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                  required
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Result Date (Auto-Publish)
+                </label>
+                <input
+                  type="date"
+                  value={form.result_date}
+                  onChange={(e) => setForm({ ...form, result_date: e.target.value })}
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Admission Fee Amount (BDT)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={form.fee_amount}
+                  onChange={(e) => setForm({ ...form, fee_amount: e.target.value })}
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Available Seats / Capacity
+                </label>
+                <input
+                  type="number"
+                  value={form.capacity}
+                  onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Min & Max Candidate Age
+                </label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    value={form.min_age}
+                    onChange={(e) => setForm({ ...form, min_age: e.target.value })}
+                    className="w-full text-xs px-2.5 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    value={form.max_age}
+                    onChange={(e) => setForm({ ...form, max_age: e.target.value })}
+                    className="w-full text-xs px-2.5 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Status
+                </label>
+                <select
+                  value={form.status}
+                  onChange={(e) => setForm({ ...form, status: e.target.value })}
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
+                >
+                  <option value="open">Open (Accepting Applications)</option>
+                  <option value="upcoming">Upcoming</option>
+                  <option value="closed">Closed</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Circular Description / Instructions
+              </label>
+              <textarea
+                rows={2}
+                placeholder="Enter intake guidelines, prerequisites, and instructions..."
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={closeForm}
+                className="px-3.5 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-4 py-1.5 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer disabled:opacity-50 min-w-[120px] flex items-center justify-center gap-1.5"
+              >
+                {saving ? (
+                  <>
+                    <div className="loader loader-xs loader-white" />
+                    <span>Saving...</span>
+                  </>
+                ) : editingCircular ? (
+                  <>
+                    <FiCheck className="text-sm" />
+                    <span>Update Circular</span>
+                  </>
+                ) : (
+                  <>
+                    <FiPlus className="text-sm" />
+                    <span>Create Circular</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Control Bar: Search, Filters, Refresh, Create Action */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+          {/* Search Input */}
+          <div className="relative flex-1 sm:w-64">
+            <FiSearch className="absolute left-2.5 top-2.5 text-slate-400 text-xs" />
+            <input
+              type="text"
+              placeholder="Search circulars..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full text-xs pl-8 pr-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden"
+            />
+          </div>
+
+          {/* Department Filter */}
+          <select
+            value={departmentFilter}
+            onChange={(e) => setDepartmentFilter(e.target.value)}
+            className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
+          >
+            <option value="all">All Departments</option>
+            {departments.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+
+          {/* Status Filter */}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="text-xs px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-hidden"
+            className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
           >
-            <option value="all">All Statuses</option>
-            <option value="published">Published</option>
-            <option value="draft">Draft</option>
+            <option value="all">All Status</option>
+            <option value="open">Open</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="closed">Closed</option>
             <option value="archived">Archived</option>
           </select>
+        </div>
 
-          <Link
-            href="/staff-panel/admission-applicants"
-            className="text-xs px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium rounded flex items-center gap-1 transition"
+        <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+          <button
+            onClick={() => fetchCirculars(false)}
+            title="Refresh list"
+            className="p-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
           >
-            Review Applicants <FiArrowUpRight className="w-3.5 h-3.5" />
-          </Link>
+            <FiRefreshCw className="text-sm" />
+          </button>
+
+          {!isFormOpen && (
+            <button
+              onClick={openNewForm}
+              className="px-3 py-1.5 rounded text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <FiPlus className="text-sm" />
+              <span>Create Circular</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Circulars List Table */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden shadow-2xs">
+      {/* Admission Circulars Table (Wide single row format) */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 uppercase text-[10px] font-semibold tracking-wider">
-              <tr>
-                <th className="py-3 px-4">Circular & Class</th>
-                <th className="py-3 px-4">Application Window</th>
-                <th className="py-3 px-4">Seats & Age Limit</th>
-                <th className="py-3 px-4">Admission Fee</th>
-                <th className="py-3 px-4">Applicants</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+          <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
+            <thead>
+              <tr className="bg-slate-50/75 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
+                <th className="py-2.5 px-3">Title & Circular ID</th>
+                <th className="py-2.5 px-3">Department</th>
+                <th className="py-2.5 px-3">Session & Class</th>
+                <th className="py-2.5 px-3">Application Window</th>
+                <th className="py-2.5 px-3">Result Date</th>
+                <th className="py-2.5 px-3">Fee (BDT)</th>
+                <th className="py-2.5 px-3">Applicants</th>
+                <th className="py-2.5 px-3">Status</th>
+                <th className="py-2.5 px-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-12">
-                    <div className="flex justify-center items-center py-2">
+                  <td colSpan="9" className="py-12 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-2">
                       <div className="loader loader-sm" />
+                      <span className="text-xs">Loading admission circulars...</span>
                     </div>
                   </td>
                 </tr>
               ) : filteredCirculars.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-10 text-slate-400">
-                    No admission circulars found. Click &quot;Create Admission Circular&quot; to publish your first intake schedule.
+                  <td colSpan="9" className="py-12 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-1">
+                      <FiFileText className="text-3xl text-slate-300 dark:text-slate-600 mb-1" />
+                      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">No admission circulars found</span>
+                      <span className="text-[11px] text-slate-400">Create an admission circular for a department and class</span>
+                    </div>
                   </td>
                 </tr>
               ) : (
                 filteredCirculars.map((circ) => (
-                  <tr key={circ.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                    <td className="py-3 px-4">
-                      <div className="font-semibold text-slate-900 dark:text-white">{circ.title}</div>
-                      <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
-                        <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-medium text-slate-600 dark:text-slate-400">
-                          {circ.class_name || 'All Classes'}
+                  <tr
+                    key={circ.id}
+                    className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                  >
+                    <td className="py-2.5 px-3">
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-slate-900 dark:text-white text-xs">{circ.title}</span>
+                        <span className="text-[10px] font-mono text-slate-400">{circ.circular_number || `#${circ.id}`}</span>
+                      </div>
+                    </td>
+
+                    <td className="py-2.5 px-3 text-slate-800 dark:text-slate-200 font-medium">
+                      {circ.department_name ? (
+                        <span className="inline-flex items-center gap-1">
+                          <FiLayers className="text-slate-400 text-xs" />
+                          {circ.department_name}
                         </span>
-                        <span>Session: {circ.session_name || 'N/A'}</span>
+                      ) : (
+                        <span className="text-slate-400 italic">None</span>
+                      )}
+                    </td>
+
+                    <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300">
+                      <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                        <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300">
+                          {circ.session_name || 'N/A'}
+                        </span>
+                        <span className="text-slate-400">&bull;</span>
+                        <span className="font-semibold text-blue-600 dark:text-blue-400">
+                          {circ.class_name || 'N/A'}
+                        </span>
                       </div>
                     </td>
-                    <td className="py-3 px-4 font-mono text-[11px]">
-                      <div>{circ.start_date ? new Date(circ.start_date).toLocaleDateString() : 'N/A'}</div>
-                      <div className="text-slate-400 text-[10px]">to {circ.end_date ? new Date(circ.end_date).toLocaleDateString() : 'N/A'}</div>
+
+                    <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600 dark:text-slate-300">
+                      {circ.start_date ? new Date(circ.start_date).toLocaleDateString() : 'N/A'}
+                      {' '}&rarr;{' '}
+                      {circ.end_date ? new Date(circ.end_date).toLocaleDateString() : 'N/A'}
                     </td>
-                    <td className="py-3 px-4">
-                      <div><strong className="text-slate-900 dark:text-white">{circ.total_seats || 'Unlimited'}</strong> Seats</div>
-                      <div className="text-[10px] text-slate-400">
-                        Age: {circ.min_age ?? '0'} - {circ.max_age ?? '∞'} yrs
-                      </div>
+
+                    <td className="py-2.5 px-3 font-mono text-[11px] text-purple-600 dark:text-purple-400 font-medium">
+                      {circ.result_date ? new Date(circ.result_date).toLocaleDateString() : 'Pending'}
                     </td>
-                    <td className="py-3 px-4">
-                      <span className="font-semibold text-slate-900 dark:text-white font-mono">
-                        {circ.fee_amount ? parseFloat(circ.fee_amount).toFixed(2) : '0.00'}
-                      </span>{' '}
-                      <span className="text-[10px] font-bold text-sky-600 bg-sky-50 dark:bg-sky-950/40 px-1.5 py-0.5 rounded">
-                        {circ.fee_currency || 'BDT'}
-                      </span>
+
+                    <td className="py-2.5 px-3 font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                      ৳{parseFloat(circ.fee_amount || 0).toFixed(2)}
                     </td>
-                    <td className="py-3 px-4">
-                      <Link
-                        href={`/staff-panel/admission-applicants?circular_id=${circ.id}`}
-                        className="inline-flex items-center gap-1 font-semibold text-sky-600 hover:text-sky-700 underline"
-                      >
-                        {circ.applicant_count || 0} candidates
-                      </Link>
+
+                    <td className="py-2.5 px-3 font-mono text-slate-700 dark:text-slate-300">
+                      <span className="font-bold text-slate-900 dark:text-white">{circ.total_applicants || 0}</span>
+                      <span className="text-slate-400 text-[10px] ml-1">/ {circ.capacity || 100}</span>
                     </td>
-                    <td className="py-3 px-4">
+
+                    <td className="py-2.5 px-3">
                       <span
-                        className={`inline-block px-2 py-0.5 text-[10px] font-bold uppercase rounded ${
-                          circ.status === 'published'
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400'
-                            : circ.status === 'draft'
-                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400'
-                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${
+                          circ.status === 'open'
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50'
+                            : circ.status === 'upcoming'
+                            ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50'
+                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
                         }`}
                       >
-                        {circ.status}
+                        {circ.status || 'open'}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-right">
+
+                    <td className="py-2.5 px-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        <Link
-                          href={`/staff-panel/admission-circular-update?id=${circ.id}`}
-                          className="p-1.5 text-slate-600 hover:text-sky-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
-                          title="Update Circular"
-                        >
-                          <FiEdit3 className="w-3.5 h-3.5" />
-                        </Link>
                         <button
-                          onClick={() => handleDelete(circ.id, circ.title)}
-                          className="p-1.5 text-slate-600 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
-                          title="Delete Circular"
+                          onClick={() => openEditForm(circ)}
+                          title="Edit Circular"
+                          className="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 transition cursor-pointer"
                         >
-                          <FiTrash2 className="w-3.5 h-3.5" />
+                          <FiEdit3 className="text-sm" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirmId(circ.id)}
+                          title="Delete Circular"
+                          className="p-1 rounded text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                        >
+                          <FiTrash2 className="text-sm" />
                         </button>
                       </div>
                     </td>
@@ -412,208 +779,6 @@ export default function AdmissionCircularsPage() {
           </table>
         </div>
       </div>
-
-      {/* Create / Edit Circular Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
-              <h3 className="font-semibold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                <FiFileText className="text-sky-600" />
-                {editingCircular ? 'Edit Admission Circular' : 'Create Admission Circular'}
-              </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-white"
-              >
-                <FiX className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSave} className="p-4 space-y-4 text-xs">
-              <div>
-                <label className="block text-slate-600 dark:text-slate-400 font-medium mb-1">
-                  Circular Title *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Annual Academic Intake 2026-2027"
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-sky-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 font-medium mb-1">
-                    Academic Class
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Class 6, Grade 9, Higher Secondary"
-                    value={form.class_name}
-                    onChange={(e) => setForm({ ...form, class_name: e.target.value })}
-                    className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 font-medium mb-1">
-                    Academic Session
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 2026-2027"
-                    value={form.session_name}
-                    onChange={(e) => setForm({ ...form, session_name: e.target.value })}
-                    className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 font-medium mb-1">
-                    Application Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={form.start_date}
-                    onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-                    className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 font-medium mb-1">
-                    Application Deadline
-                  </label>
-                  <input
-                    type="date"
-                    value={form.end_date}
-                    onChange={(e) => setForm({ ...form, end_date: e.target.value })}
-                    className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 font-medium mb-1">
-                    Min Age (Yrs)
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 10"
-                    value={form.min_age}
-                    onChange={(e) => setForm({ ...form, min_age: e.target.value })}
-                    className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 font-medium mb-1">
-                    Max Age (Yrs)
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 14"
-                    value={form.max_age}
-                    onChange={(e) => setForm({ ...form, max_age: e.target.value })}
-                    className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 font-medium mb-1">
-                    Total Seats
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 120"
-                    value={form.total_seats}
-                    onChange={(e) => setForm({ ...form, total_seats: e.target.value })}
-                    className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                  />
-                </div>
-              </div>
-
-              {/* Fee Structure */}
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded border border-slate-200 dark:border-slate-700 space-y-3">
-                <span className="font-semibold text-slate-800 dark:text-slate-200 block">
-                  Admission Fee Schedule
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-slate-600 dark:text-slate-400 font-medium mb-1">
-                      Fee Amount
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      placeholder="e.g. 500"
-                      value={form.fee_amount}
-                      onChange={(e) => setForm({ ...form, fee_amount: e.target.value })}
-                      className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 dark:text-slate-400 font-medium mb-1">
-                      Currency
-                    </label>
-                    <select
-                      value={form.currency}
-                      onChange={(e) => setForm({ ...form, currency: e.target.value })}
-                      className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                    >
-                      <option value="BDT">BDT (৳ Bangladeshi Taka)</option>
-                      <option value="USD">USD ($ US Dollar)</option>
-                      <option value="EUR">EUR (€ Euro)</option>
-                      <option value="GBP">GBP (£ British Pound)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-600 dark:text-slate-400 font-medium mb-1">
-                  Publication Status
-                </label>
-                <select
-                  value={form.status}
-                  onChange={(e) => setForm({ ...form, status: e.target.value })}
-                  className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                >
-                  <option value="published">Published (Active for online application)</option>
-                  <option value="draft">Draft (Hidden from public)</option>
-                  <option value="archived">Archived (Intake closed)</option>
-                </select>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded disabled:opacity-50 min-w-[120px] flex items-center justify-center"
-                >
-                  {saving ? (
-                    <div className="loader loader-sm loader-white" />
-                  ) : editingCircular ? (
-                    'Update Circular'
-                  ) : (
-                    'Create Circular'
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

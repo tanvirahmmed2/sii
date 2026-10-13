@@ -39,7 +39,7 @@ export async function GET(request, context) {
     let queryText = `
       SELECT cs.*,
              c.name AS class_name,
-             c.numeric_name AS class_numeric,
+             c.code AS class_code,
              s.name AS subject_name,
              s.code AS subject_code,
              s.type AS subject_type
@@ -55,7 +55,7 @@ export async function GET(request, context) {
       queryText += ` AND cs.class_id = $2`;
     }
 
-    queryText += ` ORDER BY c.numeric_name ASC, s.name ASC`;
+    queryText += ` ORDER BY c.name ASC, s.name ASC`;
 
     const result = await queryDb(queryText, params);
 

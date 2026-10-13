@@ -12,11 +12,22 @@ export async function GET(request, context) {
 
     const result = await queryDb(
       `SELECT c.*,
+              s.name AS session_name,
+              d.name AS department_name,
+              d.code AS department_code,
+              COALESCE(di.motto, ci.motto) AS motto,
+              COALESCE(di.summary, ci.summary) AS summary,
+              COALESCE(di.description, ci.description, c.description) AS description,
+              COALESCE(di.expected_cost, ci.expected_cost, 0.00) AS expected_cost,
               COALESCE((SELECT COUNT(*) FROM website_sections s WHERE s.class_id = c.id), 0)::int AS section_count,
               COALESCE((SELECT COUNT(*) FROM website_class_subjects cs WHERE cs.class_id = c.id), 0)::int AS subject_count
        FROM website_classes c
+       LEFT JOIN website_sessions s ON s.id = c.session_id
+       LEFT JOIN website_departments d ON d.id = c.department_id
+       LEFT JOIN website_department_information di ON di.department_id = d.id AND di.website_id = c.website_id
+       LEFT JOIN website_class_information ci ON ci.class_id = c.id AND ci.website_id = c.website_id
        WHERE c.website_id = $1
-       ORDER BY c.numeric_name ASC NULLS LAST, c.name ASC`,
+       ORDER BY c.name ASC, c.id ASC`,
       [website.id]
     );
 

@@ -1,25 +1,24 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'react';
 import { useSearchParams, useParams } from 'next/navigation';
-import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import * as XLSX from 'xlsx';
 import {
   FiUsers,
   FiSearch,
-  FiFilter,
   FiDownload,
   FiCheckCircle,
   FiXCircle,
   FiClock,
-  FiEye,
   FiAward,
   FiRefreshCw,
   FiDollarSign,
-  FiArrowRight,
+  FiLayers,
+  FiCheck,
   FiX,
-  FiUserCheck,
-  FiFileText
+  FiTrash2,
+  FiCalendar
 } from 'react-icons/fi';
 
 function ApplicantsContent() {
@@ -32,17 +31,17 @@ function ApplicantsContent() {
   const [applicants, setApplicants] = useState([]);
   const [circulars, setCirculars] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('all'); // all, pending, selected, rejected
+  const [statusFilter, setStatusFilter] = useState('all');
   const [selectedCircularId, setSelectedCircularId] = useState(initialCircularId);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusCounts, setStatusCounts] = useState({ all: 0, pending: 0, selected: 0, rejected: 0 });
+  const [statusCounts, setStatusCounts] = useState({ all: 0, pending: 0, completed: 0, selected: 0, rejected: 0 });
+  const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [publishing, setPublishing] = useState(false);
 
-  // Detail modal state
-  const [activeApplicant, setActiveApplicant] = useState(null);
-  const [scoreModalApplicant, setScoreModalApplicant] = useState(null);
+  // Inline Score & Rank Edit State (NO popup modal)
+  const [editingScoreId, setEditingScoreId] = useState(null);
   const [scoreInput, setScoreInput] = useState('');
   const [rankInput, setRankInput] = useState('');
-  const [actionLoading, setActionLoading] = useState(false);
 
   // Fetch circulars for filter dropdown
   useEffect(() => {
@@ -60,12 +59,12 @@ function ApplicantsContent() {
   }, [apiBase]);
 
   // Fetch applicants
-  const fetchApplicants = async () => {
-    setLoading(true);
+  const fetchApplicants = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       let url = `${apiBase}/staff/panel/admissions/applicants?status=${statusFilter}`;
       if (selectedCircularId) {
-        url += `&circular_id=${selectedCircularId}`;
+        url += `&admission_id=${selectedCircularId}`;
       }
       if (searchTerm.trim()) {
         url += `&search=${encodeURIComponent(searchTerm.trim())}`;
@@ -79,7 +78,13 @@ function ApplicantsContent() {
       if (data.success) {
         setApplicants(data.applicants || []);
         if (data.status_counts) {
-          setStatusCounts(data.status_counts);
+          setStatusCounts({
+            all: data.status_counts.all || 0,
+            pending: data.status_counts.pending || 0,
+            completed: (data.applicants || []).filter((a) => a.status === 'completed').length,
+            selected: data.status_counts.selected || 0,
+            rejected: data.status_counts.rejected || 0,
+          });
         }
       } else {
         toast.error(data.error || 'Failed to fetch applicants.');
@@ -90,27 +95,26 @@ function ApplicantsContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiBase, statusFilter, selectedCircularId, searchTerm]);
 
   useEffect(() => {
     fetchApplicants();
-  }, [statusFilter, selectedCircularId, apiBase]);
+  }, [fetchApplicants]);
 
-  // Handle Search Submission
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     fetchApplicants();
   };
 
-  // Evaluate Applicant (Select or Reject)
+  // Evaluate Applicant: Accept or Reject (NO popup modal)
   const handleEvaluate = async (applicantId, newStatus) => {
-    setActionLoading(true);
+    setActionLoadingId(applicantId);
     try {
       const res = await fetch(`${apiBase}/staff/panel/admissions/applicants`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          applicant_id: applicantId,
+          id: applicantId,
           status: newStatus,
         }),
       });
@@ -118,10 +122,7 @@ function ApplicantsContent() {
       const data = await res.json();
       if (res.ok && data.success) {
         toast.success(`Applicant marked as ${newStatus.toUpperCase()}!`);
-        fetchApplicants();
-        if (activeApplicant?.id === applicantId) {
-          setActiveApplicant(null);
-        }
+        fetchApplicants(true);
       } else {
         toast.error(data.error || `Failed to update status to ${newStatus}.`);
       }
@@ -129,114 +130,129 @@ function ApplicantsContent() {
       console.error(err);
       toast.error('Error updating applicant status.');
     } finally {
-      setActionLoading(false);
+      setActionLoadingId(null);
     }
   };
 
-  // Handle Score & Merit Update
-  const handleScoreSubmit = async (e) => {
-    e.preventDefault();
-    if (!scoreModalApplicant) return;
-
-    setActionLoading(true);
+  // Inline Score & Rank Save
+  const handleSaveScore = async (applicantId) => {
+    setActionLoadingId(applicantId);
     try {
       const res = await fetch(`${apiBase}/staff/panel/admissions/applicants`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          applicant_id: scoreModalApplicant.id,
-          merit_score: scoreInput ? parseFloat(scoreInput) : null,
-          merit_rank: rankInput ? parseInt(rankInput, 10) : null,
+          id: applicantId,
+          score: scoreInput ? parseFloat(scoreInput) : null,
+          merit_position: rankInput ? parseInt(rankInput, 10) : null,
         }),
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
-        toast.success('Merit score and rank saved successfully!');
-        setScoreModalApplicant(null);
-        fetchApplicants();
+        toast.success('Merit score and position updated!');
+        setEditingScoreId(null);
+        fetchApplicants(true);
       } else {
-        toast.error(data.error || 'Failed to save merit score.');
+        toast.error(data.error || 'Failed to update score.');
       }
-    } catch (err) {
-      console.error(err);
-      toast.error('Error saving merit score.');
+    } catch {
+      toast.error('Network error updating score.');
     } finally {
-      setActionLoading(false);
+      setActionLoadingId(null);
     }
   };
 
-  // Trigger CSV Download
-  const handleDownloadCsv = (filterType) => {
-    const downloadUrl = `${apiBase}/staff/panel/admissions/applicants/export?filter=${filterType}${
-      selectedCircularId ? `&circular_id=${selectedCircularId}` : ''
-    }`;
-    window.open(downloadUrl, '_blank');
-    toast.success(`Exporting ${filterType.toUpperCase()} applicants list...`);
+  // Publish Results (manual publish)
+  const handlePublishResults = async () => {
+    if (!selectedCircularId && circulars.length > 0) {
+      toast.error('Please select an admission circular target to publish results.');
+      return;
+    }
+
+    const targetCircularId = selectedCircularId || circulars[0]?.id;
+    if (!targetCircularId) {
+      toast.error('No admission circular found to publish results.');
+      return;
+    }
+
+    setPublishing(true);
+    try {
+      const res = await fetch(`${apiBase}/staff/panel/admissions/results/publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ admission_id: targetCircularId }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(data.message || 'Results published successfully! Rejected applicants removed.');
+        fetchApplicants(true);
+      } else {
+        toast.error(data.error || 'Failed to publish results.');
+      }
+    } catch {
+      toast.error('Network error during result publication.');
+    } finally {
+      setPublishing(false);
+    }
   };
 
+  // Download Excel Sheet (.xlsx)
+  const handleDownloadExcel = () => {
+    if (applicants.length === 0) {
+      toast.error('No applicant records available to download.');
+      return;
+    }
+
+    const exportRows = applicants.map((a) => ({
+      'Application No': a.application_no,
+      'Roll No': a.roll_no || 'N/A',
+      'Applicant Name': a.applicant_name,
+      'Email': a.email,
+      'Phone': a.phone,
+      'Gender': a.gender || 'N/A',
+      'Date of Birth': a.date_of_birth ? a.date_of_birth.substring(0, 10) : 'N/A',
+      'Circular': a.circular_title || 'N/A',
+      'Target Class': a.class_name || 'N/A',
+      'Father Name': a.father_name || 'N/A',
+      'Father Phone': a.father_phone || 'N/A',
+      'Mother Name': a.mother_name || 'N/A',
+      'Guardian Name': a.guardian_name || 'N/A',
+      'Present Address': a.present_address || 'N/A',
+      'Permanent Address': a.permanent_address || 'N/A',
+      'Previous School': a.previous_school || 'N/A',
+      'Previous GPA': a.previous_gpa || 'N/A',
+      'Payment Status': a.payment_status?.toUpperCase() || 'UNPAID',
+      'Application Status': a.status?.toUpperCase() || 'PENDING',
+      'Merit Score': a.score || '0.00',
+      'Merit Rank': a.merit_position || 'N/A',
+      'Applied Date': a.created_at ? new Date(a.created_at).toLocaleDateString() : 'N/A',
+      'Photo URL': a.photo_url || '',
+      'Signature URL': a.signature_url || '',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Applicants');
+    XLSX.writeFile(workbook, `Admission_Applicants_${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast.success('Excel sheet downloaded successfully!');
+  };
+
+  const filteredApplicants = useMemo(() => {
+    return applicants.filter((a) => {
+      if (statusFilter !== 'all' && a.status !== statusFilter) return false;
+      return true;
+    });
+  }, [applicants, statusFilter]);
+
   return (
-    <div className="w-full space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <FiUsers className="text-sky-600 dark:text-sky-400" />
-            Admission Applicants Evaluation
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Review applicant profiles, approve/reject candidates, assign merit scores, and export institutional lists.
-          </p>
-        </div>
-
-        {/* Global CSV Download Dropdown / Buttons */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={fetchApplicants}
-            className="p-2 border border-slate-200 dark:border-slate-800 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
-            title="Refresh List"
-          >
-            <FiRefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-
-          {/* Direct CSV Export Buttons */}
-          <div className="flex items-center rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-0.5 text-xs">
-            <span className="px-2 text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-              <FiDownload className="w-3.5 h-3.5" /> CSV:
-            </span>
-            <button
-              onClick={() => handleDownloadCsv('all')}
-              className="px-2 py-1 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition font-medium"
-            >
-              All
-            </button>
-            <button
-              onClick={() => handleDownloadCsv('selected')}
-              className="px-2 py-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded transition font-semibold"
-            >
-              Selected
-            </button>
-            <button
-              onClick={() => handleDownloadCsv('pending')}
-              className="px-2 py-1 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded transition font-medium"
-            >
-              Pending
-            </button>
-            <button
-              onClick={() => handleDownloadCsv('rejected')}
-              className="px-2 py-1 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition font-medium"
-            >
-              Rejected
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* KPI Status Tabs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div className="w-full space-y-4">
+      {/* Top Banner and KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <button
           onClick={() => setStatusFilter('all')}
-          className={`p-3.5 rounded border text-left transition ${
+          className={`p-3.5 rounded border text-left transition cursor-pointer ${
             statusFilter === 'all'
               ? 'bg-sky-50 dark:bg-sky-950/30 border-sky-300 dark:border-sky-800 ring-1 ring-sky-400'
               : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50'
@@ -246,48 +262,48 @@ function ApplicantsContent() {
             <span>All Applicants</span>
             <FiUsers />
           </div>
-          <div className="text-2xl font-bold text-slate-900 dark:text-white font-mono mt-1">
-            {statusCounts.all}
+          <div className="text-xl font-bold text-slate-900 dark:text-white font-mono mt-1">
+            {applicants.length}
           </div>
         </button>
 
         <button
-          onClick={() => setStatusFilter('pending')}
-          className={`p-3.5 rounded border text-left transition ${
-            statusFilter === 'pending'
-              ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 ring-1 ring-amber-400'
+          onClick={() => setStatusFilter('completed')}
+          className={`p-3.5 rounded border text-left transition cursor-pointer ${
+            statusFilter === 'completed'
+              ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 ring-1 ring-blue-400'
               : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50'
           }`}
         >
-          <div className="flex items-center justify-between text-amber-600 text-[10px] font-bold uppercase tracking-wider">
-            <span>Pending Review</span>
-            <FiClock />
+          <div className="flex items-center justify-between text-blue-600 text-[10px] font-bold uppercase tracking-wider">
+            <span>Completed (Paid &amp; Uploaded)</span>
+            <FiCheckCircle />
           </div>
-          <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 font-mono mt-1">
-            {statusCounts.pending}
+          <div className="text-xl font-bold text-blue-600 dark:text-blue-400 font-mono mt-1">
+            {applicants.filter((a) => a.status === 'completed').length}
           </div>
         </button>
 
         <button
           onClick={() => setStatusFilter('selected')}
-          className={`p-3.5 rounded border text-left transition ${
+          className={`p-3.5 rounded border text-left transition cursor-pointer ${
             statusFilter === 'selected'
               ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 ring-1 ring-emerald-400'
               : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50'
           }`}
         >
           <div className="flex items-center justify-between text-emerald-600 text-[10px] font-bold uppercase tracking-wider">
-            <span>Selected Candidates</span>
-            <FiCheckCircle />
+            <span>Accepted Students</span>
+            <FiAward />
           </div>
-          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono mt-1">
-            {statusCounts.selected}
+          <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 font-mono mt-1">
+            {applicants.filter((a) => a.status === 'selected' || a.status === 'accepted').length}
           </div>
         </button>
 
         <button
           onClick={() => setStatusFilter('rejected')}
-          className={`p-3.5 rounded border text-left transition ${
+          className={`p-3.5 rounded border text-left transition cursor-pointer ${
             statusFilter === 'rejected'
               ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-300 dark:border-rose-800 ring-1 ring-rose-400'
               : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50'
@@ -297,220 +313,349 @@ function ApplicantsContent() {
             <span>Rejected Candidates</span>
             <FiXCircle />
           </div>
-          <div className="text-2xl font-bold text-rose-600 dark:text-rose-400 font-mono mt-1">
-            {statusCounts.rejected}
+          <div className="text-xl font-bold text-rose-600 dark:text-rose-400 font-mono mt-1">
+            {applicants.filter((a) => a.status === 'rejected').length}
+          </div>
+        </button>
+
+        <button
+          onClick={() => setStatusFilter('pending')}
+          className={`p-3.5 rounded border text-left transition cursor-pointer ${
+            statusFilter === 'pending'
+              ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 ring-1 ring-amber-400'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50'
+          }`}
+        >
+          <div className="flex items-center justify-between text-amber-600 text-[10px] font-bold uppercase tracking-wider">
+            <span>Pending Review</span>
+            <FiClock />
+          </div>
+          <div className="text-xl font-bold text-amber-600 dark:text-amber-400 font-mono mt-1">
+            {applicants.filter((a) => a.status === 'pending').length}
           </div>
         </button>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <form onSubmit={handleSearchSubmit} className="flex-1 max-w-md relative flex items-center gap-2">
-          <div className="relative flex-1">
-            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
+      {/* Action Control Bar */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
+        <form onSubmit={handleSearchSubmit} className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+          {/* Search */}
+          <div className="relative flex-1 sm:w-64">
+            <FiSearch className="absolute left-2.5 top-2.5 text-slate-400 text-xs" />
             <input
               type="text"
-              placeholder="Search applicant name, roll, app no, email, phone..."
+              placeholder="Search applicant name, app no, email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full text-xs pl-9 pr-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-sky-500"
+              className="w-full text-xs pl-8 pr-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden"
             />
           </div>
-          <button
-            type="submit"
-            className="px-3 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold rounded hover:bg-slate-800 transition"
-          >
-            Search
-          </button>
-        </form>
 
-        <div className="flex items-center gap-2">
+          {/* Circular Selector */}
           <select
             value={selectedCircularId}
             onChange={(e) => setSelectedCircularId(e.target.value)}
-            className="text-xs px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-hidden"
+            className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
           >
             <option value="">All Admission Circulars</option>
             {circulars.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.title} ({c.class_name || 'All'})
+                {c.title} ({c.class_name || 'Class'})
               </option>
             ))}
           </select>
+        </form>
 
-          <Link
-            href="/staff-panel/admission-result"
-            className="text-xs px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded flex items-center gap-1.5 shadow-sm transition"
+        <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+          <button
+            onClick={() => fetchApplicants(false)}
+            title="Refresh list"
+            className="p-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
           >
-            <FiAward className="w-3.5 h-3.5" /> Publish Results
-          </Link>
+            <FiRefreshCw className="text-sm" />
+          </button>
+
+          {/* Download Excel Sheet */}
+          <button
+            onClick={handleDownloadExcel}
+            className="px-3 py-1.5 rounded text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            title="Download full applicants data as Excel sheet (.xlsx)"
+          >
+            <FiDownload className="text-sm" />
+            <span>Download Excel Sheet</span>
+          </button>
+
+          {/* Publish Results Button */}
+          <button
+            onClick={handlePublishResults}
+            disabled={publishing}
+            className="px-3.5 py-1.5 rounded text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white transition flex items-center gap-1.5 shadow-2xs cursor-pointer disabled:opacity-50"
+            title="Publish results for accepted students and delete rejected students"
+          >
+            {publishing ? (
+              <>
+                <div className="loader loader-xs loader-white" />
+                <span>Publishing...</span>
+              </>
+            ) : (
+              <>
+                <FiAward className="text-sm" />
+                <span>Publish Results</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Applicants List Table */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden shadow-2xs">
+      {/* Wide Single-Row Table (overflow does not matter) */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 uppercase text-[10px] font-semibold tracking-wider">
-              <tr>
-                <th className="py-3 px-4">Applicant Tracking</th>
-                <th className="py-3 px-4">Candidate & Contacts</th>
-                <th className="py-3 px-4">Circular & Class</th>
-                <th className="py-3 px-4">Fee Payment</th>
-                <th className="py-3 px-4">Merit Score</th>
-                <th className="py-3 px-4">Review Status</th>
-                <th className="py-3 px-4 text-right">Evaluation Actions</th>
+          <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
+            <thead>
+              <tr className="bg-slate-50/75 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
+                <th className="py-2.5 px-3">App Tracking No</th>
+                <th className="py-2.5 px-3">Roll No</th>
+                <th className="py-2.5 px-3">Candidate Name</th>
+                <th className="py-2.5 px-3">Photo (300x300)</th>
+                <th className="py-2.5 px-3">Signature (150x50)</th>
+                <th className="py-2.5 px-3">Email Address</th>
+                <th className="py-2.5 px-3">Phone</th>
+                <th className="py-2.5 px-3">Gender</th>
+                <th className="py-2.5 px-3">Date of Birth</th>
+                <th className="py-2.5 px-3">Target Intake &amp; Class</th>
+                <th className="py-2.5 px-3">Father Name &amp; Phone</th>
+                <th className="py-2.5 px-3">Mother Name &amp; Phone</th>
+                <th className="py-2.5 px-3">Guardian Info</th>
+                <th className="py-2.5 px-3">Present Address</th>
+                <th className="py-2.5 px-3">Permanent Address</th>
+                <th className="py-2.5 px-3">Previous School &amp; GPA</th>
+                <th className="py-2.5 px-3">Payment Status</th>
+                <th className="py-2.5 px-3">Application Status</th>
+                <th className="py-2.5 px-3">Score &amp; Merit Rank</th>
+                <th className="py-2.5 px-3 text-right sticky right-0 bg-slate-50 dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 shadow-xs">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-12">
-                    <div className="flex justify-center items-center">
+                  <td colSpan="20" className="py-12 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-2">
                       <div className="loader loader-sm" />
+                      <span className="text-xs">Loading admission applicants...</span>
                     </div>
                   </td>
                 </tr>
-              ) : applicants.length === 0 ? (
+              ) : filteredApplicants.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-10 text-slate-400">
-                    No applicants found under this filter criteria.
+                  <td colSpan="20" className="py-12 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-1">
+                      <FiUsers className="text-3xl text-slate-300 dark:text-slate-600 mb-1" />
+                      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">No applicant records found</span>
+                      <span className="text-[11px] text-slate-400">Applications submitted from /admission will appear here</span>
+                    </div>
                   </td>
                 </tr>
               ) : (
-                applicants.map((app) => (
-                  <tr key={app.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                    <td className="py-3 px-4 font-mono">
-                      <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                        {app.application_no}
-                      </div>
-                      <div className="text-[10px] text-slate-400">
-                        Roll: <span className="font-semibold text-slate-600 dark:text-slate-300">{app.roll_no || 'Pending'}</span>
-                      </div>
+                filteredApplicants.map((app) => (
+                  <tr
+                    key={app.id}
+                    className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                  >
+                    <td className="py-2.5 px-3 font-mono font-bold text-sky-600 dark:text-sky-400">
+                      {app.application_no}
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        {app.photo_url ? (
+
+                    <td className="py-2.5 px-3 font-mono font-medium text-slate-700 dark:text-slate-300">
+                      {app.roll_no || 'N/A'}
+                    </td>
+
+                    <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">
+                      {app.applicant_name}
+                    </td>
+
+                    {/* Photo (300x300) */}
+                    <td className="py-2 px-3">
+                      {app.photo_url ? (
+                        <a href={app.photo_url} target="_blank" rel="noreferrer" title="Click to view 300x300 photo">
                           <img
                             src={app.photo_url}
-                            alt={app.applicant_name}
-                            className="w-7 h-7 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                            alt="Photo"
+                            className="w-9 h-9 rounded object-cover border border-slate-200 dark:border-slate-700 hover:scale-125 transition-transform"
                           />
-                        ) : (
-                          <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 font-bold flex items-center justify-center text-[10px]">
-                            {app.applicant_name?.charAt(0) || 'A'}
-                          </div>
-                        )}
-                        <div>
-                          <div className="font-semibold text-slate-900 dark:text-white">{app.applicant_name}</div>
-                          <div className="text-[11px] text-slate-400">
-                            {app.phone} {app.email ? `• ${app.email}` : ''}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="font-medium text-slate-800 dark:text-slate-200">{app.circular_title}</div>
-                      <div className="text-[10px] text-slate-400">{app.class_name} • {app.session_name}</div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold uppercase rounded ${
-                          app.payment_status === 'paid'
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400'
-                            : 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400'
-                        }`}
-                      >
-                        <FiDollarSign className="w-3 h-3" />
-                        {app.payment_status}
-                      </span>
-                      {app.gateway_provider && (
-                        <div className="text-[10px] text-slate-400 mt-0.5 font-mono uppercase">
-                          via {app.gateway_provider}
-                        </div>
+                        </a>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 italic">No Photo</span>
                       )}
                     </td>
-                    <td className="py-3 px-4 font-mono">
-                      {app.merit_score !== null ? (
-                        <div className="font-bold text-sky-600 dark:text-sky-400">
-                          {app.merit_score} pts {app.merit_rank ? `(#${app.merit_rank})` : ''}
+
+                    {/* Signature (150x50) */}
+                    <td className="py-2 px-3">
+                      {app.signature_url ? (
+                        <a href={app.signature_url} target="_blank" rel="noreferrer" title="Click to view 150x50 signature">
+                          <img
+                            src={app.signature_url}
+                            alt="Signature"
+                            className="h-6 max-w-[80px] object-contain border border-slate-200 dark:border-slate-700 bg-white p-0.5 rounded hover:scale-125 transition-transform"
+                          />
+                        </a>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 italic">No Signature</span>
+                      )}
+                    </td>
+
+                    <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600 dark:text-slate-300">
+                      {app.email}
+                    </td>
+
+                    <td className="py-2.5 px-3 font-mono text-[11px] text-slate-700 dark:text-slate-300">
+                      {app.phone}
+                    </td>
+
+                    <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">
+                      {app.gender || 'N/A'}
+                    </td>
+
+                    <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600 dark:text-slate-400">
+                      {app.date_of_birth ? new Date(app.date_of_birth).toLocaleDateString() : 'N/A'}
+                    </td>
+
+                    <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300 font-medium">
+                      <span>{app.circular_title || 'Circular'}</span>
+                      <span className="text-slate-400 text-[10px] block">Class: {app.class_name || 'General'}</span>
+                    </td>
+
+                    <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300">
+                      <span>{app.father_name || 'N/A'}</span>
+                      {app.father_phone && <span className="text-slate-400 text-[10px] block font-mono">{app.father_phone}</span>}
+                    </td>
+
+                    <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300">
+                      <span>{app.mother_name || 'N/A'}</span>
+                      {app.mother_phone && <span className="text-slate-400 text-[10px] block font-mono">{app.mother_phone}</span>}
+                    </td>
+
+                    <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300">
+                      <span>{app.guardian_name || app.father_name || 'N/A'}</span>
+                      <span className="text-slate-400 text-[10px] block font-mono">{app.guardian_phone || app.father_phone || 'N/A'}</span>
+                    </td>
+
+                    <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400 max-w-xs truncate" title={app.present_address}>
+                      {app.present_address || 'N/A'}
+                    </td>
+
+                    <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400 max-w-xs truncate" title={app.permanent_address}>
+                      {app.permanent_address || 'N/A'}
+                    </td>
+
+                    <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300">
+                      <span>{app.previous_school || 'N/A'}</span>
+                      <span className="text-slate-400 text-[10px] block font-mono">GPA: {app.previous_gpa || 'N/A'}</span>
+                    </td>
+
+                    <td className="py-2.5 px-3">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                          app.payment_status === 'paid'
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50'
+                            : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50'
+                        }`}
+                      >
+                        {app.payment_status || 'UNPAID'}
+                      </span>
+                    </td>
+
+                    {/* Application Status: Shows "completed", "selected", "rejected", "pending" */}
+                    <td className="py-2.5 px-3">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                          app.status === 'completed'
+                            ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50'
+                            : app.status === 'selected' || app.status === 'accepted'
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50'
+                            : app.status === 'rejected'
+                            ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50'
+                            : 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50'
+                        }`}
+                      >
+                        {app.status || 'pending'}
+                      </span>
+                    </td>
+
+                    {/* Score & Merit Rank */}
+                    <td className="py-2.5 px-3 font-mono text-[11px]">
+                      {editingScoreId === app.id ? (
+                        <div className="flex items-center gap-1.5 animate-fade-in">
+                          <input
+                            type="number"
+                            step="0.1"
+                            placeholder="Score"
+                            value={scoreInput}
+                            onChange={(e) => setScoreInput(e.target.value)}
+                            className="w-16 px-1.5 py-0.5 border border-slate-300 dark:border-slate-700 rounded text-xs"
+                          />
+                          <input
+                            type="number"
+                            placeholder="Rank"
+                            value={rankInput}
+                            onChange={(e) => setRankInput(e.target.value)}
+                            className="w-14 px-1.5 py-0.5 border border-slate-300 dark:border-slate-700 rounded text-xs"
+                          />
+                          <button
+                            onClick={() => handleSaveScore(app.id)}
+                            className="p-1 text-emerald-600 hover:bg-emerald-50 rounded cursor-pointer"
+                            title="Save Score"
+                          >
+                            <FiCheck />
+                          </button>
+                          <button
+                            onClick={() => setEditingScoreId(null)}
+                            className="p-1 text-slate-400 hover:bg-slate-100 rounded cursor-pointer"
+                            title="Cancel"
+                          >
+                            <FiX />
+                          </button>
                         </div>
                       ) : (
-                        <button
+                        <div
                           onClick={() => {
-                            setScoreModalApplicant(app);
-                            setScoreInput('');
-                            setRankInput('');
+                            setEditingScoreId(app.id);
+                            setScoreInput(app.score !== null ? String(app.score) : '');
+                            setRankInput(app.merit_position !== null ? String(app.merit_position) : '');
                           }}
-                          className="text-[10px] text-slate-400 hover:text-sky-600 underline"
+                          className="cursor-pointer hover:underline text-slate-700 dark:text-slate-300 flex items-center gap-1.5"
+                          title="Click to edit Score / Rank"
                         >
-                          + Set Score
-                        </button>
+                          <span>{app.score !== null ? `${parseFloat(app.score).toFixed(2)} pts` : 'No score'}</span>
+                          {app.merit_position && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300">
+                              Rank #{app.merit_position}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </td>
-                    <td className="py-3 px-4">
-                      <span
-                        className={`inline-block px-2.5 py-0.5 text-[10px] font-bold uppercase rounded ${
-                          app.status === 'selected'
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 ring-1 ring-emerald-300'
-                            : app.status === 'rejected'
-                            ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400'
-                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400'
-                        }`}
-                      >
-                        {app.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-right">
+
+                    {/* Actions: Direct Accept / Reject Buttons (NO popup modal) */}
+                    <td className="py-2.5 px-3 text-right sticky right-0 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700 shadow-xs">
                       <div className="flex items-center justify-end gap-1.5">
-                        {/* Select Button */}
                         <button
                           onClick={() => handleEvaluate(app.id, 'selected')}
-                          disabled={actionLoading || app.status === 'selected'}
-                          className={`px-2 py-1 rounded text-[11px] font-semibold transition ${
-                            app.status === 'selected'
-                              ? 'bg-emerald-50 text-emerald-700 opacity-60 cursor-default'
-                              : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs'
-                          }`}
-                          title="Select / Approve Applicant"
+                          disabled={actionLoadingId === app.id || app.status === 'selected' || app.status === 'accepted'}
+                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-semibold transition cursor-pointer disabled:opacity-40 flex items-center gap-1"
+                          title="Accept student for admission"
                         >
-                          Select
+                          <FiCheckCircle className="text-xs" />
+                          <span>Accept</span>
                         </button>
 
-                        {/* Reject Button */}
                         <button
                           onClick={() => handleEvaluate(app.id, 'rejected')}
-                          disabled={actionLoading || app.status === 'rejected'}
-                          className={`px-2 py-1 rounded text-[11px] font-semibold transition ${
-                            app.status === 'rejected'
-                              ? 'bg-rose-50 text-rose-700 opacity-60 cursor-default'
-                              : 'bg-rose-600 hover:bg-rose-700 text-white shadow-2xs'
-                          }`}
-                          title="Reject Applicant"
+                          disabled={actionLoadingId === app.id || app.status === 'rejected'}
+                          className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-[11px] font-semibold transition cursor-pointer disabled:opacity-40 flex items-center gap-1"
+                          title="Reject student application"
                         >
-                          Reject
-                        </button>
-
-                        {/* Score Button */}
-                        <button
-                          onClick={() => {
-                            setScoreModalApplicant(app);
-                            setScoreInput(app.merit_score !== null ? String(app.merit_score) : '');
-                            setRankInput(app.merit_rank !== null ? String(app.merit_rank) : '');
-                          }}
-                          className="p-1.5 text-slate-500 hover:text-sky-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
-                          title="Assign Merit Score / Rank"
-                        >
-                          <FiAward className="w-3.5 h-3.5" />
-                        </button>
-
-                        {/* View Details */}
-                        <button
-                          onClick={() => setActiveApplicant(app)}
-                          className="p-1.5 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition"
-                          title="View Full Profile"
-                        >
-                          <FiEye className="w-3.5 h-3.5" />
+                          <FiXCircle className="text-xs" />
+                          <span>Reject</span>
                         </button>
                       </div>
                     </td>
@@ -521,205 +666,6 @@ function ApplicantsContent() {
           </table>
         </div>
       </div>
-
-      {/* Applicant Details Modal */}
-      {activeApplicant && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                {activeApplicant.photo_url ? (
-                  <img
-                    src={activeApplicant.photo_url}
-                    alt={activeApplicant.applicant_name}
-                    className="w-12 h-12 rounded-lg object-cover border border-slate-200 dark:border-slate-700"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-lg bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-bold flex items-center justify-center text-lg">
-                    {activeApplicant.applicant_name?.charAt(0)}
-                  </div>
-                )}
-                <div>
-                  <h3 className="font-bold text-slate-900 dark:text-white text-base">
-                    {activeApplicant.applicant_name}
-                  </h3>
-                  <div className="text-xs text-slate-400 font-mono">
-                    App No: <strong>{activeApplicant.application_no}</strong> | Roll: <strong>{activeApplicant.roll_no || 'Pending'}</strong>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={() => setActiveApplicant(null)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-white"
-              >
-                <FiX className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-4 text-xs">
-              {/* Status Header Bar */}
-              <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/60 rounded border border-slate-200 dark:border-slate-700">
-                <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Decision Status</span>
-                  <span className="font-bold text-sm uppercase text-slate-900 dark:text-white">
-                    {activeApplicant.status}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleEvaluate(activeApplicant.id, 'selected')}
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded text-xs"
-                  >
-                    Select Candidate
-                  </button>
-                  <button
-                    onClick={() => handleEvaluate(activeApplicant.id, 'rejected')}
-                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded text-xs"
-                  >
-                    Reject Candidate
-                  </button>
-                </div>
-              </div>
-
-              {/* Personal & Academic Data Grid */}
-              <div className="grid grid-cols-2 gap-3 text-slate-700 dark:text-slate-300">
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/30 rounded border border-slate-100 dark:border-slate-800">
-                  <strong className="block text-slate-400 text-[10px] uppercase">Candidate Email</strong>
-                  <span>{activeApplicant.email || 'Not specified'}</span>
-                </div>
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/30 rounded border border-slate-100 dark:border-slate-800">
-                  <strong className="block text-slate-400 text-[10px] uppercase">Phone Number</strong>
-                  <span>{activeApplicant.phone || 'Not specified'}</span>
-                </div>
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/30 rounded border border-slate-100 dark:border-slate-800">
-                  <strong className="block text-slate-400 text-[10px] uppercase">Date of Birth / Gender</strong>
-                  <span>{activeApplicant.date_of_birth ? new Date(activeApplicant.date_of_birth).toLocaleDateString() : 'N/A'} • {activeApplicant.gender || 'N/A'}</span>
-                </div>
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/30 rounded border border-slate-100 dark:border-slate-800">
-                  <strong className="block text-slate-400 text-[10px] uppercase">Blood Group / Religion</strong>
-                  <span>{activeApplicant.blood_group || 'N/A'} • {activeApplicant.religion || 'N/A'}</span>
-                </div>
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/30 rounded border border-slate-100 dark:border-slate-800">
-                  <strong className="block text-slate-400 text-[10px] uppercase">Father&apos;s Name & Contact</strong>
-                  <span>{activeApplicant.father_name || 'N/A'} ({activeApplicant.father_phone || 'N/A'})</span>
-                </div>
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/30 rounded border border-slate-100 dark:border-slate-800">
-                  <strong className="block text-slate-400 text-[10px] uppercase">Mother&apos;s Name & Contact</strong>
-                  <span>{activeApplicant.mother_name || 'N/A'} ({activeApplicant.mother_phone || 'N/A'})</span>
-                </div>
-              </div>
-
-              {/* Media Preview (Photo & Signature) */}
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded border border-slate-200 dark:border-slate-700 space-y-2">
-                <span className="font-semibold text-slate-900 dark:text-white block text-[11px] uppercase tracking-wider">
-                  Uploaded Candidate Media
-                </span>
-                <div className="flex items-center gap-6">
-                  <div>
-                    <span className="text-[10px] text-slate-400 block mb-1">Candidate Photo (500x500):</span>
-                    {activeApplicant.photo_url ? (
-                      <img
-                        src={activeApplicant.photo_url}
-                        alt="Candidate 500x500"
-                        className="w-24 h-24 object-cover rounded border border-slate-300 dark:border-slate-600"
-                      />
-                    ) : (
-                      <span className="text-slate-400 italic">No photo uploaded</span>
-                    )}
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block mb-1">Candidate Signature:</span>
-                    {activeApplicant.signature_url ? (
-                      <img
-                        src={activeApplicant.signature_url}
-                        alt="Candidate Signature"
-                        className="h-10 max-w-[150px] object-contain border border-slate-300 dark:border-slate-600 bg-white p-1 rounded"
-                      />
-                    ) : (
-                      <span className="text-slate-400 italic">No signature uploaded</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
-              <button
-                onClick={() => setActiveApplicant(null)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded font-medium text-xs"
-              >
-                Close Profile
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Score Modal */}
-      {scoreModalApplicant && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg max-w-sm w-full p-4 shadow-xl text-xs space-y-3">
-            <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-              <FiAward className="text-sky-600" />
-              Assign Merit Score & Rank
-            </h3>
-            <p className="text-slate-500 text-[11px]">
-              Candidate: <strong>{scoreModalApplicant.applicant_name}</strong> ({scoreModalApplicant.application_no})
-            </p>
-
-            <form onSubmit={handleScoreSubmit} className="space-y-3">
-              <div>
-                <label className="block text-slate-600 dark:text-slate-400 font-medium mb-1">
-                  Merit Score / Marks
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  placeholder="e.g. 88.5"
-                  value={scoreInput}
-                  onChange={(e) => setScoreInput(e.target.value)}
-                  className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-600 dark:text-slate-400 font-medium mb-1">
-                  Merit Rank (Optional)
-                </label>
-                <input
-                  type="number"
-                  placeholder="e.g. 1, 2, 3..."
-                  value={rankInput}
-                  onChange={(e) => setRankInput(e.target.value)}
-                  className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setScoreModalApplicant(null)}
-                  className="px-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded text-slate-600 dark:text-slate-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={actionLoading}
-                  className="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded disabled:opacity-50 min-w-[90px] flex items-center justify-center"
-                >
-                  {actionLoading ? (
-                    <div className="loader loader-sm loader-white" />
-                  ) : (
-                    'Save Score'
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

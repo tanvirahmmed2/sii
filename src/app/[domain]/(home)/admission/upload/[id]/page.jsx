@@ -72,9 +72,9 @@ export default function CandidateUploadPage() {
     if (!file) return;
 
     try {
-      const base64Str = await validateImageDimensions(file, 500, 500, 'Candidate Photo');
+      const base64Str = await validateImageDimensions(file, 300, 300, 'Candidate Photo');
       setImagePreview(base64Str);
-      toast.success('Candidate photo dimensions verified (500x500 px)!');
+      toast.success('Candidate photo dimensions verified (300x300 px)!');
     } catch (err) {
       toast.error(err.message);
       e.target.value = '';
@@ -86,9 +86,9 @@ export default function CandidateUploadPage() {
     if (!file) return;
 
     try {
-      const base64Str = await validateImageDimensions(file, 150, 30, 'Candidate Signature');
+      const base64Str = await validateImageDimensions(file, 150, 50, 'Candidate Signature');
       setSignaturePreview(base64Str);
-      toast.success('Candidate signature dimensions verified (150x30 px)!');
+      toast.success('Candidate signature dimensions verified (150x50 px)!');
     } catch (err) {
       toast.error(err.message);
       e.target.value = '';
@@ -98,11 +98,11 @@ export default function CandidateUploadPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!imagePreview) {
-      toast.error('Please upload candidate profile photo (500x500 px).');
+      toast.error('Please upload candidate profile photo (300x300 px).');
       return;
     }
     if (!signaturePreview) {
-      toast.error('Please upload candidate signature (150x30 px).');
+      toast.error('Please upload candidate signature (150x50 px).');
       return;
     }
 
@@ -159,12 +159,36 @@ export default function CandidateUploadPage() {
     );
   }
 
+  const [paying, setPaying] = useState(false);
+
+  const handlePayNow = async () => {
+    setPaying(true);
+    try {
+      const res = await fetch(`/api/${domain}/admissions/pay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicant_id: applicant.id }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success('Admission fee payment cleared successfully!');
+        setApplicant((prev) => ({ ...prev, payment_status: 'paid' }));
+      } else {
+        toast.error(data.error || 'Failed to complete payment.');
+      }
+    } catch {
+      toast.error('Network error during fee payment.');
+    } finally {
+      setPaying(false);
+    }
+  };
+
   // Payment clearance enforcement
   if (applicant.payment_status !== 'paid') {
     return (
       <div className="w-full max-w-lg mx-auto p-6 sm:p-8 bg-white dark:bg-slate-900 rounded-xl border border-amber-200 dark:border-amber-900/50 shadow-sm space-y-4 text-center">
         <div className="w-12 h-12 bg-amber-100 dark:bg-amber-950/60 text-amber-600 rounded-full flex items-center justify-center mx-auto text-xl">
-          <FiLock />
+          <FiCreditCard />
         </div>
         <h2 className="text-lg font-bold text-slate-900 dark:text-white">
           Application Fee Clearance Required
@@ -178,12 +202,25 @@ export default function CandidateUploadPage() {
           <div><strong>Application Tracking No:</strong> <span className="font-mono font-bold text-sky-600">{applicant.application_no}</span></div>
           <div><strong>Circular:</strong> {applicant.circular_title}</div>
         </div>
-        <Link
-          href="/admission/apply"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs rounded-lg transition"
-        >
-          <FiCreditCard /> Clear Fee Now
-        </Link>
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <button
+            onClick={handlePayNow}
+            disabled={paying}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg transition cursor-pointer disabled:opacity-50"
+          >
+            {paying ? (
+              <>
+                <div className="loader loader-xs loader-white" />
+                <span>Clearing Fee...</span>
+              </>
+            ) : (
+              <>
+                <FiCreditCard />
+                <span>Pay & Clear Fee Now</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
     );
   }
@@ -244,10 +281,10 @@ export default function CandidateUploadPage() {
               <div className="text-center">
                 <img
                   src={imagePreview}
-                  alt="Candidate 500x500"
+                  alt="Candidate 300x300"
                   className="w-28 h-28 object-cover rounded-lg border-2 border-slate-300 dark:border-slate-600 shadow-2xs"
                 />
-                <span className="text-[9px] text-slate-400 font-mono mt-1 block">Photo (500x500)</span>
+                <span className="text-[9px] text-slate-400 font-mono mt-1 block">Photo (300x300)</span>
               </div>
               <div className="text-center">
                 <img
@@ -255,7 +292,7 @@ export default function CandidateUploadPage() {
                   alt="Candidate Signature"
                   className="h-7 max-w-[150px] object-contain border border-slate-300 dark:border-slate-600 bg-white p-0.5 rounded shadow-2xs"
                 />
-                <span className="text-[9px] text-slate-400 font-mono mt-0.5 block">Official Signature</span>
+                <span className="text-[9px] text-slate-400 font-mono mt-0.5 block">Official Signature (150x50)</span>
               </div>
             </div>
           </div>
@@ -295,11 +332,11 @@ export default function CandidateUploadPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6 text-xs">
-        {/* Photo Upload: 500x500 */}
+        {/* Photo Upload: 300x300 */}
         <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-700 space-y-3">
           <div className="flex items-center justify-between">
             <span className="font-bold text-slate-900 dark:text-white text-xs">
-              Candidate Photo * (Strictly 500 × 500 Pixels)
+              Candidate Photo * (Strictly 300 × 300 Pixels)
             </span>
             <span className="text-[10px] text-sky-600 font-mono font-semibold">Square Aspect 1:1</span>
           </div>
@@ -309,7 +346,7 @@ export default function CandidateUploadPage() {
               {imagePreview ? (
                 <img
                   src={imagePreview}
-                  alt="500x500 Preview"
+                  alt="300x300 Preview"
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -325,27 +362,27 @@ export default function CandidateUploadPage() {
                 className="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 cursor-pointer"
               />
               <p className="text-[11px] text-slate-400">
-                Please upload a front-facing studio portrait. The system strictly checks image dimensions for exactly 500px width and 500px height.
+                Please upload a front-facing studio portrait. The system strictly checks image dimensions for exactly 300px width and 300px height.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Signature Upload: 150x30 */}
+        {/* Signature Upload: 150x50 */}
         <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-700 space-y-3">
           <div className="flex items-center justify-between">
             <span className="font-bold text-slate-900 dark:text-white text-xs">
-              Candidate Signature * (Strictly 150 × 30 Pixels)
+              Candidate Signature * (Strictly 150 × 50 Pixels)
             </span>
-            <span className="text-[10px] text-sky-600 font-mono font-semibold">Aspect 5:1</span>
+            <span className="text-[10px] text-sky-600 font-mono font-semibold">Aspect 3:1</span>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="w-36 h-10 rounded border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center overflow-hidden bg-white p-1">
+            <div className="w-36 h-12 rounded border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center overflow-hidden bg-white p-1">
               {signaturePreview ? (
                 <img
                   src={signaturePreview}
-                  alt="150x30 Signature Preview"
+                  alt="150x50 Signature Preview"
                   className="w-full h-full object-contain"
                 />
               ) : (
@@ -361,7 +398,7 @@ export default function CandidateUploadPage() {
                 className="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 cursor-pointer"
               />
               <p className="text-[11px] text-slate-400">
-                Sign on white paper, scan/crop to exactly 150px width and 30px height with crisp contrast.
+                Sign on white paper, scan/crop to exactly 150px width and 50px height with crisp contrast.
               </p>
             </div>
           </div>

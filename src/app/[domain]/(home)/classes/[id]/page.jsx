@@ -119,18 +119,47 @@ const ClassDetailsPage = () => {
           <div className="space-y-6">
             
             {/* Header Banner */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 shadow-xs space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                  Code: {selectedClass.code || selectedClass.id}
-                </span>
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                    Code: {selectedClass.code || selectedClass.id}
+                  </span>
+                </div>
+                {selectedClass.expected_cost && parseFloat(selectedClass.expected_cost) > 0 && (
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
+                    <span>Expected Commitment:</span>
+                    <span className="font-bold text-emerald-800 dark:text-emerald-200">
+                      ৳{parseFloat(selectedClass.expected_cost).toLocaleString()}
+                    </span>
+                    <span className="text-[10px] font-normal text-emerald-600 dark:text-emerald-400">/ academic year</span>
+                  </div>
+                )}
               </div>
-              <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
-                {selectedClass.name}
-              </h1>
+
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                  {selectedClass.name}
+                </h1>
+                {selectedClass.motto && (
+                  <p className="text-sm italic font-medium text-emerald-700 dark:text-emerald-400 mt-1">
+                    &ldquo;{selectedClass.motto}&rdquo;
+                  </p>
+                )}
+              </div>
+
+              {selectedClass.summary && (
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">
+                    Overview Synopsis
+                  </span>
+                  {selectedClass.summary}
+                </div>
+              )}
+
               {selectedClass.description && (
                 <div
-                  className="prose dark:prose-invert max-w-none text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed pt-2 border-t border-slate-100 dark:border-slate-800"
+                  className="prose dark:prose-invert max-w-none text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed pt-3 border-t border-slate-100 dark:border-slate-800"
                   dangerouslySetInnerHTML={{ __html: selectedClass.description }}
                 />
               )}

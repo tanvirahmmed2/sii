@@ -57,7 +57,7 @@ graph TD
 The database consists of **50+ relational tables** designed to support normalized data operations, strict constraint checks, cascading deletes, and automated audit triggers.
 
 ### 1. Academic & Organization Setup
-- `classes`: Standard academic classes (e.g. Class 9, Class 10). Contains `code`, `numeric_name`, and `max_seats` capacity rules.
+- `classes`: Standard academic classes (e.g. Class 9, Class 10). Contains `code`, `department_id`, and `max_seats` capacity rules.
 - `sections`: Sub-units of classes containing section names, room numbers, and capacity limits. Unique mapping for `(class_id, name)`.
 - `subjects`: List of institutional courses (e.g. Physics, Calculus, Literature) containing codes and names.
 - `class_subjects`: Many-to-many bridge table mapping which subjects are taught in which classes.

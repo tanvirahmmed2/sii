@@ -70,23 +70,39 @@ const ClassesPage = () => {
                 key={cls.id || cls.code}
                 className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 p-4 flex flex-col justify-between gap-3"
               >
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="font-semibold text-slate-900 dark:text-white text-sm sm:text-base">
                       {cls.name}
                     </h3>
-                    {cls.code && (
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                        {cls.code}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {cls.code && (
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                          {cls.code}
+                        </span>
+                      )}
+                    </div>
                   </div>
+
+                  {cls.motto && (
+                    <p className="text-[11px] italic text-emerald-700 dark:text-emerald-400 font-medium">
+                      &ldquo;{cls.motto}&rdquo;
+                    </p>
+                  )}
+
                   <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-normal">
-                    Access syllabus plans, subject schedules, and grading standards for {cls.name}.
+                    {cls.summary || `Access syllabus plans, subject schedules, and grading standards for ${cls.name}.`}
                   </p>
                 </div>
 
                 <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-xs">
+                  {cls.expected_cost && parseFloat(cls.expected_cost) > 0 ? (
+                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                      ৳{parseFloat(cls.expected_cost).toLocaleString()} <span className="text-[10px] text-slate-400 font-normal">/ yr</span>
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-slate-400">Academic Program</span>
+                  )}
                   <Link
                     href={classTarget}
                     className="font-medium text-slate-900 dark:text-white hover:underline"

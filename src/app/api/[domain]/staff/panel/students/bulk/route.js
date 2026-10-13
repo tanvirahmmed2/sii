@@ -46,21 +46,32 @@ export async function POST(request, context) {
     }
 
     // Pre-fetch academic references for this institution
-    const [classesRes, sectionsRes, sessionsRes] = await Promise.all([
-      queryDb(`SELECT id, name, code FROM website_classes WHERE website_id = $1`, [website.id]),
+    const [deptsRes, classesRes, sectionsRes, sessionsRes] = await Promise.all([
+      queryDb(`SELECT id, name, code FROM website_departments WHERE website_id = $1`, [website.id]),
+      queryDb(`SELECT id, name, code, department_id, session_id FROM website_classes WHERE website_id = $1`, [website.id]),
       queryDb(`SELECT id, name, class_id FROM website_sections WHERE website_id = $1`, [website.id]),
       queryDb(`SELECT id, name FROM website_sessions WHERE website_id = $1`, [website.id]),
     ]);
 
+    const deptsList = deptsRes.rows;
     const classesList = classesRes.rows;
     const sectionsList = sectionsRes.rows;
     const sessionsList = sessionsRes.rows;
+
+    const findDepartmentId = (val) => {
+      if (!val) return null;
+      const str = String(val).trim().toLowerCase();
+      const found = deptsList.find(
+        (d) => (d.code && d.code.toLowerCase() === str) || d.name.toLowerCase() === str || String(d.id) === str
+      );
+      return found ? found.id : null;
+    };
 
     const findClassId = (val) => {
       if (!val) return null;
       const str = String(val).trim().toLowerCase();
       const found = classesList.find(
-        (c) => c.code.toLowerCase() === str || c.name.toLowerCase() === str || String(c.id) === str
+        (c) => (c.code && c.code.toLowerCase() === str) || c.name.toLowerCase() === str || String(c.id) === str
       );
       return found ? found.id : null;
     };
@@ -99,17 +110,12 @@ export async function POST(request, context) {
 
       // Extract normalized values from row
       const rawReg = (row.Registration || row['Registration No'] || row['Registration Number'] || row.registration_no || row.reginumber || row['Reg No'] || '').trim();
+      const deptInput = row.Department || row['Department Name'] || row.department_id || row.department || '';
       const classInput = row.Class || row['Class Code'] || row['Class Name'] || row.class_id || '';
       const sectionInput = row.Section || row['Section Name'] || row.section_id || '';
       const sessionInput = row.Session || row['Session Name'] || row.session_id || '';
-      const name = (row.Name || row['Student Name'] || row.name || '').trim() || null;
       const email = (row.Email || row['Email Address'] || row.email || '').trim().toLowerCase() || null;
-      const phone = (row.Phone || row.Number || row.Mobile || row['Phone Number'] || row.phone || '').trim() || null;
       const rollNo = (row.Roll || row['Roll No'] || row['Roll Number'] || row.roll_no || '').trim() || null;
-      const gender = (row.Gender || row.gender || 'Male').trim();
-      const bloodGroup = (row['Blood Group'] || row.BloodGroup || row.blood_group || '').trim() || null;
-      const rawDob = row['Date of Birth'] || row.DOB || row.dob || null;
-      const religion = (row.Religion || row.religion || '').trim() || null;
 
       if (!rawReg) {
         results.failed++;
@@ -123,6 +129,11 @@ export async function POST(request, context) {
         results.errors.push({ row: rowIdx, registration_no: rawReg, error: `Class "${classInput || 'Blank'}" could not be matched.` });
         continue;
       }
+
+      const matchedClass = classesList.find((c) => String(c.id) === String(resolvedClassId));
+      const resolvedDeptId = findDepartmentId(deptInput) || matchedClass?.department_id || null;
+      const resolvedSessionId = findSessionId(sessionInput) || matchedClass?.session_id || null;
+      const resolvedSectionId = findSectionId(sectionInput, resolvedClassId);
 
       // Check duplicate email if email was provided
       if (email) {
@@ -153,121 +164,78 @@ export async function POST(request, context) {
         continue;
       }
 
-      const resolvedSectionId = findSectionId(sectionInput, resolvedClassId);
-      const resolvedSessionId = findSessionId(sessionInput);
-
       const studentUniqueId = `STU-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
-      const demoPassword = `${crypto.randomBytes(4).toString('hex')}S1!`;
-      const hashedPassword = await hashPassword(demoPassword);
-      const verificationToken = crypto.randomBytes(32).toString('hex');
-      const tokenExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
       try {
         const insertRes = await queryDb(
           `INSERT INTO website_students (
-              website_id, registration_no, roll_no, student_unique_id,
-              class_id, section_id, session_id, email, is_active
+              website_id, department_id, session_id, class_id, section_id,
+              registration_no, roll_no, email, student_unique_id, is_active
            )
            VALUES (
-              $1, $2, $3, $4,
-              $5, $6, $7, $8, FALSE
+              $1, $2, $3, $4, $5,
+              $6, $7, $8, $9, FALSE
            )
-           RETURNING id, registration_no, student_unique_id, email`,
+           RETURNING id, registration_no, roll_no, student_unique_id, email`,
           [
             website.id,
-            regNo,
-            rollNo || null,
-            studentUniqueId,
+            resolvedDeptId,
+            resolvedSessionId,
             resolvedClassId,
             resolvedSectionId,
-            resolvedSessionId,
+            regNo,
+            rollNo || null,
             email || null,
+            studentUniqueId,
           ]
         );
 
         const newStudent = insertRes.rows[0];
 
-        const insertInfoRes = await queryDb(
-          `INSERT INTO website_student_info (
-              website_id, student_id,
-              name, email, number, gender, blood_group,
-              date_of_birth, religion, admission_date,
-              password, verification_token, verification_token_expires,
-              verification_status, is_registered, is_verified
-           )
-           VALUES (
-              $1, $2,
-              $3, $4, $5, $6, $7,
-              $8, $9, CURRENT_DATE,
-              $10, $11, $12,
-              'pending_setup', FALSE, FALSE
-           )
-           RETURNING id, name, email`,
-          [
-            website.id,
-            newStudent.id,
-            name || null,
-            email || null,
-            phone || null,
-            ['Male', 'Female', 'Other'].includes(gender) ? gender : 'Male',
-            bloodGroup || null,
-            rawDob ? new Date(rawDob) : null,
-            religion || null,
-            hashedPassword,
-            verificationToken,
-            tokenExpires,
-          ]
-        );
-
-        const newInfo = insertInfoRes.rows[0];
-
-        // Build setup URL and dispatch Brevo invitation email if email exists
+        // Send setup notification email via Brevo if email is provided
         if (email) {
-          const setupUrl = buildStudentSetupUrl(website, verificationToken, request);
-
           try {
+            const setupUrl = `/auth/student/setup`;
             const emailHtml = buildStyledEmail({
-              title: `Welcome to ${website.name || 'Institutional Portal'}`,
-              preheader: `Complete your student account setup and enrollment credentials.`,
-              websiteName: website.name || 'Educational Management Platform',
-              bodyContent: `
-                <p>Dear <strong>${name || 'Student'}</strong>,</p>
-                <p>You have been enrolled as a student at <strong>${website.name || 'our institution'}</strong>. Please finalize your enrollment and set your personal account password by clicking the button below.</p>
-                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px; margin: 16px 0; font-size: 13px;">
-                  <p style="margin: 0 0 6px 0;"><strong>Registration Number:</strong> <span style="font-family: monospace;">${newStudent.registration_no}</span></p>
-                  <p style="margin: 0 0 6px 0;"><strong>Student Unique ID:</strong> <span style="font-family: monospace;">${newStudent.student_unique_id}</span></p>
-                  <p style="margin: 0;"><strong>Initial Demo Password:</strong> <span style="font-family: monospace; color: #475569;">${demoPassword}</span></p>
-                </div>
-                <p style="font-size: 13px; color: #64748b;">Verify your email via one-time code to activate your account for Student Portal access.</p>
-              `,
-              ctaButton: {
-                label: 'Setup Student Account →',
-                url: setupUrl,
-              },
+              title: `Student Account Setup - ${website.name || 'Portal'}`,
+              recipientName: 'Student',
+              paragraphs: [
+                `You have been registered at <strong>${website.name || 'our institution'}</strong>.`,
+                `Your registration number is: <strong>${newStudent.registration_no}</strong>`,
+                `Please complete your student account setup by verifying your email and configuring your credentials.`,
+              ],
+              buttonText: 'Complete Account Setup',
+              buttonUrl: setupUrl,
+              footerNote: 'If you did not request this registration, please contact your administration office.'
             });
 
             await sendEmail({
               to: email,
-              toName: name || 'Student',
-              subject: `Complete Your Student Account Setup - ${website.name || 'Portal'}`,
+              toName: 'Student',
+              subject: `Student Account Setup - ${website.name || 'Portal'}`,
               html: emailHtml,
               websiteId: website.id,
             });
-          } catch (emailErr) {
-            console.warn(`Bulk email dispatch failed for ${email}:`, emailErr.message);
+          } catch (mailErr) {
+            console.warn(`[BulkRegister] Mail dispatch skipped for ${email}:`, mailErr.message);
           }
         }
 
         results.successful++;
         results.created.push({
+          row: rowIdx,
           id: newStudent.id,
-          name: name || null,
-          email: email || null,
           registration_no: newStudent.registration_no,
+          student_unique_id: newStudent.student_unique_id,
+          email: newStudent.email,
         });
       } catch (insertErr) {
         results.failed++;
-        results.errors.push({ row: rowIdx, name, email, error: insertErr.message });
+        results.errors.push({
+          row: rowIdx,
+          registration_no: regNo,
+          error: insertErr.message || 'Database insert failed.',
+        });
       }
     }
 

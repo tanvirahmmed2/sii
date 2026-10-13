@@ -7,7 +7,6 @@ import TiptapEditor from 'src/component/helper/TiptapEditor';
 
 const ClassCreateForm = ({ onSuccess, onCancel }) => {
   const [name, setName] = useState('');
-  const [numericName, setNumericName] = useState('');
   const [code, setCode] = useState('');
   const [maxSeats, setMaxSeats] = useState('40');
   const [description, setDescription] = useState('');
@@ -15,8 +14,8 @@ const ClassCreateForm = ({ onSuccess, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name || !numericName || !code) {
-      toast.error('All fields are required.');
+    if (!name || !code) {
+      toast.error('All required fields must be filled.');
       return;
     }
 
@@ -25,7 +24,7 @@ const ClassCreateForm = ({ onSuccess, onCancel }) => {
       const response = await fetch('/api/classes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, numeric_name: numericName, code, max_seats: maxSeats, description }),
+        body: JSON.stringify({ name, code, max_seats: maxSeats, description }),
       });
 
       const data = await response.json();
@@ -36,7 +35,6 @@ const ClassCreateForm = ({ onSuccess, onCancel }) => {
 
       toast.success(data.message || 'Class created successfully!');
       setName('');
-      setNumericName('');
       setCode('');
       setMaxSeats('40');
       setDescription('');
@@ -54,7 +52,7 @@ const ClassCreateForm = ({ onSuccess, onCancel }) => {
         <FiFolderPlus className="text-primary" /> Add New Class
       </h2>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-5">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
             <FiFolderPlus className="text-slate-400" /> Class Name
@@ -64,20 +62,6 @@ const ClassCreateForm = ({ onSuccess, onCancel }) => {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            disabled={submitting}
-            className="w-full px-3.5 py-2.5 bg-slate-55 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 bg-slate-50"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-            <FiHash className="text-slate-400" /> Numeric Name
-          </label>
-          <input
-            type="number"
-            required
-            value={numericName}
-            onChange={(e) => setNumericName(e.target.value)}
             disabled={submitting}
             className="w-full px-3.5 py-2.5 bg-slate-55 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 bg-slate-50"
           />

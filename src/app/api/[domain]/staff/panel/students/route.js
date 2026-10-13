@@ -18,6 +18,7 @@ export async function GET(request, context) {
     const { searchParams } = new URL(request.url);
 
     const id = searchParams.get('id');
+    const departmentId = searchParams.get('department_id');
     const classId = searchParams.get('class_id');
     const sectionId = searchParams.get('section_id');
     const sessionId = searchParams.get('session_id');
@@ -31,19 +32,21 @@ export async function GET(request, context) {
     if (id) {
       const singleRes = await queryDb(
         `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
-                s.class_id, s.section_id, s.session_id, s.is_active,
+                s.department_id, s.class_id, s.section_id, s.session_id, s.is_active,
                 s.created_at, s.updated_at,
                 COALESCE(s.email, i.email) AS email, s.email AS registered_email,
                 i.name, i.number, i.gender, i.blood_group,
                 i.date_of_birth, i.religion, i.admission_date,
                 i.is_registered, i.is_verified, i.verification_status,
                 i.verification_token, i.verification_notes, i.rejection_reason, i.verified_at,
+                dept.name AS department_name,
                 c.name AS class_name, c.code AS class_code,
                 sec.name AS section_name,
                 ses.name AS session_name,
                 st.name AS verified_by_staff_name
          FROM website_students s
          LEFT JOIN website_student_info i ON s.id = i.student_id
+         LEFT JOIN website_departments dept ON s.department_id = dept.id
          LEFT JOIN website_classes c ON s.class_id = c.id
          LEFT JOIN website_sections sec ON s.section_id = sec.id
          LEFT JOIN website_sessions ses ON s.session_id = ses.id
@@ -82,6 +85,11 @@ export async function GET(request, context) {
     const values = [website.id];
     let pIdx = 2;
 
+    if (departmentId) {
+      conditions.push(`s.department_id = $${pIdx++}`);
+      values.push(departmentId);
+    }
+
     if (classId) {
       conditions.push(`s.class_id = $${pIdx++}`);
       values.push(classId);
@@ -118,24 +126,41 @@ export async function GET(request, context) {
     );
     const totalCount = countRes.rows[0]?.total || 0;
 
-    // Fetch roster
+    // Fetch roster with full student, guardian, and address details in one row
     const rosterQuery = `
       SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
-             s.class_id, s.section_id, s.session_id, s.is_active,
+             s.department_id, s.class_id, s.section_id, s.session_id, s.is_active,
              s.created_at, s.updated_at,
              COALESCE(s.email, i.email) AS email, s.email AS registered_email,
-             i.name, i.number, i.gender, i.blood_group, i.date_of_birth,
-             i.admission_date, i.is_registered, i.is_verified,
-             i.verification_status, i.verification_token, i.verification_notes,
+             COALESCE(i.name, s.name) AS name,
+             COALESCE(i.number, s.number) AS number,
+             COALESCE(i.gender, s.gender) AS gender,
+             COALESCE(i.blood_group, s.blood_group) AS blood_group,
+             COALESCE(i.date_of_birth, s.date_of_birth) AS date_of_birth,
+             COALESCE(i.religion, s.religion) AS religion,
+             COALESCE(i.admission_date, s.admission_date) AS admission_date,
+             COALESCE(i.is_registered, s.is_registered) AS is_registered,
+             COALESCE(i.is_verified, s.is_verified) AS is_verified,
+             COALESCE(i.verification_status, s.verification_status, 'pending_setup') AS verification_status,
+             i.verification_token, i.verification_notes,
+             dept.name AS department_name,
              c.name AS class_name, c.code AS class_code,
              sec.name AS section_name,
              ses.name AS session_name,
-             p.image_url AS primary_photo_url
+             p.image_url AS primary_photo_url,
+             g.father_name, g.father_phone, g.father_nid, g.father_occupation,
+             g.mother_name, g.mother_phone, g.mother_nid, g.mother_occupation,
+             g.guardian_name, g.guardian_phone, g.guardian_relation, g.guardian_email, g.guardian_address,
+             addr.present_address, addr.permanent_address,
+             addr.city, addr.district, addr.upazila, addr.postal_code, addr.country
       FROM website_students s
       LEFT JOIN website_student_info i ON s.id = i.student_id
+      LEFT JOIN website_departments dept ON s.department_id = dept.id
       LEFT JOIN website_classes c ON s.class_id = c.id
       LEFT JOIN website_sections sec ON s.section_id = sec.id
       LEFT JOIN website_sessions ses ON s.session_id = ses.id
+      LEFT JOIN website_student_guardians g ON g.student_id = s.id
+      LEFT JOIN website_student_addresses addr ON addr.student_id = s.id
       LEFT JOIN LATERAL (
         SELECT image_url FROM website_student_pictures
         WHERE student_id = s.id AND is_primary = TRUE
@@ -182,7 +207,7 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Register single student (requires registration_no and class_id only)
+// POST: Register single student (takes only required info in website_students table: department_id, session_id, class_id, section_id, registration_no, roll_no, email)
 export async function POST(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'create');
@@ -194,27 +219,29 @@ export async function POST(request, context) {
     const body = await request.json();
 
     const {
-      name,
-      email,
-      number,
-      registration_no,
-      roll_no,
+      department_id,
+      session_id,
       class_id,
       section_id,
-      session_id,
-      gender,
-      blood_group,
-      date_of_birth,
-      religion,
-      admission_date,
+      registration_no,
+      roll_no,
+      email,
     } = body;
 
     if (!registration_no?.trim()) {
       return NextResponse.json({ success: false, error: 'Registration number is required.' }, { status: 400 });
     }
 
+    if (!department_id) {
+      return NextResponse.json({ success: false, error: 'Academic department is required.' }, { status: 400 });
+    }
+
+    if (!session_id) {
+      return NextResponse.json({ success: false, error: 'Academic session is required.' }, { status: 400 });
+    }
+
     if (!class_id) {
-      return NextResponse.json({ success: false, error: 'Class is required.' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Academic class is required.' }, { status: 400 });
     }
 
     const cleanEmail = email?.trim() ? email.trim().toLowerCase() : null;
@@ -224,12 +251,9 @@ export async function POST(request, context) {
         return NextResponse.json({ success: false, error: 'Please enter a valid student email address.' }, { status: 400 });
       }
 
-      // Check duplicate email in website_students or website_student_info
+      // Check duplicate email in website_students
       const duplicateEmail = await queryDb(
-        `SELECT s.id FROM website_students s
-         LEFT JOIN website_student_info i ON s.id = i.student_id
-         WHERE s.website_id = $1 AND (LOWER(s.email) = $2 OR LOWER(i.email) = $2)
-         LIMIT 1`,
+        `SELECT id FROM website_students WHERE website_id = $1 AND LOWER(email) = $2 LIMIT 1`,
         [website.id, cleanEmail]
       );
       if (duplicateEmail.rows.length > 0) {
@@ -257,132 +281,69 @@ export async function POST(request, context) {
     // Unique student identifier
     const studentUniqueId = `STU-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
 
-    // Generate random demo password (hashed, NOT NULL in website_student_info)
-    const demoPassword = `${crypto.randomBytes(4).toString('hex')}S1!`;
-    const hashedPassword = await hashPassword(demoPassword);
-
-    // 64-character verification token expiring in 7 days
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const tokenExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
-    // 1. Insert into website_students (including email, is_active is FALSE until setup verification is complete)
+    // Insert only required information into website_students table
     const insertRes = await queryDb(
       `INSERT INTO website_students (
-          website_id, registration_no, roll_no, student_unique_id,
-          class_id, section_id, session_id, email, is_active
+          website_id, department_id, session_id, class_id, section_id,
+          registration_no, roll_no, email, student_unique_id, is_active
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, FALSE)
        RETURNING *`,
       [
         website.id,
+        parseInt(department_id, 10),
+        parseInt(session_id, 10),
+        parseInt(class_id, 10),
+        section_id ? parseInt(section_id, 10) : null,
         regNo,
         roll_no?.trim() || null,
-        studentUniqueId,
-        class_id,
-        section_id || null,
-        session_id || null,
         cleanEmail,
+        studentUniqueId,
       ]
     );
 
     const newStudent = insertRes.rows[0];
 
-    // 2. Insert into website_student_info (password NOT NULL)
-    const insertInfoRes = await queryDb(
-      `INSERT INTO website_student_info (
-          website_id, student_id,
-          name, email, number, gender, blood_group,
-          date_of_birth, religion, admission_date,
-          password, verification_token, verification_token_expires,
-          verification_status, is_registered, is_verified
-       )
-       VALUES (
-          $1, $2,
-          $3, $4, $5, $6, $7,
-          $8, $9, COALESCE($10, CURRENT_DATE),
-          $11, $12, $13,
-          'pending_setup', FALSE, FALSE
-       )
-       RETURNING *`,
-      [
-        website.id,
-        newStudent.id,
-        name?.trim() || null,
-        cleanEmail,
-        number?.trim() || null,
-        gender || null,
-        blood_group || null,
-        date_of_birth || null,
-        religion || null,
-        admission_date || null,
-        hashedPassword,
-        verificationToken,
-        tokenExpires,
-      ]
-    );
-
-    const newInfo = insertInfoRes.rows[0];
-
-    // Build multi-tenant setup link
-    const setupUrl = buildStudentSetupUrl(website, verificationToken, request);
-
-    // Dispatch setup email via Brevo only if email is provided
-    let emailSent = false;
-    let emailError = null;
-
+    // If student email is provided, send invitation to setup account via website mailer
     if (cleanEmail) {
       try {
+        const setupUrl = `/auth/student/setup`;
         const emailHtml = buildStyledEmail({
-          title: `Welcome to ${website.name || 'Institutional Portal'}`,
-          preheader: `Complete your student account setup and enrollment credentials.`,
-          websiteName: website.name || 'Educational Management Platform',
-          bodyContent: `
-            <p>Dear <strong>${newInfo.name || 'Student'}</strong>,</p>
-            <p>You have been registered as a student at <strong>${website.name || 'our institution'}</strong>. Please finalize your enrollment and set your permanent account password by clicking the button below.</p>
-            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px; margin: 16px 0; font-size: 13px;">
-              <p style="margin: 0 0 6px 0;"><strong>Registration Number:</strong> <span style="font-family: monospace;">${newStudent.registration_no}</span></p>
-              <p style="margin: 0 0 6px 0;"><strong>Student Unique ID:</strong> <span style="font-family: monospace;">${newStudent.student_unique_id}</span></p>
-              <p style="margin: 0;"><strong>Initial Demo Password:</strong> <span style="font-family: monospace; color: #475569;">${demoPassword}</span></p>
-            </div>
-            <p style="font-size: 13px; color: #64748b;">Once you submit your profile details, our administration will review and verify your account for Student Portal access.</p>
-          `,
-          ctaButton: {
-            label: 'Setup Student Account →',
-            url: setupUrl,
-          },
+          title: `Welcome to ${website.name || 'Student Portal'}`,
+          recipientName: 'Student',
+          paragraphs: [
+            `You have been registered at <strong>${website.name || 'our institution'}</strong>.`,
+            `Your Registration Number: <strong>${newStudent.registration_no}</strong>`,
+            `Please visit the student setup page to verify your email and configure your account password and profile details.`,
+          ],
+          buttonText: 'Setup Student Account',
+          buttonUrl: setupUrl,
+          footerNote: 'If you did not expect this message, please contact your school administration.'
         });
 
         await sendEmail({
           to: cleanEmail,
-          toName: newInfo.name || 'Student',
-          subject: `Complete Your Student Account Setup - ${website.name || 'Portal'}`,
+          toName: 'Student',
+          subject: `Student Account Setup - ${website.name || 'Portal'}`,
           html: emailHtml,
           websiteId: website.id,
         });
-
-        emailSent = true;
-      } catch (err) {
-        console.warn('Failed to send student setup email via Brevo:', err.message);
-        emailError = err.message;
+      } catch (mailErr) {
+        console.warn('Mail dispatch warning on registration:', mailErr.message);
       }
     }
 
     return NextResponse.json({
       success: true,
-      message: `Student registered successfully!${
-        emailSent ? ' Setup invitation link dispatched to ' + cleanEmail + '.' : ''
-      }`,
+      message: 'Student registered successfully in website_students table. Student can now setup account at /auth/student/setup.',
       payload: {
-        student: { ...newStudent, ...newInfo },
-        setupUrl,
-        demoPassword,
-        emailSent,
-        emailError,
+        student: newStudent,
+        setupUrl: `/auth/student/setup`,
       },
     });
   } catch (error) {
-    console.error('Error creating student:', error);
-    return NextResponse.json({ success: false, error: 'Internal server error while creating student.' }, { status: 500 });
+    console.error('Error registering student:', error);
+    return NextResponse.json({ success: false, error: error.message || 'Failed to register student.' }, { status: 500 });
   }
 }
 

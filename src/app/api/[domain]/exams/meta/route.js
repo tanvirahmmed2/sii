@@ -11,10 +11,10 @@ export async function GET(request, context) {
 
     const [classesRes, sessionsRes, examsRes] = await Promise.all([
       queryDb(
-        `SELECT id, name, numeric_name, code 
+        `SELECT id, name, code 
          FROM website_classes 
          WHERE website_id = $1 
-         ORDER BY numeric_name ASC, name ASC`,
+         ORDER BY name ASC, id ASC`,
         [auth.website.id]
       ),
       queryDb(

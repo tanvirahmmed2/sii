@@ -1,8 +1,19 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { BiCalendar, BiPlus, BiCheckCircle, BiEdit, BiTrash, BiSearch, BiRefresh, BiTimeFive } from 'react-icons/bi';
+import {
+  BiCalendar,
+  BiPlus,
+  BiCheckCircle,
+  BiEdit,
+  BiTrash,
+  BiSearch,
+  BiRefresh,
+  BiX,
+  BiCheck,
+  BiAlertTriangle
+} from 'react-icons/bi';
 
 export default function AcademicYearPage() {
   const params = useParams();
@@ -13,8 +24,8 @@ export default function AcademicYearPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Inline Workstation Form State (NO popup modal)
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSession, setEditingSession] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -27,13 +38,15 @@ export default function AcademicYearPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Delete State
-  const [deleteId, setDeleteId] = useState(null);
-  const [deleting, setDeleting] = useState(false);
+  // Inline Delete State (NO popup modal)
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
-  const fetchSessions = useCallback(async () => {
+  const formSectionRef = useRef(null);
+
+  const fetchSessions = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await fetch(`/api/${domain}/staff/panel/sessions`);
       const data = await res.json();
       if (data.success) {
@@ -41,7 +54,7 @@ export default function AcademicYearPage() {
       } else {
         setErrorMsg(data.error || 'Failed to fetch academic sessions');
       }
-    } catch (err) {
+    } catch {
       setErrorMsg('Network error fetching academic sessions.');
     } finally {
       setLoading(false);
@@ -49,12 +62,30 @@ export default function AcademicYearPage() {
   }, [domain]);
 
   useEffect(() => {
-    fetchSessions();
-  }, [fetchSessions]);
+    let ignore = false;
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/${domain}/staff/panel/sessions`);
+        const data = await res.json();
+        if (!ignore && data.success) {
+          setSessions(data.sessions || []);
+        }
+      } catch {
+        if (!ignore) setErrorMsg('Network error fetching academic sessions.');
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, [domain]);
 
   const filteredSessions = useMemo(() => {
     return sessions.filter((s) => {
-      const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const q = searchTerm.toLowerCase();
+      const matchesSearch = s.name.toLowerCase().includes(q);
       const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
@@ -62,7 +93,7 @@ export default function AcademicYearPage() {
 
   const currentSession = useMemo(() => sessions.find((s) => s.is_current), [sessions]);
 
-  const openCreateModal = () => {
+  const openCreateForm = () => {
     setEditingSession(null);
     setFormData({
       name: '',
@@ -72,10 +103,14 @@ export default function AcademicYearPage() {
       status: 'active'
     });
     setErrorMsg('');
-    setIsModalOpen(true);
+    setIsFormOpen(true);
+    setDeleteConfirmId(null);
+    setTimeout(() => {
+      formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
-  const openEditModal = (session) => {
+  const openEditForm = (session) => {
     setEditingSession(session);
     setFormData({
       name: session.name,
@@ -85,7 +120,17 @@ export default function AcademicYearPage() {
       status: session.status || 'active'
     });
     setErrorMsg('');
-    setIsModalOpen(true);
+    setIsFormOpen(true);
+    setDeleteConfirmId(null);
+    setTimeout(() => {
+      formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
+  const closeForm = () => {
+    setIsFormOpen(false);
+    setEditingSession(null);
+    setErrorMsg('');
   };
 
   const handleFormSubmit = async (e) => {
@@ -113,41 +158,22 @@ export default function AcademicYearPage() {
       if (data.success) {
         setSuccessMsg(data.message || 'Academic session saved successfully.');
         setTimeout(() => setSuccessMsg(''), 4000);
-        setIsModalOpen(false);
-        fetchSessions();
+        setIsFormOpen(false);
+        setEditingSession(null);
+        fetchSessions(true);
       } else {
         setErrorMsg(data.error || 'Failed to save academic session.');
       }
-    } catch (err) {
+    } catch {
       setErrorMsg('Network error saving academic session.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleSetCurrent = async (session) => {
-    try {
-      const res = await fetch(`/api/${domain}/staff/panel/sessions`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: session.id, is_current: true })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSuccessMsg(`Session ${session.name} is now set as the current academic year.`);
-        setTimeout(() => setSuccessMsg(''), 4000);
-        fetchSessions();
-      } else {
-        setErrorMsg(data.error || 'Failed to switch current session.');
-      }
-    } catch (err) {
-      setErrorMsg('Network error switching session.');
-    }
-  };
-
   const handleDelete = async (id) => {
     try {
-      setDeleting(true);
+      setDeletingId(id);
       const res = await fetch(`/api/${domain}/staff/panel/sessions?id=${id}`, {
         method: 'DELETE'
       });
@@ -155,15 +181,15 @@ export default function AcademicYearPage() {
       if (data.success) {
         setSuccessMsg('Academic session deleted successfully.');
         setTimeout(() => setSuccessMsg(''), 4000);
-        setDeleteId(null);
-        fetchSessions();
+        setDeleteConfirmId(null);
+        fetchSessions(true);
       } else {
         setErrorMsg(data.error || 'Failed to delete academic session.');
       }
-    } catch (err) {
-      setErrorMsg('Network error deleting session.');
+    } catch {
+      setErrorMsg('Network error deleting academic session.');
     } finally {
-      setDeleting(false);
+      setDeletingId(null);
     }
   };
 
@@ -175,41 +201,37 @@ export default function AcademicYearPage() {
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Sessions</p>
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-xl font-bold text-slate-900 dark:text-white font-mono">{sessions.length}</span>
-            <span className="text-[10px] font-medium text-slate-500">Recorded</span>
+            <span className="text-[10px] font-medium text-slate-500">Academic Terms</span>
           </div>
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Active Current Year</p>
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Active Status</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+            <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+              {sessions.filter((s) => s.status === 'active').length}
+            </span>
+            <span className="text-[10px] font-medium text-emerald-600">In Operation</span>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Current Session</p>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-sm font-bold text-blue-600 dark:text-blue-400 truncate max-w-[150px]">
               {currentSession ? currentSession.name : 'None Selected'}
             </span>
-            <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-              <BiCheckCircle /> Current
-            </span>
+            <span className="text-[10px] font-medium text-blue-500">Active Cycle</span>
           </div>
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Status Breakdown</p>
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Academic Architecture</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-sm font-semibold text-slate-900 dark:text-white">
-              {sessions.filter(s => s.status === 'active').length} Active
+            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              Independent Session
             </span>
-            <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">
-              {sessions.filter(s => s.status !== 'active').length} Archived
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">System Cycle</p>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-              {currentSession?.start_date ? new Date(currentSession.start_date).getFullYear() : 'Annual'}
-            </span>
-            <span className="text-[10px] font-medium text-slate-400">Calendar Term</span>
+            <span className="text-[10px] font-medium text-slate-400">Class Foundation</span>
           </div>
         </div>
       </div>
@@ -217,286 +239,352 @@ export default function AcademicYearPage() {
       {/* Notifications */}
       {successMsg && (
         <div className="p-3 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
-          <span>{successMsg}</span>
-          <span className="text-[10px] font-mono">OK</span>
+          <span className="flex items-center gap-1.5">
+            <BiCheck className="text-base text-emerald-600" />
+            {successMsg}
+          </span>
+          <button onClick={() => setSuccessMsg('')} className="text-[10px] font-mono cursor-pointer hover:underline">DISMISS</button>
         </div>
       )}
       {errorMsg && (
         <div className="p-3 rounded text-xs bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 flex items-center justify-between">
-          <span>{errorMsg}</span>
-          <button onClick={() => setErrorMsg('')} className="text-[10px] font-mono cursor-pointer">DISMISS</button>
+          <span className="flex items-center gap-1.5">
+            <BiAlertTriangle className="text-base text-rose-600" />
+            {errorMsg}
+          </span>
+          <button onClick={() => setErrorMsg('')} className="text-[10px] font-mono cursor-pointer hover:underline">DISMISS</button>
         </div>
       )}
 
-      {/* Main Workstation Card */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
-        {/* Action Toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2 flex-1 max-w-md">
-            <div className="relative w-full">
-              <BiSearch className="absolute left-2.5 top-2.5 text-slate-400 text-sm" />
-              <input
-                type="text"
-                placeholder="Search session (e.g. 2025-2026)..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full text-xs pl-8 pr-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 transition"
-              />
+      {/* Inline Delete Confirmation Alert (NO popup modal) */}
+      {deleteConfirmId && (
+        <div className="p-4 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 text-slate-900 dark:text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
+          <div className="flex items-start gap-2.5">
+            <BiAlertTriangle className="text-lg text-rose-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-bold text-rose-900 dark:text-rose-200">
+                Confirm Deleting Academic Session: {sessions.find((s) => s.id === deleteConfirmId)?.name || `#${deleteConfirmId}`}?
+              </p>
+              <p className="text-[11px] text-rose-700 dark:text-rose-300/80 mt-0.5">
+                This will unassign all classrooms, exams, and class mappings registered under this session.
+              </p>
             </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="upcoming">Upcoming</option>
-              <option value="archived">Archived</option>
-              <option value="inactive">Inactive</option>
-            </select>
           </div>
-
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
             <button
-              onClick={fetchSessions}
-              className="p-1.5 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition cursor-pointer"
-              title="Refresh"
+              onClick={() => setDeleteConfirmId(null)}
+              className="px-3 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 cursor-pointer"
             >
-              <BiRefresh className="text-base" />
+              Cancel
             </button>
             <button
-              onClick={openCreateModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer"
+              onClick={() => handleDelete(deleteConfirmId)}
+              disabled={deletingId === deleteConfirmId}
+              className="px-3.5 py-1.5 rounded text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
             >
-              <BiPlus className="text-base" />
-              <span>Add Session</span>
+              {deletingId === deleteConfirmId ? (
+                <>
+                  <div className="loader loader-xs loader-white" />
+                  <span>Deleting...</span>
+                </>
+              ) : (
+                <>
+                  <BiTrash className="text-sm" />
+                  <span>Confirm Delete</span>
+                </>
+              )}
             </button>
           </div>
         </div>
+      )}
 
-        {/* Sessions Table */}
-        <div className="overflow-x-auto">
-          {loading ? (
-            <div className="py-16 flex justify-center items-center">
-              <div className="loader loader-md" />
+      {/* Inline Workstation Form (NO popup modal) */}
+      {isFormOpen && (
+        <div ref={formSectionRef} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 shadow-sm space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-600" />
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                {editingSession ? `Edit Academic Session: ${editingSession.name}` : 'Create New Academic Session'}
+              </h3>
             </div>
-          ) : filteredSessions.length === 0 ? (
-            <div className="py-12 text-center space-y-2">
-              <BiCalendar className="mx-auto text-3xl text-slate-400" />
-              <p className="text-xs font-medium text-slate-600 dark:text-slate-400">No academic sessions found.</p>
+            <button
+              onClick={closeForm}
+              className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              title="Close form"
+            >
+              <BiX className="text-lg" />
+            </button>
+          </div>
+
+          <form onSubmit={handleFormSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Session Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 2025-2026, 2026 Academic Term"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Term Start Date
+                </label>
+                <input
+                  type="date"
+                  value={formData.start_date}
+                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Term End Date
+                </label>
+                <input
+                  type="date"
+                  value={formData.end_date}
+                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Status
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
+                >
+                  <option value="active">Active (Currently Operational)</option>
+                  <option value="upcoming">Upcoming (Future Enrollment)</option>
+                  <option value="archived">Archived (Completed Term)</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+
+              <div className="flex items-center pt-5">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700 dark:text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_current}
+                    onChange={(e) => setFormData({ ...formData, is_current: e.target.checked })}
+                    className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                  />
+                  <span>Mark as Current Primary Session for Institution</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
               <button
-                onClick={openCreateModal}
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                type="button"
+                onClick={closeForm}
+                className="px-3.5 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
               >
-                Create your first academic session
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-4 py-1.5 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer disabled:opacity-50 min-w-[110px] flex items-center justify-center gap-1.5"
+              >
+                {submitting ? (
+                  <>
+                    <div className="loader loader-xs loader-white" />
+                    <span>Saving...</span>
+                  </>
+                ) : editingSession ? (
+                  <>
+                    <BiCheck className="text-sm" />
+                    <span>Update Session</span>
+                  </>
+                ) : (
+                  <>
+                    <BiPlus className="text-sm" />
+                    <span>Create Session</span>
+                  </>
+                )}
               </button>
             </div>
-          ) : (
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider">
-                  <th className="py-2.5 px-3">Session Name</th>
-                  <th className="py-2.5 px-3">Date Period</th>
-                  <th className="py-2.5 px-3">Current Flag</th>
-                  <th className="py-2.5 px-3">Status</th>
-                  <th className="py-2.5 px-3 text-right">Actions</th>
+          </form>
+        </div>
+      )}
+
+      {/* Control Bar: Search, Filters, Refresh, Create Action */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+          {/* Search Input */}
+          <div className="relative flex-1 sm:w-64">
+            <BiSearch className="absolute left-2.5 top-2.5 text-slate-400 text-xs" />
+            <input
+              type="text"
+              placeholder="Search session..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full text-xs pl-8 pr-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden"
+            />
+          </div>
+
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="archived">Archived</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+          <button
+            onClick={() => fetchSessions(false)}
+            title="Refresh list"
+            className="p-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+          >
+            <BiRefresh className="text-sm" />
+          </button>
+
+          {!isFormOpen && (
+            <button
+              onClick={openCreateForm}
+              className="px-3 py-1.5 rounded text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <BiPlus className="text-sm" />
+              <span>Create Session</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Sessions Data Table (Wide single row format) */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
+            <thead>
+              <tr className="bg-slate-50/75 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
+                <th className="py-2.5 px-3">Session Name</th>
+                <th className="py-2.5 px-3">Timeline (Start &rarr; End)</th>
+                <th className="py-2.5 px-3">Primary / Current</th>
+                <th className="py-2.5 px-3">Classes Bound</th>
+                <th className="py-2.5 px-3">Status</th>
+                <th className="py-2.5 px-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="py-12 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <div className="loader loader-sm" />
+                      <span className="text-xs">Loading academic sessions...</span>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
-                {filteredSessions.map((session) => (
-                  <tr key={session.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3 px-3 font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                      <BiCalendar className="text-slate-400 text-sm" />
-                      <span>{session.name}</span>
+              ) : filteredSessions.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="py-12 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-1">
+                      <BiCalendar className="text-3xl text-slate-300 dark:text-slate-600 mb-1" />
+                      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">No academic sessions found</span>
+                      <span className="text-[11px] text-slate-400">Create academic sessions independently for classes</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredSessions.map((session) => (
+                  <tr
+                    key={session.id}
+                    className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors ${
+                      session.is_current ? 'bg-blue-50/20 dark:bg-blue-950/10' : ''
+                    }`}
+                  >
+                    <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs">{session.name}</span>
+                        {session.is_current && (
+                          <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300">
+                            CURRENT
+                          </span>
+                        )}
+                      </div>
                     </td>
-                    <td className="py-3 px-3 text-slate-600 dark:text-slate-400 font-mono text-[11px]">
+
+                    <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300 font-mono text-[11px]">
                       {session.start_date ? new Date(session.start_date).toLocaleDateString() : 'N/A'}
-                      {' — '}
+                      {' '}&rarr;{' '}
                       {session.end_date ? new Date(session.end_date).toLocaleDateString() : 'N/A'}
                     </td>
-                    <td className="py-3 px-3">
+
+                    <td className="py-2.5 px-3">
                       {session.is_current ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                          <BiCheckCircle /> Active Current
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400">
+                          <BiCheckCircle className="text-xs" /> Primary Cycle
                         </span>
                       ) : (
-                        <button
-                          onClick={() => handleSetCurrent(session)}
-                          className="text-[10px] text-slate-500 hover:text-slate-900 dark:hover:text-white underline cursor-pointer"
-                        >
-                          Make Current
-                        </button>
+                        <span className="text-slate-400 text-[11px]">Standard</span>
                       )}
                     </td>
-                    <td className="py-3 px-3">
-                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium capitalize ${
-                        session.status === 'active'
-                          ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300'
-                          : session.status === 'upcoming'
-                          ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                      }`}>
-                        {session.status}
+
+                    <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300 font-mono">
+                      {session.class_count || 0} classes
+                    </td>
+
+                    <td className="py-2.5 px-3">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${
+                          session.status === 'active'
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50'
+                            : session.status === 'upcoming'
+                            ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50'
+                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+                        }`}
+                      >
+                        {session.status || 'active'}
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-right">
+
+                    <td className="py-2.5 px-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
-                          onClick={() => openEditModal(session)}
-                          className="p-1 rounded text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                          title="Edit"
+                          onClick={() => openEditForm(session)}
+                          title="Edit Session"
+                          className="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 transition cursor-pointer"
                         >
                           <BiEdit className="text-sm" />
                         </button>
                         <button
-                          onClick={() => setDeleteId(session.id)}
-                          className="p-1 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
-                          title="Delete"
+                          onClick={() => setDeleteConfirmId(session.id)}
+                          title="Delete Session"
+                          className="p-1 rounded text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 transition cursor-pointer"
                         >
                           <BiTrash className="text-sm" />
                         </button>
                       </div>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
-
-      {/* Create / Edit Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg max-w-md w-full p-5 shadow-xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                {editingSession ? 'Edit Academic Session' : 'Create Academic Session'}
-              </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white text-sm cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleFormSubmit} className="space-y-3">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Session Name / Academic Year *
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. 2025-2026 or 2026"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                  className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                    className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.end_date}
-                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                    className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Session Status
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
-                >
-                  <option value="active">Active</option>
-                  <option value="upcoming">Upcoming</option>
-                  <option value="archived">Archived</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="is_current"
-                  checked={formData.is_current}
-                  onChange={(e) => setFormData({ ...formData, is_current: e.target.checked })}
-                  className="rounded text-slate-900 focus:ring-0 cursor-pointer"
-                />
-                <label htmlFor="is_current" className="text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
-                  Set as current primary academic year
-                </label>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-3 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-3.5 py-1.5 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer disabled:opacity-50"
-                >
-                  {submitting ? 'Saving...' : editingSession ? 'Update Session' : 'Create Session'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {deleteId && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg max-w-sm w-full p-4 shadow-xl space-y-3">
-            <h4 className="text-xs font-bold text-slate-900 dark:text-white">Delete Academic Session?</h4>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
-              Are you sure you want to remove this academic session? This action cannot be undone.
-            </p>
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                onClick={() => setDeleteId(null)}
-                className="px-3 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDelete(deleteId)}
-                disabled={deleting}
-                className="px-3 py-1.5 rounded text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer disabled:opacity-50"
-              >
-                {deleting ? 'Deleting...' : 'Confirm Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

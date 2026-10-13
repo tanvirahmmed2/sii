@@ -13,10 +13,9 @@ import {
   FiUser,
   FiMapPin,
   FiUsers,
-  FiCamera,
   FiArrowRight,
-  FiKey,
-  FiAlertCircle
+  FiArrowLeft,
+  FiKey
 } from 'react-icons/fi';
 
 function StudentSetupContent() {
@@ -30,7 +29,10 @@ function StudentSetupContent() {
   const [tokenInput, setTokenInput] = useState(urlToken);
   const [activeToken, setActiveToken] = useState(urlToken);
 
-  // Email verification state (Step 0)
+  // Stepper: 1: Email OTP, 2: Password Setup, 3: Personal Info, 4: Guardian Info, 5: Address
+  const [step, setStep] = useState(1);
+
+  // Email verification state (Step 1)
   const [emailInput, setEmailInput] = useState(urlEmail);
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -39,37 +41,25 @@ function StudentSetupContent() {
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [devCode, setDevCode] = useState(null);
 
-  // Loading & Submitting states
-  const [loadingStudent, setLoadingStudent] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  // Loading & Saving states
+  const [submittingStep, setSubmittingStep] = useState(false);
   const [studentData, setStudentData] = useState(null);
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
-  const [submissionResult, setSubmissionResult] = useState(null);
 
-  // Multi-step form: 1 = Password & Personal, 2 = Addresses, 3 = Guardians, 4 = Media & Submit
-  const [step, setStep] = useState(1);
-
-  // Form fields
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState(urlEmail);
+  // Step 2: Password
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  // Step 3: Personal Info
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState(urlEmail);
   const [number, setNumber] = useState('');
   const [gender, setGender] = useState('Male');
   const [bloodGroup, setBloodGroup] = useState('A+');
   const [dob, setDob] = useState('');
   const [religion, setReligion] = useState('Islam');
 
-  // Address
-  const [presentAddress, setPresentAddress] = useState('');
-  const [permanentAddress, setPermanentAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [district, setDistrict] = useState('');
-  const [upazila, setUpazila] = useState('');
-  const [postalCode, setPostalCode] = useState('');
-  const [country, setCountry] = useState('Bangladesh');
-
-  // Guardian
+  // Step 4: Guardian Info
   const [fatherName, setFatherName] = useState('');
   const [fatherPhone, setFatherPhone] = useState('');
   const [fatherNid, setFatherNid] = useState('');
@@ -86,16 +76,22 @@ function StudentSetupContent() {
   const [guardianEmail, setGuardianEmail] = useState('');
   const [guardianAddress, setGuardianAddress] = useState('');
 
-  // Media
+  // Step 5: Address Info & Media
+  const [presentAddress, setPresentAddress] = useState('');
+  const [permanentAddress, setPermanentAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [district, setDistrict] = useState('');
+  const [upazila, setUpazila] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const [country, setCountry] = useState('Bangladesh');
   const [imageUrl, setImageUrl] = useState('');
   const [signatureUrl, setSignatureUrl] = useState('');
 
-  // If token is in URL, attempt to preview candidate metadata
+  // Auto-fetch if token provided in URL
   useEffect(() => {
     if (!activeToken) return;
 
     const fetchStudent = async () => {
-      setLoadingStudent(true);
       try {
         const endpoint = getApiEndpoint(`student/setup?token=${encodeURIComponent(activeToken)}`);
         const res = await fetch(endpoint);
@@ -111,32 +107,28 @@ function StudentSetupContent() {
           if (s.name) setName(s.name);
           if (s.is_verified) {
             setIsEmailVerified(true);
-          }
-          if (s.verification_status === 'submitted') {
-            setSubmittedSuccess(true);
+            setStep(2);
           }
         }
       } catch (err) {
         console.error('Error fetching student setup:', err);
-      } finally {
-        setLoadingStudent(false);
       }
     };
 
     fetchStudent();
   }, [activeToken, getApiEndpoint]);
 
-  // Dispatch OTP Code via Brevo
+  // STEP 1: Dispatch OTP Code via Brevo
   const handleSendOtp = async (e) => {
     e.preventDefault();
     if (!emailInput.trim()) {
-      toast.error('Please enter your institutional email address.');
+      toast.error('Please enter your student email address.');
       return;
     }
 
     setSendingOtp(true);
     try {
-      const sendUrl = getApiEndpoint ? getApiEndpoint('student/setup/send-code') : '/api/student/setup/send-code';
+      const sendUrl = getApiEndpoint('student/setup/send-code');
       const res = await fetch(sendUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -148,7 +140,7 @@ function StudentSetupContent() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        toast.success(data.message || 'Verification code dispatched to your email!');
+        toast.success(data.message || 'Verification code sent to your email!');
         setOtpSent(true);
         if (data.payload?.dev_code) {
           setDevCode(data.payload.dev_code);
@@ -164,7 +156,7 @@ function StudentSetupContent() {
     }
   };
 
-  // Verify 6-digit OTP Code
+  // STEP 1: Verify OTP Code
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     if (!otpCode.trim()) {
@@ -174,7 +166,7 @@ function StudentSetupContent() {
 
     setVerifyingOtp(true);
     try {
-      const verifyUrl = getApiEndpoint ? getApiEndpoint('student/setup/verify-code') : '/api/student/setup/verify-code';
+      const verifyUrl = getApiEndpoint('student/setup/verify-code');
       const res = await fetch(verifyUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -187,7 +179,7 @@ function StudentSetupContent() {
 
       const data = await res.json();
       if (res.ok && data.success && data.payload) {
-        toast.success('Email verified successfully! Profile setup unlocked.');
+        toast.success('Email verified successfully! You may now create your password.');
         setIsEmailVerified(true);
         const s = data.payload.student;
         setStudentData(s);
@@ -221,6 +213,9 @@ function StudentSetupContent() {
           if (g.mother_phone) setMotherPhone(g.mother_phone);
           if (g.guardian_name) setGuardianName(g.guardian_name);
         }
+
+        // Advance to Step 2 (Password setup)
+        setStep(2);
       } else {
         toast.error(data.error || 'Invalid or expired verification code.');
       }
@@ -232,61 +227,102 @@ function StudentSetupContent() {
     }
   };
 
-  // Final Setup Submission
-  const handleSubmit = async (e) => {
+  // STEP 2: Password setup -> Creates account in website_student_info
+  const handleStep2Password = async (e) => {
     e.preventDefault();
-
-    if (!isEmailVerified) {
-      toast.error('You must verify your email address via web mailer before submitting setup.');
-      return;
-    }
-
     if (!password || password.length < 6) {
-      toast.error('Password must be at least 6 characters.');
-      setStep(1);
+      toast.error('Password must be at least 6 characters long.');
       return;
     }
-
     if (password !== confirmPassword) {
       toast.error('Passwords do not match.');
-      setStep(1);
       return;
     }
 
-    if (!presentAddress.trim()) {
-      toast.error('Present address is required.');
-      setStep(2);
-      return;
-    }
-
-    if (!fatherName.trim() && !motherName.trim() && !guardianName.trim()) {
-      toast.error('Please provide at least one parent or guardian name.');
-      setStep(3);
-      return;
-    }
-
-    setSubmitting(true);
+    setSubmittingStep(true);
     try {
-      const response = await fetch(getApiEndpoint('student/setup'), {
-        method: 'PUT',
+      const res = await fetch(getApiEndpoint('student/setup'), {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          step: 2,
           token: activeToken || studentData?.registration_no,
           email: email.trim(),
           password,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to setup password.');
+      }
+
+      toast.success(data.message || 'Account created! Now enter your personal details.');
+      setStep(3);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSubmittingStep(false);
+    }
+  };
+
+  // STEP 3: Personal Information
+  const handleStep3Personal = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      toast.error('Student full legal name is required.');
+      return;
+    }
+
+    setSubmittingStep(true);
+    try {
+      const res = await fetch(getApiEndpoint('student/setup'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          step: 3,
+          token: activeToken || studentData?.registration_no,
+          email: email.trim(),
           name: name.trim(),
           number: number.trim(),
           gender,
           blood_group: bloodGroup,
-          date_of_birth: dob,
+          date_of_birth: dob || null,
           religion,
-          present_address: presentAddress.trim(),
-          permanent_address: permanentAddress.trim() || presentAddress.trim(),
-          city: city.trim(),
-          district: district.trim(),
-          upazila: upazila.trim(),
-          postal_code: postalCode.trim(),
-          country: country.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to save personal details.');
+      }
+
+      toast.success(data.message || 'Personal details saved! Now enter guardian information.');
+      setStep(4);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSubmittingStep(false);
+    }
+  };
+
+  // STEP 4: Guardian Information
+  const handleStep4Guardian = async (e) => {
+    e.preventDefault();
+    if (!fatherName.trim() && !motherName.trim() && !guardianName.trim()) {
+      toast.error('Please provide at least one parent or guardian name.');
+      return;
+    }
+
+    setSubmittingStep(true);
+    try {
+      const res = await fetch(getApiEndpoint('student/setup'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          step: 4,
+          token: activeToken || studentData?.registration_no,
+          email: email.trim(),
           father_name: fatherName.trim(),
           father_phone: fatherPhone.trim(),
           father_nid: fatherNid.trim(),
@@ -299,25 +335,64 @@ function StudentSetupContent() {
           guardian_relation: guardianRelation.trim(),
           guardian_phone: guardianPhone.trim() || fatherPhone.trim() || motherPhone.trim(),
           guardian_email: guardianEmail.trim(),
-          guardian_address: guardianAddress.trim() || presentAddress.trim(),
+          guardian_address: guardianAddress.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to save guardian information.');
+      }
+
+      toast.success(data.message || 'Guardian information saved! Now enter your address.');
+      setStep(5);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSubmittingStep(false);
+    }
+  };
+
+  // STEP 5: Address Information & Finalization
+  const handleStep5Address = async (e) => {
+    e.preventDefault();
+    if (!presentAddress.trim()) {
+      toast.error('Present Address is required.');
+      return;
+    }
+
+    setSubmittingStep(true);
+    try {
+      const res = await fetch(getApiEndpoint('student/setup'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          step: 5,
+          token: activeToken || studentData?.registration_no,
+          email: email.trim(),
+          present_address: presentAddress.trim(),
+          permanent_address: permanentAddress.trim() || presentAddress.trim(),
+          city: city.trim(),
+          district: district.trim(),
+          upazila: upazila.trim(),
+          postal_code: postalCode.trim(),
+          country: country.trim(),
           image_url: imageUrl.trim(),
           signature_url: signatureUrl.trim(),
         }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to submit profile setup.');
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to complete profile setup.');
       }
 
-      toast.success(data.message || 'Profile setup submitted successfully!');
-      setSubmissionResult(data.payload || data);
+      toast.success(data.message || 'Student setup completed successfully!');
       setSubmittedSuccess(true);
     } catch (err) {
       toast.error(err.message);
     } finally {
-      setSubmitting(false);
+      setSubmittingStep(false);
     }
   };
 
@@ -330,22 +405,108 @@ function StudentSetupContent() {
             {website?.name || 'Academic Institution'}
           </span>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-            Student Account Setup & Verification
+            Student Account Setup Workstation
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-            Verify your email via one-time code (OTP), set your password, and finalize your enrollment profile.
+            5-step onboarding: Verify email via Brevo OTP, set password, and enter personal, guardian, and address information.
           </p>
         </div>
 
-        {/* STEP 0: EMAIL OTP VERIFICATION (Enforced Before Form Access) */}
-        {!isEmailVerified && !submittedSuccess && (
+        {/* Stepper Header (Steps 1 to 5) */}
+        {!submittedSuccess && (
+          <div className="grid grid-cols-5 gap-1 border-b border-slate-100 dark:border-slate-800 pb-3 text-xs">
+            {[
+              { id: 1, label: 'Email OTP', icon: FiMail },
+              { id: 2, label: 'Password', icon: FiLock },
+              { id: 3, label: 'Personal', icon: FiUser },
+              { id: 4, label: 'Guardians', icon: FiUsers },
+              { id: 5, label: 'Address', icon: FiMapPin },
+            ].map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => {
+                  if (s.id < step || (s.id === 2 && isEmailVerified)) {
+                    setStep(s.id);
+                  }
+                }}
+                disabled={s.id > step && !isEmailVerified}
+                className={`flex flex-col items-center text-center pb-1 transition cursor-pointer disabled:cursor-not-allowed ${
+                  step === s.id
+                    ? 'border-b-2 border-sky-600 text-sky-600 font-bold'
+                    : s.id < step
+                    ? 'text-emerald-600 font-semibold'
+                    : 'text-slate-400 opacity-60'
+                }`}
+              >
+                <span
+                  className={`w-6 h-6 rounded-full text-[11px] flex items-center justify-center mb-1 font-bold ${
+                    step === s.id
+                      ? 'bg-sky-600 text-white'
+                      : s.id < step
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                  }`}
+                >
+                  {s.id < step ? '✓' : s.id}
+                </span>
+                <span className="text-[10px] hidden sm:inline">{s.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* SUCCESS CELEBRATION SCREEN */}
+        {submittedSuccess && (
+          <div className="py-8 space-y-6 text-center">
+            <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto text-3xl font-bold">
+              ✓
+            </div>
+
+            <div className="space-y-2 max-w-md mx-auto">
+              <div className="inline-block px-3 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 text-[10px] font-bold uppercase tracking-wider mb-1">
+                Account Active &amp; Ready
+              </div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                Account Setup Completed!
+              </h2>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Congratulations, <strong className="text-slate-900 dark:text-white">{name || studentData?.name || 'Student'}</strong>! Your account in <code>website_student_info</code> has been created and verified.
+              </p>
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg text-left text-xs font-mono space-y-1">
+                <div><span className="text-slate-400">Reg No:</span> {studentData?.registration_no}</div>
+                <div><span className="text-slate-400">Email:</span> {email}</div>
+                <div><span className="text-slate-400">Class:</span> {studentData?.class_name || 'N/A'}</div>
+                <div><span className="text-slate-400">Department:</span> {studentData?.department_name || 'N/A'}</div>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-center gap-3">
+              <Link
+                href={tenantUrl('/auth/student/login')}
+                className="px-6 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold transition shadow-sm"
+              >
+                Proceed to Student Login →
+              </Link>
+              <Link
+                href={tenantUrl('/')}
+                className="px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+              >
+                Homepage
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 1: EMAIL OTP VERIFICATION */}
+        {!submittedSuccess && step === 1 && (
           <div className="space-y-5 max-w-md mx-auto py-2">
             <div className="p-4 bg-sky-50/50 dark:bg-sky-950/20 rounded-xl border border-sky-200 dark:border-sky-800/60 space-y-3">
               <div className="flex items-center gap-2 text-sky-800 dark:text-sky-300 font-bold text-xs">
-                <FiShield className="w-4 h-4 text-sky-600" /> Security Step: Email OTP Verification
+                <FiShield className="w-4 h-4 text-sky-600" /> Step 1: Verify Email with Brevo OTP
               </div>
               <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-                Enter your institutional email address to receive a 6-digit verification code. If email was not added by school administration during admission, also enter your Registration Number to verify and link your email.
+                Enter your institutional email address and registration number to receive a 6-digit one-time code via Brevo.
               </p>
 
               <form onSubmit={handleSendOtp} className="space-y-3 pt-1">
@@ -358,14 +519,14 @@ function StudentSetupContent() {
                     required
                     value={emailInput}
                     onChange={(e) => setEmailInput(e.target.value)}
-                    placeholder="student@example.com"
+                    placeholder="student@institution.edu"
                     className="w-full px-3 py-2 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg outline-none focus:ring-1 focus:ring-sky-500 text-slate-900 dark:text-white"
                   />
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                    Registration Number (Required if email was not added by staff)
+                    Registration Number (Optional / Recommended)
                   </label>
                   <input
                     type="text"
@@ -374,7 +535,6 @@ function StudentSetupContent() {
                     placeholder="e.g. REG-2026-1001"
                     className="w-full px-3 py-2 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg outline-none focus:ring-1 focus:ring-sky-500 text-slate-900 dark:text-white"
                   />
-                  <span className="text-[10px] text-slate-400 mt-1 block">Found on your admission receipt or circular</span>
                 </div>
 
                 <button
@@ -420,478 +580,411 @@ function StudentSetupContent() {
                   className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                 >
                   <FiCheckCircle className="w-4 h-4" />
-                  {verifyingOtp ? 'Validating Code...' : 'Verify Code & Unlock Profile Setup'}
+                  {verifyingOtp ? 'Validating Code...' : 'Verify Email & Proceed to Password Setup →'}
                 </button>
               </form>
             )}
           </div>
         )}
 
-        {/* Dynamic Success Screen (Auto-Verified vs Sent to Staff) */}
-        {submittedSuccess && (
-          <div className="py-8 space-y-6 text-center">
-            {submissionResult?.requires_staff_verification ? (
-              // Case: Email was not pre-registered by staff, submitted for staff verification
-              <>
-                <div className="w-14 h-14 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto text-2xl font-bold">
-                  ⏳
-                </div>
-
-                <div className="space-y-2 max-w-md mx-auto">
-                  <div className="inline-block px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-[10px] font-bold uppercase tracking-wider mb-1">
-                    Submitted for Staff Verification
-                  </div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                    Profile Sent to Staff for Verification
-                  </h2>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                    Thank you, <span className="font-semibold">{name || studentData?.name || 'Student'}</span>. Since your email address was not pre-registered by school administration, your profile has been submitted for staff review.
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Staff can verify your account in the institution panel. Once approved, you will be able to log in to the Student Portal.
-                  </p>
-                </div>
-              </>
-            ) : (
-              // Case: Email was pre-registered by staff, auto-verified immediately
-              <>
-                <div className="w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto text-2xl font-bold">
-                  ✓
-                </div>
-
-                <div className="space-y-2 max-w-md mx-auto">
-                  <div className="inline-block px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 text-[10px] font-bold uppercase tracking-wider mb-1">
-                    Account Verified &amp; Active
-                  </div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                    Account Setup Complete!
-                  </h2>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                    Congratulations, <span className="font-semibold">{name || studentData?.name || 'Student'}</span>. Your email was verified via one-time code and your student account is now fully active. No staff approval is needed!
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    You can now log in immediately using your Registration Number / Email and your new password.
-                  </p>
-                </div>
-              </>
-            )}
-
-            <div className="pt-2 flex items-center justify-center gap-3">
-              <Link
-                href={tenantUrl('/auth/student/login')}
-                className="px-5 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition"
-              >
-                Go to Student Login →
-              </Link>
-              <Link
-                href={tenantUrl('/')}
-                className="px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition"
-              >
-                Return to Homepage
-              </Link>
+        {/* STEP 2: CREATE ACCOUNT / SETUP PASSWORD */}
+        {!submittedSuccess && step === 2 && (
+          <form onSubmit={handleStep2Password} className="space-y-4">
+            <div className="p-3 bg-sky-50 dark:bg-sky-950/30 rounded-lg border border-sky-200 dark:border-sky-800 flex items-center justify-between text-xs">
+              <div>
+                <span className="font-bold text-sky-900 dark:text-sky-200">Email Verified:</span>{' '}
+                <span className="font-mono text-sky-800 dark:text-sky-300">{email}</span>
+              </div>
+              <span className="text-emerald-600 font-bold flex items-center gap-1">
+                <FiCheckCircle /> Verified
+              </span>
             </div>
-          </div>
+
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                Step 2: Create Account &amp; Set Password
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Configure your student portal password to initialize your <code>website_student_info</code> account.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  New Portal Password *
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none focus:border-sky-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Confirm Password *
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter password"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none focus:border-sky-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-3">
+              <button
+                type="submit"
+                disabled={submittingStep}
+                className="px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {submittingStep ? 'Creating Account...' : 'Create Account & Enter Personal Info →'}
+              </button>
+            </div>
+          </form>
         )}
 
-        {/* Student Setup Multi-Step Form (Active only when email is verified) */}
-        {isEmailVerified && !submittedSuccess && (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Identity Banner */}
-            <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-lg border border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs">
+        {/* STEP 3: PERSONAL INFORMATION */}
+        {!submittedSuccess && step === 3 && (
+          <form onSubmit={handleStep3Personal} className="space-y-4">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                Step 3: Personal Information
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Fill in your legal personal details for your student institutional record.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <p className="font-bold text-slate-900 dark:text-white text-sm">{name || studentData?.name}</p>
-                <p className="text-[11px] text-slate-500 font-mono">
-                  Reg No: <span className="text-slate-800 dark:text-slate-200">{studentData?.registration_no}</span>
-                  {studentData?.roll_no ? ` • Roll: ${studentData.roll_no}` : ''}
-                </p>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Student Full Legal Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Tanvir Ahmmed"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none focus:border-sky-500"
+                />
               </div>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 text-emerald-700 dark:text-emerald-400 font-medium text-[10px] flex items-center gap-1">
-                  <FiCheckCircle className="w-3 h-3" /> Email Verified
-                </span>
-                <span className="px-2 py-0.5 rounded bg-sky-50 dark:bg-sky-950/60 border border-sky-300 text-sky-700 dark:text-sky-300 font-medium text-[10px]">
-                  {studentData?.class_name || 'Academic Class'}
-                </span>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Contact Phone Number
+                </label>
+                <input
+                  type="text"
+                  value={number}
+                  onChange={(e) => setNumber(e.target.value)}
+                  placeholder="01XXXXXXXXX"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none focus:border-sky-500 font-mono"
+                />
               </div>
             </div>
 
-            {/* Stepper Navigation */}
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 text-xs">
-              {[
-                { id: 1, label: 'Password & Basic' },
-                { id: 2, label: 'Addresses' },
-                { id: 3, label: 'Parents / Guardians' },
-                { id: 4, label: 'Photo & Review' },
-              ].map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setStep(s.id)}
-                  className={`flex items-center gap-1.5 pb-1 border-b-2 font-medium cursor-pointer transition-colors ${
-                    step === s.id
-                      ? 'border-sky-600 text-sky-600'
-                      : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
-                  }`}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Gender</label>
+                <select
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value)}
+                  className="w-full px-2.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none cursor-pointer"
                 >
-                  <span className={`w-4 h-4 rounded-full text-[10px] flex items-center justify-center ${
-                    step === s.id ? 'bg-sky-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                  }`}>
-                    {s.id}
-                  </span>
-                  <span className="hidden sm:inline">{s.label}</span>
-                </button>
-              ))}
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Blood Group</label>
+                <select
+                  value={bloodGroup}
+                  onChange={(e) => setBloodGroup(e.target.value)}
+                  className="w-full px-2.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none cursor-pointer"
+                >
+                  <option value="A+">A+</option>
+                  <option value="A-">A-</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B-</option>
+                  <option value="O+">O+</option>
+                  <option value="O-">O-</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Date of Birth</label>
+                <input
+                  type="date"
+                  value={dob}
+                  onChange={(e) => setDob(e.target.value)}
+                  className="w-full px-2 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Religion</label>
+                <input
+                  type="text"
+                  value={religion}
+                  onChange={(e) => setReligion(e.target.value)}
+                  placeholder="e.g. Islam"
+                  className="w-full px-2.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none"
+                />
+              </div>
             </div>
 
-            {/* STEP 1: PASSWORD & PERSONAL */}
-            {step === 1 && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                      Student Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Enter full legal name"
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none"
-                    />
-                  </div>
+            <div className="flex justify-between pt-3">
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
+              >
+                <FiArrowLeft /> Back
+              </button>
+              <button
+                type="submit"
+                disabled={submittingStep}
+                className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {submittingStep ? 'Saving...' : 'Save & Enter Guardian Details →'}
+              </button>
+            </div>
+          </form>
+        )}
 
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                      Verified Institutional Email (Locked)
-                    </label>
-                    <input
-                      type="email"
-                      disabled
-                      value={email}
-                      className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono text-slate-500 cursor-not-allowed"
-                    />
-                  </div>
-                </div>
+        {/* STEP 4: GUARDIAN INFORMATION */}
+        {!submittedSuccess && step === 4 && (
+          <form onSubmit={handleStep4Guardian} className="space-y-4">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                Step 4: Parents &amp; Guardian Information
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Provide father, mother, or legal guardian details for institutional contact.
+              </p>
+            </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                      New Portal Password *
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="At least 6 characters"
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                      Confirm Password *
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Re-enter password"
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Gender</label>
-                    <select
-                      value={gender}
-                      onChange={(e) => setGender(e.target.value)}
-                      className="w-full px-2.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white"
-                    >
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Blood Group</label>
-                    <select
-                      value={bloodGroup}
-                      onChange={(e) => setBloodGroup(e.target.value)}
-                      className="w-full px-2.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white"
-                    >
-                      <option value="A+">A+</option>
-                      <option value="A-">A-</option>
-                      <option value="B+">B+</option>
-                      <option value="B-">B-</option>
-                      <option value="O+">O+</option>
-                      <option value="O-">O-</option>
-                      <option value="AB+">AB+</option>
-                      <option value="AB-">AB-</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Date of Birth</label>
-                    <input
-                      type="date"
-                      value={dob}
-                      onChange={(e) => setDob(e.target.value)}
-                      className="w-full px-2 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Phone Number</label>
-                    <input
-                      type="text"
-                      value={number}
-                      onChange={(e) => setNumber(e.target.value)}
-                      placeholder="01XXXXXXXXX"
-                      className="w-full px-2.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setStep(2)}
-                    className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5"
-                  >
-                    Next: Addresses <FiArrowRight />
-                  </button>
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Father&apos;s Full Name
+                </label>
+                <input
+                  type="text"
+                  value={fatherName}
+                  onChange={(e) => setFatherName(e.target.value)}
+                  placeholder="Father's full name"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none"
+                />
               </div>
-            )}
-
-            {/* STEP 2: ADDRESSES */}
-            {step === 2 && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                    Present Address *
-                  </label>
-                  <textarea
-                    required
-                    rows={2}
-                    value={presentAddress}
-                    onChange={(e) => setPresentAddress(e.target.value)}
-                    placeholder="House, Road, Area, Ward"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                    Permanent Address
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={permanentAddress}
-                    onChange={(e) => setPermanentAddress(e.target.value)}
-                    placeholder="Leave blank if same as present"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">City</label>
-                    <input
-                      type="text"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      placeholder="e.g. Dhaka"
-                      className="w-full px-2.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">District</label>
-                    <input
-                      type="text"
-                      value={district}
-                      onChange={(e) => setDistrict(e.target.value)}
-                      placeholder="e.g. Dhaka"
-                      className="w-full px-2.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Upazila</label>
-                    <input
-                      type="text"
-                      value={upazila}
-                      onChange={(e) => setUpazila(e.target.value)}
-                      placeholder="e.g. Mirpur"
-                      className="w-full px-2.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Postal Code</label>
-                    <input
-                      type="text"
-                      value={postalCode}
-                      onChange={(e) => setPostalCode(e.target.value)}
-                      placeholder="e.g. 1216"
-                      className="w-full px-2.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-between pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold"
-                  >
-                    ← Back
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStep(3)}
-                    className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5"
-                  >
-                    Next: Guardians <FiArrowRight />
-                  </button>
-                </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Father&apos;s Contact Phone
+                </label>
+                <input
+                  type="text"
+                  value={fatherPhone}
+                  onChange={(e) => setFatherPhone(e.target.value)}
+                  placeholder="01XXXXXXXXX"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none font-mono"
+                />
               </div>
-            )}
+            </div>
 
-            {/* STEP 3: GUARDIANS */}
-            {step === 3 && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                      Father&apos;s Full Name
-                    </label>
-                    <input
-                      type="text"
-                      value={fatherName}
-                      onChange={(e) => setFatherName(e.target.value)}
-                      placeholder="Father's name"
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                      Father&apos;s Phone Number
-                    </label>
-                    <input
-                      type="text"
-                      value={fatherPhone}
-                      onChange={(e) => setFatherPhone(e.target.value)}
-                      placeholder="01XXXXXXXXX"
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                      Mother&apos;s Full Name
-                    </label>
-                    <input
-                      type="text"
-                      value={motherName}
-                      onChange={(e) => setMotherName(e.target.value)}
-                      placeholder="Mother's name"
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                      Mother&apos;s Phone Number
-                    </label>
-                    <input
-                      type="text"
-                      value={motherPhone}
-                      onChange={(e) => setMotherPhone(e.target.value)}
-                      placeholder="01XXXXXXXXX"
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-between pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setStep(2)}
-                    className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold"
-                  >
-                    ← Back
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStep(4)}
-                    className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5"
-                  >
-                    Next: Media & Submit <FiArrowRight />
-                  </button>
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Mother&apos;s Full Name
+                </label>
+                <input
+                  type="text"
+                  value={motherName}
+                  onChange={(e) => setMotherName(e.target.value)}
+                  placeholder="Mother's full name"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none"
+                />
               </div>
-            )}
-
-            {/* STEP 4: MEDIA & FINAL SUBMIT */}
-            {step === 4 && (
-              <div className="space-y-4">
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-700 space-y-3">
-                  <span className="font-semibold text-slate-900 dark:text-white block text-xs">
-                    Profile Media URLs (Optional / Prepopulated from Admission)
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">
-                        Student Photo URL
-                      </label>
-                      <input
-                        type="text"
-                        value={imageUrl}
-                        onChange={(e) => setImageUrl(e.target.value)}
-                        placeholder="https://..."
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">
-                        Student Signature URL
-                      </label>
-                      <input
-                        type="text"
-                        value={signatureUrl}
-                        onChange={(e) => setSignatureUrl(e.target.value)}
-                        placeholder="https://..."
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
-                  <strong>Final Confirmation:</strong> By clicking Submit, your profile credentials and verified email (<code>{email}</code>) will be recorded. Your account will await final approval by the administration desk before portal activation.
-                </div>
-
-                <div className="flex justify-between pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setStep(3)}
-                    className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold"
-                  >
-                    ← Back
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-2 disabled:opacity-50"
-                  >
-                    {submitting ? 'Submitting Setup...' : 'Finalize Profile Setup'}
-                  </button>
-                </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Mother&apos;s Contact Phone
+                </label>
+                <input
+                  type="text"
+                  value={motherPhone}
+                  onChange={(e) => setMotherPhone(e.target.value)}
+                  placeholder="01XXXXXXXXX"
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none font-mono"
+                />
               </div>
-            )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 border-t border-slate-100 dark:border-slate-800">
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Legal Guardian Name</label>
+                <input
+                  type="text"
+                  value={guardianName}
+                  onChange={(e) => setGuardianName(e.target.value)}
+                  placeholder="Guardian's name (if not parent)"
+                  className="w-full px-2.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Guardian Relation</label>
+                <select
+                  value={guardianRelation}
+                  onChange={(e) => setGuardianRelation(e.target.value)}
+                  className="w-full px-2.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none cursor-pointer"
+                >
+                  <option value="Father">Father</option>
+                  <option value="Mother">Mother</option>
+                  <option value="Brother">Brother</option>
+                  <option value="Uncle">Uncle</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Guardian Phone</label>
+                <input
+                  type="text"
+                  value={guardianPhone}
+                  onChange={(e) => setGuardianPhone(e.target.value)}
+                  placeholder="01XXXXXXXXX"
+                  className="w-full px-2.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-between pt-3">
+              <button
+                type="button"
+                onClick={() => setStep(3)}
+                className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
+              >
+                <FiArrowLeft /> Back
+              </button>
+              <button
+                type="submit"
+                disabled={submittingStep}
+                className="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {submittingStep ? 'Saving...' : 'Save & Enter Address Details →'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* STEP 5: ADDRESS INFORMATION */}
+        {!submittedSuccess && step === 5 && (
+          <form onSubmit={handleStep5Address} className="space-y-4">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                Step 5: Present &amp; Permanent Address
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Enter your present and permanent address details to complete your student profile setup.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                Present Address *
+              </label>
+              <textarea
+                required
+                rows={2}
+                value={presentAddress}
+                onChange={(e) => setPresentAddress(e.target.value)}
+                placeholder="House, Road, Area, Ward"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none focus:border-sky-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                Permanent Address
+              </label>
+              <textarea
+                rows={2}
+                value={permanentAddress}
+                onChange={(e) => setPermanentAddress(e.target.value)}
+                placeholder="Leave blank if same as present address"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none focus:border-sky-500"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">City</label>
+                <input
+                  type="text"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="e.g. Dhaka"
+                  className="w-full px-2.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">District</label>
+                <input
+                  type="text"
+                  value={district}
+                  onChange={(e) => setDistrict(e.target.value)}
+                  placeholder="e.g. Dhaka"
+                  className="w-full px-2.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Upazila</label>
+                <input
+                  type="text"
+                  value={upazila}
+                  onChange={(e) => setUpazila(e.target.value)}
+                  placeholder="e.g. Mirpur"
+                  className="w-full px-2.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Postal Code</label>
+                <input
+                  type="text"
+                  value={postalCode}
+                  onChange={(e) => setPostalCode(e.target.value)}
+                  placeholder="e.g. 1216"
+                  className="w-full px-2.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white outline-none font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-between pt-3">
+              <button
+                type="button"
+                onClick={() => setStep(4)}
+                className="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
+              >
+                <FiArrowLeft /> Back
+              </button>
+              <button
+                type="submit"
+                disabled={submittingStep}
+                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer disabled:opacity-50 shadow-sm"
+              >
+                {submittingStep ? 'Finalizing Setup...' : '✓ Complete Student Setup'}
+              </button>
+            </div>
           </form>
         )}
       </div>

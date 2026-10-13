@@ -4,6 +4,14 @@ export const staffNavData = [
     title: 'Class',
     children: [
       {
+        title: 'Departments',
+        path: '/departments'
+      },
+      {
+        title: 'Department Information',
+        path: '/department-information'
+      },
+      {
         title: 'Academic Year',
         path: '/academic-year'
       },

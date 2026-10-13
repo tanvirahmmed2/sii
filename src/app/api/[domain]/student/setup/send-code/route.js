@@ -83,15 +83,38 @@ export async function POST(request, context) {
     const verificationOtp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes validity
 
-    // Store OTP in website_student_info
+    // Store OTP in website_students directly (always present for registered student)
     await queryDb(
-      `UPDATE website_student_info
+      `UPDATE website_students
        SET two_factor_code = $1,
            two_factor_expires = $2,
            updated_at = CURRENT_TIMESTAMP
-       WHERE student_id = $3 AND website_id = $4`,
+       WHERE id = $3 AND website_id = $4`,
       [verificationOtp, expiresAt, student.id, website.id]
     );
+
+    // Also store in website_email_verifications
+    try {
+      await queryDb(
+        `INSERT INTO website_email_verifications (website_id, email, otp_code, purpose, expires_at)
+         VALUES ($1, $2, $3, 'student_setup', $4)`,
+        [website.id, cleanEmail, verificationOtp, expiresAt]
+      );
+    } catch (verErr) {
+      console.warn('Notice inserting into website_email_verifications:', verErr.message);
+    }
+
+    // If website_student_info exists, update it as well
+    try {
+      await queryDb(
+        `UPDATE website_student_info
+         SET two_factor_code = $1,
+             two_factor_expires = $2,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE student_id = $3 AND website_id = $4`,
+        [verificationOtp, expiresAt, student.id, website.id]
+      );
+    } catch (_) {}
 
     // Prepare Brevo email content
     let emailDispatched = false;

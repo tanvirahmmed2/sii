@@ -179,22 +179,31 @@ export async function POST(request, context) {
 
     // 3. Upsert into website_admission_applicant_info
     await queryDb(
-      `INSERT INTO website_admission_applicant_info (applicant_id, photo_url, signature_url, updated_at)
-       VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+      `INSERT INTO website_admission_applicant_info (website_id, applicant_id, photo_url, signature_url, updated_at)
+       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
        ON CONFLICT (applicant_id)
        DO UPDATE SET
          photo_url = EXCLUDED.photo_url,
          signature_url = EXCLUDED.signature_url,
          updated_at = CURRENT_TIMESTAMP`,
-      [applicant.id, photoUrl, signatureUrl]
+      [website.id, applicant.id, photoUrl, signatureUrl]
+    );
+
+    // 4. Mark applicant status as 'completed'
+    await queryDb(
+      `UPDATE website_admission_applicants
+       SET status = 'completed', updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND website_id = $2`,
+      [applicant.id, website.id]
     );
 
     return NextResponse.json({
       success: true,
-      message: 'Candidate photo and signature uploaded successfully!',
+      message: 'Candidate photo and signature uploaded successfully! Application is now marked as Completed.',
       payload: {
         applicant_id: applicant.id,
         application_no: applicant.application_no,
+        status: 'completed',
         photo_url: photoUrl,
         signature_url: signatureUrl
       }
