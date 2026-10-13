@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
-import { initiatePaymentForPurpose } from 'src/lib/database/paymentGateways.js';
 
 /**
  * GET /api/[domain]/admissions/apply?admission_id=...
@@ -20,11 +18,15 @@ export async function GET(request, context) {
 
     let sql = `
       SELECT a.*, c.name AS class_name, s.name AS session_name,
-             af.fee_title, af.amount AS fee_amount, af.currency AS fee_currency, af.late_fee
+             d.name AS department_name,
+             af.fee_title, af.amount AS fee_amount, af.currency AS fee_currency, af.late_fee,
+             ex.exam_date AS admission_exam_date, ex.venue AS exam_venue, ex.instructions AS exam_instructions
       FROM website_admissions a
       LEFT JOIN website_classes c ON c.id = a.class_id
       LEFT JOIN website_sessions s ON s.id = a.session_id
+      LEFT JOIN website_departments d ON d.id = a.department_id
       LEFT JOIN website_admission_fees af ON af.admission_id = a.id AND af.status = 'active'
+      LEFT JOIN website_admission_exams ex ON ex.admission_id = a.id
       WHERE a.website_id = $1 AND a.status = 'open' AND a.is_published = TRUE
     `;
     const params = [website.id];
@@ -50,7 +52,8 @@ export async function GET(request, context) {
 
 /**
  * POST /api/[domain]/admissions/apply
- * Candidate submits application form -> creates application & fee invoice -> triggers payment checkout route.
+ * Candidate submits application form -> records applicant, info, and fee payment entry.
+ * Note: payment_status is in website_admission_fee_payments.
  */
 export async function POST(request, context) {
   try {
@@ -62,6 +65,7 @@ export async function POST(request, context) {
     const body = await request.json().catch(() => ({}));
     const {
       admission_id,
+      circular_id,
       applicant_name,
       email,
       phone,
@@ -76,13 +80,18 @@ export async function POST(request, context) {
       guardian_name,
       guardian_phone,
       guardian_relation,
+      address,
       present_address,
       permanent_address,
+      last_class,
+      last_class_grade,
+      last_institution,
       previous_school,
       previous_gpa
     } = body;
 
-    if (!admission_id) {
+    const targetAdmId = admission_id || circular_id;
+    if (!targetAdmId) {
       return NextResponse.json({ success: false, error: 'Please select an admission circular target.' }, { status: 400 });
     }
     if (!applicant_name || !applicant_name.trim()) {
@@ -95,7 +104,7 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Contact phone number is required.' }, { status: 400 });
     }
 
-    const admId = parseInt(admission_id, 10);
+    const admId = parseInt(targetAdmId, 10);
 
     // 1. Verify circular exists and is active
     const admRes = await queryDb(`
@@ -123,20 +132,28 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Application period has concluded for this circular.' }, { status: 400 });
     }
 
-    // Generate Application Number: APP-{year}-{count+1}
+    // Generate Application Number: APP-{year}-{random_seq}
     const countRes = await queryDb(`SELECT COUNT(*)::int AS count FROM website_admission_applicants WHERE website_id = $1`, [website.id]);
     const seq = (countRes.rows[0].count || 0) + 1001;
     const year = new Date().getFullYear();
     const appNumber = `APP-${year}-${seq}`;
 
-    // 2. Insert into website_admission_applicants
+    const resolvedLastClass = last_class ? last_class.trim() : (body.past_school_class || 'N/A');
+    const resolvedLastGrade = last_class_grade !== undefined && last_class_grade !== '' && last_class_grade !== null
+      ? parseFloat(last_class_grade)
+      : (previous_gpa ? parseFloat(previous_gpa) : null);
+    const resolvedLastInst = last_institution ? last_institution.trim() : (previous_school || body.past_school_name || 'N/A');
+
+    // 2. Insert into website_admission_applicants (payment_status is NOT in this table)
     const insertApp = await queryDb(`
       INSERT INTO website_admission_applicants (
         website_id, admission_id, application_no, applicant_name, email,
-        phone, gender, date_of_birth, payment_status, status
+        phone, gender, date_of_birth, status,
+        last_class, last_class_grade, last_institution
       ) VALUES (
         $1, $2, $3, $4, $5,
-        $6, $7, $8, 'unpaid', 'pending'
+        $6, $7, $8, 'pending',
+        $9, $10, $11
       ) RETURNING *
     `, [
       website.id,
@@ -146,7 +163,10 @@ export async function POST(request, context) {
       email.toLowerCase().trim(),
       phone.trim(),
       gender,
-      date_of_birth || null
+      date_of_birth || null,
+      resolvedLastClass,
+      resolvedLastGrade,
+      resolvedLastInst
     ]);
 
     const applicant = insertApp.rows[0];
@@ -174,56 +194,33 @@ export async function POST(request, context) {
       guardian_name || father_name || null,
       guardian_phone || father_phone || null,
       guardian_relation || 'Father',
-      present_address || null,
-      permanent_address || null,
-      previous_school || null,
-      previous_gpa ? parseFloat(previous_gpa) : null
+      present_address || address || null,
+      permanent_address || address || null,
+      resolvedLastInst,
+      resolvedLastGrade
     ]);
 
-    // 4. Resolve Payment Route for 'admission_fees'
+    // 4. Create pending payment record in website_admission_fee_payments
     const feeAmount = parseFloat(circular.fee_amount) || 500.00;
     const feeCurrency = circular.fee_currency || 'BDT';
     const invoiceRef = `INV-ADM-${appNumber}`;
 
-    let paymentResult = null;
-    try {
-      paymentResult = await initiatePaymentForPurpose({
-        websiteId: website.id,
-        purpose: 'admission_fees',
-        amount: feeAmount,
-        currency: feeCurrency,
-        invoiceRef,
-        payer: {
-          name: applicant.applicant_name,
-          email: applicant.email,
-          phone: applicant.phone
-        },
-        returnUrl: `/admission/upload/${applicant.id}?status=paid&invoice=${invoiceRef}`
-      });
-
-      // Insert record into website_admission_fee_payments
-      await queryDb(`
-        INSERT INTO website_admission_fee_payments (
-          website_id, applicant_id, admission_id, gateway_account_id,
-          gateway_code, amount, currency, transaction_id, payment_status, invoice_no
-        ) VALUES (
-          $1, $2, $3, $4,
-          $5, $6, $7, $8, 'pending', $9
-        )
-      `, [
-        website.id,
-        applicant.id,
-        admId,
-        paymentResult.gateway?.account_id || null,
-        paymentResult.gateway?.code || 'online',
-        feeAmount,
-        feeCurrency,
-        paymentResult.transaction_id,
-        invoiceRef
-      ]);
-    } catch (payErr) {
-      console.warn('Direct gateway routing skipped or pending:', payErr.message);
-    }
+    await queryDb(`
+      INSERT INTO website_admission_fee_payments (
+        website_id, applicant_id, admission_id,
+        gateway_code, amount, currency, transaction_id, payment_status, invoice_no
+      ) VALUES (
+        $1, $2, $3,
+        'online', $4, $5, NULL, 'pending', $6
+      )
+    `, [
+      website.id,
+      applicant.id,
+      admId,
+      feeAmount,
+      feeCurrency,
+      invoiceRef
+    ]);
 
     return NextResponse.json({
       success: true,
@@ -233,9 +230,21 @@ export async function POST(request, context) {
       fee_amount: feeAmount,
       fee_currency: feeCurrency,
       invoice_ref: invoiceRef,
-      checkout_url: paymentResult?.checkout_url || `/admission/upload/${applicant.id}?simulated=true`,
-      payment_gateway: paymentResult?.gateway || null,
-      next_step: `/admission/upload/${applicant.id}`
+      applicant: {
+        id: applicant.id,
+        application_no: appNumber,
+        applicant_name: applicant.applicant_name,
+        email: applicant.email,
+        phone: applicant.phone,
+        fee_amount: feeAmount,
+        currency: feeCurrency,
+        payment_status: 'pending'
+      },
+      payment: {
+        payment_url: `/admission/payment/${applicant.id}`,
+        invoice_ref: invoiceRef
+      },
+      next_step: `/admission/payment/${applicant.id}`
     });
   } catch (error) {
     console.error('Error in POST /admissions/apply:', error);

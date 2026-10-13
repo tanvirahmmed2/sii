@@ -216,6 +216,14 @@ export const staffNavData = [
         path: '/admission-applicants'
       },
       {
+        title: 'Exam Marks Upload',
+        path: '/admission-exam-marks-upload'
+      },
+      {
+        title: 'Exam Selection & Cutoff',
+        path: '/admission-exam-marks-process'
+      },
+      {
         title: 'Merit Results',
         path: '/admission-result'
       },
@@ -463,6 +471,14 @@ export const staffNavData = [
       {
         title: 'Applicants',
         path: '/admission-applicants'
+      },
+      {
+        title: 'Exam Marks Upload',
+        path: '/admission-exam-marks-upload'
+      },
+      {
+        title: 'Exam Selection & Cutoff',
+        path: '/admission-exam-marks-process'
       },
       {
         title: 'Result',

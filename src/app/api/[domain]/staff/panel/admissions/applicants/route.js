@@ -5,7 +5,7 @@ import { autoPublishDueResults } from '../results/publish/route.js';
 
 /**
  * GET /api/[domain]/staff/panel/admissions/applicants
- * Fetches applicants with advanced filters (status, circular, payment, search)
+ * Fetches applicants with full candidate details, fees, previous background, and media.
  */
 export async function GET(request, context) {
   try {
@@ -22,23 +22,36 @@ export async function GET(request, context) {
     const status = searchParams.get('status') || 'all';
     const paymentStatus = searchParams.get('payment_status') || 'all';
     const search = searchParams.get('search')?.trim();
+    const sortBy = searchParams.get('sort_by') || 'created_at'; // 'created_at' | 'merit' | 'score'
 
     let sql = `
       SELECT a.*,
-             adm.title AS circular_title, adm.circular_number,
+             adm.title AS circular_title,
+             adm.selection_method,
+             adm.capacity AS circular_capacity,
              c.name AS class_name,
+             c.max_seats AS class_max_seats,
              ses.name AS session_name,
              dept.name AS department_name,
-             inf.father_name, inf.father_phone, inf.mother_name, inf.mother_phone,
+             COALESCE(p.payment_status, 'unpaid') AS payment_status,
+             COALESCE(p.amount, af.amount, 0.00) AS fee_amount,
+             COALESCE(p.currency, af.currency, 'BDT') AS fee_currency,
+             p.transaction_id, p.paid_date, p.gateway_code, p.invoice_no,
+             COALESCE(img.photo_url, inf.photo_url) AS photo_url,
+             COALESCE(img.signature_url, inf.signature_url) AS signature_url,
+             inf.father_name, inf.father_phone, inf.father_occupation,
+             inf.mother_name, inf.mother_phone, inf.mother_occupation,
              inf.guardian_name, inf.guardian_phone, inf.guardian_relation,
              inf.present_address, inf.permanent_address,
-             inf.previous_school, inf.previous_gpa,
-             inf.photo_url, inf.signature_url, inf.submitted_at
+             inf.submitted_at
       FROM website_admission_applicants a
       JOIN website_admissions adm ON adm.id = a.admission_id
       LEFT JOIN website_classes c ON c.id = adm.class_id
       LEFT JOIN website_sessions ses ON ses.id = adm.session_id
       LEFT JOIN website_departments dept ON dept.id = adm.department_id
+      LEFT JOIN website_admission_fees af ON af.admission_id = adm.id AND af.status = 'active'
+      LEFT JOIN website_admission_fee_payments p ON p.applicant_id = a.id
+      LEFT JOIN website_admission_applicant_images img ON img.applicant_id = a.id
       LEFT JOIN website_admission_applicant_info inf ON inf.applicant_id = a.id
       WHERE a.website_id = $1
     `;
@@ -57,7 +70,7 @@ export async function GET(request, context) {
     }
 
     if (paymentStatus && paymentStatus !== 'all') {
-      sql += ` AND a.payment_status = $${paramIndex++}`;
+      sql += ` AND COALESCE(p.payment_status, 'unpaid') = $${paramIndex++}`;
       params.push(paymentStatus);
     }
 
@@ -73,7 +86,13 @@ export async function GET(request, context) {
       paramIndex++;
     }
 
-    sql += ` ORDER BY a.created_at DESC`;
+    if (sortBy === 'merit') {
+      sql += ` ORDER BY a.last_class_grade DESC NULLS LAST, a.score DESC NULLS LAST, a.created_at ASC`;
+    } else if (sortBy === 'score') {
+      sql += ` ORDER BY a.score DESC NULLS LAST, a.created_at ASC`;
+    } else {
+      sql += ` ORDER BY a.created_at DESC`;
+    }
 
     const res = await queryDb(sql, params);
 
@@ -125,7 +144,7 @@ export async function PUT(request, context) {
     const body = await request.json().catch(() => ({}));
     const {
       id,
-      status, // 'selected' | 'rejected' | 'pending'
+      status, // 'selected' | 'rejected' | 'pending' | 'completed'
       selection_notes,
       score,
       roll_no,
@@ -150,8 +169,10 @@ export async function PUT(request, context) {
     const applicant = checkRes.rows[0];
     const staffId = auth.user?.id || null;
 
-    const isSelected = status === 'selected';
+    const isSelected = status === 'selected' || status === 'accepted';
     const isRejected = status === 'rejected';
+
+    const normalizedStatus = isSelected ? 'selected' : (status || null);
 
     const updateRes = await queryDb(`
       UPDATE website_admission_applicants
@@ -166,9 +187,9 @@ export async function PUT(request, context) {
       WHERE id = $7 AND website_id = $8
       RETURNING *
     `, [
-      status || null,
+      normalizedStatus,
       selection_notes !== undefined ? selection_notes : null,
-      score !== undefined ? parseFloat(score) : null,
+      score !== undefined && score !== null ? parseFloat(score) : null,
       roll_no ? roll_no.trim() : null,
       merit_position ? parseInt(merit_position, 10) : null,
       staffId,
@@ -223,6 +244,39 @@ export async function PUT(request, context) {
     });
   } catch (error) {
     console.error('Error in PUT /staff/panel/admissions/applicants:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+/**
+ * DELETE /api/[domain]/staff/panel/admissions/applicants
+ * Allows staff to permanently delete a candidate application record.
+ */
+export async function DELETE(request, context) {
+  try {
+    const auth = await verifyStaffPaymentAccess(request, context);
+    if (auth.error) {
+      return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Applicant ID is required.' }, { status: 400 });
+    }
+
+    await queryDb(`
+      DELETE FROM website_admission_applicants
+      WHERE id = $1 AND website_id = $2
+    `, [parseInt(id, 10), auth.website.id]);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Applicant record deleted successfully.'
+    });
+  } catch (error) {
+    console.error('Error in DELETE /staff/panel/admissions/applicants:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

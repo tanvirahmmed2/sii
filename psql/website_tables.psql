@@ -2399,7 +2399,6 @@ CREATE TABLE IF NOT EXISTS website_admissions (
     session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
     class_id BIGINT REFERENCES website_classes(id) ON DELETE SET NULL,
     title VARCHAR(255) NOT NULL,
-    circular_number VARCHAR(100),
     description TEXT,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
@@ -2411,6 +2410,10 @@ CREATE TABLE IF NOT EXISTS website_admissions (
     status VARCHAR(50) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed', 'upcoming', 'archived')),
     is_published BOOLEAN DEFAULT TRUE,
     created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    last_class TEXT,
+    last_class_grade NUMERIC(4, 2),
+    last_institution TEXT,
+    selection_method VARCHAR(50) DEFAULT 'manual' CHECK (selection_method IN ('exam', 'merit', 'manual')),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -2423,6 +2426,52 @@ CREATE TRIGGER update_website_admissions_updated_at
 CREATE INDEX IF NOT EXISTS idx_ws_adm_web ON website_admissions(website_id);
 CREATE INDEX IF NOT EXISTS idx_ws_adm_class ON website_admissions(website_id, class_id);
 CREATE INDEX IF NOT EXISTS idx_ws_adm_status ON website_admissions(website_id, status);
+
+-- ----------------------------------------------------------------------------
+-- 63B. WEBSITE ADMISSION EXAMS TABLE (Exam Schedule & Details for Exam-based Circulars)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_admission_exams (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    admission_id BIGINT NOT NULL REFERENCES website_admissions(id) ON DELETE CASCADE,
+    exam_date TIMESTAMPTZ,
+    admit_publish_date TIMESTAMPTZ,
+    venue VARCHAR(255),
+    instructions TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(admission_id)
+);
+
+DROP TRIGGER IF EXISTS update_website_admission_exams_updated_at ON website_admission_exams;
+CREATE TRIGGER update_website_admission_exams_updated_at
+    BEFORE UPDATE ON website_admission_exams
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_adm_exams_web ON website_admission_exams(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_adm_exams_adm ON website_admission_exams(admission_id);
+
+-- ----------------------------------------------------------------------------
+-- 63C. WEBSITE ADMISSION EXAM SUBJECTS TABLE (Subjects & Marks for Admission Exam)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_admission_exam_subjects (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    admission_id BIGINT NOT NULL REFERENCES website_admissions(id) ON DELETE CASCADE,
+    admission_exam_id BIGINT REFERENCES website_admission_exams(id) ON DELETE CASCADE,
+    title VARCHAR(150) NOT NULL,
+    mark NUMERIC(6, 2) NOT NULL DEFAULT 100.00 CHECK (mark >= 0),
+    time VARCHAR(50) NOT NULL DEFAULT '1 hour',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_admission_exam_subjects_updated_at ON website_admission_exam_subjects;
+CREATE TRIGGER update_website_admission_exam_subjects_updated_at
+    BEFORE UPDATE ON website_admission_exam_subjects
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_adm_exam_sub_adm ON website_admission_exam_subjects(admission_id);
 
 -- ----------------------------------------------------------------------------
 -- 64. WEBSITE ADMISSION FEES TABLE (Application & Intake Fees Structure)
@@ -2462,8 +2511,7 @@ CREATE TABLE IF NOT EXISTS website_admission_applicants (
     phone VARCHAR(50) NOT NULL,
     gender VARCHAR(20) DEFAULT 'Male' CHECK (gender IN ('Male', 'Female', 'Other')),
     date_of_birth DATE,
-    payment_status VARCHAR(50) NOT NULL DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid', 'paid', 'exempted')),
-    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'selected', 'rejected', 'enrolled')),
+    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'selected', 'rejected', 'enrolled', 'completed')),
     selection_notes TEXT,
     score NUMERIC(6, 2) DEFAULT 0.00,
     merit_position INT,
@@ -2471,6 +2519,9 @@ CREATE TABLE IF NOT EXISTS website_admission_applicants (
     selected_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
     enrolled_at TIMESTAMPTZ,
     enrolled_student_id BIGINT REFERENCES website_students(id) ON DELETE SET NULL,
+    last_class TEXT,
+    last_class_grade NUMERIC(4, 2),
+    last_institution TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(website_id, application_no)
@@ -2484,7 +2535,6 @@ CREATE TRIGGER update_website_admission_applicants_updated_at
 CREATE INDEX IF NOT EXISTS idx_ws_adm_app_web ON website_admission_applicants(website_id);
 CREATE INDEX IF NOT EXISTS idx_ws_adm_app_adm ON website_admission_applicants(admission_id);
 CREATE INDEX IF NOT EXISTS idx_ws_adm_app_stat ON website_admission_applicants(website_id, status);
-CREATE INDEX IF NOT EXISTS idx_ws_adm_app_pay ON website_admission_applicants(website_id, payment_status);
 CREATE INDEX IF NOT EXISTS idx_ws_adm_app_email ON website_admission_applicants(website_id, email);
 
 -- ----------------------------------------------------------------------------
@@ -2525,6 +2575,30 @@ CREATE TRIGGER update_website_admission_applicant_info_updated_at
 CREATE INDEX IF NOT EXISTS idx_ws_adm_info_app ON website_admission_applicant_info(applicant_id);
 
 -- ----------------------------------------------------------------------------
+-- 66B. WEBSITE ADMISSION APPLICANT IMAGES TABLE (Cloudinary Photo & Signature Store)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_admission_applicant_images (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    applicant_id BIGINT NOT NULL REFERENCES website_admission_applicants(id) ON DELETE CASCADE,
+    photo_url TEXT NOT NULL,
+    photo_public_id VARCHAR(255),
+    signature_url TEXT NOT NULL,
+    signature_public_id VARCHAR(255),
+    uploaded_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(applicant_id)
+);
+
+DROP TRIGGER IF EXISTS update_website_admission_applicant_images_updated_at ON website_admission_applicant_images;
+CREATE TRIGGER update_website_admission_applicant_images_updated_at
+    BEFORE UPDATE ON website_admission_applicant_images
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_adm_app_img_app ON website_admission_applicant_images(applicant_id);
+
+-- ----------------------------------------------------------------------------
 -- 67. WEBSITE ADMISSION FEE PAYMENTS TABLE (Form Purchase Ledger)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_admission_fee_payments (
@@ -2553,6 +2627,30 @@ CREATE TRIGGER update_website_admission_fee_payments_updated_at
 CREATE INDEX IF NOT EXISTS idx_ws_adm_pay_web ON website_admission_fee_payments(website_id);
 CREATE INDEX IF NOT EXISTS idx_ws_adm_pay_app ON website_admission_fee_payments(applicant_id);
 CREATE INDEX IF NOT EXISTS idx_ws_adm_pay_stat ON website_admission_fee_payments(website_id, payment_status);
+
+-- ----------------------------------------------------------------------------
+-- 67B. WEBSITE ADMISSION EXAM MARKS TABLE (Marks Breakdown per Subject for Exam-based Admissions)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_admission_exam_marks (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    admission_id BIGINT NOT NULL REFERENCES website_admissions(id) ON DELETE CASCADE,
+    subject_id BIGINT NOT NULL REFERENCES website_admission_exam_subjects(id) ON DELETE CASCADE,
+    applicant_id BIGINT NOT NULL REFERENCES website_admission_applicants(id) ON DELETE CASCADE,
+    marks_obtained NUMERIC(6, 2) NOT NULL DEFAULT 0.00 CHECK (marks_obtained >= 0.00),
+    remarks TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(admission_id, subject_id, applicant_id)
+);
+
+DROP TRIGGER IF EXISTS update_website_admission_exam_marks_updated_at ON website_admission_exam_marks;
+CREATE TRIGGER update_website_admission_exam_marks_updated_at
+    BEFORE UPDATE ON website_admission_exam_marks
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_adm_marks_adm ON website_admission_exam_marks(admission_id);
+CREATE INDEX IF NOT EXISTS idx_ws_adm_marks_app ON website_admission_exam_marks(applicant_id);
 
 -- ----------------------------------------------------------------------------
 -- 68. WEBSITE ADMISSION RESULTS TABLE (Published Intake Results)

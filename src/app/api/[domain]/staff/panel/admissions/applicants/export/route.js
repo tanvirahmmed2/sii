@@ -19,14 +19,17 @@ export async function GET(request, context) {
 
     let sql = `
       SELECT a.application_no, a.roll_no, a.applicant_name, a.email, a.phone,
-             a.gender, a.date_of_birth, a.status, a.payment_status,
+             a.gender, a.date_of_birth, a.status,
+             COALESCE(p.payment_status, 'unpaid') AS payment_status,
              a.score, a.merit_position, a.selection_notes, a.created_at,
+             a.last_class, a.last_class_grade, a.last_institution,
              adm.title AS circular_title, c.name AS class_name,
              inf.father_name, inf.father_phone, inf.mother_name,
              inf.present_address, inf.previous_school, inf.previous_gpa
       FROM website_admission_applicants a
       JOIN website_admissions adm ON adm.id = a.admission_id
       LEFT JOIN website_classes c ON c.id = adm.class_id
+      LEFT JOIN website_admission_fee_payments p ON p.applicant_id = a.id
       LEFT JOIN website_admission_applicant_info inf ON inf.applicant_id = a.id
       WHERE a.website_id = $1
     `;
@@ -67,8 +70,9 @@ export async function GET(request, context) {
       'Father Phone',
       'Mother Name',
       'Present Address',
-      'Previous School',
-      'Previous GPA',
+      'Last Class',
+      'Last Class Grade',
+      'Last Institution',
       'Applied Date',
       'Selection Notes'
     ];
@@ -100,8 +104,9 @@ export async function GET(request, context) {
         escapeCsv(row.father_phone || ''),
         escapeCsv(row.mother_name || ''),
         escapeCsv(row.present_address || ''),
-        escapeCsv(row.previous_school || ''),
-        escapeCsv(row.previous_gpa || ''),
+        escapeCsv(row.last_class || row.previous_school || ''),
+        escapeCsv(row.last_class_grade || row.previous_gpa || ''),
+        escapeCsv(row.last_institution || row.previous_school || ''),
         escapeCsv(row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : ''),
         escapeCsv(row.selection_notes || '')
       ].join(',');

@@ -17,7 +17,11 @@ import {
   FiRefreshCw,
   FiX,
   FiLayers,
-  FiCheck
+  FiCheck,
+  FiAward,
+  FiClipboard,
+  FiClock,
+  FiMapPin
 } from 'react-icons/fi';
 
 export default function AdmissionCircularsPage() {
@@ -33,8 +37,9 @@ export default function AdmissionCircularsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [selectionMethodFilter, setSelectionMethodFilter] = useState('all');
 
-  // Inline Workstation Form State (NO popup modal)
+  // Workstation Form State
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCircular, setEditingCircular] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -60,6 +65,18 @@ export default function AdmissionCircularsPage() {
     fee_amount: '500',
     currency: 'BDT',
     description: '',
+    selection_method: 'manual', // 'exam' | 'merit' | 'manual'
+    last_class: 'N/A',
+    last_class_grade: '',
+    last_institution: 'N/A',
+    exam_date: new Date(Date.now() + 32 * 86400000).toISOString().split('T')[0],
+    admit_publish_date: new Date(Date.now() + 25 * 86400000).toISOString().split('T')[0],
+    exam_venue: '',
+    exam_instructions: '',
+    exam_subjects: [
+      { title: 'Mathematics', mark: 100, time: '1 hour' },
+      { title: 'English', mark: 100, time: '1 hour' }
+    ]
   });
 
   const fetchCirculars = useCallback(async (silent = false) => {
@@ -103,10 +120,24 @@ export default function AdmissionCircularsPage() {
     });
   }, [classes, form.department_id, form.session_id]);
 
+  // Selected class object to inspect maximum seats
+  const selectedClass = useMemo(() => {
+    return classes.find((c) => String(c.id) === String(form.class_id)) || null;
+  }, [classes, form.class_id]);
+
+  const isCapacityExceeded = useMemo(() => {
+    if (!selectedClass || !selectedClass.max_seats) return false;
+    const max = parseInt(selectedClass.max_seats, 10);
+    const cap = parseInt(form.capacity, 10) || 0;
+    return cap > max;
+  }, [selectedClass, form.capacity]);
+
   const openNewForm = () => {
     setEditingCircular(null);
     const activeSession = sessions.find((s) => s.is_current) || sessions[0];
     const firstDept = departments[0];
+    const defaultCapacity = '50';
+
     setForm({
       title: '',
       department_id: firstDept ? String(firstDept.id) : '',
@@ -117,12 +148,24 @@ export default function AdmissionCircularsPage() {
       result_date: new Date(Date.now() + 35 * 86400000).toISOString().split('T')[0],
       min_age: '10',
       max_age: '16',
-      capacity: '100',
+      capacity: defaultCapacity,
       status: 'open',
       is_published: true,
       fee_amount: '500',
       currency: 'BDT',
       description: '',
+      selection_method: 'manual',
+      last_class: 'N/A',
+      last_class_grade: '',
+      last_institution: 'N/A',
+      exam_date: new Date(Date.now() + 32 * 86400000).toISOString().split('T')[0],
+      admit_publish_date: new Date(Date.now() + 25 * 86400000).toISOString().split('T')[0],
+      exam_venue: '',
+      exam_instructions: '',
+      exam_subjects: [
+        { title: 'Mathematics', mark: 100, time: '1 hour' },
+        { title: 'English', mark: 100, time: '1 hour' }
+      ]
     });
     setIsFormOpen(true);
     setDeleteConfirmId(null);
@@ -141,14 +184,28 @@ export default function AdmissionCircularsPage() {
       start_date: circ.start_date ? circ.start_date.split('T')[0] : '',
       end_date: circ.end_date ? circ.end_date.split('T')[0] : '',
       result_date: circ.result_date ? circ.result_date.split('T')[0] : '',
-      min_age: circ.min_age !== null ? String(circ.min_age) : '',
-      max_age: circ.max_age !== null ? String(circ.max_age) : '',
-      capacity: circ.capacity !== null ? String(circ.capacity) : '100',
+      min_age: circ.min_age !== null && circ.min_age !== undefined ? String(circ.min_age) : '',
+      max_age: circ.max_age !== null && circ.max_age !== undefined ? String(circ.max_age) : '',
+      capacity: circ.capacity !== null && circ.capacity !== undefined ? String(circ.capacity) : '100',
       status: circ.status || 'open',
       is_published: circ.is_published !== undefined ? Boolean(circ.is_published) : true,
       fee_amount: circ.fee_amount !== null && circ.fee_amount !== undefined ? String(circ.fee_amount) : '0',
       currency: circ.fee_currency || 'BDT',
       description: circ.description || '',
+      selection_method: circ.selection_method || 'manual',
+      last_class: circ.last_class || 'N/A',
+      last_class_grade: circ.last_class_grade !== null && circ.last_class_grade !== undefined ? String(circ.last_class_grade) : '',
+      last_institution: circ.last_institution || 'N/A',
+      exam_date: circ.admission_exam_date ? circ.admission_exam_date.split('T')[0] : (circ.exam_date ? circ.exam_date.split('T')[0] : ''),
+      admit_publish_date: circ.admission_admit_publish_date ? circ.admission_admit_publish_date.split('T')[0] : '',
+      exam_venue: circ.exam_venue || '',
+      exam_instructions: circ.exam_instructions || '',
+      exam_subjects: Array.isArray(circ.exam_subjects) && circ.exam_subjects.length > 0
+        ? circ.exam_subjects.map((s) => ({ title: s.title, mark: s.mark, time: s.time }))
+        : [
+            { title: 'Mathematics', mark: 100, time: '1 hour' },
+            { title: 'English', mark: 100, time: '1 hour' }
+          ]
     });
     setIsFormOpen(true);
     setDeleteConfirmId(null);
@@ -160,6 +217,29 @@ export default function AdmissionCircularsPage() {
   const closeForm = () => {
     setIsFormOpen(false);
     setEditingCircular(null);
+  };
+
+  // Exam Subjects helper handlers
+  const addSubjectRow = () => {
+    setForm((prev) => ({
+      ...prev,
+      exam_subjects: [...prev.exam_subjects, { title: '', mark: 100, time: '1 hour' }]
+    }));
+  };
+
+  const removeSubjectRow = (index) => {
+    setForm((prev) => ({
+      ...prev,
+      exam_subjects: prev.exam_subjects.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateSubjectRow = (index, field, value) => {
+    setForm((prev) => {
+      const updated = [...prev.exam_subjects];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, exam_subjects: updated };
+    });
   };
 
   const handleSave = async (e) => {
@@ -177,8 +257,25 @@ export default function AdmissionCircularsPage() {
       return;
     }
     if (!form.class_id) {
-      toast.error('Class selection is required.');
+      toast.error('Target Class selection is required.');
       return;
+    }
+
+    if (isCapacityExceeded) {
+      toast.error(`Capacity (${form.capacity}) exceeds class maximum seats (${selectedClass?.max_seats}).`);
+      return;
+    }
+
+    if (form.selection_method === 'exam') {
+      if (!form.exam_date) {
+        toast.error('Exam Date is required for Exam-based admission.');
+        return;
+      }
+      const validSubjects = form.exam_subjects.filter((s) => s.title && s.title.trim());
+      if (validSubjects.length === 0) {
+        toast.error('At least one exam subject is required for Exam-based admission.');
+        return;
+      }
     }
 
     setSaving(true);
@@ -193,6 +290,10 @@ export default function AdmissionCircularsPage() {
         max_age: form.max_age ? parseInt(form.max_age, 10) : null,
         capacity: form.capacity ? parseInt(form.capacity, 10) : 100,
         fee_amount: form.fee_amount ? parseFloat(form.fee_amount) : 0,
+        last_class_grade: form.last_class_grade !== '' ? parseFloat(form.last_class_grade) : null,
+        exam_subjects: form.selection_method === 'exam'
+          ? form.exam_subjects.filter((s) => s.title && s.title.trim())
+          : []
       };
 
       const method = editingCircular ? 'PUT' : 'POST';
@@ -249,9 +350,10 @@ export default function AdmissionCircularsPage() {
         (circ.department_name && circ.department_name.toLowerCase().includes(q));
       const matchesStatus = statusFilter === 'all' || circ.status === statusFilter;
       const matchesDept = departmentFilter === 'all' || String(circ.department_id) === String(departmentFilter);
-      return matchesSearch && matchesStatus && matchesDept;
+      const matchesMethod = selectionMethodFilter === 'all' || circ.selection_method === selectionMethodFilter;
+      return matchesSearch && matchesStatus && matchesDept && matchesMethod;
     });
-  }, [circulars, searchTerm, statusFilter, departmentFilter]);
+  }, [circulars, searchTerm, statusFilter, departmentFilter, selectionMethodFilter]);
 
   return (
     <div className="w-full space-y-4">
@@ -286,17 +388,17 @@ export default function AdmissionCircularsPage() {
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Departments Covered</p>
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Exam Based</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 font-mono">
-              {departments.length}
+            <span className="text-xl font-bold text-purple-600 dark:text-purple-400 font-mono">
+              {circulars.filter((c) => c.selection_method === 'exam').length}
             </span>
-            <span className="text-[10px] font-medium text-slate-400">Academic Units</span>
+            <span className="text-[10px] font-medium text-purple-500">Scheduled Exams</span>
           </div>
         </div>
       </div>
 
-      {/* Inline Delete Confirmation Alert (NO popup modal) */}
+      {/* Delete Confirmation Alert */}
       {deleteConfirmId && (
         <div className="p-4 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 text-slate-900 dark:text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
           <div className="flex items-start gap-2.5">
@@ -306,7 +408,7 @@ export default function AdmissionCircularsPage() {
                 Confirm Deleting Admission Circular: {circulars.find((c) => c.id === deleteConfirmId)?.title || `#${deleteConfirmId}`}?
               </p>
               <p className="text-[11px] text-rose-700 dark:text-rose-300/80 mt-0.5">
-                This will delete the circular configuration and associated application fee records.
+                This will delete the circular configuration, fee structure, and associated exam schedules.
               </p>
             </div>
           </div>
@@ -338,12 +440,12 @@ export default function AdmissionCircularsPage() {
         </div>
       )}
 
-      {/* Inline Workstation Form (NO popup modal) */}
+      {/* Workstation Form */}
       {isFormOpen && (
         <div ref={formSectionRef} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 shadow-sm space-y-4 animate-fade-in">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-blue-600" />
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                 {editingCircular ? `Edit Admission Circular: ${editingCircular.title}` : 'Create New Admission Circular'}
               </h3>
@@ -358,6 +460,7 @@ export default function AdmissionCircularsPage() {
           </div>
 
           <form onSubmit={handleSave} className="space-y-4">
+            {/* Section A: Title, Dept, Session */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div className="md:col-span-2">
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -412,6 +515,7 @@ export default function AdmissionCircularsPage() {
               </div>
             </div>
 
+            {/* Section B: Class selection & Seat Capacity Ceiling */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -426,12 +530,69 @@ export default function AdmissionCircularsPage() {
                   <option value="">Select Target Class...</option>
                   {availableClassesForForm.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name}
+                      {c.name} {c.max_seats ? `(Max: ${c.max_seats} seats)` : ''}
                     </option>
                   ))}
                 </select>
+                {selectedClass && (
+                  <p className="text-[10px] text-slate-500 mt-1 font-mono">
+                    Class seat ceiling: <strong className="text-blue-600">{selectedClass.max_seats || 'Not set'} seats</strong>
+                  </p>
+                )}
               </div>
 
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Intake Capacity (Seats) <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={form.capacity}
+                  onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+                  className={`w-full text-xs px-3 py-2 rounded border font-mono ${
+                    isCapacityExceeded
+                      ? 'border-rose-500 bg-rose-50/50 dark:bg-rose-950/20 text-rose-900 dark:text-rose-200'
+                      : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white'
+                  }`}
+                />
+                {isCapacityExceeded && (
+                  <p className="text-[10px] text-rose-600 dark:text-rose-400 font-semibold mt-1">
+                    Exceeds class maximum seats ({selectedClass?.max_seats})!
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Selection Method <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={form.selection_method}
+                  onChange={(e) => setForm({ ...form, selection_method: e.target.value })}
+                  className="w-full text-xs px-3 py-2 rounded border border-blue-300 dark:border-blue-700 bg-blue-50/30 dark:bg-blue-950/30 text-blue-900 dark:text-blue-200 font-semibold focus:outline-hidden cursor-pointer"
+                >
+                  <option value="exam">Exam Based Admission</option>
+                  <option value="merit">Merit Based (Last Class Grade / GPA)</option>
+                  <option value="manual">Manual Selection (Direct Staff Review)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Application Fee (BDT)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={form.fee_amount}
+                  onChange={(e) => setForm({ ...form, fee_amount: e.target.value })}
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Section C: Dates & Windows */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Start Date <span className="text-rose-500">*</span>
@@ -441,7 +602,7 @@ export default function AdmissionCircularsPage() {
                   value={form.start_date}
                   onChange={(e) => setForm({ ...form, start_date: e.target.value })}
                   required
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono"
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
                 />
               </div>
 
@@ -454,64 +615,199 @@ export default function AdmissionCircularsPage() {
                   value={form.end_date}
                   onChange={(e) => setForm({ ...form, end_date: e.target.value })}
                   required
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono"
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
                 />
               </div>
 
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Result Date (Auto-Publish)
+                  Result Date (Auto / Manual Publish)
                 </label>
                 <input
                   type="date"
                   value={form.result_date}
                   onChange={(e) => setForm({ ...form, result_date: e.target.value })}
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono"
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Admission Fee Amount (BDT)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={form.fee_amount}
-                  onChange={(e) => setForm({ ...form, fee_amount: e.target.value })}
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono"
-                />
+            {/* Section D: Background Prerequisites (Can be N/A) */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 rounded-md space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                  Applicant Past Academic Requirements (Candidates can specify N/A if not applicable)
+                </span>
+                <span className="text-[10px] text-slate-400">Prerequisite references</span>
               </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Available Seats / Capacity
-                </label>
-                <input
-                  type="number"
-                  value={form.capacity}
-                  onChange={(e) => setForm({ ...form, capacity: e.target.value })}
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                    Previous Class (or N/A)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Class 5, SSC, or N/A"
+                    value={form.last_class}
+                    onChange={(e) => setForm({ ...form, last_class: e.target.value })}
+                    className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                    Min Grade / GPA (or leave blank)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="e.g. 3.50 (optional)"
+                    value={form.last_class_grade}
+                    onChange={(e) => setForm({ ...form, last_class_grade: e.target.value })}
+                    className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                    Previous Institution (or N/A)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Recognized School or N/A"
+                    value={form.last_institution}
+                    onChange={(e) => setForm({ ...form, last_institution: e.target.value })}
+                    className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  />
+                </div>
               </div>
+            </div>
 
+            {/* Section E: Exam Configuration (Conditional if selection_method === 'exam') */}
+            {form.selection_method === 'exam' && (
+              <div className="p-4 bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800/50 rounded-lg space-y-3 animate-fade-in">
+                <div className="flex items-center justify-between border-b border-purple-100 dark:border-purple-900/40 pb-2">
+                  <div className="flex items-center gap-2">
+                    <FiAward className="text-purple-600 text-base" />
+                    <span className="text-xs font-bold text-purple-900 dark:text-purple-200">
+                      Admission Exam Schedule & Subject Marks Breakdown
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-purple-600 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/60 px-2 py-0.5 rounded font-mono">
+                    Exam-based Intake
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-semibold text-purple-900 dark:text-purple-300 mb-1">
+                      Exam Date & Time <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={form.exam_date}
+                      onChange={(e) => setForm({ ...form, exam_date: e.target.value })}
+                      required={form.selection_method === 'exam'}
+                      className="w-full text-xs px-2.5 py-1.5 rounded border border-purple-300 dark:border-purple-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-purple-900 dark:text-purple-300 mb-1">
+                      Admit Card Publish Date
+                    </label>
+                    <input
+                      type="date"
+                      value={form.admit_publish_date}
+                      onChange={(e) => setForm({ ...form, admit_publish_date: e.target.value })}
+                      className="w-full text-xs px-2.5 py-1.5 rounded border border-purple-300 dark:border-purple-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-purple-900 dark:text-purple-300 mb-1">
+                      Exam Venue
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Main Campus Auditorium / Building 2"
+                      value={form.exam_venue}
+                      onChange={(e) => setForm({ ...form, exam_venue: e.target.value })}
+                      className="w-full text-xs px-2.5 py-1.5 rounded border border-purple-300 dark:border-purple-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-semibold text-purple-900 dark:text-purple-300">
+                      Exam Subjects (Title, Mark, Time)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={addSubjectRow}
+                      className="text-[11px] font-medium text-purple-600 hover:text-purple-700 dark:text-purple-400 flex items-center gap-1 cursor-pointer"
+                    >
+                      <FiPlus className="text-xs" /> Add Subject
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {form.exam_subjects.map((sub, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="Subject Title (e.g. Mathematics)"
+                          value={sub.title}
+                          onChange={(e) => updateSubjectRow(idx, 'title', e.target.value)}
+                          className="flex-2 text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
+                        />
+                        <input
+                          type="number"
+                          placeholder="Mark"
+                          value={sub.mark}
+                          onChange={(e) => updateSubjectRow(idx, 'mark', e.target.value)}
+                          className="w-24 text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Duration (e.g. 1 hour)"
+                          value={sub.time}
+                          onChange={(e) => updateSubjectRow(idx, 'time', e.target.value)}
+                          className="w-28 text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                        />
+                        {form.exam_subjects.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeSubjectRow(idx)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded transition cursor-pointer"
+                            title="Remove subject"
+                          >
+                            <FiTrash2 className="text-xs" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Section F: Age, Status, Description */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Min & Max Candidate Age
+                  Candidate Age Range
                 </label>
                 <div className="grid grid-cols-2 gap-1.5">
                   <input
                     type="number"
-                    placeholder="Min"
+                    placeholder="Min Age"
                     value={form.min_age}
                     onChange={(e) => setForm({ ...form, min_age: e.target.value })}
                     className="w-full text-xs px-2.5 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
                   />
                   <input
                     type="number"
-                    placeholder="Max"
+                    placeholder="Max Age"
                     value={form.max_age}
                     onChange={(e) => setForm({ ...form, max_age: e.target.value })}
                     className="w-full text-xs px-2.5 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
@@ -521,7 +817,7 @@ export default function AdmissionCircularsPage() {
 
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Status
+                  Circular Status
                 </label>
                 <select
                   value={form.status}
@@ -534,11 +830,29 @@ export default function AdmissionCircularsPage() {
                   <option value="archived">Archived</option>
                 </select>
               </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Publish to Public Portal
+                </label>
+                <div className="flex items-center gap-2 mt-2">
+                  <input
+                    type="checkbox"
+                    id="is_published_checkbox"
+                    checked={form.is_published}
+                    onChange={(e) => setForm({ ...form, is_published: e.target.checked })}
+                    className="w-4 h-4 rounded text-blue-600"
+                  />
+                  <label htmlFor="is_published_checkbox" className="text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
+                    Display in website admission circulars list
+                  </label>
+                </div>
+              </div>
             </div>
 
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Circular Description / Instructions
+                Circular Description / Guidelines
               </label>
               <textarea
                 rows={2}
@@ -549,6 +863,7 @@ export default function AdmissionCircularsPage() {
               />
             </div>
 
+            {/* Actions */}
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
@@ -559,7 +874,7 @@ export default function AdmissionCircularsPage() {
               </button>
               <button
                 type="submit"
-                disabled={saving}
+                disabled={saving || isCapacityExceeded}
                 className="px-4 py-1.5 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer disabled:opacity-50 min-w-[120px] flex items-center justify-center gap-1.5"
               >
                 {saving ? (
@@ -613,6 +928,18 @@ export default function AdmissionCircularsPage() {
             ))}
           </select>
 
+          {/* Selection Method Filter */}
+          <select
+            value={selectionMethodFilter}
+            onChange={(e) => setSelectionMethodFilter(e.target.value)}
+            className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
+          >
+            <option value="all">All Selection Methods</option>
+            <option value="exam">Exam Based</option>
+            <option value="merit">Merit Based</option>
+            <option value="manual">Manual Selection</option>
+          </select>
+
           {/* Status Filter */}
           <select
             value={statusFilter}
@@ -648,18 +975,19 @@ export default function AdmissionCircularsPage() {
         </div>
       </div>
 
-      {/* Admission Circulars Table (Wide single row format) */}
+      {/* Admission Circulars Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
             <thead>
               <tr className="bg-slate-50/75 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
-                <th className="py-2.5 px-3">Title & Circular ID</th>
+                <th className="py-2.5 px-3">Title & Method</th>
                 <th className="py-2.5 px-3">Department</th>
                 <th className="py-2.5 px-3">Session & Class</th>
+                <th className="py-2.5 px-3">Capacity / Max</th>
                 <th className="py-2.5 px-3">Application Window</th>
-                <th className="py-2.5 px-3">Result Date</th>
-                <th className="py-2.5 px-3">Fee (BDT)</th>
+                <th className="py-2.5 px-3">Exam / Result Date</th>
+                <th className="py-2.5 px-3">Fee</th>
                 <th className="py-2.5 px-3">Applicants</th>
                 <th className="py-2.5 px-3">Status</th>
                 <th className="py-2.5 px-3 text-right">Actions</th>
@@ -668,7 +996,7 @@ export default function AdmissionCircularsPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
               {loading ? (
                 <tr>
-                  <td colSpan="9" className="py-12 text-center text-slate-400">
+                  <td colSpan="10" className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <div className="loader loader-sm" />
                       <span className="text-xs">Loading admission circulars...</span>
@@ -677,7 +1005,7 @@ export default function AdmissionCircularsPage() {
                 </tr>
               ) : filteredCirculars.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="py-12 text-center text-slate-400">
+                  <td colSpan="10" className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-1">
                       <FiFileText className="text-3xl text-slate-300 dark:text-slate-600 mb-1" />
                       <span className="text-xs font-medium text-slate-600 dark:text-slate-400">No admission circulars found</span>
@@ -694,7 +1022,24 @@ export default function AdmissionCircularsPage() {
                     <td className="py-2.5 px-3">
                       <div className="flex flex-col">
                         <span className="font-semibold text-slate-900 dark:text-white text-xs">{circ.title}</span>
-                        <span className="text-[10px] font-mono text-slate-400">{circ.circular_number || `#${circ.id}`}</span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span
+                            className={`inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-semibold uppercase ${
+                              circ.selection_method === 'exam'
+                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
+                                : circ.selection_method === 'merit'
+                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                                : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                            }`}
+                          >
+                            {circ.selection_method === 'exam'
+                              ? 'Exam Based'
+                              : circ.selection_method === 'merit'
+                              ? 'Merit Based'
+                              : 'Manual Select'}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">#{circ.id}</span>
+                        </div>
                       </div>
                     </td>
 
@@ -721,14 +1066,34 @@ export default function AdmissionCircularsPage() {
                       </div>
                     </td>
 
+                    <td className="py-2.5 px-3 font-mono text-[11px]">
+                      <span className="font-bold text-slate-900 dark:text-white">{circ.capacity || 100}</span>
+                      <span className="text-slate-400 ml-1 text-[10px]">
+                        / max {circ.class_max_seats || 'unlimited'}
+                      </span>
+                    </td>
+
                     <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600 dark:text-slate-300">
                       {circ.start_date ? new Date(circ.start_date).toLocaleDateString() : 'N/A'}
                       {' '}&rarr;{' '}
                       {circ.end_date ? new Date(circ.end_date).toLocaleDateString() : 'N/A'}
                     </td>
 
-                    <td className="py-2.5 px-3 font-mono text-[11px] text-purple-600 dark:text-purple-400 font-medium">
-                      {circ.result_date ? new Date(circ.result_date).toLocaleDateString() : 'Pending'}
+                    <td className="py-2.5 px-3 font-mono text-[11px]">
+                      {circ.selection_method === 'exam' && circ.admission_exam_date ? (
+                        <div className="flex flex-col">
+                          <span className="text-purple-600 dark:text-purple-400 font-semibold">
+                            Exam: {new Date(circ.admission_exam_date).toLocaleDateString()}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            Res: {circ.result_date ? new Date(circ.result_date).toLocaleDateString() : 'TBD'}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-purple-600 dark:text-purple-400 font-medium">
+                          {circ.result_date ? new Date(circ.result_date).toLocaleDateString() : 'Pending'}
+                        </span>
+                      )}
                     </td>
 
                     <td className="py-2.5 px-3 font-mono font-semibold text-emerald-600 dark:text-emerald-400">
@@ -737,7 +1102,7 @@ export default function AdmissionCircularsPage() {
 
                     <td className="py-2.5 px-3 font-mono text-slate-700 dark:text-slate-300">
                       <span className="font-bold text-slate-900 dark:text-white">{circ.total_applicants || 0}</span>
-                      <span className="text-slate-400 text-[10px] ml-1">/ {circ.capacity || 100}</span>
+                      <span className="text-slate-400 text-[10px] ml-1">applicants</span>
                     </td>
 
                     <td className="py-2.5 px-3">

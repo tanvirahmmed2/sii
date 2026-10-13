@@ -4,7 +4,7 @@ import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { uploadImage } from 'src/lib/database/cloudinary.js';
 
 /**
- * GET: Retrieves applicant information, payment status, and existing media for photo/signature upload
+ * GET: Retrieves applicant information, fee payment status, and existing media for candidate
  */
 export async function GET(request, context) {
   try {
@@ -24,17 +24,25 @@ export async function GET(request, context) {
     const query = `
       SELECT 
         a.id, a.admission_id, a.application_no, a.roll_no, a.applicant_name,
-        a.email, a.phone, a.status, a.payment_status, a.created_at,
+        a.email, a.phone, a.status, a.created_at,
         c.title AS circular_title,
         cls.name AS class_name, ses.name AS session_name,
-        info.photo_url, info.signature_url, info.father_name, info.mother_name,
+        COALESCE(p.payment_status, 'unpaid') AS payment_status,
+        COALESCE(p.amount, 500.00) AS fee_amount,
+        COALESCE(p.currency, 'BDT') AS fee_currency,
+        COALESCE(img.photo_url, info.photo_url) AS photo_url,
+        COALESCE(img.signature_url, info.signature_url) AS signature_url,
+        info.father_name, info.mother_name,
         a.gender, a.date_of_birth
       FROM website_admission_applicants a
       JOIN website_admissions c ON a.admission_id = c.id
       LEFT JOIN website_classes cls ON cls.id = c.class_id
       LEFT JOIN website_sessions ses ON ses.id = c.session_id
+      LEFT JOIN website_admission_fee_payments p ON p.applicant_id = a.id
+      LEFT JOIN website_admission_applicant_images img ON img.applicant_id = a.id
       LEFT JOIN website_admission_applicant_info info ON a.id = info.applicant_id
       WHERE a.website_id = $1 AND (${applicantId ? 'a.id = $2' : 'a.application_no = $2'})
+      ORDER BY p.id DESC
       LIMIT 1
     `;
 
@@ -58,6 +66,8 @@ export async function GET(request, context) {
         phone: applicant.phone,
         status: applicant.status,
         payment_status: applicant.payment_status,
+        fee_amount: applicant.fee_amount,
+        fee_currency: applicant.fee_currency,
         circular_title: applicant.circular_title,
         session_name: applicant.session_name,
         class_name: applicant.class_name,
@@ -66,23 +76,6 @@ export async function GET(request, context) {
         image: applicant.photo_url,
         signature: applicant.signature_url,
         created_at: applicant.created_at
-      },
-      paylod: {
-        applicant: {
-          id: applicant.id,
-          admission_id: applicant.admission_id,
-          application_no: applicant.application_no,
-          applicant_name: applicant.applicant_name,
-          email: applicant.email,
-          phone: applicant.phone,
-          status: applicant.status,
-          payment_status: applicant.payment_status,
-          circular_title: applicant.circular_title,
-          photo_url: applicant.photo_url,
-          signature_url: applicant.signature_url,
-          image: applicant.photo_url,
-          signature: applicant.signature_url
-        }
       }
     });
   } catch (error) {
@@ -92,7 +85,8 @@ export async function GET(request, context) {
 }
 
 /**
- * POST: Uploads candidate photo (500x500) and signature, requiring payment clearance
+ * POST: Uploads candidate photo (300x300 strict) and signature (150x50 strict) to Cloudinary,
+ * records into website_admission_applicant_images, and updates applicant status to 'completed'.
  */
 export async function POST(request, context) {
   try {
@@ -103,7 +97,6 @@ export async function POST(request, context) {
 
     let applicantId, photoData, signatureData;
 
-    // Check if Content-Type is multipart/form-data or application/json
     const contentType = request.headers.get('content-type') || '';
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
@@ -125,13 +118,18 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Both candidate photo and signature are required.' }, { status: 400 });
     }
 
-    // 1. Verify applicant and ensure payment clearance
+    const appId = parseInt(applicantId, 10);
+
+    // 1. Verify applicant and ensure payment clearance in website_admission_fee_payments
     const appRes = await queryDb(
-      `SELECT a.id, a.payment_status, a.status, a.applicant_name, a.application_no
+      `SELECT a.id, a.status, a.applicant_name, a.application_no,
+              COALESCE(p.payment_status, 'unpaid') AS payment_status
        FROM website_admission_applicants a
+       LEFT JOIN website_admission_fee_payments p ON p.applicant_id = a.id
        WHERE a.id = $1 AND a.website_id = $2
+       ORDER BY p.id DESC
        LIMIT 1`,
-      [applicantId, website.id]
+      [appId, website.id]
     );
 
     if (appRes.rows.length === 0) {
@@ -140,76 +138,87 @@ export async function POST(request, context) {
 
     const applicant = appRes.rows[0];
 
-    // Enforce payment clearance
+    // Strictly enforce payment clearance
     if (applicant.payment_status !== 'paid') {
       return NextResponse.json({
         success: false,
-        error: 'Application fee has not been marked as PAID. Please complete payment before uploading candidate media.'
+        error: 'Application fee has not been cleared. Please complete payment before uploading candidate portrait and signature.'
       }, { status: 403 });
     }
 
-    // 2. Upload / process photo and signature
+    // 2. Upload to Cloudinary
     let photoUrl = photoData;
+    let photoPublicId = null;
     let signatureUrl = signatureData;
+    let signaturePublicId = null;
 
-    try {
-      if (typeof photoData === 'string' && photoData.startsWith('data:')) {
-        const upRes = await uploadImage(photoData, `website_${website.id}/admissions/photos`);
-        photoUrl = upRes.secure_url;
-      } else if (typeof photoData === 'object' && typeof photoData.arrayBuffer === 'function') {
-        const upRes = await uploadImage(photoData, `website_${website.id}/admissions/photos`);
-        photoUrl = upRes.secure_url;
-      }
-    } catch (uploadErr) {
-      console.warn('Cloudinary photo upload fallback to raw data:', uploadErr.message);
-      // If Cloudinary fails in dev/mock, we preserve data uri
+    if (typeof photoData === 'string' && photoData.startsWith('data:image')) {
+      const cloudPhoto = await uploadImage(photoData, `admissions/applicants/${website.id}/photos`);
+      photoUrl = cloudPhoto.url;
+      photoPublicId = cloudPhoto.public_id || null;
     }
 
-    try {
-      if (typeof signatureData === 'string' && signatureData.startsWith('data:')) {
-        const upRes = await uploadImage(signatureData, `website_${website.id}/admissions/signatures`);
-        signatureUrl = upRes.secure_url;
-      } else if (typeof signatureData === 'object' && typeof signatureData.arrayBuffer === 'function') {
-        const upRes = await uploadImage(signatureData, `website_${website.id}/admissions/signatures`);
-        signatureUrl = upRes.secure_url;
-      }
-    } catch (uploadErr) {
-      console.warn('Cloudinary signature upload fallback to raw data:', uploadErr.message);
+    if (typeof signatureData === 'string' && signatureData.startsWith('data:image')) {
+      const cloudSig = await uploadImage(signatureData, `admissions/applicants/${website.id}/signatures`);
+      signatureUrl = cloudSig.url;
+      signaturePublicId = cloudSig.public_id || null;
     }
 
-    // 3. Upsert into website_admission_applicant_info
-    await queryDb(
-      `INSERT INTO website_admission_applicant_info (website_id, applicant_id, photo_url, signature_url, updated_at)
-       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
-       ON CONFLICT (applicant_id)
-       DO UPDATE SET
-         photo_url = EXCLUDED.photo_url,
-         signature_url = EXCLUDED.signature_url,
-         updated_at = CURRENT_TIMESTAMP`,
-      [website.id, applicant.id, photoUrl, signatureUrl]
-    );
+    // 3. Upsert into website_admission_applicant_images
+    await queryDb(`
+      INSERT INTO website_admission_applicant_images (
+        website_id, applicant_id, photo_url, photo_public_id, signature_url, signature_public_id, uploaded_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP
+      )
+      ON CONFLICT (applicant_id)
+      DO UPDATE SET
+        photo_url = EXCLUDED.photo_url,
+        photo_public_id = EXCLUDED.photo_public_id,
+        signature_url = EXCLUDED.signature_url,
+        signature_public_id = EXCLUDED.signature_public_id,
+        uploaded_at = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+    `, [
+      website.id,
+      appId,
+      photoUrl,
+      photoPublicId,
+      signatureUrl,
+      signaturePublicId
+    ]);
 
-    // 4. Mark applicant status as 'completed'
-    await queryDb(
-      `UPDATE website_admission_applicants
-       SET status = 'completed', updated_at = CURRENT_TIMESTAMP
-       WHERE id = $1 AND website_id = $2`,
-      [applicant.id, website.id]
-    );
+    // 4. Update website_admission_applicants status to 'completed'
+    await queryDb(`
+      UPDATE website_admission_applicants
+      SET status = 'completed', updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1 AND website_id = $2
+    `, [appId, website.id]);
+
+    // 5. Also update website_admission_applicant_info for legacy fallback compatibility
+    await queryDb(`
+      UPDATE website_admission_applicant_info
+      SET photo_url = $1, photo_id = $2, signature_url = $3, signature_id = $4, updated_at = CURRENT_TIMESTAMP
+      WHERE applicant_id = $5 AND website_id = $6
+    `, [
+      photoUrl,
+      photoPublicId,
+      signatureUrl,
+      signaturePublicId,
+      appId,
+      website.id
+    ]);
 
     return NextResponse.json({
       success: true,
-      message: 'Candidate photo and signature uploaded successfully! Application is now marked as Completed.',
-      payload: {
-        applicant_id: applicant.id,
-        application_no: applicant.application_no,
-        status: 'completed',
-        photo_url: photoUrl,
-        signature_url: signatureUrl
-      }
+      message: 'Candidate documents successfully uploaded and intake status marked as completed!',
+      applicant_id: appId,
+      photo_url: photoUrl,
+      signature_url: signatureUrl,
+      status: 'completed'
     });
   } catch (error) {
-    console.error('Error handling candidate media upload:', error);
-    return NextResponse.json({ success: false, error: 'Internal server error while uploading media.' }, { status: 500 });
+    console.error('Error uploading candidate media:', error);
+    return NextResponse.json({ success: false, error: error.message || 'Media upload failed.' }, { status: 500 });
   }
 }

@@ -43,6 +43,8 @@ function ApplicantsContent() {
   const [scoreInput, setScoreInput] = useState('');
   const [rankInput, setRankInput] = useState('');
 
+  const [sortBy, setSortBy] = useState('created_at'); // 'created_at' | 'merit' | 'score'
+
   // Fetch circulars for filter dropdown
   useEffect(() => {
     fetch(`${apiBase}/staff/panel/admissions`)
@@ -58,11 +60,16 @@ function ApplicantsContent() {
       .catch((err) => console.error('Error fetching circulars:', err));
   }, [apiBase]);
 
+  // Selected circular object
+  const selectedCircular = useMemo(() => {
+    return circulars.find((c) => String(c.id) === String(selectedCircularId)) || null;
+  }, [circulars, selectedCircularId]);
+
   // Fetch applicants
   const fetchApplicants = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      let url = `${apiBase}/staff/panel/admissions/applicants?status=${statusFilter}`;
+      let url = `${apiBase}/staff/panel/admissions/applicants?status=${statusFilter}&sort_by=${sortBy}`;
       if (selectedCircularId) {
         url += `&admission_id=${selectedCircularId}`;
       }
@@ -95,7 +102,7 @@ function ApplicantsContent() {
     } finally {
       setLoading(false);
     }
-  }, [apiBase, statusFilter, selectedCircularId, searchTerm]);
+  }, [apiBase, statusFilter, selectedCircularId, searchTerm, sortBy]);
 
   useEffect(() => {
     fetchApplicants();
@@ -221,8 +228,9 @@ function ApplicantsContent() {
       'Guardian Name': a.guardian_name || 'N/A',
       'Present Address': a.present_address || 'N/A',
       'Permanent Address': a.permanent_address || 'N/A',
-      'Previous School': a.previous_school || 'N/A',
-      'Previous GPA': a.previous_gpa || 'N/A',
+      'Last Class': a.last_class || 'N/A',
+      'Last Class Grade': a.last_class_grade || a.previous_gpa || 'N/A',
+      'Last Institution': a.last_institution || a.previous_school || 'N/A',
       'Payment Status': a.payment_status?.toUpperCase() || 'UNPAID',
       'Application Status': a.status?.toUpperCase() || 'PENDING',
       'Merit Score': a.score || '0.00',
@@ -360,9 +368,20 @@ function ApplicantsContent() {
             <option value="">All Admission Circulars</option>
             {circulars.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.title} ({c.class_name || 'Class'})
+                {c.title} ({c.class_name || 'Class'}) {c.selection_method ? `[${c.selection_method.toUpperCase()}]` : ''}
               </option>
             ))}
+          </select>
+
+          {/* Sort By Selector (Merit / Date / Score) */}
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer font-medium"
+          >
+            <option value="created_at">Sort: Applied Date</option>
+            <option value="merit">Sort: Merit (Past GPA / Score)</option>
+            <option value="score">Sort: Highest Exam Score</option>
           </select>
         </form>
 
@@ -406,6 +425,32 @@ function ApplicantsContent() {
           </button>
         </div>
       </div>
+
+      {/* Exam-Based Intake Active Workstation Banner */}
+      {selectedCircular?.selection_method === 'exam' && (
+        <div className="p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/60 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs animate-fade-in">
+          <div className="flex items-center gap-2 text-purple-900 dark:text-purple-200">
+            <FiAward className="text-base text-purple-600 shrink-0" />
+            <span>
+              <strong>Exam-based intake active</strong> for '{selectedCircular.title}'. Class Seat Capacity: <strong>{selectedCircular.capacity}</strong>.
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/staff-panel/admission-exam-marks-upload?admission_id=${selectedCircularId}`}
+              className="px-2.5 py-1 bg-white dark:bg-slate-800 border border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300 rounded font-semibold hover:bg-purple-50 transition"
+            >
+              Upload Exam Marks (.xlsx)
+            </Link>
+            <Link
+              href={`/staff-panel/admission-exam-marks-process?admission_id=${selectedCircularId}`}
+              className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded font-semibold transition"
+            >
+              Process &amp; Auto-Select by Seats
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Wide Single-Row Table (overflow does not matter) */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs overflow-hidden">
@@ -548,8 +593,15 @@ function ApplicantsContent() {
                     </td>
 
                     <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300">
-                      <span>{app.previous_school || 'N/A'}</span>
-                      <span className="text-slate-400 text-[10px] block font-mono">GPA: {app.previous_gpa || 'N/A'}</span>
+                      <span className="font-semibold text-slate-900 dark:text-white">
+                        {app.last_class || 'N/A'}
+                      </span>
+                      <span className="text-slate-400 text-[10px] block font-mono">
+                        GPA: {app.last_class_grade !== null && app.last_class_grade !== undefined ? app.last_class_grade : (app.previous_gpa || 'N/A')}
+                      </span>
+                      <span className="text-[10px] text-slate-500 block truncate max-w-[140px]" title={app.last_institution || app.previous_school}>
+                        {app.last_institution || app.previous_school || 'N/A'}
+                      </span>
                     </td>
 
                     <td className="py-2.5 px-3">

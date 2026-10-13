@@ -209,20 +209,20 @@ const ApplyFormContent = () => {
         </div>
 
         {/* Payment Action or Upload Redirection */}
-        {pay?.payment_url && app.payment_status !== 'paid' ? (
+        {app.payment_status !== 'paid' ? (
           <div className="p-4 bg-sky-50 dark:bg-sky-950/30 rounded-lg border border-sky-200 dark:border-sky-800 text-left space-y-3">
             <div className="flex items-center gap-2 text-sky-800 dark:text-sky-300 font-semibold text-xs">
-              <FiCreditCard className="w-4 h-4" /> Gateway Payment Clearance Required
+              <FiCreditCard className="w-4 h-4" /> Admission Fee Payment Required
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-              To complete your admission application, please proceed to the secure payment portal to settle the admission fee of <strong>{app.fee_amount} {app.currency}</strong>.
+              To complete your admission application, please proceed to pay the application fee of <strong>৳{app.fee_amount || 500} {app.currency || 'BDT'}</strong> via our secure payment gateway.
             </p>
-            <a
-              href={pay.payment_url}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs rounded-lg shadow-sm transition"
+            <Link
+              href={pay?.payment_url || `/admission/payment/${app.id}`}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg shadow-sm transition"
             >
               Pay Now via Payment Gateway <FiArrowRight />
-            </a>
+            </Link>
           </div>
         ) : (
           <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg border border-emerald-200 dark:border-emerald-800 text-left space-y-3">
@@ -230,7 +230,7 @@ const ApplyFormContent = () => {
               <FiCheckCircle className="w-4 h-4" /> Payment Cleared! Next: Candidate Media Upload
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-300">
-              Your application fee has been settled. Please upload your candidate portrait photo (500x500 pixels) and official signature to finalize your admit card.
+              Your application fee has been settled. Please upload your candidate portrait photo (300x300 pixels) and official signature (150x50 pixels) to finalize your admission application.
             </p>
             <Link
               href={`/admission/upload/${app.id}`}

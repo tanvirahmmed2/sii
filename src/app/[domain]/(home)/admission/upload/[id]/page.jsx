@@ -203,22 +203,19 @@ export default function CandidateUploadPage() {
           <div><strong>Circular:</strong> {applicant.circular_title}</div>
         </div>
         <div className="flex items-center justify-center gap-3 pt-2">
+          <Link
+            href={`/admission/payment/${applicant.id}`}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg transition"
+          >
+            <FiCreditCard />
+            <span>Go to Payment Gateway</span>
+          </Link>
           <button
             onClick={handlePayNow}
             disabled={paying}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg transition cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-xs rounded-lg transition cursor-pointer disabled:opacity-50"
           >
-            {paying ? (
-              <>
-                <div className="loader loader-xs loader-white" />
-                <span>Clearing Fee...</span>
-              </>
-            ) : (
-              <>
-                <FiCreditCard />
-                <span>Pay & Clear Fee Now</span>
-              </>
-            )}
+            {paying ? 'Processing...' : 'Instant Clear'}
           </button>
         </div>
       </div>

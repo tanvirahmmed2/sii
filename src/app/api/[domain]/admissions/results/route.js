@@ -57,7 +57,7 @@ export async function GET(request, context) {
 
     // Also fetch available circulars with published results for selection dropdown
     const circularsRes = await queryDb(`
-      SELECT DISTINCT adm.id, adm.title, adm.circular_number
+      SELECT DISTINCT adm.id, adm.title
       FROM website_admissions adm
       JOIN website_admission_results r ON r.admission_id = adm.id
       WHERE adm.website_id = $1 AND r.is_published = TRUE

@@ -44,7 +44,7 @@ function CircularUpdateContent() {
   // Form State
   const [form, setForm] = useState({
     title: '',
-    circular_number: '',
+    selection_method: 'manual',
     class_id: '',
     session_id: '',
     start_date: '',
@@ -69,7 +69,7 @@ function CircularUpdateContent() {
 
     setForm({
       title: circ.title || '',
-      circular_number: circ.circular_number || '',
+      selection_method: circ.selection_method || 'manual',
       class_id: circ.class_id ? String(circ.class_id) : '',
       session_id: circ.session_id ? String(circ.session_id) : '',
       start_date: circ.start_date ? new Date(circ.start_date).toISOString().split('T')[0] : '',
@@ -175,7 +175,7 @@ function CircularUpdateContent() {
       const payload = {
         id: parseInt(selectedId, 10),
         title: form.title.trim(),
-        circular_number: form.circular_number.trim() || undefined,
+        selection_method: form.selection_method || 'manual',
         class_id: form.class_id ? parseInt(form.class_id, 10) : null,
         session_id: form.session_id ? parseInt(form.session_id, 10) : null,
         start_date: form.start_date,
@@ -244,7 +244,7 @@ function CircularUpdateContent() {
             ) : (
               circulars.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.title} ({c.circular_number || `ID: ${c.id}`}) — {c.status?.toUpperCase()}
+                  {c.title} (ID: #{c.id}) — {c.status?.toUpperCase()}
                 </option>
               ))
             )}
@@ -368,16 +368,18 @@ function CircularUpdateContent() {
 
             <div className="space-y-1">
               <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                Circular Code / Number
+                Selection Method
               </label>
-              <input
-                type="text"
-                name="circular_number"
-                value={form.circular_number}
+              <select
+                name="selection_method"
+                value={form.selection_method}
                 onChange={handleChange}
-                placeholder="e.g., CIR-2026-001"
-                className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-sky-500"
-              />
+                className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-sky-500 cursor-pointer"
+              >
+                <option value="exam">Exam Based Admission</option>
+                <option value="merit">Merit Based (Past Grade / GPA)</option>
+                <option value="manual">Manual Selection</option>
+              </select>
             </div>
 
             <div className="space-y-1">
