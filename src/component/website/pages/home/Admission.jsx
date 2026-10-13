@@ -40,7 +40,7 @@ const Admission = () => {
 
         <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto">
           <Link
-            href={tenantUrl('/apply')}
+            href={tenantUrl('/admission/apply')}
             className="px-4 py-2 rounded bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 text-xs font-medium text-center transition-colors"
           >
             Apply Online &rarr;

@@ -8,11 +8,12 @@ import { SCHOOL_NAME } from 'src/lib/database/secret';
 const Footer = () => {
   const {
     website,
+    departments,
     websiteSettings,
     tenantUrl,
-    theme,
     isDark,
     toggleTheme,
+    secondaryColor,
   } = useContext(TenantWebsiteContext);
 
   const schoolName = website?.name || websiteSettings?.school_name || SCHOOL_NAME;
@@ -21,6 +22,9 @@ const Footer = () => {
   const address = website?.address || websiteSettings?.address || '';
   const eiin = website?.eiin_number || websiteSettings?.eiin || '';
   const mapUrl = websiteSettings?.map_url || null;
+
+  // Secondary brand background color
+  const footerBg = secondaryColor || website?.secondary_color || '#0f172a';
 
   const renderFooterMap = () => {
     if (!mapUrl) return null;
@@ -52,49 +56,52 @@ const Footer = () => {
     );
   };
 
-  const linkColClass = 'flex flex-col space-y-1.5 text-xs';
+  const linkColClass = 'flex flex-col space-y-2 text-xs';
   const navLinkClass =
-    'text-slate-400 hover:text-white dark:hover:text-slate-100 transition-colors py-0.5';
+    'text-white/80 hover:text-white transition-colors duration-150 py-0.5 inline-flex items-center gap-1.5';
 
   return (
-    <footer className="w-full bg-slate-900 dark:bg-slate-950 text-slate-300 border-t border-slate-800 transition-colors">
-      <div className="w-full px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <footer
+      className="w-full text-white/90 border-t border-white/10 transition-colors"
+      style={{ backgroundColor: footerBg }}
+    >
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-12 space-y-10 max-w-7xl mx-auto">
         {/* Top Tier: Institution Profile & Navigation Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Col 1 & 2: Institution Meta */}
-          <div className="lg:col-span-2 space-y-3">
-            <div className="space-y-1">
-              <span className="text-base font-semibold text-white tracking-tight">
+          <div className="lg:col-span-2 space-y-4">
+            <div className="space-y-1.5">
+              <span className="text-lg font-bold text-white tracking-tight">
                 {schoolName}
               </span>
               {eiin && (
-                <p className="text-xs font-mono text-slate-400">
+                <p className="text-xs font-mono text-white/70">
                   Government EIIN: {eiin}
                 </p>
               )}
             </div>
 
-            <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
-              Dedicated to academic rigor, integrity, and future-ready education. Official institutional management portal and digital registry.
+            <p className="text-xs text-white/75 leading-relaxed max-w-sm">
+              Committed to academic excellence, innovative pedagogy, and developing future-ready leaders. Official institutional management portal and digital registry.
             </p>
 
-            <div className="space-y-1 text-xs text-slate-400 pt-1">
+            <div className="space-y-1.5 text-xs text-white/75 pt-1">
               {address && (
-                <p>
-                  <span className="font-semibold text-slate-300">Address: </span>
-                  {address}
+                <p className="flex items-start gap-1.5">
+                  <span className="font-semibold text-white">Address:</span>
+                  <span>{address}</span>
                 </p>
               )}
               {phone && (
-                <p>
-                  <span className="font-semibold text-slate-300">Telephone: </span>
-                  {phone}
+                <p className="flex items-center gap-1.5">
+                  <span className="font-semibold text-white">Telephone:</span>
+                  <span>{phone}</span>
                 </p>
               )}
               {email && (
-                <p>
-                  <span className="font-semibold text-slate-300">Email: </span>
-                  {email}
+                <p className="flex items-center gap-1.5">
+                  <span className="font-semibold text-white">Email:</span>
+                  <span>{email}</span>
                 </p>
               )}
             </div>
@@ -104,71 +111,80 @@ const Footer = () => {
               <button
                 type="button"
                 onClick={toggleTheme}
-                className="px-2.5 py-1 text-xs font-medium rounded border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors cursor-pointer"
+                className="px-3 py-1.5 text-xs font-semibold rounded-md border border-white/20 text-white/90 hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
                 title={`Switch to ${isDark ? 'Light' : 'Dark'} mode`}
               >
-                {isDark ? 'Light Mode' : 'Dark Mode'}
+                <span>{isDark ? '☀ Switch to Light Mode' : '☾ Switch to Dark Mode'}</span>
               </button>
             </div>
           </div>
 
-          {/* Col 3: Academic & Admissions */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
-              Academics
+          {/* Col 3: Academic Departments & Admissions */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-white/15 pb-1.5">
+              Academic Departments
             </h3>
             <div className={linkColClass}>
-              <Link href={tenantUrl('/classes')} className={navLinkClass}>
-                Class Programs
+              <Link href={tenantUrl('/departments')} className={`${navLinkClass} font-semibold text-white`}>
+                All Departments &rarr;
               </Link>
+              {departments && departments.slice(0, 3).map((dept) => (
+                <Link
+                  key={dept.id}
+                  href={tenantUrl(`/departments/${dept.id}`)}
+                  className={navLinkClass}
+                >
+                  {dept.name}
+                </Link>
+              ))}
               <Link href={tenantUrl('/admission')} className={navLinkClass}>
                 Admission Circular
               </Link>
-              <Link href={tenantUrl('/apply')} className={navLinkClass}>
+              <Link href={tenantUrl('/admission/apply')} className={navLinkClass}>
                 Apply Online
               </Link>
               <Link href={tenantUrl('/student-fees')} className={navLinkClass}>
-                Tuition Fees
+                Tuition Fees Schedule
               </Link>
               <Link href={tenantUrl('/results')} className={navLinkClass}>
-                Results Archive
-              </Link>
-              <Link href={tenantUrl('/clubs')} className={navLinkClass}>
-                Clubs &amp; Societies
+                Examination Results
               </Link>
             </div>
           </div>
 
-          {/* Col 4: Faculty & Campus */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
+          {/* Col 4: Campus Life */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-white/15 pb-1.5">
               Campus Life
             </h3>
             <div className={linkColClass}>
               <Link href={tenantUrl('/teachers')} className={navLinkClass}>
-                Faculty Roster
+                Faculty Members
               </Link>
-              <Link href={tenantUrl('/staffs')} className={navLinkClass}>
-                Staff Directory
+              <Link href={tenantUrl('/clubs')} className={navLinkClass}>
+                Clubs &amp; Societies
               </Link>
               <Link href={tenantUrl('/notices')} className={navLinkClass}>
                 Official Notices
               </Link>
               <Link href={tenantUrl('/events')} className={navLinkClass}>
-                Academic Calendar
+                Campus Events
               </Link>
               <Link href={tenantUrl('/news')} className={navLinkClass}>
-                News &amp; Media
+                News &amp; Updates
               </Link>
               <Link href={tenantUrl('/gallery')} className={navLinkClass}>
                 Campus Gallery
               </Link>
+              <Link href={tenantUrl('/facilities')} className={navLinkClass}>
+                Campus Facilities
+              </Link>
             </div>
           </div>
 
-          {/* Col 5: Institutional Verification & Portals */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
+          {/* Col 5: Verification & Portals */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-white/15 pb-1.5">
               Verification &amp; Portals
             </h3>
             <div className={linkColClass}>
@@ -194,26 +210,29 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Middle Tier: Map if present */}
+        {/* Middle Tier: Campus Map (if configured) */}
         {mapUrl && (
-          <div className="w-full aspect-[21/9] max-h-52 rounded border border-slate-800 overflow-hidden bg-slate-800">
+          <div className="w-full aspect-[21/9] max-h-52 rounded-xl border border-white/15 overflow-hidden bg-black/20 shadow-md">
             {renderFooterMap()}
           </div>
         )}
 
         {/* Bottom Tier: Copyright & Disclaimers */}
-        <div className="pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+        <div className="pt-6 border-t border-white/15 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/70">
           <p>
             Copyright &copy; {new Date().getFullYear()} {schoolName}. All rights reserved.
           </p>
-          <div className="flex items-center gap-4">
-            <Link href={tenantUrl('/policies')} className="hover:text-slate-400 transition-colors">
+          <div className="flex flex-wrap items-center gap-4">
+            <Link href={tenantUrl('/about')} className="hover:text-white transition-colors">
+              About Us
+            </Link>
+            <Link href={tenantUrl('/policies')} className="hover:text-white transition-colors">
               Campus Policies
             </Link>
-            <Link href={tenantUrl('/faqs')} className="hover:text-slate-400 transition-colors">
+            <Link href={tenantUrl('/faqs')} className="hover:text-white transition-colors">
               FAQs
             </Link>
-            <Link href={tenantUrl('/contact')} className="hover:text-slate-400 transition-colors">
+            <Link href={tenantUrl('/contact')} className="hover:text-white transition-colors">
               Contact Office
             </Link>
           </div>

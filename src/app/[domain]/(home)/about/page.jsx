@@ -273,7 +273,7 @@ const About = () => {
               </p>
             </div>
             <Link 
-              href={boardMembers.length > 0 ? tenantUrl('/about/board') : tenantUrl('/authorities')} 
+              href={tenantUrl('/about/board')} 
               className="text-xs text-primary font-medium hover:underline"
             >
               All Board Members →

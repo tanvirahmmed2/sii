@@ -12,7 +12,7 @@ import {
   BiRefresh,
   BiX,
   BiCheck,
-  BiAlertTriangle
+  BiErrorCircle
 } from 'react-icons/bi';
 
 export default function AcademicYearPage() {
@@ -249,7 +249,7 @@ export default function AcademicYearPage() {
       {errorMsg && (
         <div className="p-3 rounded text-xs bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 flex items-center justify-between">
           <span className="flex items-center gap-1.5">
-            <BiAlertTriangle className="text-base text-rose-600" />
+            <BiErrorCircle className="text-base text-rose-600" />
             {errorMsg}
           </span>
           <button onClick={() => setErrorMsg('')} className="text-[10px] font-mono cursor-pointer hover:underline">DISMISS</button>
@@ -260,7 +260,7 @@ export default function AcademicYearPage() {
       {deleteConfirmId && (
         <div className="p-4 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 text-slate-900 dark:text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
           <div className="flex items-start gap-2.5">
-            <BiAlertTriangle className="text-lg text-rose-600 shrink-0 mt-0.5" />
+            <BiErrorCircle className="text-lg text-rose-600 shrink-0 mt-0.5" />
             <div>
               <p className="text-xs font-bold text-rose-900 dark:text-rose-200">
                 Confirm Deleting Academic Session: {sessions.find((s) => s.id === deleteConfirmId)?.name || `#${deleteConfirmId}`}?

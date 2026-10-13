@@ -149,6 +149,7 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
   const [staffSidebar, setStaffSidebar] = useState(false);
 
   // Tenant shared data
+  const [departments, setDepartments] = useState([]);
   const [classes, setClasses] = useState([]);
   const [clubs, setClubs] = useState([]);
   const [designations, setDesignations] = useState([]);
@@ -222,6 +223,18 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
     }
   }, [getApiEndpoint]);
 
+  const fetchDepartments = useCallback(async () => {
+    try {
+      const deptRes = await fetch(getApiEndpoint('departments'));
+      if (deptRes.ok) {
+        const data = await deptRes.json();
+        setDepartments(data.payload?.departments || data.paylod?.departments || data.departments || []);
+      }
+    } catch (err) {
+      console.error('Error fetching departments in WebsiteContext:', err);
+    }
+  }, [getApiEndpoint]);
+
   const fetchClasses = useCallback(async () => {
     try {
       const classesRes = await fetch(getApiEndpoint('classes'));
@@ -255,9 +268,10 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
   useEffect(() => {
     fetchWebsiteSettings();
     fetchDesignations();
+    fetchDepartments();
     fetchClasses();
     fetchClubs();
-  }, [fetchWebsiteSettings, fetchDesignations, fetchClasses, fetchClubs]);
+  }, [fetchWebsiteSettings, fetchDesignations, fetchDepartments, fetchClasses, fetchClubs]);
 
   // Dynamic path helper to keep internal links scoped to this tenant
   const tenantUrl = useCallback(
@@ -336,6 +350,9 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
     setStaffSidebar,
 
     // Tenant shared data
+    departments,
+    setDepartments,
+    fetchDepartments,
     classes,
     setClasses,
     clubs,

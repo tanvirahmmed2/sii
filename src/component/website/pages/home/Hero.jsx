@@ -71,7 +71,7 @@ const Hero = () => {
         {/* Primary Action Buttons */}
         <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
           <Link
-            href={tenantUrl('/apply')}
+            href={tenantUrl('/admission/apply')}
             className="px-4 py-2 rounded bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-medium text-xs transition-colors cursor-pointer"
           >
             Apply for Admission
