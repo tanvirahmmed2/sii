@@ -21,7 +21,8 @@ import {
   FiList,
   FiCheckCircle,
   FiLock,
-  FiMapPin
+  FiMapPin,
+  FiLayers
 } from 'react-icons/fi';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
@@ -38,9 +39,11 @@ export default function TeacherRegistrationPage() {
 
   const fileInputRef = useRef(null);
 
-  // Available designations
+  // Available designations & departments
   const [designations, setDesignations] = useState([]);
   const [loadingDesignations, setLoadingDesignations] = useState(true);
+  const [departments, setDepartments] = useState([]);
+  const [loadingDepartments, setLoadingDepartments] = useState(true);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -56,6 +59,7 @@ export default function TeacherRegistrationPage() {
     permanent_address: '',
     joining_date: new Date().toISOString().split('T')[0],
     salary: '',
+    department_id: '',
     designation_id: '',
     photo_url: '',
     photo_id: '',
@@ -86,7 +90,7 @@ export default function TeacherRegistrationPage() {
     }
   }, []);
 
-  // Fetch designations
+  // Fetch designations & departments
   useEffect(() => {
     async function loadDesignations() {
       if (!domain) return;
@@ -106,7 +110,28 @@ export default function TeacherRegistrationPage() {
         setLoadingDesignations(false);
       }
     }
+
+    async function loadDepartments() {
+      if (!domain) return;
+      try {
+        setLoadingDepartments(true);
+        const res = await fetch(`/api/${domain}/staff/panel/departments`);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.departments)) {
+          setDepartments(data.departments);
+          if (data.departments.length > 0) {
+            setFormData((prev) => ({ ...prev, department_id: String(data.departments[0].id) }));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load departments:', err);
+      } finally {
+        setLoadingDepartments(false);
+      }
+    }
+
     loadDesignations();
+    loadDepartments();
   }, [domain]);
 
   const handleInputChange = (e) => {
@@ -199,6 +224,11 @@ export default function TeacherRegistrationPage() {
       return;
     }
 
+    if (!formData.department_id) {
+      showToast('Department is required. Every teacher must belong to an academic department.', true);
+      return;
+    }
+
     // Filter out blank qualification rows
     const validQuals = qualifications.filter(
       (q) => q.degree && q.degree.trim() && q.institute && q.institute.trim()
@@ -208,6 +238,7 @@ export default function TeacherRegistrationPage() {
       setSubmitting(true);
       const payload = {
         ...formData,
+        department_id: Number(formData.department_id),
         designation_id: formData.designation_id ? Number(formData.designation_id) : null,
         salary: formData.salary ? parseFloat(formData.salary) : 0,
         qualifications: validQuals
@@ -526,10 +557,40 @@ export default function TeacherRegistrationPage() {
             <span>2. Institutional Role & Employment</span>
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <div>
-              <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Designation / Rank <span className="text-rose-500">*</span>
+              <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                <FiLayers className="w-3.5 h-3.5 text-blue-600" />
+                <span>Department <span className="text-rose-500">*</span></span>
+              </label>
+              <select
+                name="department_id"
+                required
+                value={formData.department_id}
+                onChange={handleInputChange}
+                className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 cursor-pointer"
+              >
+                <option value="">-- Choose Department --</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} {d.code ? `(${d.code})` : ''}
+                  </option>
+                ))}
+              </select>
+              {departments.length === 0 && !loadingDepartments && (
+                <p className="text-[10px] text-amber-600 mt-1">
+                  No departments found.{' '}
+                  <Link href={`/${domain}/staff-panel/departments`} className="underline font-semibold">
+                    Create a department first
+                  </Link>
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                <FiAward className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Designation / Rank <span className="text-rose-500">*</span></span>
               </label>
               <select
                 name="designation_id"
@@ -570,7 +631,7 @@ export default function TeacherRegistrationPage() {
 
             <div>
               <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Basic Monthly Salary (BDT / Currency)
+                Basic Monthly Salary
               </label>
               <input
                 type="number"

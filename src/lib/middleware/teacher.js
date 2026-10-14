@@ -185,14 +185,16 @@ export async function getTeacherSession(request) {
 
     // Check website_teachers first
     const res = await queryDb(
-      `SELECT wt.id, wt.website_id, wt.designation_id, wt.name, wt.email, wt.number,
+      `SELECT wt.id, wt.website_id, wt.department_id, wt.designation_id, wt.name, wt.email, wt.number,
               wt.emergency_contact, wt.gender, wt.blood_group, wt.date_of_birth, wt.religion,
               wt.address, wt.permanent_address, wt.joining_date, wt.salary, wt.photo_url,
               wt.photo_id, wt.is_active, wt.is_registered, wt.created_at,
               wd.title AS designation_title,
+              dept.name AS department_name, dept.code AS department_code,
               w.name AS website_name, w.subdomain AS website_subdomain, w.custom_domain AS website_custom_domain
        FROM website_teachers wt
        LEFT JOIN website_designations wd ON wd.id = wt.designation_id
+       LEFT JOIN website_departments dept ON dept.id = wt.department_id
        LEFT JOIN websites w ON w.id = wt.website_id
        WHERE wt.id = $1 LIMIT 1`,
       [decoded.id]

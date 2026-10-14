@@ -28,13 +28,15 @@ export async function GET(request, context) {
     }
 
     const teacherRes = await queryDb(
-      `SELECT wt.id, wt.website_id, wt.designation_id, wt.name, wt.email, wt.number,
+      `SELECT wt.id, wt.website_id, wt.department_id, wt.designation_id, wt.name, wt.email, wt.number,
               wt.emergency_contact, wt.gender, wt.blood_group, wt.date_of_birth, wt.religion,
               wt.address, wt.permanent_address, wt.joining_date, wt.salary, wt.photo_url,
               wt.photo_id, wt.is_active, wt.is_registered, wt.created_at, wt.updated_at,
-              wd.title AS designation_title, wd.display_order AS designation_order
+              wd.title AS designation_title, wd.display_order AS designation_order,
+              dept.name AS department_name, dept.code AS department_code
        FROM website_teachers wt
        LEFT JOIN website_designations wd ON wd.id = wt.designation_id
+       LEFT JOIN website_departments dept ON dept.id = wt.department_id
        WHERE wt.id = $1 AND wt.website_id = $2
        LIMIT 1`,
       [session.id, website.id]

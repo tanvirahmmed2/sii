@@ -743,6 +743,7 @@ CREATE TRIGGER update_website_designations_updated_at
 CREATE TABLE IF NOT EXISTS website_teachers (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    department_id BIGINT NOT NULL REFERENCES website_departments(id) ON DELETE CASCADE,
     designation_id BIGINT REFERENCES website_designations(id) ON DELETE SET NULL,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
@@ -772,6 +773,9 @@ CREATE TABLE IF NOT EXISTS website_teachers (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(website_id, email)
 );
+
+CREATE INDEX IF NOT EXISTS idx_website_teachers_dept ON website_teachers(department_id);
+CREATE INDEX IF NOT EXISTS idx_website_teachers_web ON website_teachers(website_id);
 
 DROP TRIGGER IF EXISTS update_website_teachers_updated_at ON website_teachers;
 CREATE TRIGGER update_website_teachers_updated_at

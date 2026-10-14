@@ -61,13 +61,15 @@ export async function GET(request, context) {
     // Single teacher profile retrieval
     if (id || email) {
       let queryStr = `
-        SELECT wt.id, wt.website_id, wt.designation_id, wt.name, wt.email, wt.number,
+        SELECT wt.id, wt.website_id, wt.department_id, wt.designation_id, wt.name, wt.email, wt.number,
                wt.emergency_contact, wt.gender, wt.blood_group, wt.date_of_birth, wt.religion,
                wt.address, wt.permanent_address, wt.joining_date, wt.salary, wt.photo_url,
                wt.photo_id, wt.is_active, wt.is_registered, wt.created_at, wt.updated_at,
-               wd.title AS designation_title, wd.display_order AS designation_order
+               wd.title AS designation_title, wd.display_order AS designation_order,
+               dept.name AS department_name, dept.code AS department_code
         FROM website_teachers wt
         LEFT JOIN website_designations wd ON wd.id = wt.designation_id
+        LEFT JOIN website_departments dept ON dept.id = wt.department_id
         WHERE wt.website_id = $1
       `;
       const queryParams = [website.id];
@@ -149,6 +151,13 @@ export async function GET(request, context) {
       paramIndex++;
     }
 
+    const departmentId = searchParams.get('department_id');
+    if (departmentId && departmentId !== 'all') {
+      whereClauses.push(`wt.department_id = $${paramIndex}`);
+      params.push(departmentId);
+      paramIndex++;
+    }
+
     if (status === 'active') {
       whereClauses.push(`wt.is_active = TRUE`);
     } else if (status === 'inactive') {
@@ -170,7 +179,8 @@ export async function GET(request, context) {
          COUNT(*)::int AS total_teachers,
          COUNT(*) FILTER (WHERE is_active = TRUE)::int AS active_teachers,
          COUNT(*) FILTER (WHERE is_active = FALSE)::int AS inactive_teachers,
-         COUNT(DISTINCT designation_id)::int AS total_designations
+         COUNT(DISTINCT designation_id)::int AS total_designations,
+         COUNT(DISTINCT department_id)::int AS total_departments
        FROM website_teachers
        WHERE website_id = $1`,
       [website.id]
@@ -180,19 +190,22 @@ export async function GET(request, context) {
       active_teachers: 0,
       inactive_teachers: 0,
       total_designations: 0,
+      total_departments: 0,
     };
 
     // Query rows with pagination
     const listQuery = `
-      SELECT wt.id, wt.website_id, wt.designation_id, wt.name, wt.email, wt.number,
+      SELECT wt.id, wt.website_id, wt.department_id, wt.designation_id, wt.name, wt.email, wt.number,
              wt.emergency_contact, wt.gender, wt.blood_group, wt.date_of_birth, wt.religion,
              wt.address, wt.permanent_address, wt.joining_date, wt.salary, wt.photo_url,
              wt.photo_id, wt.is_active, wt.is_registered, wt.created_at, wt.updated_at,
              wd.title AS designation_title,
+             dept.name AS department_name, dept.code AS department_code,
              (SELECT COUNT(*)::int FROM website_teacher_qualifications wtq WHERE wtq.teacher_id = wt.id) AS qualification_count,
              (SELECT COUNT(*)::int FROM website_teacher_subjects wts WHERE wts.teacher_id = wt.id) AS subject_count
       FROM website_teachers wt
       LEFT JOIN website_designations wd ON wd.id = wt.designation_id
+      LEFT JOIN website_departments dept ON dept.id = wt.department_id
       WHERE ${whereStr}
       ORDER BY wt.is_active DESC, wd.display_order ASC NULLS LAST, wt.name ASC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
@@ -232,6 +245,7 @@ export async function POST(request, context) {
       name,
       email,
       number,
+      department_id,
       emergency_contact = null,
       gender = 'male',
       blood_group = null,
@@ -259,6 +273,9 @@ export async function POST(request, context) {
     if (!number || !number.trim()) {
       return NextResponse.json({ success: false, error: 'Teacher contact number is required.' }, { status: 400 });
     }
+    if (!department_id) {
+      return NextResponse.json({ success: false, error: 'Department is required. Every teacher must belong to an academic department.' }, { status: 400 });
+    }
 
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedNumber = number.trim();
@@ -272,6 +289,16 @@ export async function POST(request, context) {
     if (existing.rows.length > 0) {
       return NextResponse.json({ success: false, error: 'A teacher with this email already exists in this institution.' }, { status: 409 });
     }
+
+    // Verify department exists and belongs to this website
+    const deptRes = await queryDb(
+      `SELECT id, name FROM website_departments WHERE id = $1 AND website_id = $2 LIMIT 1`,
+      [department_id, website.id]
+    );
+    if (deptRes.rows.length === 0) {
+      return NextResponse.json({ success: false, error: 'Selected department does not exist in this institution.' }, { status: 400 });
+    }
+    const verifiedDepartmentId = deptRes.rows[0].id;
 
     // Verify designation exists if provided
     let verifiedDesignationId = null;
@@ -296,18 +323,19 @@ export async function POST(request, context) {
 
     const insertRes = await queryDb(
       `INSERT INTO website_teachers (
-         website_id, designation_id, name, email, number, emergency_contact,
+         website_id, department_id, designation_id, name, email, number, emergency_contact,
          gender, blood_group, date_of_birth, religion, address, permanent_address,
          joining_date, salary, photo_url, photo_id, password, is_active, is_registered,
          verification_token, verification_token_expires
        ) VALUES (
-         $1, $2, $3, $4, $5, $6,
-         $7, $8, $9, $10, $11, $12,
-         COALESCE($13::date, CURRENT_DATE), $14, $15, $16, $17, $18, FALSE,
-         $19, CURRENT_TIMESTAMP + INTERVAL '7 days'
+         $1, $2, $3, $4, $5, $6, $7,
+         $8, $9, $10, $11, $12, $13,
+         COALESCE($14::date, CURRENT_DATE), $15, $16, $17, $18, $19, FALSE,
+         $20, CURRENT_TIMESTAMP + INTERVAL '7 days'
        ) RETURNING *`,
       [
         website.id,
+        verifiedDepartmentId,
         verifiedDesignationId,
         name.trim(),
         trimmedEmail,
@@ -420,6 +448,7 @@ export async function PUT(request, context) {
       name,
       email,
       number,
+      department_id,
       emergency_contact,
       gender,
       blood_group,
@@ -469,6 +498,22 @@ export async function PUT(request, context) {
       passwordHash = await hashPassword(password.trim());
     }
 
+    // Verify department exists if provided
+    let verifiedDepartmentId = undefined;
+    if (department_id !== undefined) {
+      if (!department_id) {
+        return NextResponse.json({ success: false, error: 'Department is required.' }, { status: 400 });
+      }
+      const deptRes = await queryDb(
+        `SELECT id FROM website_departments WHERE id = $1 AND website_id = $2 LIMIT 1`,
+        [department_id, website.id]
+      );
+      if (deptRes.rows.length === 0) {
+        return NextResponse.json({ success: false, error: 'Selected department does not exist in this institution.' }, { status: 400 });
+      }
+      verifiedDepartmentId = deptRes.rows[0].id;
+    }
+
     // Verify designation exists if provided
     let verifiedDesignationId = null;
     if (designation_id) {
@@ -496,12 +541,13 @@ export async function PUT(request, context) {
            joining_date = COALESCE($11::date, joining_date),
            salary = COALESCE($12, salary),
            designation_id = $13,
-           photo_url = COALESCE($14, photo_url),
-           photo_id = COALESCE($15, photo_id),
-           password = $16,
-           is_active = COALESCE($17, is_active),
+           department_id = COALESCE($14, department_id),
+           photo_url = COALESCE($15, photo_url),
+           photo_id = COALESCE($16, photo_id),
+           password = $17,
+           is_active = COALESCE($18, is_active),
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $18 AND website_id = $19
+       WHERE id = $19 AND website_id = $20
        RETURNING *`,
       [
         name?.trim() || null,
@@ -517,6 +563,7 @@ export async function PUT(request, context) {
         joining_date || null,
         salary !== undefined ? Number(salary) : null,
         verifiedDesignationId,
+        verifiedDepartmentId !== undefined ? verifiedDepartmentId : null,
         photo_url !== undefined ? (photo_url?.trim() || null) : null,
         photo_id !== undefined ? (photo_id?.trim() || null) : null,
         passwordHash,

@@ -31,16 +31,19 @@ export default function TeacherListPage() {
 
   const [teachers, setTeachers] = useState([]);
   const [designations, setDesignations] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [stats, setStats] = useState({
     total_teachers: 0,
     active_teachers: 0,
     inactive_teachers: 0,
-    total_designations: 0
+    total_designations: 0,
+    total_departments: 0
   });
 
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDesignation, setSelectedDesignation] = useState('all');
+  const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 1 });
@@ -69,21 +72,28 @@ export default function TeacherListPage() {
     }
   }, []);
 
-  // Fetch designations for filter dropdown
+  // Fetch designations & departments for filter dropdowns
   useEffect(() => {
-    async function loadDesignations() {
+    async function loadFilterOptions() {
       if (!domain) return;
       try {
-        const res = await fetch(`/api/${domain}/staff/panel/teacher/designations`);
-        const data = await res.json();
-        if (data.success) {
-          setDesignations(data.designations || []);
+        const [desRes, deptRes] = await Promise.all([
+          fetch(`/api/${domain}/staff/panel/teacher/designations`),
+          fetch(`/api/${domain}/staff/panel/departments`)
+        ]);
+        const desData = await desRes.json();
+        const deptData = await deptRes.json();
+        if (desData.success) {
+          setDesignations(desData.designations || []);
+        }
+        if (deptData.success) {
+          setDepartments(deptData.departments || []);
         }
       } catch (err) {
-        console.error('Failed to load designations:', err);
+        console.error('Failed to load filter options:', err);
       }
     }
-    loadDesignations();
+    loadFilterOptions();
   }, [domain]);
 
   // Fetch teachers roster
@@ -97,6 +107,7 @@ export default function TeacherListPage() {
       });
       if (searchTerm.trim()) queryParams.set('search', searchTerm.trim());
       if (selectedDesignation !== 'all') queryParams.set('designation_id', selectedDesignation);
+      if (selectedDepartment !== 'all') queryParams.set('department_id', selectedDepartment);
       if (selectedStatus !== 'all') queryParams.set('status', selectedStatus);
 
       const res = await fetch(`/api/${domain}/staff/panel/teacher?${queryParams.toString()}`);
@@ -115,7 +126,7 @@ export default function TeacherListPage() {
     } finally {
       setLoading(false);
     }
-  }, [domain, page, searchTerm, selectedDesignation, selectedStatus, showToast]);
+  }, [domain, page, searchTerm, selectedDesignation, selectedDepartment, selectedStatus, showToast]);
 
   useEffect(() => {
     fetchTeachers();
@@ -255,6 +266,22 @@ export default function TeacherListPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             <select
+              value={selectedDepartment}
+              onChange={(e) => {
+                setSelectedDepartment(e.target.value);
+                setPage(1);
+              }}
+              className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer"
+            >
+              <option value="all">All Departments</option>
+              {departments.map((dept) => (
+                <option key={dept.id} value={dept.id}>
+                  {dept.name} {dept.code ? `(${dept.code})` : ''}
+                </option>
+              ))}
+            </select>
+
+            <select
               value={selectedDesignation}
               onChange={(e) => {
                 setSelectedDesignation(e.target.value);
@@ -305,6 +332,7 @@ export default function TeacherListPage() {
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
               <tr>
                 <th className="px-3 py-2">Teacher Profile</th>
+                <th className="px-3 py-2">Department</th>
                 <th className="px-3 py-2">Designation</th>
                 <th className="px-3 py-2">Contact Details</th>
                 <th className="px-3 py-2">Joining &amp; Salary</th>
@@ -316,7 +344,7 @@ export default function TeacherListPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
               {loading && teachers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-8 text-center">
+                  <td colSpan={8} className="px-3 py-8 text-center">
                     <div className="flex justify-center items-center">
                       <div className="loader loader-sm" />
                     </div>
@@ -324,7 +352,7 @@ export default function TeacherListPage() {
                 </tr>
               ) : teachers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-8 text-center text-slate-400">
+                  <td colSpan={8} className="px-3 py-8 text-center text-slate-400">
                     <FiUsers className="w-6 h-6 mx-auto mb-2 text-slate-300 dark:text-slate-700" />
                     <p className="font-medium text-slate-600 dark:text-slate-400">No teachers found</p>
                     <p className="text-[11px] text-slate-400 mt-0.5">
@@ -365,6 +393,24 @@ export default function TeacherListPage() {
                           </div>
                         </div>
                       </div>
+                    </td>
+
+                    {/* Department */}
+                    <td className="px-3 py-2">
+                      {teacher.department_name ? (
+                        <div className="flex flex-col">
+                          <span className="text-slate-900 dark:text-white font-medium text-xs">
+                            {teacher.department_name}
+                          </span>
+                          {teacher.department_code && (
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {teacher.department_code}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 text-[11px] italic">Unassigned</span>
+                      )}
                     </td>
 
                     {/* Designation */}
@@ -518,8 +564,13 @@ export default function TeacherListPage() {
                     </div>
                   )}
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white">{selectedTeacher.name}</h4>
+                      {selectedTeacher.department_name && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800">
+                          {selectedTeacher.department_name} {selectedTeacher.department_code ? `(${selectedTeacher.department_code})` : ''}
+                        </span>
+                      )}
                       <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800">
                         {selectedTeacher.designation_title || 'Unassigned'}
                       </span>

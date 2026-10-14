@@ -21,7 +21,8 @@ import {
   FiList,
   FiRefreshCw,
   FiMapPin,
-  FiBookOpen
+  FiBookOpen,
+  FiLayers
 } from 'react-icons/fi';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
@@ -44,8 +45,9 @@ function TeacherUpdateContent() {
   const [allTeachers, setAllTeachers] = useState([]);
   const [selectedTeacherId, setSelectedTeacherId] = useState(initialTeacherId);
 
-  // Designations
+  // Designations & Departments
   const [designations, setDesignations] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -65,6 +67,7 @@ function TeacherUpdateContent() {
     permanent_address: '',
     joining_date: '',
     salary: '',
+    department_id: '',
     designation_id: '',
     photo_url: '',
     photo_id: '',
@@ -86,21 +89,28 @@ function TeacherUpdateContent() {
     }
   }, []);
 
-  // Fetch designations
+  // Fetch designations & departments
   useEffect(() => {
-    async function loadDesignations() {
+    async function loadData() {
       if (!domain) return;
       try {
-        const res = await fetch(`/api/${domain}/staff/panel/teacher/designations`);
-        const data = await res.json();
-        if (data.success) {
-          setDesignations(data.designations || []);
+        const [desRes, deptRes] = await Promise.all([
+          fetch(`/api/${domain}/staff/panel/teacher/designations`),
+          fetch(`/api/${domain}/staff/panel/departments`)
+        ]);
+        const desData = await desRes.json();
+        const deptData = await deptRes.json();
+        if (desData.success) {
+          setDesignations(desData.designations || []);
+        }
+        if (deptData.success) {
+          setDepartments(deptData.departments || []);
         }
       } catch (err) {
         console.error(err);
       }
     }
-    loadDesignations();
+    loadData();
   }, [domain]);
 
   // Fetch teachers roster for selector
@@ -146,6 +156,7 @@ function TeacherUpdateContent() {
           permanent_address: t.permanent_address || '',
           joining_date: t.joining_date ? t.joining_date.split('T')[0] : '',
           salary: t.salary !== null && t.salary !== undefined ? String(t.salary) : '',
+          department_id: t.department_id ? String(t.department_id) : '',
           designation_id: t.designation_id ? String(t.designation_id) : '',
           photo_url: t.photo_url || '',
           photo_id: t.photo_id || '',
@@ -233,11 +244,16 @@ function TeacherUpdateContent() {
       showToast('Phone number is required.', true);
       return;
     }
+    if (!formData.department_id) {
+      showToast('Department is required. Every teacher must belong to a department.', true);
+      return;
+    }
 
     try {
       setSubmitting(true);
       const payload = {
         ...formData,
+        department_id: Number(formData.department_id),
         designation_id: formData.designation_id ? Number(formData.designation_id) : null,
         salary: formData.salary ? parseFloat(formData.salary) : 0
       };
@@ -565,10 +581,32 @@ function TeacherUpdateContent() {
               <span>2. Institutional Role & Employment</span>
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               <div>
-                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Designation / Rank
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                  <FiLayers className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Department <span className="text-rose-500">*</span></span>
+                </label>
+                <select
+                  name="department_id"
+                  required
+                  value={formData.department_id}
+                  onChange={handleInputChange}
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 cursor-pointer"
+                >
+                  <option value="">-- Choose Department --</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} {d.code ? `(${d.code})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                  <FiAward className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Designation / Rank</span>
                 </label>
                 <select
                   name="designation_id"
