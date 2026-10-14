@@ -95,10 +95,11 @@ export async function GET(request) {
                 '' AS vision,
                 '' AS history,
                 '' AS map_url,
-                '' AS facebook_url,
-                '' AS twitter_url,
-                '' AS instagram_url,
-                '' AS youtube_url,
+                COALESCE(w.facebook_url, '') AS facebook_url,
+                COALESCE(w.twitter_url, '') AS twitter_url,
+                COALESCE(w.instagram_url, '') AS instagram_url,
+                COALESCE(w.youtube_url, '') AS youtube_url,
+                COALESCE(w.linkedin_url, '') AS linkedin_url,
                 p.name AS package_name,
                 p.slug AS package_slug,
                 s.id AS subscription_id,
@@ -552,6 +553,36 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       values.push(body.address ? String(body.address).trim() : null);
     }
 
+    if (body.facebook_url !== undefined || body.facebookUrl !== undefined) {
+      const fbVal = body.facebook_url !== undefined ? body.facebook_url : body.facebookUrl;
+      updates.push(`facebook_url = $${idx++}`);
+      values.push(fbVal ? String(fbVal).trim() : null);
+    }
+
+    if (body.twitter_url !== undefined || body.twitterUrl !== undefined) {
+      const twVal = body.twitter_url !== undefined ? body.twitter_url : body.twitterUrl;
+      updates.push(`twitter_url = $${idx++}`);
+      values.push(twVal ? String(twVal).trim() : null);
+    }
+
+    if (body.instagram_url !== undefined || body.instagramUrl !== undefined) {
+      const igVal = body.instagram_url !== undefined ? body.instagram_url : body.instagramUrl;
+      updates.push(`instagram_url = $${idx++}`);
+      values.push(igVal ? String(igVal).trim() : null);
+    }
+
+    if (body.youtube_url !== undefined || body.youtubeUrl !== undefined) {
+      const ytVal = body.youtube_url !== undefined ? body.youtube_url : body.youtubeUrl;
+      updates.push(`youtube_url = $${idx++}`);
+      values.push(ytVal ? String(ytVal).trim() : null);
+    }
+
+    if (body.linkedin_url !== undefined || body.linkedinUrl !== undefined) {
+      const liVal = body.linkedin_url !== undefined ? body.linkedin_url : body.linkedinUrl;
+      updates.push(`linkedin_url = $${idx++}`);
+      values.push(liVal ? String(liVal).trim() : null);
+    }
+
     // Subdomain change
     if (body.subdomain !== undefined) {
       const rawSub = String(body.subdomain).trim().toLowerCase();
@@ -753,10 +784,11 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
               '' AS vision,
               '' AS history,
               '' AS map_url,
-              '' AS facebook_url,
-              '' AS twitter_url,
-              '' AS instagram_url,
-              '' AS youtube_url,
+              COALESCE(w.facebook_url, '') AS facebook_url,
+              COALESCE(w.twitter_url, '') AS twitter_url,
+              COALESCE(w.instagram_url, '') AS instagram_url,
+              COALESCE(w.youtube_url, '') AS youtube_url,
+              COALESCE(w.linkedin_url, '') AS linkedin_url,
               (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published
        FROM websites w
        WHERE w.id = $1 AND w.creator_id = $2

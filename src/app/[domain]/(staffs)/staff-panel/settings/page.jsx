@@ -36,6 +36,7 @@ export default function WebsiteSettingsPage() {
   const [twitterUrl, setTwitterUrl] = useState('');
   const [instagramUrl, setInstagramUrl] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [linkedinUrl, setLinkedinUrl] = useState('');
 
   // Branding / Theme
   const [theme, setTheme] = useState('default');
@@ -45,16 +46,12 @@ export default function WebsiteSettingsPage() {
   // System
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
 
-  // Fetch website settings
-  const fetchSettings = async () => {
+  // Refresh website settings after updates
+  const refreshSettings = async () => {
     try {
-      setLoading(true);
       const res = await fetch(getApiEndpoint('staff/settings'));
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to load website settings.');
-      }
+      if (!res.ok) return;
 
       const s = data.payload?.settings || data.paylod?.settings || data.settings || {};
 
@@ -78,22 +75,72 @@ export default function WebsiteSettingsPage() {
       setTwitterUrl(s.twitter_url || '');
       setInstagramUrl(s.instagram_url || '');
       setYoutubeUrl(s.youtube_url || '');
+      setLinkedinUrl(s.linkedin_url || '');
 
       setTheme(s.theme || 'default');
       setPrimaryColor(s.primary_color || '#1e40af');
       setSecondaryColor(s.secondary_color || '#0ea5e9');
 
       setIsMaintenanceMode(Boolean(s.is_maintenance_mode));
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setLoading(false);
+    } catch {
+      // Non-fatal
     }
   };
 
   useEffect(() => {
-    fetchSettings();
-  }, []);
+    let ignore = false;
+    async function loadSettings() {
+      try {
+        const res = await fetch(getApiEndpoint('staff/settings'));
+        const data = await res.json();
+        if (ignore) return;
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to load website settings.');
+        }
+
+        const s = data.payload?.settings || data.paylod?.settings || data.settings || {};
+
+        setName(s.name || website?.name || '');
+        setInstitutionType(s.institution_type || website?.institution_type || 'School');
+        setEiinNumber(s.eiin_number || website?.eiin_number || '');
+        setLogo(s.logo || website?.logo || '');
+        setFavicon(s.favicon || website?.favicon || '');
+
+        setContactPhone(s.contact_phone || '');
+        setContactEmail(s.contact_email || '');
+        setAddress(s.address || '');
+        setMapUrl(s.map_url || '');
+
+        setMotto(s.motto || '');
+        setMission(s.mission || '');
+        setVision(s.vision || '');
+        setHistory(s.history || '');
+
+        setFacebookUrl(s.facebook_url || '');
+        setTwitterUrl(s.twitter_url || '');
+        setInstagramUrl(s.instagram_url || '');
+        setYoutubeUrl(s.youtube_url || '');
+        setLinkedinUrl(s.linkedin_url || '');
+
+        setTheme(s.theme || 'default');
+        setPrimaryColor(s.primary_color || '#1e40af');
+        setSecondaryColor(s.secondary_color || '#0ea5e9');
+
+        setIsMaintenanceMode(Boolean(s.is_maintenance_mode));
+      } catch (err) {
+        if (!ignore) toast.error(err.message);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    }
+
+    loadSettings();
+
+    return () => {
+      ignore = true;
+    };
+  }, [getApiEndpoint, website]);
 
   const handleSaveSettings = async (e) => {
     if (e) e.preventDefault();
@@ -123,6 +170,7 @@ export default function WebsiteSettingsPage() {
         twitter_url: twitterUrl.trim() || null,
         instagram_url: instagramUrl.trim() || null,
         youtube_url: youtubeUrl.trim() || null,
+        linkedin_url: linkedinUrl.trim() || null,
         theme: theme.trim() || 'default',
         primary_color: primaryColor.trim() || '#1e40af',
         secondary_color: secondaryColor.trim() || '#0ea5e9',
@@ -145,7 +193,7 @@ export default function WebsiteSettingsPage() {
       if (typeof fetchWebsiteSettings === 'function') {
         fetchWebsiteSettings();
       }
-      fetchSettings();
+      refreshSettings();
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -494,6 +542,19 @@ export default function WebsiteSettingsPage() {
                   value={youtubeUrl}
                   onChange={(e) => setYoutubeUrl(e.target.value)}
                   placeholder="https://youtube.com/@..."
+                  className="w-full px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  LinkedIn Profile URL
+                </label>
+                <input
+                  type="url"
+                  value={linkedinUrl}
+                  onChange={(e) => setLinkedinUrl(e.target.value)}
+                  placeholder="https://linkedin.com/school/..."
                   className="w-full px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
                 />
               </div>

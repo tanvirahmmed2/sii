@@ -2,6 +2,7 @@
 
 import React, { useContext } from 'react';
 import Link from 'next/link';
+import { FaFacebookF, FaTwitter, FaInstagram, FaYoutube, FaLinkedinIn } from 'react-icons/fa';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import { SCHOOL_NAME } from 'src/lib/database/secret';
 
@@ -22,6 +23,21 @@ const Footer = () => {
   const address = website?.address || websiteSettings?.address || '';
   const eiin = website?.eiin_number || websiteSettings?.eiin || '';
   const mapUrl = websiteSettings?.map_url || null;
+
+  // Social URLs
+  const facebookUrl = website?.facebook_url || websiteSettings?.facebook_url || '';
+  const twitterUrl = website?.twitter_url || websiteSettings?.twitter_url || '';
+  const instagramUrl = website?.instagram_url || websiteSettings?.instagram_url || '';
+  const youtubeUrl = website?.youtube_url || websiteSettings?.youtube_url || '';
+  const linkedinUrl = website?.linkedin_url || websiteSettings?.linkedin_url || '';
+
+  const socialLinks = [
+    { name: 'Facebook', url: facebookUrl, icon: FaFacebookF },
+    { name: 'Twitter', url: twitterUrl, icon: FaTwitter },
+    { name: 'Instagram', url: instagramUrl, icon: FaInstagram },
+    { name: 'YouTube', url: youtubeUrl, icon: FaYoutube },
+    { name: 'LinkedIn', url: linkedinUrl, icon: FaLinkedinIn },
+  ];
 
   // Secondary brand background color
   const footerBg = secondaryColor || website?.secondary_color || '#0f172a';
@@ -65,6 +81,36 @@ const Footer = () => {
       className="w-full text-white/90 border-t border-white/10 transition-colors"
       style={{ backgroundColor: footerBg }}
     >
+      {/* Top Bar: Follow us on */}
+      <div className="w-full border-b border-white/10 bg-black/15">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs sm:text-sm font-semibold tracking-wider uppercase text-white/90">
+              Follow us on :
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            {socialLinks.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.url || '#'}
+                  target={item.url ? '_blank' : undefined}
+                  rel={item.url ? 'noopener noreferrer' : undefined}
+                  aria-label={item.name}
+                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/25 text-white/90 hover:text-white flex items-center justify-center transition-all duration-150 border border-white/15 hover:scale-105"
+                  title={item.name}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
       <div className="w-full px-4 sm:px-6 lg:px-8 py-12 space-y-10 max-w-7xl mx-auto">
         {/* Top Tier: Institution Profile & Navigation Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">

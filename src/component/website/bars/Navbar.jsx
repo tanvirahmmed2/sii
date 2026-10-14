@@ -2,7 +2,6 @@
 
 import React, { useContext, useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import { SCHOOL_NAME } from 'src/lib/database/secret';
@@ -22,15 +21,35 @@ const Navbar = () => {
   } = useContext(TenantWebsiteContext);
 
   const pathname = usePathname();
+  const [prevPathname, setPrevPathname] = useState(pathname);
   const [deptOpen, setDeptOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [clubsOpen, setClubsOpen] = useState(false);
+  const [logoError, setLogoError] = useState(false);
   const deptRef = useRef(null);
   const aboutRef = useRef(null);
   const clubsRef = useRef(null);
 
+  // Close dropdowns on route changes during render
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
+    setDeptOpen(false);
+    setAboutOpen(false);
+    setClubsOpen(false);
+  }
+
   const schoolName = website?.name || websiteSettings?.school_name || SCHOOL_NAME;
-  const logoUrl = website?.logo || website?.favicon || null;
+  
+  // Use logo strictly from website table with no fallback
+  const rawLogo = website?.logo;
+  const logoUrl =
+    typeof rawLogo === 'string' &&
+    rawLogo.trim() !== '' &&
+    rawLogo.trim().toLowerCase() !== 'null' &&
+    rawLogo.trim().toLowerCase() !== 'undefined'
+      ? rawLogo.trim()
+      : null;
+
   const eiin = website?.eiin_number || websiteSettings?.eiin || null;
 
   // Primary brand background color
@@ -54,13 +73,6 @@ const Navbar = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-
-  // Close dropdowns on route changes
-  useEffect(() => {
-    setDeptOpen(false);
-    setAboutOpen(false);
-    setClubsOpen(false);
-  }, [pathname]);
 
   const navLinkClass = (path) => {
     const isActive = pathname === path || pathname === tenantUrl(path);
@@ -88,31 +100,21 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-14 sm:h-16 gap-3">
           {/* Brand & Institution Info */}
           <Link href={tenantUrl('/')} className="flex items-center gap-2.5 min-w-0 group">
-            {logoUrl ? (
+            {logoUrl && !logoError && (
               <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-lg border border-white/30 bg-white overflow-hidden shrink-0 flex items-center justify-center shadow-xs">
-                <Image
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   src={logoUrl}
                   alt={schoolName}
-                  width={36}
-                  height={36}
-                  className="object-contain p-0.5"
-                  unoptimized={logoUrl.startsWith('http')}
+                  className="w-full h-full object-contain p-0.5"
+                  onError={() => setLogoError(true)}
                 />
-              </div>
-            ) : (
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white/20 border border-white/30 text-white text-xs sm:text-sm font-bold flex items-center justify-center shrink-0 shadow-xs">
-                {schoolName?.charAt(0) || 'A'}
               </div>
             )}
             <div className="flex flex-col min-w-0">
               <span className="text-sm sm:text-base font-bold text-white tracking-tight truncate group-hover:text-white/90 transition-colors">
                 {schoolName}
               </span>
-              {eiin && (
-                <span className="text-[10px] text-white/80 font-mono tracking-wide">
-                  EIIN: {eiin}
-                </span>
-              )}
             </div>
           </Link>
 

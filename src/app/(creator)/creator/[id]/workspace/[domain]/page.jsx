@@ -62,6 +62,7 @@ export default function WebsiteManagePage() {
   const [twitterUrl, setTwitterUrl] = useState('');
   const [instagramUrl, setInstagramUrl] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [linkedinUrl, setLinkedinUrl] = useState('');
   const [primaryColor, setPrimaryColor] = useState('#1e40af');
   const [secondaryColor, setSecondaryColor] = useState('#0ea5e9');
   const [theme, setTheme] = useState('default');
@@ -190,6 +191,7 @@ export default function WebsiteManagePage() {
         setTwitterUrl(w.twitter_url || '');
         setInstagramUrl(w.instagram_url || '');
         setYoutubeUrl(w.youtube_url || '');
+        setLinkedinUrl(w.linkedin_url || '');
         setPrimaryColor(w.primary_color || '#1e40af');
         setSecondaryColor(w.secondary_color || '#0ea5e9');
         setTheme(w.theme || 'default');
@@ -514,6 +516,7 @@ export default function WebsiteManagePage() {
         twitter_url: twitterUrl.trim(),
         instagram_url: instagramUrl.trim(),
         youtube_url: youtubeUrl.trim(),
+        linkedin_url: linkedinUrl.trim(),
         primary_color: primaryColor,
         secondary_color: secondaryColor,
         theme: theme,
@@ -2399,6 +2402,17 @@ export default function WebsiteManagePage() {
                   value={youtubeUrl}
                   onChange={(e) => setYoutubeUrl(e.target.value)}
                   placeholder="https://youtube.com/@yourschool"
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">LinkedIn URL</label>
+                <input
+                  type="url"
+                  value={linkedinUrl}
+                  onChange={(e) => setLinkedinUrl(e.target.value)}
+                  placeholder="https://linkedin.com/school/yourschool"
                   className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>

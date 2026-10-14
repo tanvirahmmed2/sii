@@ -37,10 +37,11 @@ export async function GET(request, context) {
       mission: '',
       vision: '',
       history: '',
-      facebook_url: '',
-      twitter_url: '',
-      instagram_url: '',
-      youtube_url: '',
+      facebook_url: website.facebook_url || '',
+      twitter_url: website.twitter_url || '',
+      instagram_url: website.instagram_url || '',
+      youtube_url: website.youtube_url || '',
+      linkedin_url: website.linkedin_url || '',
       primary_color: website.primary_color || '#1e40af',
       secondary_color: website.secondary_color || '#0ea5e9',
       theme: website.theme || 'default',
@@ -97,8 +98,13 @@ export async function PUT(request, context) {
            logo_id = COALESCE($11, logo_id),
            favicon = COALESCE($12, favicon),
            favicon_id = COALESCE($13, favicon_id),
+           facebook_url = COALESCE($14, facebook_url),
+           twitter_url = COALESCE($15, twitter_url),
+           instagram_url = COALESCE($16, instagram_url),
+           youtube_url = COALESCE($17, youtube_url),
+           linkedin_url = COALESCE($18, linkedin_url),
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $14
+       WHERE id = $19
        RETURNING *`,
       [
         body.school_name || body.name || null,
@@ -114,6 +120,11 @@ export async function PUT(request, context) {
         body.logo_id || null,
         body.favicon || null,
         body.favicon_id || null,
+        body.facebook_url !== undefined ? String(body.facebook_url).trim() : null,
+        body.twitter_url !== undefined ? String(body.twitter_url).trim() : null,
+        body.instagram_url !== undefined ? String(body.instagram_url).trim() : null,
+        body.youtube_url !== undefined ? String(body.youtube_url).trim() : null,
+        body.linkedin_url !== undefined ? String(body.linkedin_url).trim() : null,
         websiteId,
       ]
     );
@@ -140,3 +151,5 @@ export async function PUT(request, context) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+export const POST = PUT;

@@ -45,10 +45,11 @@ export async function GET(request, context) {
       mission: '',
       vision: '',
       history: '',
-      facebook_url: '',
-      twitter_url: '',
-      instagram_url: '',
-      youtube_url: '',
+      facebook_url: website.facebook_url || '',
+      twitter_url: website.twitter_url || '',
+      instagram_url: website.instagram_url || '',
+      youtube_url: website.youtube_url || '',
+      linkedin_url: website.linkedin_url || '',
       updated_at: website.updated_at,
     };
 
@@ -105,8 +106,13 @@ export async function PUT(request, context) {
            contact_phone = COALESCE($10, contact_phone),
            address = COALESCE($11, address),
            is_maintenance_mode = COALESCE($12, is_maintenance_mode),
+           facebook_url = COALESCE($13, facebook_url),
+           twitter_url = COALESCE($14, twitter_url),
+           instagram_url = COALESCE($15, instagram_url),
+           youtube_url = COALESCE($16, youtube_url),
+           linkedin_url = COALESCE($17, linkedin_url),
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $13
+       WHERE id = $18
        RETURNING *`,
       [
         data.name !== undefined ? String(data.name).trim() : null,
@@ -121,6 +127,11 @@ export async function PUT(request, context) {
         data.contact_phone !== undefined ? String(data.contact_phone).trim() : null,
         data.address !== undefined ? String(data.address).trim() : null,
         data.is_maintenance_mode !== undefined ? Boolean(data.is_maintenance_mode) : null,
+        data.facebook_url !== undefined ? String(data.facebook_url).trim() : null,
+        data.twitter_url !== undefined ? String(data.twitter_url).trim() : null,
+        data.instagram_url !== undefined ? String(data.instagram_url).trim() : null,
+        data.youtube_url !== undefined ? String(data.youtube_url).trim() : null,
+        data.linkedin_url !== undefined ? String(data.linkedin_url).trim() : null,
         website.id,
       ]
     );

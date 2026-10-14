@@ -258,11 +258,28 @@ export function verifyWebsiteToken(token) {
   }
 }
 
+let _websiteSchemaEnsured = false;
+async function ensureWebsiteSchema() {
+  if (_websiteSchemaEnsured) return;
+  _websiteSchemaEnsured = true;
+  try {
+    await query(`
+      ALTER TABLE websites
+      ADD COLUMN IF NOT EXISTS facebook_url TEXT,
+      ADD COLUMN IF NOT EXISTS twitter_url TEXT,
+      ADD COLUMN IF NOT EXISTS instagram_url TEXT,
+      ADD COLUMN IF NOT EXISTS youtube_url TEXT,
+      ADD COLUMN IF NOT EXISTS linkedin_url TEXT;
+    `);
+  } catch {}
+}
+
 /**
  * Resolve which website this request is for, based on the [slug] or [domain] param.
  */
 export async function resolveWebsiteFromRequest(request, context) {
   try {
+    await ensureWebsiteSchema().catch(() => {});
     const params = await context?.params;
     let identifier = typeof context === 'string' ? context : (params?.domain || params?.slug);
 
@@ -323,6 +340,7 @@ export async function resolveWebsiteFromRequest(request, context) {
     const res = await query(
       `SELECT id, creator_id, name, slug, subdomain, subdomain AS domain, custom_domain,
               custom_domain_verified, institution_type, eiin_number, contact_email, contact_phone, address,
+              facebook_url, twitter_url, instagram_url, youtube_url, linkedin_url,
               primary_color, secondary_color, theme, status, is_maintenance_mode,
               logo, logo_id, favicon, favicon_id,
               (status = 'active') AS is_active,
