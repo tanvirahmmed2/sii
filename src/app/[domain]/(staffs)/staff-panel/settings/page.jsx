@@ -1,10 +1,24 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import TenantLoader from 'src/component/tenant/TenantLoader';
 import Link from 'next/link';
 import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 import { toast } from 'react-hot-toast';
+
+const CURRENCIES = [
+  { code: 'BDT', symbol: '৳', label: 'BDT (৳) - Bangladeshi Taka' },
+  { code: 'USD', symbol: '$', label: 'USD ($) - US Dollar' },
+  { code: 'EUR', symbol: '€', label: 'EUR (€) - Euro' },
+  { code: 'GBP', symbol: '£', label: 'GBP (£) - British Pound' },
+  { code: 'INR', symbol: '₹', label: 'INR (₹) - Indian Rupee' },
+  { code: 'CAD', symbol: 'CA$', label: 'CAD ($) - Canadian Dollar' },
+  { code: 'AUD', symbol: 'AU$', label: 'AUD ($) - Australian Dollar' },
+  { code: 'AED', symbol: 'AED', label: 'AED (د.إ) - UAE Dirham' },
+  { code: 'SAR', symbol: 'SAR', label: 'SAR (﷼) - Saudi Riyal' },
+  { code: 'MYR', symbol: 'RM', label: 'MYR (RM) - Malaysian Ringgit' },
+  { code: 'SGD', symbol: 'S$', label: 'SGD ($) - Singapore Dollar' },
+];
 
 export default function WebsiteSettingsPage() {
   const { website, getApiEndpoint, fetchWebsiteSettings } = useTenantWebsite();
@@ -16,8 +30,18 @@ export default function WebsiteSettingsPage() {
   const [name, setName] = useState('');
   const [institutionType, setInstitutionType] = useState('School');
   const [eiinNumber, setEiinNumber] = useState('');
-  const [logo, setLogo] = useState('');
-  const [favicon, setFavicon] = useState('');
+  const [currency, setCurrency] = useState('BDT');
+
+  // Cloudinary Logo & Favicon states
+  const [logoPreview, setLogoPreview] = useState('');
+  const [logoDataUri, setLogoDataUri] = useState(''); // New base64 image data to upload
+  const [removeLogo, setRemoveLogo] = useState(false);
+  const logoInputRef = useRef(null);
+
+  const [faviconPreview, setFaviconPreview] = useState('');
+  const [faviconDataUri, setFaviconDataUri] = useState(''); // New base64 image data to upload
+  const [removeFavicon, setRemoveFavicon] = useState(false);
+  const faviconInputRef = useRef(null);
 
   // Contact Fields
   const [contactPhone, setContactPhone] = useState('');
@@ -43,8 +67,11 @@ export default function WebsiteSettingsPage() {
   const [primaryColor, setPrimaryColor] = useState('#1e40af');
   const [secondaryColor, setSecondaryColor] = useState('#0ea5e9');
 
-  // System
+  // System & Maintenance
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState(
+    'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.'
+  );
 
   // Refresh website settings after updates
   const refreshSettings = async () => {
@@ -58,8 +85,15 @@ export default function WebsiteSettingsPage() {
       setName(s.name || website?.name || '');
       setInstitutionType(s.institution_type || website?.institution_type || 'School');
       setEiinNumber(s.eiin_number || website?.eiin_number || '');
-      setLogo(s.logo || website?.logo || '');
-      setFavicon(s.favicon || website?.favicon || '');
+      setCurrency(s.currency || website?.currency || 'BDT');
+
+      setLogoPreview(s.logo || website?.logo || '');
+      setLogoDataUri('');
+      setRemoveLogo(false);
+
+      setFaviconPreview(s.favicon || website?.favicon || '');
+      setFaviconDataUri('');
+      setRemoveFavicon(false);
 
       setContactPhone(s.contact_phone || '');
       setContactEmail(s.contact_email || '');
@@ -82,6 +116,10 @@ export default function WebsiteSettingsPage() {
       setSecondaryColor(s.secondary_color || '#0ea5e9');
 
       setIsMaintenanceMode(Boolean(s.is_maintenance_mode));
+      setMaintenanceMessage(
+        s.maintenance_message ||
+          'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.'
+      );
     } catch {
       // Non-fatal
     }
@@ -104,8 +142,15 @@ export default function WebsiteSettingsPage() {
         setName(s.name || website?.name || '');
         setInstitutionType(s.institution_type || website?.institution_type || 'School');
         setEiinNumber(s.eiin_number || website?.eiin_number || '');
-        setLogo(s.logo || website?.logo || '');
-        setFavicon(s.favicon || website?.favicon || '');
+        setCurrency(s.currency || website?.currency || 'BDT');
+
+        setLogoPreview(s.logo || website?.logo || '');
+        setLogoDataUri('');
+        setRemoveLogo(false);
+
+        setFaviconPreview(s.favicon || website?.favicon || '');
+        setFaviconDataUri('');
+        setRemoveFavicon(false);
 
         setContactPhone(s.contact_phone || '');
         setContactEmail(s.contact_email || '');
@@ -128,6 +173,10 @@ export default function WebsiteSettingsPage() {
         setSecondaryColor(s.secondary_color || '#0ea5e9');
 
         setIsMaintenanceMode(Boolean(s.is_maintenance_mode));
+        setMaintenanceMessage(
+          s.maintenance_message ||
+            'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.'
+        );
       } catch (err) {
         if (!ignore) toast.error(err.message);
       } finally {
@@ -142,6 +191,68 @@ export default function WebsiteSettingsPage() {
     };
   }, [getApiEndpoint, website]);
 
+  // Handle Logo File selection
+  const handleLogoSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file (PNG, JPG, SVG, or WEBP).');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target.result;
+      setLogoPreview(result);
+      setLogoDataUri(result);
+      setRemoveLogo(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleClearLogo = () => {
+    setLogoPreview('');
+    setLogoDataUri('');
+    setRemoveLogo(true);
+    if (logoInputRef.current) logoInputRef.current.value = '';
+  };
+
+  // Handle Favicon File selection
+  const handleFaviconSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/') && !file.name.endsWith('.ico')) {
+      toast.error('Please select an icon file (ICO, PNG, or SVG).');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Favicon size must be less than 2MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target.result;
+      setFaviconPreview(result);
+      setFaviconDataUri(result);
+      setRemoveFavicon(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleClearFavicon = () => {
+    setFaviconPreview('');
+    setFaviconDataUri('');
+    setRemoveFavicon(true);
+    if (faviconInputRef.current) faviconInputRef.current.value = '';
+  };
+
   const handleSaveSettings = async (e) => {
     if (e) e.preventDefault();
 
@@ -151,13 +262,14 @@ export default function WebsiteSettingsPage() {
     }
 
     setSubmitting(true);
+    const toastId = toast.loading('Uploading assets & updating settings...');
+
     try {
       const payload = {
         name: name.trim(),
         institution_type: institutionType.trim(),
         eiin_number: eiinNumber.trim() || null,
-        logo: logo.trim() || null,
-        favicon: favicon.trim() || null,
+        currency: currency.trim().toUpperCase() || 'BDT',
         contact_phone: contactPhone.trim() || null,
         contact_email: contactEmail.trim() || null,
         address: address.trim() || null,
@@ -175,7 +287,24 @@ export default function WebsiteSettingsPage() {
         primary_color: primaryColor.trim() || '#1e40af',
         secondary_color: secondaryColor.trim() || '#0ea5e9',
         is_maintenance_mode: Boolean(isMaintenanceMode),
+        maintenance_message: maintenanceMessage.trim(),
       };
+
+      // Only pass logo if a new image was uploaded or explicitly removed
+      if (removeLogo) {
+        payload.remove_logo = true;
+        payload.logo = '';
+      } else if (logoDataUri) {
+        payload.logo = logoDataUri;
+      }
+
+      // Only pass favicon if a new icon was uploaded or explicitly removed
+      if (removeFavicon) {
+        payload.remove_favicon = true;
+        payload.favicon = '';
+      } else if (faviconDataUri) {
+        payload.favicon = faviconDataUri;
+      }
 
       const res = await fetch(getApiEndpoint('staff/settings'), {
         method: 'PUT',
@@ -189,13 +318,13 @@ export default function WebsiteSettingsPage() {
         throw new Error(data.error || 'Failed to update website settings.');
       }
 
-      toast.success(data.message || 'Website settings updated successfully!');
+      toast.success(data.message || 'Website settings and assets updated successfully!', { id: toastId });
       if (typeof fetchWebsiteSettings === 'function') {
         fetchWebsiteSettings();
       }
       refreshSettings();
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.message || 'Error updating settings', { id: toastId });
     } finally {
       setSubmitting(false);
     }
@@ -207,7 +336,6 @@ export default function WebsiteSettingsPage() {
 
   return (
     <div className="w-full space-y-5">
-      
       {/* Top Banner Header */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -220,7 +348,7 @@ export default function WebsiteSettingsPage() {
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Configure all public institutional metadata, branding, campus contact information, philosophy, and system modes.
+            Configure all public institutional metadata, branding, Cloudinary logo &amp; favicon assets, default billing currency, and campus system maintenance.
           </p>
         </div>
 
@@ -229,9 +357,9 @@ export default function WebsiteSettingsPage() {
             type="button"
             onClick={handleSaveSettings}
             disabled={submitting}
-            className="px-5 py-2 rounded bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition cursor-pointer disabled:opacity-60 shadow-xs"
+            className="px-5 py-2 rounded bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition cursor-pointer disabled:opacity-60 shadow-xs flex items-center gap-1.5"
           >
-            {submitting ? 'Updating Website...' : 'Save All Settings'}
+            {submitting ? 'Uploading & Updating...' : 'Save All Settings'}
           </button>
         </div>
       </div>
@@ -240,10 +368,10 @@ export default function WebsiteSettingsPage() {
       <div className="flex items-center gap-1 border-b border-slate-200 dark:border-slate-800 pb-0 overflow-x-auto text-xs font-medium">
         {[
           { key: 'general', label: 'General & Identity' },
+          { key: 'branding', label: 'Logo, Favicon & Theme' },
           { key: 'contact', label: 'Contact & Location' },
           { key: 'mission', label: 'Mission, Vision & History' },
           { key: 'social', label: 'Social Channels' },
-          { key: 'branding', label: 'Appearance & Branding' },
           { key: 'system', label: 'System & Maintenance' },
         ].map((tab) => (
           <button
@@ -263,15 +391,15 @@ export default function WebsiteSettingsPage() {
 
       {/* Main Settings Form */}
       <form onSubmit={handleSaveSettings} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 sm:p-6 shadow-2xs space-y-6">
-
+        
         {/* TAB 1: General & Identity */}
         {activeTab === 'general' && (
           <div className="space-y-4">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-                General Institution Identification
+                General Institution Identification &amp; Defaults
               </h2>
-              <p className="text-[11px] text-slate-500">Core organizational names, accreditation codes, and primary insignia.</p>
+              <p className="text-[11px] text-slate-500">Core organizational names, accreditation codes, and operational transaction currency.</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -323,81 +451,315 @@ export default function WebsiteSettingsPage() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Logo Image URL
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1 flex items-center justify-between">
+                  <span>Default Operating Currency *</span>
+                  <span className="text-[10px] text-primary lowercase font-medium">Used for fees &amp; salaries</span>
                 </label>
-                <input
-                  type="url"
-                  value={logo}
-                  onChange={(e) => setLogo(e.target.value)}
-                  placeholder="https://.../logo.png"
-                  className="w-full px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Favicon Image URL
-                </label>
-                <input
-                  type="url"
-                  value={favicon}
-                  onChange={(e) => setFavicon(e.target.value)}
-                  placeholder="https://.../favicon.ico"
-                  className="w-full px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
-                />
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer font-medium"
+                >
+                  {CURRENCIES.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  This currency is automatically used across student admission fees, monthly tuition invoices, fee receipts, payroll scales, and accounting statements.
+                </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* TAB 2: Contact & Location */}
+        {/* TAB 2: Branding (Cloudinary Logo & Favicon + Colors) */}
+        {activeTab === 'branding' && (
+          <div className="space-y-6">
+            <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                Brand Assets &amp; Appearance (Cloudinary Powered)
+              </h2>
+              <p className="text-[11px] text-slate-500">
+                Upload your official institution logo and browser tab favicon directly. Files are stored securely on Cloudinary CDN.
+              </p>
+            </div>
+
+            {/* Logo and Favicon Upload Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
+              
+              {/* LOGO UPLOADER */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 dark:text-white block">Official Institution Logo</span>
+                    <span className="text-[10px] text-slate-500">Appears in header, navbar, report cards &amp; invoices</span>
+                  </div>
+                  {logoPreview && (
+                    <button
+                      type="button"
+                      onClick={handleClearLogo}
+                      className="px-2 py-1 text-[11px] text-rose-600 hover:text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition font-medium cursor-pointer"
+                    >
+                      Remove Logo
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-4">
+                  {/* Preview Thumbnail */}
+                  <div className="w-20 h-20 rounded border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center p-2 shrink-0 overflow-hidden shadow-2xs">
+                    {logoPreview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={logoPreview}
+                        alt="Logo Preview"
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    ) : (
+                      <div className="text-center text-slate-400">
+                        <span className="text-[10px] block font-mono">No Logo</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Upload Controls */}
+                  <div className="flex-1 space-y-2">
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                      onChange={handleLogoSelect}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => logoInputRef.current?.click()}
+                      className="px-3.5 py-1.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-primary text-slate-800 dark:text-slate-200 text-xs font-medium transition cursor-pointer shadow-2xs"
+                    >
+                      {logoPreview ? 'Replace Logo Image' : 'Select Logo Image'}
+                    </button>
+                    <p className="text-[10px] text-slate-500">
+                      Supports PNG, JPG, SVG, WEBP up to 5MB. Cloudinary CDN optimized.
+                    </p>
+                    {logoDataUri && (
+                      <span className="inline-block text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                        [Ready to upload]
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* FAVICON UPLOADER */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 dark:text-white block">Browser Tab Favicon</span>
+                    <span className="text-[10px] text-slate-500">Shown in browser tabs &amp; mobile bookmarks</span>
+                  </div>
+                  {faviconPreview && (
+                    <button
+                      type="button"
+                      onClick={handleClearFavicon}
+                      className="px-2 py-1 text-[11px] text-rose-600 hover:text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition font-medium cursor-pointer"
+                    >
+                      Remove Favicon
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-4">
+                  {/* Preview Thumbnail */}
+                  <div className="w-14 h-14 rounded border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center p-2 shrink-0 overflow-hidden shadow-2xs">
+                    {faviconPreview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={faviconPreview}
+                        alt="Favicon Preview"
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    ) : (
+                      <div className="text-center text-slate-400">
+                        <span className="text-[9px] block font-mono">No Icon</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Upload Controls */}
+                  <div className="flex-1 space-y-2">
+                    <input
+                      ref={faviconInputRef}
+                      type="file"
+                      accept="image/x-icon,image/png,image/svg+xml,image/jpeg"
+                      onChange={handleFaviconSelect}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => faviconInputRef.current?.click()}
+                      className="px-3.5 py-1.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-primary text-slate-800 dark:text-slate-200 text-xs font-medium transition cursor-pointer shadow-2xs"
+                    >
+                      {faviconPreview ? 'Replace Favicon' : 'Select Favicon'}
+                    </button>
+                    <p className="text-[10px] text-slate-500">
+                      Square ratio recommended (32x32 or 64x64, ICO/PNG).
+                    </p>
+                    {faviconDataUri && (
+                      <span className="inline-block text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                        [Ready to upload]
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Colors and Theme Preset */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white block mb-3">
+                Color Palette &amp; Accents
+              </span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                    Theme Preset
+                  </label>
+                  <select
+                    value={theme}
+                    onChange={(e) => setTheme(e.target.value)}
+                    className="w-full px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="default">Default Academic</option>
+                    <option value="modern">Modern Sleek</option>
+                    <option value="classic">Classic Ivy</option>
+                    <option value="minimal">Minimal Slate</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                    Primary Accent Color
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={primaryColor}
+                      onChange={(e) => setPrimaryColor(e.target.value)}
+                      className="w-9 h-9 p-0.5 rounded border border-slate-200 dark:border-slate-800 cursor-pointer bg-white dark:bg-slate-900"
+                    />
+                    <input
+                      type="text"
+                      value={primaryColor}
+                      onChange={(e) => setPrimaryColor(e.target.value)}
+                      placeholder="#1e40af"
+                      className="flex-1 px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-xs outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                    Secondary Highlight Color
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={secondaryColor}
+                      onChange={(e) => setSecondaryColor(e.target.value)}
+                      className="w-9 h-9 p-0.5 rounded border border-slate-200 dark:border-slate-800 cursor-pointer bg-white dark:bg-slate-900"
+                    />
+                    <input
+                      type="text"
+                      value={secondaryColor}
+                      onChange={(e) => setSecondaryColor(e.target.value)}
+                      placeholder="#0ea5e9"
+                      className="flex-1 px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-xs outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Recommended Presets */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded border border-slate-200 dark:border-slate-800 space-y-2">
+              <span className="text-[10px] font-semibold uppercase text-slate-400 block">Recommended Color Presets</span>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { name: 'Royal Navy', pri: '#1e40af', sec: '#0ea5e9' },
+                  { name: 'Emerald Scholar', pri: '#047857', sec: '#10b981' },
+                  { name: 'Crimson Heritage', pri: '#b91c1c', sec: '#f87171' },
+                  { name: 'Indigo Modern', pri: '#4338ca', sec: '#818cf8' },
+                  { name: 'Deep Amethyst', pri: '#6d28d9', sec: '#a78bfa' },
+                ].map((preset) => (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    onClick={() => {
+                      setPrimaryColor(preset.pri);
+                      setSecondaryColor(preset.sec);
+                    }}
+                    className="px-2.5 py-1 rounded text-[11px] border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: preset.pri }}></span>
+                    <span className="text-slate-700 dark:text-slate-300 font-medium">{preset.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: Contact & Location */}
         {activeTab === 'contact' && (
           <div className="space-y-4">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
                 Contact &amp; Physical Location Details
               </h2>
-              <p className="text-[11px] text-slate-500">Official campus channels accessible to students, guardians, and visitors.</p>
+              <p className="text-[11px] text-slate-500">Official email, telephone numbers, campus address, and Google map embed link.</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Primary Contact Phone
+                  Primary Contact Telephone
                 </label>
                 <input
                   type="text"
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
-                  placeholder="+1 (800) 555-0199"
+                  placeholder="+880 1700 000000"
                   className="w-full px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
                 />
               </div>
 
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Primary Contact Email
+                  Official Inquiries Email
                 </label>
                 <input
                   type="email"
                   value={contactEmail}
                   onChange={(e) => setContactEmail(e.target.value)}
-                  placeholder="info@institution.edu"
+                  placeholder="contact@institution.edu"
                   className="w-full px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
                 />
               </div>
 
               <div className="sm:col-span-2">
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Physical Campus Address
+                  Physical Campus Postal Address
                 </label>
                 <textarea
                   rows={2}
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Plot 42, Academic Boulevard, University Town, City, Country"
-                  className="w-full px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary text-xs resize-none"
+                  placeholder="123 Academic Avenue, Educational District, City, Country"
+                  className="w-full px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
                 />
               </div>
 
@@ -409,7 +771,7 @@ export default function WebsiteSettingsPage() {
                   type="url"
                   value={mapUrl}
                   onChange={(e) => setMapUrl(e.target.value)}
-                  placeholder="https://maps.google.com/maps?q=..."
+                  placeholder="https://www.google.com/maps/embed?pb=..."
                   className="w-full px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
                 />
               </div>
@@ -417,26 +779,26 @@ export default function WebsiteSettingsPage() {
           </div>
         )}
 
-        {/* TAB 3: Mission, Vision & History */}
+        {/* TAB 4: Mission, Vision & History */}
         {activeTab === 'mission' && (
           <div className="space-y-4">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-                Institutional Mission, Vision &amp; History
+                Institutional Philosophy &amp; Historical Background
               </h2>
-              <p className="text-[11px] text-slate-500">Core philosophical values, institutional aspirations, and heritage chronicles.</p>
+              <p className="text-[11px] text-slate-500">Appears on the About Us page, prospectus, and institutional showcases.</p>
             </div>
 
             <div className="space-y-4 text-xs">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Motto / Tagline
+                  Official Motto / Tagline
                 </label>
                 <input
                   type="text"
                   value={motto}
                   onChange={(e) => setMotto(e.target.value)}
-                  placeholder="e.g. Illuminating Minds, Shaping Leaders"
+                  placeholder="e.g. Inspiring Excellence, Cultivating Character"
                   className="w-full px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
                 />
               </div>
@@ -449,8 +811,8 @@ export default function WebsiteSettingsPage() {
                   rows={3}
                   value={mission}
                   onChange={(e) => setMission(e.target.value)}
-                  placeholder="Our mission is to foster intellectual curiosity, character, and scholastic excellence..."
-                  className="w-full px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary resize-none"
+                  placeholder="Describe your school's fundamental purpose and learning objectives..."
+                  className="w-full px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
                 />
               </div>
 
@@ -462,28 +824,28 @@ export default function WebsiteSettingsPage() {
                   rows={3}
                   value={vision}
                   onChange={(e) => setVision(e.target.value)}
-                  placeholder="To be a globally recognized center of learning that transforms youth into ethical global citizens..."
-                  className="w-full px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary resize-none"
+                  placeholder="Describe the future aspiration and academic impact envisioned for your graduates..."
+                  className="w-full px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
                 />
               </div>
 
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Institutional Heritage &amp; History
+                  Campus Brief History
                 </label>
                 <textarea
-                  rows={4}
+                  rows={3}
                   value={history}
                   onChange={(e) => setHistory(e.target.value)}
-                  placeholder="Founded in 1985 by visionary educators, our institution started with 50 students and has grown into..."
-                  className="w-full px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary resize-none"
+                  placeholder="Write a concise history of founding year, campus milestones, and accreditations..."
+                  className="w-full px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary"
                 />
               </div>
             </div>
           </div>
         )}
 
-        {/* TAB 4: Social Channels */}
+        {/* TAB 5: Social Channels */}
         {activeTab === 'social' && (
           <div className="space-y-4">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -546,7 +908,7 @@ export default function WebsiteSettingsPage() {
                 />
               </div>
 
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   LinkedIn Profile URL
                 </label>
@@ -562,122 +924,37 @@ export default function WebsiteSettingsPage() {
           </div>
         )}
 
-        {/* TAB 5: Appearance & Branding */}
-        {activeTab === 'branding' && (
-          <div className="space-y-5">
-            <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-                Brand Appearance &amp; Color Scheme
-              </h2>
-              <p className="text-[11px] text-slate-500">Configure visual themes and brand color accents used throughout the site.</p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Theme Preset
-                </label>
-                <select
-                  value={theme}
-                  onChange={(e) => setTheme(e.target.value)}
-                  className="w-full px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary cursor-pointer"
-                >
-                  <option value="default">Default Academic</option>
-                  <option value="modern">Modern Sleek</option>
-                  <option value="classic">Classic Ivy</option>
-                  <option value="minimal">Minimal Slate</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Primary Accent Color
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={primaryColor}
-                    onChange={(e) => setPrimaryColor(e.target.value)}
-                    className="w-9 h-9 p-0.5 rounded border border-slate-200 dark:border-slate-800 cursor-pointer bg-white dark:bg-slate-900"
-                  />
-                  <input
-                    type="text"
-                    value={primaryColor}
-                    onChange={(e) => setPrimaryColor(e.target.value)}
-                    placeholder="#1e40af"
-                    className="flex-1 px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-xs outline-none focus:border-primary"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Secondary Highlight Color
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={secondaryColor}
-                    onChange={(e) => setSecondaryColor(e.target.value)}
-                    className="w-9 h-9 p-0.5 rounded border border-slate-200 dark:border-slate-800 cursor-pointer bg-white dark:bg-slate-900"
-                  />
-                  <input
-                    type="text"
-                    value={secondaryColor}
-                    onChange={(e) => setSecondaryColor(e.target.value)}
-                    placeholder="#0ea5e9"
-                    className="flex-1 px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white font-mono text-xs outline-none focus:border-primary"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Color Presets */}
-            <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded border border-slate-200 dark:border-slate-800 space-y-2">
-              <span className="text-[10px] font-semibold uppercase text-slate-400 block">Recommended Palette Presets</span>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { name: 'Royal Navy', pri: '#1e40af', sec: '#0ea5e9' },
-                  { name: 'Emerald Scholar', pri: '#047857', sec: '#10b981' },
-                  { name: 'Crimson Heritage', pri: '#b91c1c', sec: '#f87171' },
-                  { name: 'Indigo Modern', pri: '#4338ca', sec: '#818cf8' },
-                  { name: 'Deep Amethyst', pri: '#6d28d9', sec: '#a78bfa' },
-                ].map((preset) => (
-                  <button
-                    key={preset.name}
-                    type="button"
-                    onClick={() => {
-                      setPrimaryColor(preset.pri);
-                      setSecondaryColor(preset.sec);
-                    }}
-                    className="px-2.5 py-1 rounded text-[11px] border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 flex items-center gap-1.5 transition cursor-pointer"
-                  >
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: preset.pri }}></span>
-                    <span className="text-slate-700 dark:text-slate-300 font-medium">{preset.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* TAB 6: System & Maintenance */}
         {activeTab === 'system' && (
           <div className="space-y-5">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-                Operations &amp; Maintenance Mode
+                Operations &amp; Maintenance Status
               </h2>
-              <p className="text-[11px] text-slate-500">Control system availability and maintenance screens for visitors.</p>
+              <p className="text-[11px] text-slate-500">
+                Control campus website availability, active service mode, and visitor notices during upgrades.
+              </p>
             </div>
 
+            {/* Toggle Card */}
             <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
               <div className="space-y-1">
-                <span className="text-xs font-semibold text-slate-900 dark:text-white block">
-                  Campus Maintenance Mode
-                </span>
-                <p className="text-[11px] text-slate-500 max-w-lg leading-relaxed">
-                  When enabled, all public web pages display a temporary maintenance notice. Staff and administrator panels remain accessible.
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                    Campus Portal Maintenance Mode
+                  </span>
+                  <span
+                    className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${
+                      isMaintenanceMode
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300/40'
+                        : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300/40'
+                    }`}
+                  >
+                    {isMaintenanceMode ? 'Maintenance Active' : 'Live & Operational'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 max-w-xl leading-relaxed">
+                  When enabled, all public web pages (home, admissions, news, facilities) show an elegant maintenance screen. Staff, teachers, officers, and students can still securely sign in and access panel workstations.
                 </p>
               </div>
 
@@ -692,9 +969,44 @@ export default function WebsiteSettingsPage() {
               </label>
             </div>
 
+            {/* Maintenance Message */}
+            <div className="space-y-2 text-xs">
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Public Maintenance Notice Message
+              </label>
+              <textarea
+                rows={3}
+                value={maintenanceMessage}
+                onChange={(e) => setMaintenanceMessage(e.target.value)}
+                placeholder="Our campus portal is temporarily under scheduled maintenance. Please check back shortly."
+                className="w-full px-3 py-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white outline-none focus:border-primary leading-relaxed"
+              />
+              <p className="text-[10px] text-slate-500">
+                This announcement will be displayed prominently to public visitors on the maintenance screen.
+              </p>
+            </div>
+
+            {/* Live Preview Card */}
             {isMaintenanceMode && (
-              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded text-xs text-amber-800 dark:text-amber-300">
-                Notice: Maintenance mode is currently active. Public visitors will not be able to browse admissions, news, or courses.
+              <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded space-y-2">
+                <div className="text-amber-800 dark:text-amber-300 font-semibold text-xs">
+                  Preview of Public Visitor Screen
+                </div>
+                <div className="p-4 bg-white dark:bg-slate-900 border border-amber-200/60 dark:border-amber-800/40 rounded shadow-2xs space-y-2">
+                  <div className="flex items-center gap-2.5">
+                    {logoPreview && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={logoPreview} alt="Logo" className="w-6 h-6 object-contain" />
+                    )}
+                    <span className="font-bold text-slate-900 dark:text-white text-xs">{name || 'Your Institution'}</span>
+                  </div>
+                  <p className="text-xs text-slate-700 dark:text-slate-300 italic">
+                    &ldquo;{maintenanceMessage}&rdquo;
+                  </p>
+                  <span className="text-[10px] text-slate-400 block">
+                    Campus Helplines: {contactPhone || 'Available'} • {contactEmail || 'Support Available'}
+                  </span>
+                </div>
               </div>
             )}
           </div>
@@ -712,14 +1024,13 @@ export default function WebsiteSettingsPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="px-5 py-2 rounded bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition cursor-pointer disabled:opacity-60 shadow-xs"
+            className="px-5 py-2 rounded bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition cursor-pointer disabled:opacity-60 shadow-xs flex items-center gap-1.5"
           >
-            {submitting ? 'Updating Website...' : 'Save All Settings Changes →'}
+            {submitting ? 'Uploading & Updating...' : 'Save All Settings Changes →'}
           </button>
         </div>
 
       </form>
-
     </div>
   );
 }

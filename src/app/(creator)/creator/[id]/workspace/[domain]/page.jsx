@@ -27,6 +27,20 @@ const PRESET_COLORS = [
   { name: 'Slate Modern', hex: '#0f172a' },
 ];
 
+const CURRENCIES = [
+  { code: 'BDT', symbol: '৳', label: 'BDT (৳) - Bangladeshi Taka' },
+  { code: 'USD', symbol: '$', label: 'USD ($) - US Dollar' },
+  { code: 'EUR', symbol: '€', label: 'EUR (€) - Euro' },
+  { code: 'GBP', symbol: '£', label: 'GBP (£) - British Pound' },
+  { code: 'INR', symbol: '₹', label: 'INR (₹) - Indian Rupee' },
+  { code: 'CAD', symbol: 'CA$', label: 'CAD ($) - Canadian Dollar' },
+  { code: 'AUD', symbol: 'AU$', label: 'AU$ ($) - Australian Dollar' },
+  { code: 'AED', symbol: 'AED', label: 'AED (د.إ) - UAE Dirham' },
+  { code: 'SAR', symbol: 'SAR', label: 'SAR (﷼) - Saudi Riyal' },
+  { code: 'MYR', symbol: 'RM', label: 'MYR (RM) - Malaysian Ringgit' },
+  { code: 'SGD', symbol: 'S$', label: 'SGD ($) - Singapore Dollar' },
+];
+
 export default function WebsiteManagePage() {
   const router = useRouter();
   const routeParams = useParams();
@@ -70,7 +84,11 @@ export default function WebsiteManagePage() {
   const [logoId, setLogoId] = useState('');
   const [favicon, setFavicon] = useState('');
   const [faviconId, setFaviconId] = useState('');
+  const [currency, setCurrency] = useState('BDT');
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState(
+    'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.'
+  );
 
   // Brand Asset Upload states
   const [logoFile, setLogoFile] = useState(null);
@@ -199,7 +217,12 @@ export default function WebsiteManagePage() {
         setLogoId(w.logo_id || '');
         setFavicon(w.favicon || '');
         setFaviconId(w.favicon_id || '');
+        setCurrency(w.currency || 'BDT');
         setIsMaintenanceMode(Boolean(w.is_maintenance_mode));
+        setMaintenanceMessage(
+          w.maintenance_message ||
+            'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.'
+        );
 
         // Subdomain
         let cleanSub = w.subdomain || w.slug || '';
@@ -524,7 +547,9 @@ export default function WebsiteManagePage() {
         logo_id: logoId,
         favicon: faviconPreview || favicon.trim(),
         favicon_id: faviconId,
+        currency: currency,
         is_maintenance_mode: isMaintenanceMode,
+        maintenance_message: maintenanceMessage.trim(),
         is_published: !isMaintenanceMode,
       };
 
@@ -559,6 +584,40 @@ export default function WebsiteManagePage() {
       }
     } catch {
       setSaveError('Network error while saving changes.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleMaintenanceMode = async (targetMode) => {
+    if (!website?.id) return;
+    setIsMaintenanceMode(targetMode);
+    try {
+      setSaving(true);
+      setSaveError('');
+      setSaveSuccess('');
+      const res = await fetch('/api/marketing/creator/websites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_website',
+          id: website.id,
+          creatorId: Number(creatorId),
+          is_maintenance_mode: targetMode,
+          is_published: !targetMode,
+          maintenance_message: maintenanceMessage.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (data.website) setWebsite(data.website);
+        setSaveSuccess(`Website switched to ${targetMode ? 'Maintenance Mode' : 'Live'}.`);
+        setTimeout(() => setSaveSuccess(''), 3000);
+      } else {
+        setSaveError(data.error || 'Failed to update maintenance mode.');
+      }
+    } catch {
+      setSaveError('Network error while toggling maintenance mode.');
     } finally {
       setSaving(false);
     }
@@ -2094,23 +2153,9 @@ export default function WebsiteManagePage() {
                     )}
 
                     <div className="text-[10px] text-slate-400">
-                      Recommended: Transparent PNG or SVG. Minimum 200x200 px.
+                      Recommended: Transparent PNG, WEBP, or SVG. Minimum 200x200 px. Files upload directly to Cloudinary.
                     </div>
                   </div>
-                </div>
-
-                {/* Direct Logo URL field */}
-                <div className="pt-2 border-t border-slate-100">
-                  <label className="block text-[11px] font-medium text-slate-600 mb-1">
-                    Or Enter Hosted Logo URL
-                  </label>
-                  <input
-                    type="text"
-                    value={logo}
-                    onChange={(e) => setLogo(e.target.value)}
-                    placeholder="https://res.cloudinary.com/.../logo.png"
-                    className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
-                  />
                 </div>
               </div>
 
@@ -2189,23 +2234,9 @@ export default function WebsiteManagePage() {
                     )}
 
                     <div className="text-[10px] text-slate-400">
-                      Standard square icon: .ico, .png, or .svg (32x32 px).
+                      Standard square icon: .ico, .png, or .svg (32x32 px). Files upload directly to Cloudinary.
                     </div>
                   </div>
-                </div>
-
-                {/* Direct Favicon URL field */}
-                <div className="pt-2 border-t border-slate-100">
-                  <label className="block text-[11px] font-medium text-slate-600 mb-1">
-                    Or Enter Hosted Favicon URL
-                  </label>
-                  <input
-                    type="text"
-                    value={favicon}
-                    onChange={(e) => setFavicon(e.target.value)}
-                    placeholder="https://res.cloudinary.com/.../favicon.ico"
-                    className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
-                  />
                 </div>
               </div>
             </div>
@@ -2252,6 +2283,20 @@ export default function WebsiteManagePage() {
                   placeholder="e.g. 108342"
                   className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Campus Operating Currency *</label>
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                >
+                  {CURRENCIES.map((c) => (
+                    <option key={c.code} value={c.code}>{c.label}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-400 mt-0.5">Applied to student fees, invoices, salary scales, and payments.</p>
               </div>
 
               <div className="sm:col-span-2">
@@ -2609,35 +2654,60 @@ export default function WebsiteManagePage() {
       {/* --------------------------------------------------------------------- */}
       {activeTab === 'danger' && (
         <div className="space-y-4">
-          <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
+          <div className="bg-white border border-slate-200 rounded p-4 space-y-4">
             <div className="border-b border-slate-100 pb-2">
-              <h2 className="text-sm font-semibold text-slate-900">Maintenance Mode</h2>
+              <h2 className="text-sm font-semibold text-slate-900">Maintenance Mode & Public Notice</h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                When maintenance mode is active, public visitors will see a temporary maintenance notice.
+                When maintenance mode is active, public visitors will see a branded maintenance screen. Staff and administrative panels remain fully accessible.
               </p>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between p-3 rounded border bg-slate-50 border-slate-200">
               <div>
-                <span className="font-medium text-slate-800 block text-xs">Enable Maintenance Mode</span>
+                <span className="font-semibold text-slate-800 block text-xs">
+                  {isMaintenanceMode ? 'Campus Website Under Maintenance' : 'Campus Website is Live & Operational'}
+                </span>
                 <span className="text-[11px] text-slate-500">
-                  Status: {isMaintenanceMode ? 'Website is currently in Maintenance' : 'Website is Live & Operational'}
+                  {isMaintenanceMode
+                    ? 'Public home routes redirect to the maintenance notice.'
+                    : 'All public circulars, admissions, and portals are live.'}
                 </span>
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  setIsMaintenanceMode(!isMaintenanceMode);
-                  handleSave();
-                }}
-                className={`px-3 py-1.5 rounded font-medium text-xs cursor-pointer border ${
+                onClick={() => handleToggleMaintenanceMode(!isMaintenanceMode)}
+                disabled={saving}
+                className={`px-3 py-1.5 rounded font-medium text-xs cursor-pointer border transition-colors disabled:opacity-50 ${
                   isMaintenanceMode
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                    : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                    ? 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700'
+                    : 'bg-amber-500 text-white border-amber-500 hover:bg-amber-600'
                 }`}
               >
-                {isMaintenanceMode ? 'Switch to Live' : 'Enable Maintenance'}
+                {isMaintenanceMode ? 'Switch to Live Mode' : 'Enable Maintenance Mode'}
               </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-slate-700">
+                Public Maintenance Notice Message
+              </label>
+              <textarea
+                rows={3}
+                value={maintenanceMessage}
+                onChange={(e) => setMaintenanceMessage(e.target.value)}
+                placeholder="Our campus portal is temporarily under scheduled maintenance. Please check back shortly."
+                className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+              />
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save Maintenance Notice'}
+                </button>
+              </div>
             </div>
           </div>
 

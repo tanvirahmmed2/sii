@@ -327,6 +327,39 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     const primaryColor = body.primaryColor || body.primary_color || body.themeConfig?.primaryColor || '#1e40af';
     const secondaryColor = body.secondaryColor || body.secondary_color || body.themeConfig?.secondaryColor || '#0ea5e9';
     const themeName = body.theme || body.themeConfig?.mode || 'default';
+    const currency = (body.currency || 'BDT').toString().trim().toUpperCase();
+    const isMaintenanceMode = Boolean(body.is_maintenance_mode !== undefined ? body.is_maintenance_mode : (body.isMaintenanceMode || false));
+    const maintenanceMessage = (body.maintenance_message || body.maintenanceMessage || 'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.').toString().trim();
+
+    let initialLogo = null;
+    let initialLogoId = null;
+    if (body.logo && typeof body.logo === 'string' && body.logo.startsWith('data:image/')) {
+      try {
+        const up = await uploadImage(body.logo, 'school/branding');
+        initialLogo = up.url;
+        initialLogoId = up.publicId;
+      } catch (err) {
+        console.warn('Initial logo upload warning:', err.message);
+      }
+    } else if (body.logo) {
+      initialLogo = String(body.logo).trim();
+      initialLogoId = body.logo_id ? String(body.logo_id).trim() : null;
+    }
+
+    let initialFavicon = null;
+    let initialFaviconId = null;
+    if (body.favicon && typeof body.favicon === 'string' && (body.favicon.startsWith('data:image/') || body.favicon.startsWith('data:application/'))) {
+      try {
+        const up = await uploadImage(body.favicon, 'school/branding');
+        initialFavicon = up.url;
+        initialFaviconId = up.publicId;
+      } catch (err) {
+        console.warn('Initial favicon upload warning:', err.message);
+      }
+    } else if (body.favicon) {
+      initialFavicon = String(body.favicon).trim();
+      initialFaviconId = body.favicon_id ? String(body.favicon_id).trim() : null;
+    }
 
     const res = await queryDb(
       `INSERT INTO websites (
@@ -346,11 +379,17 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
          contact_email,
          contact_phone,
          address,
+         currency,
+         logo,
+         logo_id,
+         favicon,
+         favicon_id,
          storage_used_mb,
          is_maintenance_mode,
+         maintenance_message,
          subscription_expires_at
        ) VALUES (
-         $1, $2, $3, $4, $5, NULL, FALSE, $6, $7, 'active', $8, $9, $10, $11, $12, $13, 15, FALSE, $14
+         $1, $2, $3, $4, $5, NULL, FALSE, $6, $7, 'active', $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 15, $19, $20, $21
        ) RETURNING *`,
       [
         creatorId,
@@ -366,6 +405,13 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
         contactEmail || null,
         contactPhone || null,
         address || null,
+        currency,
+        initialLogo,
+        initialLogoId,
+        initialFavicon,
+        initialFaviconId,
+        isMaintenanceMode,
+        maintenanceMessage,
         chosenSub.current_period_end || null,
       ]
     );
@@ -742,6 +788,16 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
           values.push(body.favicon_id);
         }
       }
+    }
+
+    if (body.currency !== undefined) {
+      updates.push(`currency = $${idx++}`);
+      values.push(String(body.currency).trim().toUpperCase());
+    }
+
+    if (body.maintenance_message !== undefined) {
+      updates.push(`maintenance_message = $${idx++}`);
+      values.push(String(body.maintenance_message).trim());
     }
 
     if (body.status !== undefined) {

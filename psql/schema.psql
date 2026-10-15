@@ -317,9 +317,11 @@ CREATE TABLE IF NOT EXISTS websites (
     instagram_url TEXT,
     youtube_url TEXT,
     linkedin_url TEXT,
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
     subscription_expires_at TIMESTAMPTZ,
     storage_used_mb INT DEFAULT 0,
     is_maintenance_mode BOOLEAN DEFAULT FALSE,
+    maintenance_message TEXT DEFAULT 'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

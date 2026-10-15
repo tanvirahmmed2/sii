@@ -50,7 +50,6 @@ const Navbar = () => {
       ? rawLogo.trim()
       : null;
 
-  const eiin = website?.eiin_number || websiteSettings?.eiin || null;
 
   // Primary brand background color
   const navBg = primaryColor || website?.primary_color || '#1e3a8a';

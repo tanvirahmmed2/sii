@@ -2,24 +2,9 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import {
-  BiLayer,
-  BiPlus,
-  BiEdit,
-  BiTrash,
-  BiSearch,
-  BiRefresh,
-  BiBook,
-  BiGridAlt,
-  BiX,
-  BiCheck,
-  BiErrorCircle
-} from 'react-icons/bi';
-
 export default function ClassSetupPage() {
   const params = useParams();
   const domain = params?.domain || '';
-
   const [classes, setClasses] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [sessions, setSessions] = useState([]);
@@ -46,9 +31,7 @@ export default function ClassSetupPage() {
   // Inline Delete Confirmation State (NO popup modal)
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
-
   const formSectionRef = useRef(null);
-
   const fetchClasses = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
@@ -67,7 +50,6 @@ export default function ClassSetupPage() {
       setLoading(false);
     }
   }, [domain]);
-
   useEffect(() => {
     let ignore = false;
     const load = async () => {
@@ -90,9 +72,8 @@ export default function ClassSetupPage() {
       ignore = true;
     };
   }, [domain]);
-
   const filteredClasses = useMemo(() => {
-    return classes.filter((c) => {
+    return classes.filter(c => {
       if (selectedDepartmentFilter !== 'all' && String(c.department_id) !== String(selectedDepartmentFilter)) {
         return false;
       }
@@ -100,26 +81,18 @@ export default function ClassSetupPage() {
         return false;
       }
       const q = searchTerm.toLowerCase();
-      return (
-        c.name.toLowerCase().includes(q) ||
-        (c.code && c.code.toLowerCase().includes(q)) ||
-        (c.department_name && c.department_name.toLowerCase().includes(q)) ||
-        (c.session_name && c.session_name.toLowerCase().includes(q))
-      );
+      return c.name.toLowerCase().includes(q) || c.code && c.code.toLowerCase().includes(q) || c.department_name && c.department_name.toLowerCase().includes(q) || c.session_name && c.session_name.toLowerCase().includes(q);
     });
   }, [classes, searchTerm, selectedDepartmentFilter, selectedSessionFilter]);
-
   const totalSeats = useMemo(() => {
     return classes.reduce((sum, c) => sum + (parseInt(c.max_seats, 10) || 0), 0);
   }, [classes]);
-
   const totalSections = useMemo(() => {
     return classes.reduce((sum, c) => sum + (parseInt(c.section_count, 10) || 0), 0);
   }, [classes]);
-
   const openCreateForm = () => {
     setEditingClass(null);
-    const currentSession = sessions.find((s) => s.is_current);
+    const currentSession = sessions.find(s => s.is_current);
     setFormData({
       name: '',
       code: `CLS-${classes.length + 1}`,
@@ -132,11 +105,13 @@ export default function ClassSetupPage() {
     setIsFormOpen(true);
     setDeleteConfirmId(null);
     setTimeout(() => {
-      formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      formSectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
     }, 100);
   };
-
-  const openEditForm = (classItem) => {
+  const openEditForm = classItem => {
     setEditingClass(classItem);
     setFormData({
       name: classItem.name,
@@ -150,17 +125,18 @@ export default function ClassSetupPage() {
     setIsFormOpen(true);
     setDeleteConfirmId(null);
     setTimeout(() => {
-      formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      formSectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
     }, 100);
   };
-
   const closeForm = () => {
     setIsFormOpen(false);
     setEditingClass(null);
     setErrorMsg('');
   };
-
-  const handleFormSubmit = async (e) => {
+  const handleFormSubmit = async e => {
     e.preventDefault();
     if (!formData.name.trim()) {
       setErrorMsg('Class Name is required.');
@@ -174,22 +150,23 @@ export default function ClassSetupPage() {
       setErrorMsg('Academic Session is required to create a class.');
       return;
     }
-
     try {
       setSubmitting(true);
       setErrorMsg('');
-
       const url = `/api/${domain}/staff/panel/classes`;
       const method = editingClass ? 'PUT' : 'POST';
-      const body = editingClass ? { ...formData, id: editingClass.id } : formData;
-
+      const body = editingClass ? {
+        ...formData,
+        id: editingClass.id
+      } : formData;
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify(body)
       });
       const data = await res.json();
-
       if (data.success) {
         setSuccessMsg(data.message || 'Class saved successfully.');
         setTimeout(() => setSuccessMsg(''), 4000);
@@ -205,8 +182,7 @@ export default function ClassSetupPage() {
       setSubmitting(false);
     }
   };
-
-  const handleDelete = async (id) => {
+  const handleDelete = async id => {
     try {
       setDeletingId(id);
       const res = await fetch(`/api/${domain}/staff/panel/classes?id=${id}`, {
@@ -227,9 +203,7 @@ export default function ClassSetupPage() {
       setDeletingId(null);
     }
   };
-
-  return (
-    <div className="w-full space-y-4">
+  return <div className="w-full space-y-4">
       {/* KPI Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
@@ -268,33 +242,28 @@ export default function ClassSetupPage() {
       </div>
 
       {/* Notifications */}
-      {successMsg && (
-        <div className="p-3 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
+      {successMsg && <div className="p-3 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
           <span className="flex items-center gap-1.5">
-            <BiCheck className="text-base text-emerald-600" />
+            
             {successMsg}
           </span>
           <button onClick={() => setSuccessMsg('')} className="text-[10px] font-mono cursor-pointer hover:underline">DISMISS</button>
-        </div>
-      )}
-      {errorMsg && (
-        <div className="p-3 rounded text-xs bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 flex items-center justify-between">
+        </div>}
+      {errorMsg && <div className="p-3 rounded text-xs bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 flex items-center justify-between">
           <span className="flex items-center gap-1.5">
-            <BiErrorCircle className="text-base text-rose-600" />
+            
             {errorMsg}
           </span>
           <button onClick={() => setErrorMsg('')} className="text-[10px] font-mono cursor-pointer hover:underline">DISMISS</button>
-        </div>
-      )}
+        </div>}
 
       {/* Inline Delete Confirmation Alert (NO popup modal) */}
-      {deleteConfirmId && (
-        <div className="p-4 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 text-slate-900 dark:text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
+      {deleteConfirmId && <div className="p-4 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 text-slate-900 dark:text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
           <div className="flex items-start gap-2.5">
-            <BiErrorCircle className="text-lg text-rose-600 shrink-0 mt-0.5" />
+            
             <div>
               <p className="text-xs font-bold text-rose-900 dark:text-rose-200">
-                Confirm Deleting Class: {classes.find((c) => c.id === deleteConfirmId)?.name || `#${deleteConfirmId}`}?
+                Confirm Deleting Class: {classes.find(c => c.id === deleteConfirmId)?.name || `#${deleteConfirmId}`}?
               </p>
               <p className="text-[11px] text-rose-700 dark:text-rose-300/80 mt-0.5">
                 This will permanently remove this class, its section configurations, and curriculum mappings.
@@ -302,36 +271,23 @@ export default function ClassSetupPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-            <button
-              onClick={() => setDeleteConfirmId(null)}
-              className="px-3 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 cursor-pointer"
-            >
+            <button onClick={() => setDeleteConfirmId(null)} className="px-3 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 cursor-pointer">
               Cancel
             </button>
-            <button
-              onClick={() => handleDelete(deleteConfirmId)}
-              disabled={deletingId === deleteConfirmId}
-              className="px-3.5 py-1.5 rounded text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-            >
-              {deletingId === deleteConfirmId ? (
-                <>
+            <button onClick={() => handleDelete(deleteConfirmId)} disabled={deletingId === deleteConfirmId} className="px-3.5 py-1.5 rounded text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer disabled:opacity-50 flex items-center gap-1.5">
+              {deletingId === deleteConfirmId ? <>
                   <div className="loader loader-xs loader-white" />
                   <span>Deleting...</span>
-                </>
-              ) : (
-                <>
-                  <BiTrash className="text-sm" />
+                </> : <>
+                  
                   <span>Confirm Delete</span>
-                </>
-              )}
+                </>}
             </button>
           </div>
-        </div>
-      )}
+        </div>}
 
       {/* Inline Workstation Form (NO popup modal) */}
-      {isFormOpen && (
-        <div ref={formSectionRef} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 shadow-sm space-y-4 animate-fade-in">
+      {isFormOpen && <div ref={formSectionRef} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 shadow-sm space-y-4 animate-fade-in">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-blue-600" />
@@ -339,12 +295,8 @@ export default function ClassSetupPage() {
                 {editingClass ? `Edit Class: ${editingClass.name}` : 'Create New Academic Class'}
               </h3>
             </div>
-            <button
-              onClick={closeForm}
-              className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-              title="Close form"
-            >
-              <BiX className="text-lg" />
+            <button onClick={closeForm} className="text-slate-400 hover:text-slate-700 dark:hover:text-white px-2 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer" title="Close form">
+              Close
             </button>
           </div>
 
@@ -354,28 +306,20 @@ export default function ClassSetupPage() {
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Class Name <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Class 1, Grade 10, Standard 5"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900"
-                />
+                <input type="text" placeholder="e.g. Class 1, Grade 10, Standard 5" value={formData.name} onChange={e => setFormData({
+              ...formData,
+              name: e.target.value
+            })} required className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900" />
               </div>
 
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Class Code / Identifier <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  placeholder="e.g. CLS-01, G-10"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  required
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono uppercase"
-                />
+                <input type="text" placeholder="e.g. CLS-01, G-10" value={formData.code} onChange={e => setFormData({
+              ...formData,
+              code: e.target.value
+            })} required className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono uppercase" />
               </div>
             </div>
 
@@ -384,17 +328,14 @@ export default function ClassSetupPage() {
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Parent Department (Academic Discipline)
                 </label>
-                <select
-                  value={formData.department_id}
-                  onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
-                >
+                <select value={formData.department_id} onChange={e => setFormData({
+              ...formData,
+              department_id: e.target.value
+            })} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer">
                   <option value="">No Department (General / Common Discipline)</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>
+                  {departments.map(d => <option key={d.id} value={d.id}>
                       {d.name} {d.code ? `(${d.code})` : ''}
-                    </option>
-                  ))}
+                    </option>)}
                 </select>
               </div>
 
@@ -402,17 +343,14 @@ export default function ClassSetupPage() {
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Parent Academic Session / Term
                 </label>
-                <select
-                  value={formData.session_id}
-                  onChange={(e) => setFormData({ ...formData, session_id: e.target.value })}
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
-                >
+                <select value={formData.session_id} onChange={e => setFormData({
+              ...formData,
+              session_id: e.target.value
+            })} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer">
                   <option value="">No Session (Available in all sessions)</option>
-                  {sessions.map((s) => (
-                    <option key={s.id} value={s.id}>
+                  {sessions.map(s => <option key={s.id} value={s.id}>
                       {s.name} {s.is_current ? '• [Current]' : ''}
-                    </option>
-                  ))}
+                    </option>)}
                 </select>
               </div>
             </div>
@@ -422,64 +360,42 @@ export default function ClassSetupPage() {
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Maximum Seat Capacity
                 </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="2000"
-                  value={formData.max_seats}
-                  onChange={(e) => setFormData({ ...formData, max_seats: e.target.value })}
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono"
-                />
+                <input type="number" min="1" max="2000" value={formData.max_seats} onChange={e => setFormData({
+              ...formData,
+              max_seats: e.target.value
+            })} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono" />
               </div>
 
               <div className="md:col-span-2">
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Description / Remarks
                 </label>
-                <input
-                  type="text"
-                  placeholder="Optional notes or details about this academic grade..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden"
-                />
+                <input type="text" placeholder="Optional notes or details about this academic grade..." value={formData.description} onChange={e => setFormData({
+              ...formData,
+              description: e.target.value
+            })} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden" />
               </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={closeForm}
-                className="px-3.5 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
-              >
+              <button type="button" onClick={closeForm} className="px-3.5 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
                 Cancel
               </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="px-4 py-1.5 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer disabled:opacity-50 min-w-[110px] flex items-center justify-center gap-1.5"
-              >
-                {submitting ? (
-                  <>
+              <button type="submit" disabled={submitting} className="px-4 py-1.5 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer disabled:opacity-50 min-w-[110px] flex items-center justify-center gap-1.5">
+                {submitting ? <>
                     <div className="loader loader-xs loader-white" />
                     <span>Saving...</span>
-                  </>
-                ) : editingClass ? (
-                  <>
-                    <BiCheck className="text-sm" />
+                  </> : editingClass ? <>
+                    
                     <span>Update Class</span>
-                  </>
-                ) : (
-                  <>
-                    <BiPlus className="text-sm" />
+                  </> : <>
+                    
                     <span>Create Class</span>
-                  </>
-                )}
+                  </>}
               </button>
             </div>
           </form>
-        </div>
-      )}
+        </div>}
 
       {/* Workstation Container */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
@@ -487,62 +403,33 @@ export default function ClassSetupPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 flex-1 max-w-xl flex-wrap">
             <div className="relative flex-1 min-w-[160px]">
-              <BiSearch className="absolute left-2.5 top-2.5 text-slate-400 text-sm" />
-              <input
-                type="text"
-                placeholder="Search class, department or session..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full text-xs pl-8 pr-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900"
-              />
+              
+              <input type="text" placeholder="Search class, department or session..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900" />
             </div>
-            {departments.length > 0 && (
-              <div className="w-36">
-                <select
-                  value={selectedDepartmentFilter}
-                  onChange={(e) => setSelectedDepartmentFilter(e.target.value)}
-                  className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
-                >
+            {departments.length > 0 && <div className="w-36">
+                <select value={selectedDepartmentFilter} onChange={e => setSelectedDepartmentFilter(e.target.value)} className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer">
                   <option value="all">All Departments</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>
+                  {departments.map(d => <option key={d.id} value={d.id}>
                       {d.name}
-                    </option>
-                  ))}
+                    </option>)}
                 </select>
-              </div>
-            )}
-            {sessions.length > 0 && (
-              <div className="w-36">
-                <select
-                  value={selectedSessionFilter}
-                  onChange={(e) => setSelectedSessionFilter(e.target.value)}
-                  className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
-                >
+              </div>}
+            {sessions.length > 0 && <div className="w-36">
+                <select value={selectedSessionFilter} onChange={e => setSelectedSessionFilter(e.target.value)} className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer">
                   <option value="all">All Sessions</option>
-                  {sessions.map((s) => (
-                    <option key={s.id} value={s.id}>
+                  {sessions.map(s => <option key={s.id} value={s.id}>
                       {s.name}
-                    </option>
-                  ))}
+                    </option>)}
                 </select>
-              </div>
-            )}
+              </div>}
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => fetchClasses(false)}
-              className="p-1.5 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition cursor-pointer"
-              title="Refresh"
-            >
-              <BiRefresh className="text-base" />
+            <button onClick={() => fetchClasses(false)} className="px-2 py-1 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition cursor-pointer" title="Refresh">
+              Refresh
             </button>
-            <button
-              onClick={openCreateForm}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer"
-            >
-              <BiPlus className="text-base" />
+            <button onClick={openCreateForm} className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer">
+              
               <span>Add Class</span>
             </button>
           </div>
@@ -550,23 +437,15 @@ export default function ClassSetupPage() {
 
         {/* Classes Table */}
         <div className="overflow-x-auto">
-          {loading ? (
-            <div className="py-12 flex justify-center items-center">
+          {loading ? <div className="py-12 flex justify-center items-center">
               <div className="loader loader-sm" />
-            </div>
-          ) : filteredClasses.length === 0 ? (
-            <div className="py-12 text-center space-y-2">
-              <BiLayer className="mx-auto text-3xl text-slate-400" />
+            </div> : filteredClasses.length === 0 ? <div className="py-12 text-center space-y-2">
+              
               <p className="text-xs font-medium text-slate-600 dark:text-slate-400">No classes configured yet.</p>
-              <button
-                onClick={openCreateForm}
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
-              >
+              <button onClick={openCreateForm} className="text-xs text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
                 Set up your first school class
               </button>
-            </div>
-          ) : (
-            <table className="w-full text-left text-xs">
+            </div> : <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider">
                   <th className="py-2.5 px-3">Class / Grade</th>
@@ -580,8 +459,7 @@ export default function ClassSetupPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
-                {filteredClasses.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
+                {filteredClasses.map(item => <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
                     <td className="py-3 px-3 font-semibold text-slate-900 dark:text-white">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-[11px] text-slate-700 dark:text-slate-300 shrink-0">
@@ -589,29 +467,19 @@ export default function ClassSetupPage() {
                         </div>
                         <div>
                           <div>{item.name}</div>
-                          {item.description && (
-                            <div className="text-[10px] text-slate-400 font-normal truncate max-w-xs">{item.description}</div>
-                          )}
+                          {item.description && <div className="text-[10px] text-slate-400 font-normal truncate max-w-xs">{item.description}</div>}
                         </div>
                       </div>
                     </td>
                     <td className="py-3 px-3">
-                      {item.department_name ? (
-                        <span className="font-semibold text-blue-600 dark:text-blue-400">
+                      {item.department_name ? <span className="font-semibold text-blue-600 dark:text-blue-400">
                           {item.department_name}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 italic">General / Common</span>
-                      )}
+                        </span> : <span className="text-slate-400 italic">General / Common</span>}
                     </td>
                     <td className="py-3 px-3">
-                      {item.session_name ? (
-                        <span className="font-medium text-slate-700 dark:text-slate-300">
+                      {item.session_name ? <span className="font-medium text-slate-700 dark:text-slate-300">
                           {item.session_name}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 italic">All Sessions</span>
-                      )}
+                        </span> : <span className="text-slate-400 italic">All Sessions</span>}
                     </td>
                     <td className="py-3 px-3">
                       <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
@@ -623,41 +491,30 @@ export default function ClassSetupPage() {
                     </td>
                     <td className="py-3 px-3">
                       <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 dark:text-blue-400">
-                        <BiGridAlt className="text-xs" />
+                        
                         <span>{item.section_count} sections</span>
                       </span>
                     </td>
                     <td className="py-3 px-3">
                       <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                        <BiBook className="text-xs" />
+                        
                         <span>{item.subject_count} subjects</span>
                       </span>
                     </td>
                     <td className="py-3 px-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => openEditForm(item)}
-                          className="p-1.5 rounded text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                          title="Edit"
-                        >
-                          <BiEdit className="text-sm" />
+                        <button onClick={() => openEditForm(item)} className="px-2 py-1 rounded text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer" title="Edit">
+                          Edit
                         </button>
-                        <button
-                          onClick={() => setDeleteConfirmId(item.id)}
-                          className="p-1.5 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
-                          title="Delete"
-                        >
-                          <BiTrash className="text-sm" />
+                        <button onClick={() => setDeleteConfirmId(item.id)} className="px-2 py-1 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer" title="Delete">
+                          Delete
                         </button>
                       </div>
                     </td>
-                  </tr>
-                ))}
+                  </tr>)}
               </tbody>
-            </table>
-          )}
+            </table>}
         </div>
       </div>
-    </div>
-  );
+    </div>;
 }

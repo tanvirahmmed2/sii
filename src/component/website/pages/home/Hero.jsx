@@ -44,20 +44,9 @@ const Hero = () => {
   }, [getApiEndpoint]);
 
   return (
-    <section className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 transition-colors">
+    <section className="w-full bg-secondary-light dark:bg-secondary-dark border-b border-slate-200 dark:border-slate-800 transition-colors">
       <div className="w-full px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 flex flex-col items-center text-center space-y-6">
-        {/* Meta badges */}
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <span className="text-[10px] font-medium px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-            {institutionType}
-          </span>
-          {eiin && (
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-              Govt. EIIN: {eiin}
-            </span>
-          )}
-        </div>
-
+        
         {/* Institution Headline */}
         <h1 className="text-2xl sm:text-4xl lg:text-5xl font-semibold text-slate-900 dark:text-white tracking-tight max-w-4xl leading-tight">
           {schoolName}

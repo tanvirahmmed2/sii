@@ -2,6 +2,7 @@
 -- TENANT WEBSITES SUBSCHEMA (STAFF & MODULE SUBSETS ONLY)
 -- Isolated Schema Definition for Tenant Educational Websites
 -- Scoped by website_id & prefixed with website_
+-- Parent Table: websites (id, creator_id, name, slug, subdomain, currency, logo, logo_id, favicon, favicon_id, is_maintenance_mode, maintenance_message)
 -- All other website modules will be created incrementally as needed.
 -- ============================================================================
 

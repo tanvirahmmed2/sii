@@ -4,56 +4,42 @@ import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-import {
-  FiAward,
-  FiCheckCircle,
-  FiGlobe,
-  FiRefreshCw,
-  FiLayers,
-  FiUsers,
-  FiArrowRight,
-  FiEye,
-  FiAlertTriangle,
-  FiExternalLink
-} from 'react-icons/fi';
-
 function ResultsContent() {
   const params = useParams();
   const domain = params?.domain || '';
   const apiBase = domain ? `/api/${domain}` : '/api';
-
   const [results, setResults] = useState([]);
   const [circulars, setCirculars] = useState([]);
   const [selectedCircularId, setSelectedCircularId] = useState('');
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
-  const [meta, setMeta] = useState({ total_published: 0, total_selected_available: 0 });
+  const [meta, setMeta] = useState({
+    total_published: 0,
+    total_selected_available: 0
+  });
 
   // Load circulars
   useEffect(() => {
-    fetch(`${apiBase}/staff/panel/admissions`)
-      .then(async (res) => {
-        if (!res.ok) return { success: false };
-        return res.json();
-      })
-      .then((data) => {
-        if (data?.success && data?.circulars) {
-          setCirculars(data.circulars);
-          if (data.circulars.length > 0 && !selectedCircularId) {
-            setSelectedCircularId(String(data.circulars[0].id));
-          }
+    fetch(`${apiBase}/staff/panel/admissions`).then(async res => {
+      if (!res.ok) return {
+        success: false
+      };
+      return res.json();
+    }).then(data => {
+      if (data?.success && data?.circulars) {
+        setCirculars(data.circulars);
+        if (data.circulars.length > 0 && !selectedCircularId) {
+          setSelectedCircularId(String(data.circulars[0].id));
         }
-      })
-      .catch((err) => console.error(err));
+      }
+    }).catch(err => console.error(err));
   }, [apiBase]);
 
   // Fetch results for the selected circular
   const fetchResults = async () => {
     setLoading(true);
     try {
-      const url = `${apiBase}/staff/panel/admissions/results/publish${
-        selectedCircularId ? `?circular_id=${selectedCircularId}` : ''
-      }`;
+      const url = `${apiBase}/staff/panel/admissions/results/publish${selectedCircularId ? `?circular_id=${selectedCircularId}` : ''}`;
       const res = await fetch(url);
       if (!res.ok) {
         throw new Error(`Server error (${res.status})`);
@@ -63,7 +49,7 @@ function ResultsContent() {
         setResults(data.results || []);
         setMeta({
           total_published: data.total_published || 0,
-          total_selected_available: data.total_selected_available || 0,
+          total_selected_available: data.total_selected_available || 0
         });
       } else {
         toast.error(data.error || 'Failed to fetch published results.');
@@ -75,7 +61,6 @@ function ResultsContent() {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchResults();
   }, [selectedCircularId, apiBase]);
@@ -86,21 +71,20 @@ function ResultsContent() {
       toast.error('Please select an admission circular first.');
       return;
     }
-
     if (!window.confirm('Are you sure you want to auto-publish merit results? This will strictly publish only SELECTED candidates.')) {
       return;
     }
-
     setPublishing(true);
     try {
       const res = await fetch(`${apiBase}/staff/panel/admissions/results/publish`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
-          circular_id: selectedCircularId,
-        }),
+          circular_id: selectedCircularId
+        })
       });
-
       const data = await res.json();
       if (res.ok && data.success) {
         toast.success(data.message || 'Results published successfully!');
@@ -115,14 +99,12 @@ function ResultsContent() {
       setPublishing(false);
     }
   };
-
-  return (
-    <div className="w-full space-y-6">
+  return <div className="w-full space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <FiAward className="text-amber-500" />
+            
             Merit Results Publication Workstation
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -131,28 +113,16 @@ function ResultsContent() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={fetchResults}
-            className="p-2 border border-slate-200 dark:border-slate-800 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
-            title="Refresh List"
-          >
-            <FiRefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <button onClick={fetchResults} className="p-2 border border-slate-200 dark:border-slate-800 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition" title="Refresh List">
+            
           </button>
 
-          <Link
-            href="/admission/results"
-            target="_blank"
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded transition"
-          >
-            <FiGlobe className="w-3.5 h-3.5" /> Public View <FiExternalLink className="w-3 h-3 text-slate-400" />
+          <Link href="/admission/results" target="_blank" className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded transition">
+            Public View ↗
           </Link>
 
-          <button
-            onClick={handleAutoPublish}
-            disabled={publishing || loading}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded shadow-sm transition disabled:opacity-50"
-          >
-            <FiCheckCircle className="w-4 h-4" />
+          <button onClick={handleAutoPublish} disabled={publishing || loading} className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded shadow-sm transition disabled:opacity-50">
+            
             {publishing ? 'Publishing...' : 'Auto-Publish Selected Results'}
           </button>
         </div>
@@ -163,7 +133,7 @@ function ResultsContent() {
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs">
           <div className="flex items-center justify-between text-slate-400 mb-1">
             <span className="text-[10px] uppercase font-bold tracking-wider">Published Merit Records</span>
-            <FiCheckCircle className="text-emerald-500" />
+            
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold text-slate-900 dark:text-white font-mono">
@@ -176,7 +146,7 @@ function ResultsContent() {
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs">
           <div className="flex items-center justify-between text-slate-400 mb-1">
             <span className="text-[10px] uppercase font-bold tracking-wider">Eligible Selected Pool</span>
-            <FiUsers className="text-sky-500" />
+            
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold text-slate-900 dark:text-white font-mono">
@@ -189,12 +159,9 @@ function ResultsContent() {
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs">
           <div className="flex items-center justify-between text-slate-400 mb-1">
             <span className="text-[10px] uppercase font-bold tracking-wider">Next Operational Step</span>
-            <FiArrowRight className="text-indigo-500" />
+            
           </div>
-          <Link
-            href="/staff-panel/admission-enrollment"
-            className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline mt-1"
-          >
+          <Link href="/staff-panel/admission-enrollment" className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline mt-1">
             Register to Student Portal →
           </Link>
         </div>
@@ -204,17 +171,11 @@ function ResultsContent() {
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-1 max-w-md">
           <span className="text-xs font-medium text-slate-500">Target Intake:</span>
-          <select
-            value={selectedCircularId}
-            onChange={(e) => setSelectedCircularId(e.target.value)}
-            className="flex-1 text-xs px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-medium focus:outline-hidden"
-          >
+          <select value={selectedCircularId} onChange={e => setSelectedCircularId(e.target.value)} className="flex-1 text-xs px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-medium focus:outline-hidden">
             <option value="">All Admission Circulars</option>
-            {circulars.map((c) => (
-              <option key={c.id} value={c.id}>
+            {circulars.map(c => <option key={c.id} value={c.id}>
                 {c.title} ({c.class_name || 'All Classes'})
-              </option>
-            ))}
+              </option>)}
           </select>
         </div>
 
@@ -239,35 +200,23 @@ function ResultsContent() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
-              {loading ? (
-                <tr>
+              {loading ? <tr>
                   <td colSpan="7" className="text-center py-12">
                     <div className="flex justify-center items-center py-2">
                       <div className="loader loader-sm" />
                     </div>
                   </td>
-                </tr>
-              ) : results.length === 0 ? (
-                <tr>
+                </tr> : results.length === 0 ? <tr>
                   <td colSpan="7" className="text-center py-10 text-slate-400">
                     No results published yet for this circular. Click &quot;Auto-Publish Selected Results&quot; above to publish all approved candidates.
                   </td>
-                </tr>
-              ) : (
-                results.map((resItem, idx) => (
-                  <tr key={resItem.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                </tr> : results.map((resItem, idx) => <tr key={resItem.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                     <td className="py-3 px-4 font-mono font-bold text-amber-600 dark:text-amber-400 text-sm">
                       #{resItem.merit_rank || idx + 1}
                     </td>
                     <td className="py-3 px-4">
                       <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                        {resItem.photo_url && (
-                          <img
-                            src={resItem.photo_url}
-                            alt={resItem.applicant_name}
-                            className="w-6 h-6 rounded-full object-cover border border-slate-200 dark:border-slate-700"
-                          />
-                        )}
+                        {resItem.photo_url && <img src={resItem.photo_url} alt={resItem.applicant_name} className="w-6 h-6 rounded-full object-cover border border-slate-200 dark:border-slate-700" />}
                         {resItem.applicant_name}
                       </div>
                       <div className="text-[11px] text-slate-400">
@@ -296,30 +245,20 @@ function ResultsContent() {
                     </td>
                     <td className="py-3 px-4 text-right">
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-bold uppercase bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-400">
-                        <FiCheckCircle className="w-3 h-3 text-sky-600" /> Published
+                        Published
                       </span>
                     </td>
-                  </tr>
-                ))
-              )}
+                  </tr>)}
             </tbody>
           </table>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 }
-
 export default function AdmissionResultPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="p-12 flex justify-center items-center">
+  return <Suspense fallback={<div className="p-12 flex justify-center items-center">
           <div className="loader loader-md" />
-        </div>
-      }
-    >
+        </div>}>
       <ResultsContent />
-    </Suspense>
-  );
+    </Suspense>;
 }

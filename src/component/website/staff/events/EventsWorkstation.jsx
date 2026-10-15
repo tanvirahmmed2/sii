@@ -5,11 +5,6 @@ import React, { useState, useEffect, useContext, useMemo, useCallback } from 're
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import * as XLSX from 'xlsx';
-import {
-  FiCalendar, FiPlus, FiEdit2, FiTrash2, FiUsers, FiDownload,
-  FiX, FiSearch, FiMapPin, FiClock,
-  FiCheckCircle, FiEye, FiRefreshCw
-} from 'react-icons/fi';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import Loader from 'src/component/common/Loader';
 
@@ -455,7 +450,7 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider mb-1">
-            <FiCalendar /> {portalType === 'officer' ? 'Officer Workstation' : 'Staff Operations Desk'}
+            {portalType === 'officer' ? 'Officer Workstation' : 'Staff Operations Desk'}
           </div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             Campus Events Management
@@ -469,18 +464,17 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
           <button
             onClick={() => fetchEvents(true)}
             disabled={refreshing}
-            className="p-2.5 rounded-md border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+            className="px-3 py-2 rounded-md border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium transition-colors cursor-pointer"
             title="Refresh events"
           >
-            <FiRefreshCw className={`text-sm ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Syncing...' : 'Sync'}
           </button>
 
           <button
             onClick={handleOpenCreateModal}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-md bg-primary hover:bg-primary-dark text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            className="px-4 py-2.5 rounded-md bg-primary hover:bg-primary-dark text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
           >
-            <FiPlus className="text-base" />
-            <span>Create New Event</span>
+            Create New Event
           </button>
         </div>
       </div>
@@ -539,13 +533,12 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
       {/* Filter and Search Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
         <div className="relative flex-1">
-          <FiSearch className="absolute left-3 top-3 text-slate-400 text-sm" />
           <input
             type="text"
             placeholder="Search events by title, venue, or description..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-xs rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-primary"
+            className="w-full px-3 py-2 text-xs rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-primary"
           />
         </div>
 
@@ -582,7 +575,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
         </div>
       ) : filteredEvents.length === 0 ? (
         <div className="p-12 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg space-y-3">
-          <FiCalendar className="text-4xl text-slate-300 dark:text-slate-600 mx-auto" />
           <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">No Events Found</h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
             {events.length === 0
@@ -594,7 +586,7 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
               onClick={handleOpenCreateModal}
               className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-white text-xs font-semibold cursor-pointer"
             >
-              <FiPlus /> Create Event Now
+              Create Event Now
             </button>
           )}
         </div>
@@ -633,7 +625,7 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                                 className="w-full h-full object-cover"
                               />
                             ) : (
-                              <FiCalendar className="text-slate-400 text-lg" />
+                              <span className="text-[10px] text-slate-400 font-medium">Event</span>
                             )}
                           </div>
                           <div className="space-y-0.5 max-w-xs sm:max-w-md">
@@ -658,7 +650,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         <div className="space-y-1">
                           <div className="flex items-center gap-1.5 text-slate-800 dark:text-slate-200 font-medium text-xs">
-                            <FiClock className="text-slate-400 text-xs" />
                             <span>
                               {eventDate.toLocaleDateString('en-US', {
                                 month: 'short',
@@ -675,7 +666,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                           </div>
                           {event.location ? (
                             <div className="flex items-center gap-1.5 text-slate-500 text-[11px]">
-                              <FiMapPin className="text-slate-400 text-xs" />
                               <span className="truncate max-w-[180px]">{event.location}</span>
                             </div>
                           ) : (
@@ -698,12 +688,10 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                           >
                             {event.is_applicable ? (
                               <>
-                                <FiCheckCircle className="text-xs" />
                                 <span>Applicable (Open)</span>
                               </>
                             ) : (
                               <>
-                                <FiX className="text-xs" />
                                 <span>Not Applicable (Info Only)</span>
                               </>
                             )}
@@ -735,7 +723,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                           onClick={() => handleViewApplicants(event)}
                           className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-primary/10 hover:text-primary dark:hover:text-primary text-slate-700 dark:text-slate-300 font-semibold text-xs transition-colors cursor-pointer"
                         >
-                          <FiUsers className="text-xs" />
                           <span>{event.total_applicants || 0} Registered</span>
                         </button>
                       </td>
@@ -745,24 +732,24 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                         <div className="inline-flex items-center gap-1">
                           <button
                             onClick={() => handleViewApplicants(event)}
-                            className="p-1.5 text-slate-500 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors cursor-pointer"
+                            className="px-2 py-1 text-xs text-slate-600 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors cursor-pointer font-medium"
                             title="View applicants & export Excel"
                           >
-                            <FiEye className="text-sm" />
+                            View
                           </button>
                           <button
                             onClick={() => handleOpenEditModal(event)}
-                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors cursor-pointer"
+                            className="px-2 py-1 text-xs text-slate-600 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors cursor-pointer font-medium"
                             title="Edit event"
                           >
-                            <FiEdit2 className="text-sm" />
+                            Edit
                           </button>
                           <button
                             onClick={() => handleDeleteEvent(event)}
-                            className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors cursor-pointer"
+                            className="px-2 py-1 text-xs text-slate-600 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors cursor-pointer font-medium"
                             title="Delete event"
                           >
-                            <FiTrash2 className="text-sm" />
+                            Delete
                           </button>
                         </div>
                       </td>
@@ -792,9 +779,9 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
               </div>
               <button
                 onClick={() => setModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded cursor-pointer"
+                className="px-2 py-1 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded cursor-pointer"
               >
-                <FiX className="text-lg" />
+                Close
               </button>
             </div>
 
@@ -971,15 +958,14 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                   className="inline-flex items-center gap-2 px-3.5 py-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-40"
                   title="Download full applicants list in Excel spreadsheet (.xlsx)"
                 >
-                  <FiDownload className="text-sm" />
                   <span>Download in Excel Sheet</span>
                 </button>
 
                 <button
                   onClick={() => setApplicantsModalOpen(false)}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded cursor-pointer"
+                  className="px-2 py-1 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded cursor-pointer"
                 >
-                  <FiX className="text-lg" />
+                  Close
                 </button>
               </div>
             </div>
@@ -987,13 +973,12 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
             {/* Filter Bar */}
             <div className="p-3 bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2">
               <div className="relative w-full sm:w-72">
-                <FiSearch className="absolute left-2.5 top-2.5 text-slate-400 text-xs" />
                 <input
                   type="text"
                   placeholder="Filter by student name, roll, reg..."
                   value={applicantSearch}
                   onChange={(e) => setApplicantSearch(e.target.value)}
-                  className="w-full pl-8 pr-2.5 py-1.5 text-xs rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-hidden"
+                  className="w-full px-2.5 py-1.5 text-xs rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-hidden"
                 />
               </div>
 
@@ -1024,7 +1009,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                 </div>
               ) : filteredApplicants.length === 0 ? (
                 <div className="py-16 text-center space-y-2">
-                  <FiUsers className="text-3xl text-slate-300 dark:text-slate-600 mx-auto" />
                   <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                     No Applicants Found
                   </h4>
@@ -1114,10 +1098,10 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                           <td className="py-2.5 px-3 text-right">
                             <button
                               onClick={() => handleRemoveApplicant(app)}
-                              className="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors cursor-pointer"
+                              className="text-slate-400 hover:text-rose-600 px-2 py-0.5 text-xs rounded transition-colors cursor-pointer"
                               title="Remove from applicant roster"
                             >
-                              <FiTrash2 className="text-xs" />
+                              Remove
                             </button>
                           </td>
                         </tr>
@@ -1140,7 +1124,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                   disabled={applicants.length === 0}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-semibold cursor-pointer disabled:opacity-40"
                 >
-                  <FiDownload />
                   <span>Download in Excel Sheet</span>
                 </button>
                 <button

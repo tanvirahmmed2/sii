@@ -342,6 +342,8 @@ export async function resolveWebsiteFromRequest(request, context) {
               custom_domain_verified, institution_type, eiin_number, contact_email, contact_phone, address,
               facebook_url, twitter_url, instagram_url, youtube_url, linkedin_url,
               primary_color, secondary_color, theme, status, is_maintenance_mode,
+              COALESCE(maintenance_message, 'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.') AS maintenance_message,
+              COALESCE(currency, 'BDT') AS currency,
               logo, logo_id, favicon, favicon_id,
               (status = 'active') AS is_active,
               (status = 'active' AND is_maintenance_mode = false) AS is_published

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { SCHOOL_NAME, LOGO_URL, META_TITLE, META_DESCRIPTION } from 'src/lib/database/secret';
+import { uploadImage, deleteImage } from 'src/lib/database/cloudinary';
 
 // GET Public Website Settings for Tenant directly from websites table
 export async function GET(request, context) {
@@ -22,6 +23,7 @@ export async function GET(request, context) {
       website_id: website.id,
       school_name: schoolName,
       name: schoolName,
+      currency: website.currency || 'BDT',
       logo_url: logoUrl,
       logo: logoUrl,
       logo_id: website.logo_id || null,
@@ -48,6 +50,7 @@ export async function GET(request, context) {
       institution_type: website.institution_type || 'School',
       eiin_number: website.eiin_number || '',
       is_maintenance_mode: Boolean(website.is_maintenance_mode),
+      maintenance_message: website.maintenance_message || 'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.',
       status: website.status || 'active',
       subdomain: website.subdomain || '',
       custom_domain: website.custom_domain || '',
@@ -83,6 +86,44 @@ export async function PUT(request, context) {
     const body = await request.json().catch(() => ({}));
     const websiteId = website.id;
 
+    // Handle Cloudinary upload / deletion for Logo
+    let finalLogo = body.logo !== undefined || body.logo_url !== undefined ? (body.logo || body.logo_url || null) : undefined;
+    let finalLogoId = body.logo_id !== undefined ? (body.logo_id || null) : undefined;
+
+    if (body.remove_logo || (body.logo === '' && website.logo_id)) {
+      if (website.logo_id) {
+        try { await deleteImage(website.logo_id); } catch (e) { console.warn(e.message); }
+      }
+      finalLogo = null;
+      finalLogoId = null;
+    } else if (finalLogo && typeof finalLogo === 'string' && finalLogo.startsWith('data:image/')) {
+      if (website.logo_id) {
+        try { await deleteImage(website.logo_id); } catch (e) { console.warn(e.message); }
+      }
+      const up = await uploadImage(finalLogo, `school/${websiteId}/branding`);
+      finalLogo = up.url;
+      finalLogoId = up.publicId;
+    }
+
+    // Handle Cloudinary upload / deletion for Favicon
+    let finalFavicon = body.favicon !== undefined ? (body.favicon || null) : undefined;
+    let finalFaviconId = body.favicon_id !== undefined ? (body.favicon_id || null) : undefined;
+
+    if (body.remove_favicon || (body.favicon === '' && website.favicon_id)) {
+      if (website.favicon_id) {
+        try { await deleteImage(website.favicon_id); } catch (e) { console.warn(e.message); }
+      }
+      finalFavicon = null;
+      finalFaviconId = null;
+    } else if (finalFavicon && typeof finalFavicon === 'string' && (finalFavicon.startsWith('data:image/') || finalFavicon.startsWith('data:application/'))) {
+      if (website.favicon_id) {
+        try { await deleteImage(website.favicon_id); } catch (e) { console.warn(e.message); }
+      }
+      const up = await uploadImage(finalFavicon, `school/${websiteId}/branding`);
+      finalFavicon = up.url;
+      finalFaviconId = up.publicId;
+    }
+
     const res = await queryDb(
       `UPDATE websites
        SET name = COALESCE($1, name),
@@ -94,17 +135,20 @@ export async function PUT(request, context) {
            secondary_color = COALESCE($7, secondary_color),
            institution_type = COALESCE($8, institution_type),
            eiin_number = COALESCE($9, eiin_number),
-           logo = COALESCE($10, logo),
-           logo_id = COALESCE($11, logo_id),
-           favicon = COALESCE($12, favicon),
-           favicon_id = COALESCE($13, favicon_id),
-           facebook_url = COALESCE($14, facebook_url),
-           twitter_url = COALESCE($15, twitter_url),
-           instagram_url = COALESCE($16, instagram_url),
-           youtube_url = COALESCE($17, youtube_url),
-           linkedin_url = COALESCE($18, linkedin_url),
+           currency = COALESCE($10, currency),
+           logo = CASE WHEN $11::boolean THEN $12 ELSE logo END,
+           logo_id = CASE WHEN $11::boolean THEN $13 ELSE logo_id END,
+           favicon = CASE WHEN $14::boolean THEN $15 ELSE favicon END,
+           favicon_id = CASE WHEN $14::boolean THEN $16 ELSE favicon_id END,
+           facebook_url = COALESCE($17, facebook_url),
+           twitter_url = COALESCE($18, twitter_url),
+           instagram_url = COALESCE($19, instagram_url),
+           youtube_url = COALESCE($20, youtube_url),
+           linkedin_url = COALESCE($21, linkedin_url),
+           is_maintenance_mode = COALESCE($22, is_maintenance_mode),
+           maintenance_message = COALESCE($23, maintenance_message),
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $19
+       WHERE id = $24
        RETURNING *`,
       [
         body.school_name || body.name || null,
@@ -116,15 +160,20 @@ export async function PUT(request, context) {
         body.secondary_color || null,
         body.institution_type || null,
         body.eiin_number || null,
-        body.logo || body.logo_url || null,
-        body.logo_id || null,
-        body.favicon || null,
-        body.favicon_id || null,
+        body.currency ? String(body.currency).trim().toUpperCase() : null,
+        finalLogo !== undefined,
+        finalLogo || null,
+        finalLogoId || null,
+        finalFavicon !== undefined,
+        finalFavicon || null,
+        finalFaviconId || null,
         body.facebook_url !== undefined ? String(body.facebook_url).trim() : null,
         body.twitter_url !== undefined ? String(body.twitter_url).trim() : null,
         body.instagram_url !== undefined ? String(body.instagram_url).trim() : null,
         body.youtube_url !== undefined ? String(body.youtube_url).trim() : null,
         body.linkedin_url !== undefined ? String(body.linkedin_url).trim() : null,
+        body.is_maintenance_mode !== undefined ? Boolean(body.is_maintenance_mode) : null,
+        body.maintenance_message !== undefined ? String(body.maintenance_message).trim() : null,
         websiteId,
       ]
     );

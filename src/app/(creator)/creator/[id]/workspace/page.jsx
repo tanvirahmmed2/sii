@@ -1,10 +1,25 @@
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect */
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useCreator } from '../layout';
 import Link from 'next/link';
 import LoadingScreen from 'src/component/common/LoadingScreen';
+
+const CURRENCIES = [
+  { code: 'BDT', symbol: '৳', label: 'BDT (৳) - Bangladeshi Taka' },
+  { code: 'USD', symbol: '$', label: 'USD ($) - US Dollar' },
+  { code: 'EUR', symbol: '€', label: 'EUR (€) - Euro' },
+  { code: 'GBP', symbol: '£', label: 'GBP (£) - British Pound' },
+  { code: 'INR', symbol: '₹', label: 'INR (₹) - Indian Rupee' },
+  { code: 'CAD', symbol: 'CA$', label: 'CAD ($) - Canadian Dollar' },
+  { code: 'AUD', symbol: 'AU$', label: 'AUD ($) - Australian Dollar' },
+  { code: 'AED', symbol: 'AED', label: 'AED (د.إ) - UAE Dirham' },
+  { code: 'SAR', symbol: 'SAR', label: 'SAR (﷼) - Saudi Riyal' },
+  { code: 'MYR', symbol: 'RM', label: 'MYR (RM) - Malaysian Ringgit' },
+  { code: 'SGD', symbol: 'S$', label: 'SGD ($) - Singapore Dollar' },
+];
 
 const INSTITUTION_TYPES = [
   { value: 'school', label: 'School' },
@@ -56,11 +71,22 @@ function WorkspaceContent() {
   const [mail, setMail] = useState(creator?.email || '');
   const [institutionType, setInstitutionType] = useState('school');
   const [eeinNumber, setEeinNumber] = useState('');
+  const [currency, setCurrency] = useState('BDT');
   const [customDomain, setCustomDomain] = useState('');
   const [address, setAddress] = useState('');
   const [tagline, setTagline] = useState('');
   const [primaryColor, setPrimaryColor] = useState('#1e40af');
   const [secondaryColor, setSecondaryColor] = useState('#0ea5e9');
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
+
+  // Create Modal Brand Assets (Cloudinary file uploads, NO URLs)
+  const [logoPreview, setLogoPreview] = useState('');
+  const [logoDataUri, setLogoDataUri] = useState('');
+  const createLogoInputRef = useRef(null);
+
+  const [faviconPreview, setFaviconPreview] = useState('');
+  const [faviconDataUri, setFaviconDataUri] = useState('');
+  const createFaviconInputRef = useRef(null);
 
   // Realtime Domain Availability State
   const [domainTouched, setDomainTouched] = useState(false);
@@ -89,11 +115,25 @@ function WorkspaceContent() {
   const [editMail, setEditMail] = useState('');
   const [editInstitutionType, setEditInstitutionType] = useState('school');
   const [editEeinNumber, setEditEeinNumber] = useState('');
+  const [editCurrency, setEditCurrency] = useState('BDT');
   const [editCustomDomain, setEditCustomDomain] = useState('');
   const [editAddress, setEditAddress] = useState('');
   const [editPrimaryColor, setEditPrimaryColor] = useState('#1e40af');
   const [editSecondaryColor, setEditSecondaryColor] = useState('#0ea5e9');
   const [editIsPublished, setEditIsPublished] = useState(true);
+  const [editIsMaintenanceMode, setEditIsMaintenanceMode] = useState(false);
+
+  // Edit Modal Brand Assets (Cloudinary file uploads, NO URLs)
+  const [editLogoPreview, setEditLogoPreview] = useState('');
+  const [editLogoDataUri, setEditLogoDataUri] = useState('');
+  const [editRemoveLogo, setEditRemoveLogo] = useState(false);
+  const editLogoInputRef = useRef(null);
+
+  const [editFaviconPreview, setEditFaviconPreview] = useState('');
+  const [editFaviconDataUri, setEditFaviconDataUri] = useState('');
+  const [editRemoveFavicon, setEditRemoveFavicon] = useState(false);
+  const editFaviconInputRef = useRef(null);
+
   const [editDomainStatus, setEditDomainStatus] = useState({ state: 'idle', message: '' });
   const [updating, setUpdating] = useState(false);
   const [updateMsg, setUpdateMsg] = useState('');
@@ -268,10 +308,21 @@ function WorkspaceContent() {
     setEditInstitutionType(matchedType ? matchedType.value : 'school');
 
     setEditEeinNumber(w.eiin_number || '');
+    setEditCurrency(w.currency || 'BDT');
     setEditAddress(w.address || '');
     setEditPrimaryColor(w.primary_color || '#1e40af');
     setEditSecondaryColor(w.secondary_color || '#0ea5e9');
     setEditIsPublished(w.status === 'active' && !w.is_maintenance_mode);
+    setEditIsMaintenanceMode(Boolean(w.is_maintenance_mode));
+
+    setEditLogoPreview(w.logo || '');
+    setEditLogoDataUri('');
+    setEditRemoveLogo(false);
+
+    setEditFaviconPreview(w.favicon || '');
+    setEditFaviconDataUri('');
+    setEditRemoveFavicon(false);
+
     setUpdateMsg('');
     setUpdateErr('');
     setEditDomainStatus({ state: 'available', message: 'Current active domain' });
@@ -346,12 +397,16 @@ function WorkspaceContent() {
           institution_type: institutionType,
           eeinNumber: eeinNumber.trim(),
           eiinNumber: eeinNumber.trim(),
+          currency: currency,
           customDomain: cleanDomain,
           subdomain: cleanDomain,
           address: address.trim(),
           tagline: tagline.trim(),
           primaryColor: primaryColor,
           secondaryColor: secondaryColor,
+          is_maintenance_mode: isMaintenanceMode,
+          logo: logoDataUri || null,
+          favicon: faviconDataUri || null,
         }),
       });
 
@@ -366,10 +421,18 @@ function WorkspaceContent() {
           setCustomDomain('');
           setDomainTouched(false);
           setEeinNumber('');
+          setCurrency('BDT');
           setAddress('');
           setTagline('');
           setPrimaryColor('#1e40af');
           setSecondaryColor('#0ea5e9');
+          setIsMaintenanceMode(false);
+          setLogoPreview('');
+          setLogoDataUri('');
+          setFaviconPreview('');
+          setFaviconDataUri('');
+          if (createLogoInputRef.current) createLogoInputRef.current.value = '';
+          if (createFaviconInputRef.current) createFaviconInputRef.current.value = '';
         }, 1200);
       } else {
         setCreateError(data.error || 'Failed to create website.');
@@ -414,12 +477,16 @@ function WorkspaceContent() {
           contact_email: editMail.trim(),
           institution_type: editInstitutionType,
           eiin_number: editEeinNumber.trim(),
+          currency: editCurrency,
           custom_domain: cleanDomain,
           subdomain: cleanDomain,
           address: editAddress.trim(),
           primary_color: editPrimaryColor,
           secondary_color: editSecondaryColor,
           is_published: editIsPublished,
+          is_maintenance_mode: editIsMaintenanceMode,
+          ...(editRemoveLogo ? { remove_logo: true, logo: '' } : editLogoDataUri ? { logo: editLogoDataUri } : {}),
+          ...(editRemoveFavicon ? { remove_favicon: true, favicon: '' } : editFaviconDataUri ? { favicon: editFaviconDataUri } : {}),
         }),
       });
 
@@ -1068,18 +1135,150 @@ function WorkspaceContent() {
                 </div>
               </div>
 
-              {/* Field 4: EEIN / EIIN Number */}
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  EIIN Number (Educational Institute Identification No.)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. 132456"
-                  value={eeinNumber}
-                  onChange={(e) => setEeinNumber(e.target.value)}
-                  className="w-full bg-slate-50/50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
-                />
+              {/* Field 4: EEIN & Currency in 2 columns */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    EIIN Number (Educational Institute No.)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 132456"
+                    value={eeinNumber}
+                    onChange={(e) => setEeinNumber(e.target.value)}
+                    className="w-full bg-slate-50/50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Operating Currency <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    required
+                    className="w-full bg-slate-50/50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all font-medium"
+                  >
+                    {CURRENCIES.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Brand Assets (Logo & Favicon - Uploaded via Cloudinary) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                {/* Logo Image Upload */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Institution Logo (Upload to Cloudinary)
+                  </label>
+                  <input
+                    type="file"
+                    ref={createLogoInputRef}
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        setLogoPreview(reader.result);
+                        setLogoDataUri(reader.result);
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                    className="hidden"
+                  />
+                  <div className="flex items-center gap-2">
+                    <div className="w-12 h-12 rounded border border-slate-300 bg-white flex items-center justify-center p-1 shrink-0 overflow-hidden">
+                      {logoPreview ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={logoPreview} alt="Logo" className="max-h-full max-w-full object-contain" />
+                      ) : (
+                        <span className="text-[9px] text-slate-400 font-mono">No Logo</span>
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <button
+                        type="button"
+                        onClick={() => createLogoInputRef.current?.click()}
+                        className="px-2.5 py-1 text-[11px] rounded bg-white border border-slate-300 hover:border-blue-600 text-slate-700 font-medium transition cursor-pointer shadow-2xs"
+                      >
+                        {logoPreview ? 'Change Logo' : 'Select Logo'}
+                      </button>
+                      {logoPreview && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLogoPreview('');
+                            setLogoDataUri('');
+                            if (createLogoInputRef.current) createLogoInputRef.current.value = '';
+                          }}
+                          className="text-[10px] text-rose-600 hover:underline cursor-pointer block"
+                        >
+                          Clear Logo
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Favicon Image Upload */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Browser Favicon (Upload to Cloudinary)
+                  </label>
+                  <input
+                    type="file"
+                    ref={createFaviconInputRef}
+                    accept="image/x-icon,image/png,image/svg+xml,image/jpeg"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        setFaviconPreview(reader.result);
+                        setFaviconDataUri(reader.result);
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                    className="hidden"
+                  />
+                  <div className="flex items-center gap-2">
+                    <div className="w-12 h-12 rounded border border-slate-300 bg-white flex items-center justify-center p-1 shrink-0 overflow-hidden">
+                      {faviconPreview ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={faviconPreview} alt="Favicon" className="max-h-full max-w-full object-contain" />
+                      ) : (
+                        <span className="text-[9px] text-slate-400 font-mono">No Icon</span>
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <button
+                        type="button"
+                        onClick={() => createFaviconInputRef.current?.click()}
+                        className="px-2.5 py-1 text-[11px] rounded bg-white border border-slate-300 hover:border-blue-600 text-slate-700 font-medium transition cursor-pointer shadow-2xs"
+                      >
+                        {faviconPreview ? 'Change Favicon' : 'Select Favicon'}
+                      </button>
+                      {faviconPreview && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFaviconPreview('');
+                            setFaviconDataUri('');
+                            if (createFaviconInputRef.current) createFaviconInputRef.current.value = '';
+                          }}
+                          className="text-[10px] text-rose-600 hover:underline cursor-pointer block"
+                        >
+                          Clear Favicon
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Field 5 & 6: Contact Number & Mail in 2 columns */}
@@ -1168,6 +1367,20 @@ function WorkspaceContent() {
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Maintenance Mode Option */}
+              <div className="flex items-center gap-2.5 p-3 rounded-lg bg-amber-50/60 border border-amber-200/80">
+                <input
+                  type="checkbox"
+                  id="createIsMaintenanceMode"
+                  checked={isMaintenanceMode}
+                  onChange={(e) => setIsMaintenanceMode(e.target.checked)}
+                  className="w-4 h-4 rounded text-amber-600 border-slate-300 cursor-pointer"
+                />
+                <label htmlFor="createIsMaintenanceMode" className="text-slate-800 text-xs font-medium cursor-pointer">
+                  Start in Maintenance Mode (Visitors will see scheduled maintenance notice)
+                </label>
               </div>
 
               {/* Modal Actions */}
@@ -1309,16 +1522,152 @@ function WorkspaceContent() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  EIIN Number
-                </label>
-                <input
-                  type="text"
-                  value={editEeinNumber}
-                  onChange={(e) => setEditEeinNumber(e.target.value)}
-                  className="w-full bg-slate-50/50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 font-mono focus:outline-none focus:border-blue-600"
-                />
+              {/* Currency and EIIN Number in 2 columns */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Operating Currency *
+                  </label>
+                  <select
+                    value={editCurrency}
+                    onChange={(e) => setEditCurrency(e.target.value)}
+                    className="w-full bg-slate-50/50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-blue-600 font-medium"
+                  >
+                    {CURRENCIES.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    EIIN Number
+                  </label>
+                  <input
+                    type="text"
+                    value={editEeinNumber}
+                    onChange={(e) => setEditEeinNumber(e.target.value)}
+                    className="w-full bg-slate-50/50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 font-mono focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+              </div>
+
+              {/* Brand Assets (Logo & Favicon - Cloudinary Uploaded) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                {/* Logo Image Upload */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Institution Logo (Upload to Cloudinary)
+                  </label>
+                  <input
+                    type="file"
+                    ref={editLogoInputRef}
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        setEditLogoPreview(reader.result);
+                        setEditLogoDataUri(reader.result);
+                        setEditRemoveLogo(false);
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                    className="hidden"
+                  />
+                  <div className="flex items-center gap-2">
+                    <div className="w-12 h-12 rounded border border-slate-300 bg-white flex items-center justify-center p-1 shrink-0 overflow-hidden">
+                      {editLogoPreview ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={editLogoPreview} alt="Logo" className="max-h-full max-w-full object-contain" />
+                      ) : (
+                        <span className="text-[9px] text-slate-400 font-mono">No Logo</span>
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <button
+                        type="button"
+                        onClick={() => editLogoInputRef.current?.click()}
+                        className="px-2.5 py-1 text-[11px] rounded bg-white border border-slate-300 hover:border-blue-600 text-slate-700 font-medium transition cursor-pointer shadow-2xs"
+                      >
+                        {editLogoPreview ? 'Change Logo' : 'Select Logo'}
+                      </button>
+                      {editLogoPreview && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditLogoPreview('');
+                            setEditLogoDataUri('');
+                            setEditRemoveLogo(true);
+                            if (editLogoInputRef.current) editLogoInputRef.current.value = '';
+                          }}
+                          className="text-[10px] text-rose-600 hover:underline cursor-pointer block"
+                        >
+                          Remove Logo
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Favicon Image Upload */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Browser Favicon (Upload to Cloudinary)
+                  </label>
+                  <input
+                    type="file"
+                    ref={editFaviconInputRef}
+                    accept="image/x-icon,image/png,image/svg+xml,image/jpeg"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        setEditFaviconPreview(reader.result);
+                        setEditFaviconDataUri(reader.result);
+                        setEditRemoveFavicon(false);
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                    className="hidden"
+                  />
+                  <div className="flex items-center gap-2">
+                    <div className="w-12 h-12 rounded border border-slate-300 bg-white flex items-center justify-center p-1 shrink-0 overflow-hidden">
+                      {editFaviconPreview ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={editFaviconPreview} alt="Favicon" className="max-h-full max-w-full object-contain" />
+                      ) : (
+                        <span className="text-[9px] text-slate-400 font-mono">No Icon</span>
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <button
+                        type="button"
+                        onClick={() => editFaviconInputRef.current?.click()}
+                        className="px-2.5 py-1 text-[11px] rounded bg-white border border-slate-300 hover:border-blue-600 text-slate-700 font-medium transition cursor-pointer shadow-2xs"
+                      >
+                        {editFaviconPreview ? 'Change Favicon' : 'Select Favicon'}
+                      </button>
+                      {editFaviconPreview && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditFaviconPreview('');
+                            setEditFaviconDataUri('');
+                            setEditRemoveFavicon(true);
+                            if (editFaviconInputRef.current) editFaviconInputRef.current.value = '';
+                          }}
+                          className="text-[10px] text-rose-600 hover:underline cursor-pointer block"
+                        >
+                          Remove Favicon
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1403,17 +1752,34 @@ function WorkspaceContent() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="editIsPublished"
-                  checked={editIsPublished}
-                  onChange={(e) => setEditIsPublished(e.target.checked)}
-                  className="w-4 h-4 rounded text-blue-600 border-slate-300 cursor-pointer"
-                />
-                <label htmlFor="editIsPublished" className="text-slate-800 font-medium cursor-pointer">
-                  Publish Website (Public Live Access)
-                </label>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label htmlFor="editIsPublished" className="text-slate-800 text-xs font-semibold cursor-pointer block">
+                      Live Portal Status
+                    </label>
+                    <span className="text-[10px] text-slate-500">
+                      Toggle active public access or switch campus to maintenance window.
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextPub = !editIsPublished;
+                        setEditIsPublished(nextPub);
+                        setEditIsMaintenanceMode(!nextPub);
+                      }}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
+                        editIsPublished && !editIsMaintenanceMode
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : 'bg-amber-100 text-amber-800 border border-amber-300'
+                      }`}
+                    >
+                      {editIsPublished && !editIsMaintenanceMode ? '✓ Public Live' : '🛠 Maintenance Active'}
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
