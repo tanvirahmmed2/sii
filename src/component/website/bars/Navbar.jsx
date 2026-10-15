@@ -143,7 +143,7 @@ const Navbar = () => {
                 href={tenantUrl('/auth/access')}
                 className="px-3 py-1 rounded-md bg-white hover:bg-white/90 text-slate-900 font-bold text-xs transition-all shadow-xs"
               >
-                Staff Login
+                Login
               </Link>
             </div>
 
@@ -262,28 +262,7 @@ const Navbar = () => {
                     id="department-box"
                     className="w-96 sm:w-[450px] bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden"
                   >
-                    {/* Header of Department Box */}
-                    <div className="p-3.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/60 flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-blue-600 inline-block" />
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-                            Academic Departments
-                          </h4>
-                        </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                          Disciplinary tracks &amp; syllabus curriculums
-                        </p>
-                      </div>
-                      <Link
-                        href={tenantUrl('/departments')}
-                        className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline shrink-0"
-                      >
-                        All Departments &rarr;
-                      </Link>
-                    </div>
-
-                    {/* Department Grid / List */}
+                    
                     <div className="p-2 max-h-72 overflow-y-auto space-y-1">
                       {departments && departments.length > 0 ? (
                         departments.map((d) => (
@@ -334,18 +313,7 @@ const Navbar = () => {
                       )}
                     </div>
 
-                    {/* Footer of Department Box */}
-                    <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
-                      <span className="text-slate-500 dark:text-slate-400 font-medium">
-                        Admissions Open
-                      </span>
-                      <Link
-                        href={tenantUrl('/admission/apply')}
-                        className="font-bold text-blue-600 dark:text-blue-400 hover:underline"
-                      >
-                        Apply for Admission &rarr;
-                      </Link>
-                    </div>
+                    
                   </div>
                 </div>
               )}

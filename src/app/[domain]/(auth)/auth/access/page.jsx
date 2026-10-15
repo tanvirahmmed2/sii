@@ -9,34 +9,28 @@ export default function AccessPortalSelectionPage() {
 
   const accessOptions = [
     {
-      title: 'Teacher / Faculty Portal',
+      title: 'Teacher',
       description: 'Manage assigned classes, attendance logs, exam questions, grading, and schedules.',
-      tag: '[Faculty]',
       href: tenantUrl('/auth/access/teacher/login'),
     },
     {
-      title: 'Staff / Operations Desk',
+      title: 'Staff',
       description: 'Access cashier ledger, registrar student archives, admissions, and library management.',
-      tag: '[Staff]',
       href: tenantUrl('/auth/access/staff/login'),
     },
     {
-      title: 'Officer Access Portal',
+      title: 'Officer',
       description: 'Direct sign-in for assigned department officers, approvals, and administrative duties.',
-      tag: '[Officer]',
       href: tenantUrl('/auth/access/officer/login'),
     },
   ];
 
   return (
-    <div className="w-full min-h-[80vh] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="w-full min-h-screen flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-6 sm:p-8 shadow-xs space-y-6">
         
-        {/* Header */}
         <div className="text-center space-y-1.5 border-b border-slate-100 dark:border-slate-800 pb-5">
-          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block">
-            {website?.name || 'Institutional Desk'}
-          </span>
+          
           <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
             Institutional Access
           </h1>
@@ -45,7 +39,6 @@ export default function AccessPortalSelectionPage() {
           </p>
         </div>
 
-        {/* Direct Access Options */}
         <div className="space-y-3">
           {accessOptions.map((option) => (
             <Link

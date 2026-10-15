@@ -19,14 +19,11 @@ export default function AuthPortalSelectionPage() {
   };
 
   return (
-    <div className="w-full min-h-[80vh] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="w-full min-h-screen flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-6 sm:p-8 shadow-xs space-y-6">
         
-        {/* Header */}
         <div className="text-center space-y-1.5 border-b border-slate-100 dark:border-slate-800 pb-5">
-          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block">
-            {website?.name || 'Campus Portal'}
-          </span>
+         
           <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
             Select Portal Access
           </h1>
@@ -35,9 +32,7 @@ export default function AuthPortalSelectionPage() {
           </p>
         </div>
 
-        {/* Roles Selection */}
         <div className="space-y-3">
-          {/* Student Radio option */}
           <label
             className={`flex items-start gap-3 p-4 rounded-md border transition-colors cursor-pointer ${
               selectedRole === 'student'
@@ -61,9 +56,6 @@ export default function AuthPortalSelectionPage() {
                 View enrolled classes, routine, daily attendance, exam results, and fees ledger.
               </p>
             </div>
-            <span className="text-[10px] font-semibold text-primary uppercase">
-              [Student]
-            </span>
           </label>
 
           {/* Administration Radio option */}
@@ -90,9 +82,6 @@ export default function AuthPortalSelectionPage() {
                 Access teaching rosters, grading tools, registrar archives, and cashier desks.
               </p>
             </div>
-            <span className="text-[10px] font-semibold text-primary uppercase">
-              [Staff/Faculty]
-            </span>
           </label>
         </div>
 
