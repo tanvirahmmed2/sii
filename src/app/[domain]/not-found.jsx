@@ -11,7 +11,6 @@ export default function TenantNotFound() {
     <NotFoundScreen
       title="Page Not Found"
       description="The institutional page, module, or document you requested could not be located in this campus system."
-      homeUrl="/"
       isTenant={true}
     />
   );

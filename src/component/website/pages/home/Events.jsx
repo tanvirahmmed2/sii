@@ -13,7 +13,7 @@ const Events = () => {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const res = await fetch(getApiEndpoint('events/home'));
+        const res = await fetch(getApiEndpoint('home/events?home=true'));
         if (res.ok) {
           const data = await res.json();
           setEvents(data.payload?.events || data.paylod?.events || []);

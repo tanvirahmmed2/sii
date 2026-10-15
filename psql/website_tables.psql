@@ -301,6 +301,7 @@ CREATE TABLE IF NOT EXISTS website_departments (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     name VARCHAR(150) NOT NULL,
+    slug VARCHAR(150),
     code VARCHAR(50),
     description TEXT,
     order_no INT DEFAULT 0,
@@ -310,6 +311,7 @@ CREATE TABLE IF NOT EXISTS website_departments (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_website_depts_web ON website_departments(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_depts_slug ON website_departments(website_id, slug);
 CREATE INDEX IF NOT EXISTS idx_website_depts_active ON website_departments(is_active);
 CREATE INDEX IF NOT EXISTS idx_website_depts_order ON website_departments(order_no);
 
@@ -344,6 +346,43 @@ CREATE TRIGGER update_website_department_information_updated_at
 
 CREATE OR REPLACE VIEW website_depart_information AS SELECT * FROM website_department_information;
 CREATE OR REPLACE VIEW website_depart_infomrtaion AS SELECT * FROM website_department_information;
+
+-- ----------------------------------------------------------------------------
+-- 12C. WEBSITE DEPARTMENT HEADS TABLE (Like Board Members for Departments)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_dept_heads (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    department_id BIGINT NOT NULL REFERENCES website_departments(id) ON DELETE CASCADE,
+    teacher_id BIGINT REFERENCES website_teachers(id) ON DELETE SET NULL,
+    name VARCHAR(255) NOT NULL,
+    title VARCHAR(255),
+    designation VARCHAR(255) NOT NULL DEFAULT 'Head of Department',
+    image TEXT,
+    image_id VARCHAR(255),
+    bio TEXT,
+    message TEXT,
+    email VARCHAR(255),
+    phone VARCHAR(50),
+    joining_date DATE,
+    order_no INT NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, department_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_dept_heads_web ON website_dept_heads(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_dept_heads_dept ON website_dept_heads(department_id);
+CREATE INDEX IF NOT EXISTS idx_website_dept_heads_active ON website_dept_heads(is_active);
+
+DROP TRIGGER IF EXISTS update_website_dept_heads_updated_at ON website_dept_heads;
+CREATE TRIGGER update_website_dept_heads_updated_at
+    BEFORE UPDATE ON website_dept_heads
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE OR REPLACE VIEW website_department_heads AS SELECT * FROM website_dept_heads;
 
 -- ----------------------------------------------------------------------------
 -- 12C. WEBSITE SESSIONS TABLE (Academic Sessions / Years - Independent Entity)

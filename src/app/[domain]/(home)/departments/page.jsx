@@ -14,7 +14,7 @@ const DepartmentsPage = () => {
     let ignore = false;
     const fetchDepartments = async () => {
       try {
-        const res = await fetch(getApiEndpoint('departments'));
+        const res = await fetch(getApiEndpoint('home/departments'));
         if (res.ok) {
           const data = await res.json();
           if (!ignore) {
@@ -97,7 +97,8 @@ const DepartmentsPage = () => {
         ) : filteredDepartments.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredDepartments.map((dept) => {
-              const deptLink = tenantUrl(`/departments/${dept.id}`);
+              const deptSlug = dept.slug || (dept.name ? dept.name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-') : dept.id);
+              const deptLink = tenantUrl(`/departments/${deptSlug}`);
               const classesList = Array.isArray(dept.classes) ? dept.classes : [];
 
               return (
@@ -126,6 +127,27 @@ const DepartmentsPage = () => {
                       <p className="text-xs italic text-blue-700 dark:text-blue-400 font-medium leading-relaxed">
                         &ldquo;{dept.motto}&rdquo;
                       </p>
+                    )}
+
+                    {dept.dept_head && (
+                      <div className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800">
+                        <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden shrink-0 relative">
+                          {dept.dept_head.image ? (
+                            <img
+                              src={dept.dept_head.image}
+                              alt={dept.dept_head.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-slate-500">
+                              {dept.dept_head.name?.[0]}
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 text-[11px] text-slate-600 dark:text-slate-300 truncate">
+                          <span className="font-semibold text-slate-900 dark:text-white">Head:</span> {dept.dept_head.name}
+                        </div>
+                      </div>
                     )}
 
                     <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed">

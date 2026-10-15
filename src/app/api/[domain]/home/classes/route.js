@@ -1,31 +1,48 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 
 // GET: List all classes for public tenant consumption
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
     if (!website) {
-      return NextResponse.json({ success: false, error: 'Educational institution portal not found.' }, { status: 404 });
+      return NextResponse.json(
+        { success: false, error: 'Educational institution portal not found.' },
+        { status: 404 }
+      );
     }
 
     const result = await queryDb(
-      `SELECT c.*,
+      `SELECT c.id,
+              c.website_id,
+              c.session_id,
+              c.department_id,
+              c.name,
+              c.code,
+              c.max_seats,
+              c.description,
+              c.created_at,
+              c.updated_at,
               s.name AS session_name,
               d.name AS department_name,
               d.code AS department_code,
-              COALESCE(di.motto, ci.motto) AS motto,
-              COALESCE(di.summary, ci.summary) AS summary,
-              COALESCE(di.description, ci.description, c.description) AS description,
-              COALESCE(di.expected_cost, ci.expected_cost, 0.00) AS expected_cost,
-              COALESCE((SELECT COUNT(*) FROM website_sections s WHERE s.class_id = c.id), 0)::int AS section_count,
-              COALESCE((SELECT COUNT(*) FROM website_class_subjects cs WHERE cs.class_id = c.id), 0)::int AS subject_count
+              di.motto AS motto,
+              di.summary AS summary,
+              COALESCE(c.description, di.description) AS detailed_description,
+              COALESCE(di.expected_cost, 0.00) AS expected_cost,
+              COALESCE((SELECT COUNT(*) FROM website_sections sec WHERE sec.class_id = c.id), 0)::int AS section_count,
+              COALESCE((SELECT COUNT(*) FROM website_class_subjects cs WHERE cs.class_id = c.id), 0)::int AS subject_count,
+              COALESCE(
+                (SELECT json_agg(json_build_object('id', sec.id, 'name', sec.name, 'capacity', sec.capacity, 'room_number', sec.room_number) ORDER BY sec.name ASC)
+                 FROM website_sections sec
+                 WHERE sec.class_id = c.id),
+                '[]'::json
+              ) AS sections
        FROM website_classes c
        LEFT JOIN website_sessions s ON s.id = c.session_id
        LEFT JOIN website_departments d ON d.id = c.department_id
        LEFT JOIN website_department_information di ON di.department_id = d.id AND di.website_id = c.website_id
-       LEFT JOIN website_class_information ci ON ci.class_id = c.id AND ci.website_id = c.website_id
        WHERE c.website_id = $1
        ORDER BY c.name ASC, c.id ASC`,
       [website.id]
@@ -36,9 +53,13 @@ export async function GET(request, context) {
       classes: result.rows,
       payload: { classes: result.rows },
       paylod: { classes: result.rows },
+      total: result.rowCount,
     });
   } catch (error) {
-    console.error('Error fetching tenant classes:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error('Error fetching tenant classes in home/classes:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to fetch classes.' },
+      { status: 500 }
+    );
   }
 }

@@ -11,7 +11,7 @@ const AnnouncementPopup = () => {
   useEffect(() => {
     const fetchActiveAnnouncement = async () => {
       try {
-        const url = tenantCtx?.getApiEndpoint ? tenantCtx.getApiEndpoint('announcements') : '/api/announcements';
+        const url = tenantCtx?.getApiEndpoint ? tenantCtx.getApiEndpoint('home/announcements') : '/api/announcements';
         const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();

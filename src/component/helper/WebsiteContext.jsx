@@ -213,7 +213,7 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
 
   const fetchDesignations = useCallback(async () => {
     try {
-      const designationsRes = await fetch(getApiEndpoint('authorities/designations'));
+      const designationsRes = await fetch(getApiEndpoint('home/designations'));
       if (designationsRes.ok) {
         const data = await designationsRes.json();
         setDesignations(data.payload?.designations || data.paylod?.designations || []);
@@ -225,7 +225,7 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
 
   const fetchDepartments = useCallback(async () => {
     try {
-      const deptRes = await fetch(getApiEndpoint('departments'));
+      const deptRes = await fetch(getApiEndpoint('home/departments'));
       if (deptRes.ok) {
         const data = await deptRes.json();
         setDepartments(data.payload?.departments || data.paylod?.departments || data.departments || []);
@@ -237,7 +237,7 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
 
   const fetchClasses = useCallback(async () => {
     try {
-      const classesRes = await fetch(getApiEndpoint('classes'));
+      const classesRes = await fetch(getApiEndpoint('home/classes'));
       if (classesRes.ok) {
         const data = await classesRes.json();
         setClasses(data.payload?.classes || data.paylod?.classes || []);
@@ -249,7 +249,7 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
 
   const fetchClubs = useCallback(async () => {
     try {
-      const clubsRes = await fetch(getApiEndpoint('clubs'));
+      const clubsRes = await fetch(getApiEndpoint('home/clubs'));
       if (clubsRes.ok) {
         const data = await clubsRes.json();
         setClubs(data.payload?.clubs || data.paylod?.clubs || []);

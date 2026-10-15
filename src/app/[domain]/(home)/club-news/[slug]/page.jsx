@@ -16,7 +16,7 @@ const ClubNewsDetailPage = () => {
     const fetchClubNews = async () => {
       setLoading(true);
       try {
-        const res = await fetch(getApiEndpoint(`club-news/${slug}`));
+        const res = await fetch(getApiEndpoint(`home/club-news/${slug}`));
         if (res.ok) {
           const data = await res.json();
           const item = data.payload?.clubNews || data.paylod?.clubNews || null;

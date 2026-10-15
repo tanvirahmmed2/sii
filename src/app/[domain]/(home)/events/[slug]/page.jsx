@@ -22,7 +22,7 @@ const EventDetailPage = ({ params: paramsPromise }) => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await fetch(getApiEndpoint(`events/${encodeURIComponent(slug)}`));
+        const res = await fetch(getApiEndpoint(`home/events/${encodeURIComponent(slug)}`));
         if (res.ok) {
           const data = await res.json();
           const fetchedEvent = data.paylod?.event || data.payload?.event || null;

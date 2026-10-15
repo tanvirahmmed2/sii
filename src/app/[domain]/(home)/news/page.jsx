@@ -12,7 +12,7 @@ const NewsPage = () => {
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        const res = await fetch(getApiEndpoint('news'));
+        const res = await fetch(getApiEndpoint('home/news'));
         if (res.ok) {
           const data = await res.json();
           setNews(data.payload?.news || data.paylod?.news || data.news || []);

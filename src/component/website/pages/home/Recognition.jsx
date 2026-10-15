@@ -14,7 +14,7 @@ const Recognition = () => {
   useEffect(() => {
     const fetchRecognitions = async () => {
       try {
-        const res = await fetch(getApiEndpoint('recognitions'));
+        const res = await fetch(getApiEndpoint('home/recognitions'));
         if (res.ok) {
           const data = await res.json();
           const list =

@@ -10,7 +10,6 @@ import { useRouter } from 'next/navigation';
 export default function NotFoundScreen({
   title = 'Page Not Found',
   description = 'The page or resource you are trying to access does not exist, has been removed, or is temporarily unavailable.',
-  homeUrl = '/',
   isTenant = false,
 }) {
   const router = useRouter();
@@ -82,13 +81,6 @@ export default function NotFoundScreen({
 
         {/* Actions */}
         <div className="flex items-center justify-center gap-2 pt-2">
-          <button
-            type="button"
-            onClick={handleReturnHome}
-            className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-medium text-xs transition-colors cursor-pointer"
-          >
-            Return to Homepage
-          </button>
           <button
             type="button"
             onClick={handleGoBack}

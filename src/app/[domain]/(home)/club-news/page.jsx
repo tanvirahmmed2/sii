@@ -17,7 +17,7 @@ const ClubNewsPage = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const newsRes = await fetch(getApiEndpoint('club-news'));
+        const newsRes = await fetch(getApiEndpoint('home/club-news'));
         if (newsRes.ok) {
           const newsData = await newsRes.json();
           const payload = newsData.paylod || newsData.payload || {};
@@ -27,7 +27,7 @@ const ClubNewsPage = () => {
         if (contextClubs && contextClubs.length > 0) {
           setClubs(contextClubs);
         } else {
-          const clubsRes = await fetch(getApiEndpoint('clubs'));
+          const clubsRes = await fetch(getApiEndpoint('home/clubs'));
           if (clubsRes.ok) {
             const clubsData = await clubsRes.json();
             const payload = clubsData.paylod || clubsData.payload || {};

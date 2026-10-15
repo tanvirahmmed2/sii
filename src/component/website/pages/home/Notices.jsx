@@ -13,7 +13,7 @@ const Notices = () => {
   useEffect(() => {
     const fetchNotices = async () => {
       try {
-        const res = await fetch(getApiEndpoint('notices/home'));
+        const res = await fetch(getApiEndpoint('home/notices?home=true'));
         if (res.ok) {
           const data = await res.json();
           setNotices(data.payload?.notices || data.paylod?.notices || []);

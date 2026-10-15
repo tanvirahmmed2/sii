@@ -23,7 +23,7 @@ const Hero = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const statsRes = await fetch(getApiEndpoint('public/stats'));
+        const statsRes = await fetch(getApiEndpoint('home/stats'));
         if (statsRes.ok) {
           const statsData = await statsRes.json();
           const payload = statsData.payload || statsData.paylod;

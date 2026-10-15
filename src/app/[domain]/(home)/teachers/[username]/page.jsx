@@ -18,7 +18,7 @@ const TeacherPublicProfilePage = () => {
     if (!username) return;
     const fetchData = async () => {
       try {
-        const res = await fetch(getApiEndpoint(`teachers/${username}`));
+        const res = await fetch(getApiEndpoint(`home/teachers/${username}`));
         if (res.ok) {
           const data = await res.json();
           setTeacher(data.payload?.teacher || data.paylod?.teacher || null);

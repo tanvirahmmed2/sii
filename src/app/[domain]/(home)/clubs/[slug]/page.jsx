@@ -20,8 +20,8 @@ const ClubDetailsPage = () => {
     const fetchData = async () => {
       try {
         const [clubRes, newsRes] = await Promise.all([
-          fetch(getApiEndpoint(`clubs/${slug}`)),
-          fetch(getApiEndpoint('club-news'))
+          fetch(getApiEndpoint(`home/clubs/${slug}`)),
+          fetch(getApiEndpoint('home/club-news'))
         ]);
 
         let foundClub = null;

@@ -12,7 +12,7 @@ const ClubsPage = () => {
   useEffect(() => {
     const fetchClubs = async () => {
       try {
-        const res = await fetch(getApiEndpoint('clubs'));
+        const res = await fetch(getApiEndpoint('home/clubs'));
         if (res.ok) {
           const data = await res.json();
           setClubs(data.payload?.clubs || data.paylod?.clubs || data.clubs || []);
