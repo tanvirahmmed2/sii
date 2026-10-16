@@ -177,7 +177,7 @@ const Footer = () => {
               {departments && departments.slice(0, 3).map((dept) => (
                 <Link
                   key={dept.id}
-                  href={tenantUrl(`/departments/${dept.id}`)}
+                  href={tenantUrl(`/departments/${dept.slug || dept.id}`)}
                   className={navLinkClass}
                 >
                   {dept.name}

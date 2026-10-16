@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/websiteResolver.js';
 
 // GET: Single class details with subjects, sections, and faculty
 export async function GET(request, context) {
@@ -22,7 +22,6 @@ export async function GET(request, context) {
     const classRes = await queryDb(
       `SELECT c.id,
               c.website_id,
-              c.session_id,
               c.department_id,
               c.name,
               c.code,
@@ -30,16 +29,15 @@ export async function GET(request, context) {
               c.description,
               c.created_at,
               c.updated_at,
-              s.name AS session_name,
               d.name AS department_name,
               d.code AS department_code,
+              d.slug AS department_slug,
               di.motto AS motto,
               di.summary AS summary,
               COALESCE(c.description, di.description) AS detailed_description,
               COALESCE(di.expected_cost, 0.00) AS expected_cost
        FROM website_classes c
-       LEFT JOIN website_sessions s ON s.id = c.session_id
-       LEFT JOIN website_departments d ON d.id = c.department_id
+       JOIN website_departments d ON d.id = c.department_id AND d.website_id = c.website_id
        LEFT JOIN website_department_information di ON di.department_id = d.id AND di.website_id = c.website_id
        WHERE c.website_id = $1 AND (c.id::text = $2 OR LOWER(c.code) = LOWER($2))
        LIMIT 1`,

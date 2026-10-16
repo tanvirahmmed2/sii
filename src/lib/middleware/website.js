@@ -3,6 +3,11 @@ import { queryDb } from '../database/db.js';
 import { BASE_DOMAIN, BASE_URL } from '../database/secret.js';
 import {
   resolveWebsiteFromRequest,
+  resolveWebsite,
+  invalidateWebsiteCache,
+  clearWebsiteCache,
+} from './websiteResolver.js';
+import {
   getWebsiteUserSession,
   getUserRolesAndPermissions,
   generateWebsiteToken,
@@ -12,6 +17,9 @@ import {
 
 export {
   resolveWebsiteFromRequest,
+  resolveWebsite,
+  invalidateWebsiteCache,
+  clearWebsiteCache,
   getWebsiteUserSession,
   getUserRolesAndPermissions,
   generateWebsiteToken,
@@ -93,37 +101,11 @@ export function getWebsiteDomain(request) {
 }
 
 /**
- * Fetches website record strictly from database.
+ * Fetches website record using dedicated resolver with in-memory caching and coalescing.
  */
 export async function fetchWebsiteByDomain(domain) {
   if (!domain) return null;
-  const clean = String(domain).trim().toLowerCase();
-
-  try {
-    const res = await queryDb(
-      `SELECT id, creator_id, name, slug, subdomain, subdomain AS domain, custom_domain,
-              custom_domain_verified, institution_type, eiin_number, contact_email, contact_phone, address,
-              primary_color, secondary_color, theme, status, is_maintenance_mode,
-              COALESCE(maintenance_message, 'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.') AS maintenance_message,
-              COALESCE(currency, 'BDT') AS currency,
-              logo, logo_id, favicon, favicon_id,
-              (status = 'active') AS is_active,
-              (status = 'active' AND is_maintenance_mode = false) AS is_published
-       FROM websites 
-       WHERE LOWER(slug) = LOWER($1) 
-          OR LOWER(subdomain) = LOWER($1) 
-          OR LOWER(custom_domain) = LOWER($1)
-          OR LOWER(subdomain) LIKE LOWER($2)
-       LIMIT 1`,
-      [clean, `${clean}.%`]
-    );
-
-    if (res.rows.length === 0) return null;
-    return res.rows[0];
-  } catch (err) {
-    console.error('fetchWebsiteByDomain error:', err);
-    return null;
-  }
+  return resolveWebsite(domain);
 }
 
 /**

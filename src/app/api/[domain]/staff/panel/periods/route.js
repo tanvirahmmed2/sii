@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/websiteResolver';
 import { getStaffSession } from 'src/lib/middleware/staff';
 
 async function verifyStaffAccess(request, context) {
@@ -63,14 +63,66 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create period
+// POST: Create period or sync period structure across active days
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const body = await request.json().catch(() => ({}));
-    const { day_id, name, start_time, end_time, is_break = false } = body;
+
+    // Action: Sync period structure across all active working days
+    if (body.action === 'sync_to_active_days') {
+      // 1. Get unique period templates configured for this institution
+      const templatesRes = await queryDb(
+        `SELECT DISTINCT ON (LOWER(name)) name, start_time, end_time, is_break
+         FROM website_periods
+         WHERE website_id = $1
+         ORDER BY LOWER(name), id ASC`,
+        [auth.website.id]
+      );
+
+      if (templatesRes.rows.length === 0) {
+        return NextResponse.json({
+          success: false,
+          error: 'No period time slots have been created yet. Please create at least one period first.'
+        }, { status: 400 });
+      }
+
+      // 2. Get active working days
+      const daysRes = await queryDb(
+        `SELECT id, name FROM website_days WHERE website_id = $1 AND status = 'on' ORDER BY day_order ASC`,
+        [auth.website.id]
+      );
+
+      let createdCount = 0;
+      for (const d of daysRes.rows) {
+        for (const tmpl of templatesRes.rows) {
+          const check = await queryDb(
+            `SELECT id FROM website_periods WHERE website_id = $1 AND day_id = $2 AND LOWER(name) = LOWER($3) LIMIT 1`,
+            [auth.website.id, d.id, tmpl.name]
+          );
+          if (check.rows.length === 0) {
+            await queryDb(
+              `INSERT INTO website_periods (website_id, day_id, name, start_time, end_time, is_break)
+               VALUES ($1, $2, $3, $4, $5, $6)`,
+              [auth.website.id, d.id, tmpl.name, tmpl.start_time, tmpl.end_time, Boolean(tmpl.is_break)]
+            );
+            createdCount++;
+          }
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        createdCount,
+        message: createdCount > 0
+          ? `Successfully synchronized ${createdCount} periods across ${daysRes.rows.length} working days.`
+          : 'All working days already have all configured period slots.'
+      });
+    }
+
+    const { day_id, name, start_time, end_time, is_break = false, apply_to_all_active_days = false } = body;
 
     if (!day_id || !name || !start_time || !end_time) {
       return NextResponse.json({ success: false, error: 'Day, Period Name, Start Time, and End Time are required.' }, { status: 400 });
@@ -84,6 +136,31 @@ export async function POST(request, context) {
 
     if (dayCheck.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Selected day does not exist in this portal.' }, { status: 404 });
+    }
+
+    if (apply_to_all_active_days) {
+      const activeDays = await queryDb(
+        `SELECT id FROM website_days WHERE website_id = $1 AND status = 'on'`,
+        [auth.website.id]
+      );
+      for (const ad of activeDays.rows) {
+        const exists = await queryDb(
+          `SELECT id FROM website_periods WHERE website_id = $1 AND day_id = $2 AND LOWER(name) = LOWER($3) LIMIT 1`,
+          [auth.website.id, ad.id, String(name).trim()]
+        );
+        if (exists.rows.length === 0) {
+          await queryDb(
+            `INSERT INTO website_periods (website_id, day_id, name, start_time, end_time, is_break)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [auth.website.id, ad.id, String(name).trim(), String(start_time).trim(), String(end_time).trim(), Boolean(is_break)]
+          );
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Period created and applied to all working days.'
+      });
     }
 
     const insertRes = await queryDb(

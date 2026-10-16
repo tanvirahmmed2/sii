@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/websiteResolver.js';
 import { getStaffSession } from 'src/lib/middleware/staff';
 
 async function verifyStaffAccess(request, context) {
@@ -27,7 +27,7 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET: List sections (Step 4 in hierarchy: under Classes)
+// GET: List sections (under Classes and Departments)
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -36,29 +36,25 @@ export async function GET(request, context) {
     const { searchParams } = new URL(request.url);
     const classId = searchParams.get('class_id');
 
-    // 1. Fetch available classes with parent session & department info
+    // 1. Fetch available classes with parent department info
     const classesResult = await queryDb(
       `SELECT c.id, c.name, c.code,
-              sess.name AS session_name,
               dept.name AS department_name
        FROM website_classes c
-       LEFT JOIN website_sessions sess ON sess.id = c.session_id
        LEFT JOIN website_departments dept ON dept.id = c.department_id
        WHERE c.website_id = $1
        ORDER BY c.name ASC`,
       [auth.website.id]
     );
 
-    // 2. Query sections with class, session, and department details
+    // 2. Query sections with class and department details
     let queryText = `
       SELECT s.*, 
              c.name AS class_name, 
              c.code AS class_code,
-             sess.name AS session_name,
              dept.name AS department_name
       FROM website_sections s
       JOIN website_classes c ON c.id = s.class_id
-      LEFT JOIN website_sessions sess ON sess.id = c.session_id
       LEFT JOIN website_departments dept ON dept.id = c.department_id
       WHERE s.website_id = $1
     `;
@@ -99,17 +95,16 @@ export async function POST(request, context) {
     }
 
     if (!name || !String(name).trim()) {
-      return NextResponse.json({ success: false, error: 'Section name is required (e.g., Section A, Morning).' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Section Name is required (e.g. Section A, Batch 1).' }, { status: 400 });
     }
 
     // Verify class belongs to website
     const classCheck = await queryDb(
-      `SELECT id, name FROM website_classes WHERE id = $1 AND website_id = $2 LIMIT 1`,
+      `SELECT id FROM website_classes WHERE id = $1 AND website_id = $2`,
       [class_id, auth.website.id]
     );
-
-    if (classCheck.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Selected class does not exist in this portal.' }, { status: 404 });
+    if (classCheck.rowCount === 0) {
+      return NextResponse.json({ success: false, error: 'Target class does not exist.' }, { status: 400 });
     }
 
     const insertRes = await queryDb(
@@ -118,7 +113,7 @@ export async function POST(request, context) {
        RETURNING *`,
       [
         auth.website.id,
-        class_id,
+        parseInt(class_id, 10),
         String(name).trim(),
         parseInt(capacity, 10) || 40,
         room_number ? String(room_number).trim() : null
@@ -131,11 +126,9 @@ export async function POST(request, context) {
       `SELECT s.*, 
               c.name AS class_name, 
               c.code AS class_code,
-              sess.name AS session_name,
               dept.name AS department_name
        FROM website_sections s
        JOIN website_classes c ON c.id = s.class_id
-       LEFT JOIN website_sessions sess ON sess.id = c.session_id
        LEFT JOIN website_departments dept ON dept.id = c.department_id
        WHERE s.id = $1`,
       [savedSection.id]
@@ -179,9 +172,9 @@ export async function PUT(request, context) {
        RETURNING *`,
       [
         class_id ? parseInt(class_id, 10) : null,
-        name !== undefined ? String(name).trim() : null,
+        name ? String(name).trim() : null,
         capacity !== undefined ? parseInt(capacity, 10) : null,
-        room_number !== undefined ? String(room_number).trim() : null,
+        room_number !== undefined ? (room_number ? String(room_number).trim() : null) : null,
         id,
         auth.website.id
       ]
@@ -195,11 +188,9 @@ export async function PUT(request, context) {
       `SELECT s.*, 
               c.name AS class_name, 
               c.code AS class_code,
-              sess.name AS session_name,
               dept.name AS department_name
        FROM website_sections s
        JOIN website_classes c ON c.id = s.class_id
-       LEFT JOIN website_sessions sess ON sess.id = c.session_id
        LEFT JOIN website_departments dept ON dept.id = c.department_id
        WHERE s.id = $1`,
       [id]
@@ -230,7 +221,7 @@ export async function DELETE(request, context) {
     }
 
     const delRes = await queryDb(
-      `DELETE FROM website_sections WHERE id = $1 AND website_id = $2 RETURNING id`,
+      `DELETE FROM website_sections WHERE id = $1 AND website_id = $2 RETURNING id, name`,
       [id, auth.website.id]
     );
 
@@ -240,7 +231,7 @@ export async function DELETE(request, context) {
 
     return NextResponse.json({
       success: true,
-      message: 'Section deleted successfully.'
+      message: `Section "${delRes.rows[0].name}" deleted successfully.`
     });
   } catch (error) {
     console.error('Error in DELETE section:', error);

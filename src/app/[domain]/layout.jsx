@@ -1,6 +1,6 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/websiteResolver';
 import { TenantWebsiteProvider } from 'src/component/helper/WebsiteContext';
 import { calculateColorShades } from 'src/lib/utils/colors';
 

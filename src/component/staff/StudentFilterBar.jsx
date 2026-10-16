@@ -69,10 +69,9 @@ export default function StudentFilterBar({
     };
   }, [getApiEndpoint]);
 
-  // Cascaded classes by selectedDepartment and selectedSession
+  // Cascaded classes by selectedDepartment
   const availableClasses = classes.filter((c) => {
     if (selectedDepartment && c.department_id && String(c.department_id) !== String(selectedDepartment)) return false;
-    if (selectedSession && c.session_id && String(c.session_id) !== String(selectedSession)) return false;
     return true;
   });
 

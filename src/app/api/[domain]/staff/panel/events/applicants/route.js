@@ -93,8 +93,8 @@ export async function GET(request, context) {
         c.name AS class_name,
         sec.name AS section_name,
         ses.name AS session_name
-      FROM events_applicants ea
-      JOIN events e ON e.id = ea.event_id
+      FROM website_events_applicants ea
+      JOIN website_events e ON e.id = ea.event_id
       JOIN website_students s ON s.id = ea.student_id
       LEFT JOIN website_student_info i ON i.student_id = s.id
       LEFT JOIN website_classes c ON c.id = s.class_id
@@ -151,7 +151,7 @@ export async function PUT(request, context) {
     }
 
     const updateRes = await queryDb(
-      `UPDATE events_applicants
+      `UPDATE website_events_applicants
        SET status = COALESCE($1, status),
            notes = COALESCE($2, notes),
            updated_at = CURRENT_TIMESTAMP
@@ -193,7 +193,7 @@ export async function DELETE(request, context) {
     }
 
     const deleteRes = await queryDb(
-      `DELETE FROM events_applicants WHERE id = $1 AND website_id = $2 RETURNING id`,
+      `DELETE FROM website_events_applicants WHERE id = $1 AND website_id = $2 RETURNING id`,
       [targetId, auth.website.id]
     );
 

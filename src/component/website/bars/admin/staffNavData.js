@@ -12,6 +12,10 @@ export const staffNavData = [
         path: '/department-information'
       },
       {
+        title: 'Department Head',
+        path: '/department-head'
+      },
+      {
         title: 'Academic Year',
         path: '/academic-year'
       },

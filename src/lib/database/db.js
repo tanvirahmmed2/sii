@@ -10,7 +10,12 @@ if (!global._postgresPool) {
     host: PG_HOST,
     port: PG_PORT ? parseInt(PG_PORT, 10) : 5432,
     database: PG_DATABASE,
-    ssl: { rejectUnauthorized: false }
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 5000,
+  });
+
+  global._postgresPool.on('error', (err) => {
+    console.error('[Postgres Pool Error]:', err?.message || err);
   });
 }
 

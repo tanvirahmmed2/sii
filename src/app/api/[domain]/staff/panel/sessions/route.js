@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/websiteResolver.js';
 import { getStaffSession } from 'src/lib/middleware/staff';
 
 async function verifyStaffAccess(request, context) {
@@ -38,7 +38,8 @@ export async function GET(request, context) {
 
     let query = `
       SELECT s.*,
-             COALESCE((SELECT COUNT(*) FROM website_classes c WHERE c.session_id = s.id), 0)::int AS class_count
+             COALESCE((SELECT COUNT(*) FROM website_students st WHERE st.session_id = s.id), 0)::int AS student_count,
+             0::int AS class_count
       FROM website_sessions s
       WHERE s.website_id = $1
     `;
@@ -49,7 +50,7 @@ export async function GET(request, context) {
       query += ` AND s.name ILIKE $${params.length}`;
     }
 
-    query += ` ORDER BY s.is_current DESC, s.start_date DESC NULLS LAST, s.id DESC`;
+    query += ` ORDER BY s.is_current DESC, s.id DESC`;
 
     const result = await queryDb(query, params);
 
@@ -71,14 +72,15 @@ export async function POST(request, context) {
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const body = await request.json().catch(() => ({}));
-    const { name, start_date, end_date, is_current, status = 'active' } = body;
+    const { name, is_current = false, status = 'active' } = body;
 
     if (!name || !String(name).trim()) {
-      return NextResponse.json({ success: false, error: 'Session name is required (e.g. 2025-2026).' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Session Name is required (e.g., 2026-2027).' }, { status: 400 });
     }
 
     const trimmedName = String(name).trim();
 
+    // If marked as current, reset other sessions' is_current to false
     if (is_current) {
       await queryDb(
         `UPDATE website_sessions SET is_current = FALSE WHERE website_id = $1`,
@@ -87,14 +89,12 @@ export async function POST(request, context) {
     }
 
     const insertRes = await queryDb(
-      `INSERT INTO website_sessions (website_id, name, start_date, end_date, is_current, status)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO website_sessions (website_id, name, is_current, status)
+       VALUES ($1, $2, $3, $4)
        RETURNING *`,
       [
         auth.website.id,
         trimmedName,
-        start_date || null,
-        end_date || null,
         Boolean(is_current),
         status || 'active'
       ]
@@ -123,12 +123,13 @@ export async function PUT(request, context) {
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const body = await request.json().catch(() => ({}));
-    const { id, name, start_date, end_date, is_current, status } = body;
+    const { id, name, is_current, status } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Session ID is required.' }, { status: 400 });
     }
 
+    // If marked current, clear other current sessions first
     if (is_current) {
       await queryDb(
         `UPDATE website_sessions SET is_current = FALSE WHERE website_id = $1 AND id != $2`,
@@ -139,19 +140,15 @@ export async function PUT(request, context) {
     const updateRes = await queryDb(
       `UPDATE website_sessions
        SET name = COALESCE($1, name),
-           start_date = COALESCE($2, start_date),
-           end_date = COALESCE($3, end_date),
-           is_current = COALESCE($4, is_current),
-           status = COALESCE($5, status),
+           is_current = COALESCE($2, is_current),
+           status = COALESCE($3, status),
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $6 AND website_id = $7
+       WHERE id = $4 AND website_id = $5
        RETURNING *`,
       [
-        name !== undefined ? (name ? String(name).trim() : null) : null,
-        start_date !== undefined ? start_date : null,
-        end_date !== undefined ? end_date : null,
+        name ? String(name).trim() : null,
         is_current !== undefined ? Boolean(is_current) : null,
-        status !== undefined ? status : null,
+        status || null,
         id,
         auth.website.id
       ]
@@ -161,14 +158,9 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Session not found.' }, { status: 404 });
     }
 
-    const countRes = await queryDb(
-      `SELECT COUNT(*)::int AS class_count FROM website_classes WHERE session_id = $1`,
-      [id]
-    );
-
     return NextResponse.json({
       success: true,
-      session: { ...updateRes.rows[0], class_count: countRes.rows[0]?.class_count || 0 },
+      session: { ...updateRes.rows[0], class_count: 0 },
       message: 'Academic session updated successfully.'
     });
   } catch (error) {
@@ -191,7 +183,7 @@ export async function DELETE(request, context) {
     }
 
     const delRes = await queryDb(
-      `DELETE FROM website_sessions WHERE id = $1 AND website_id = $2 RETURNING id`,
+      `DELETE FROM website_sessions WHERE id = $1 AND website_id = $2 RETURNING id, name`,
       [id, auth.website.id]
     );
 
@@ -201,7 +193,7 @@ export async function DELETE(request, context) {
 
     return NextResponse.json({
       success: true,
-      message: 'Academic session deleted successfully.'
+      message: `Academic session "${delRes.rows[0].name}" deleted successfully.`
     });
   } catch (error) {
     console.error('Error in DELETE session:', error);

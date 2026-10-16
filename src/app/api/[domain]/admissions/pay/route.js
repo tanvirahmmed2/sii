@@ -34,7 +34,7 @@ export async function POST(request, context) {
     );
 
     if (appRes.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Applicant record not found.' }, { status: 404 geological: false });
+      return NextResponse.json({ success: false, error: 'Applicant record not found.' }, { status: 404 });
     }
 
     const applicant = appRes.rows[0];

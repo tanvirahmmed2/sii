@@ -6,7 +6,6 @@ import Life from 'src/component/website/pages/home/Life'
 import News from 'src/component/website/pages/home/News'
 import Notices from 'src/component/website/pages/home/Notices'
 import Recognition from 'src/component/website/pages/home/Recognition'
-import AnnouncementPopup from 'src/component/helper/AnnouncementPopup'
 import React from 'react'
 
 const Home = () => {
@@ -19,7 +18,6 @@ const Home = () => {
     <Notices/>
     <Events/>
     <News/>
-    <AnnouncementPopup/>
     <Recognition/>
     </>
   )

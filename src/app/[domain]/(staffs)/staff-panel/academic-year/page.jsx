@@ -15,8 +15,6 @@ export default function AcademicYearPage() {
   const [editingSession, setEditingSession] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
-    start_date: '',
-    end_date: '',
     is_current: false,
     status: 'active'
   });
@@ -77,8 +75,6 @@ export default function AcademicYearPage() {
     setEditingSession(null);
     setFormData({
       name: '',
-      start_date: '',
-      end_date: '',
       is_current: sessions.length === 0,
       status: 'active'
     });
@@ -96,8 +92,6 @@ export default function AcademicYearPage() {
     setEditingSession(session);
     setFormData({
       name: session.name,
-      start_date: session.start_date ? session.start_date.split('T')[0] : '',
-      end_date: session.end_date ? session.end_date.split('T')[0] : '',
       is_current: Boolean(session.is_current),
       status: session.status || 'active'
     });
@@ -277,63 +271,48 @@ export default function AcademicYearPage() {
           </div>
 
           <form onSubmit={handleFormSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Session Name <span className="text-rose-500">*</span>
                 </label>
-                <input type="text" placeholder="e.g. 2025-2026, 2026 Academic Term" value={formData.name} onChange={e => setFormData({
-              ...formData,
-              name: e.target.value
-            })} required className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 font-medium" />
+                <input
+                  type="text"
+                  placeholder="e.g. 2025-2026, 2026 Academic Term"
+                  value={formData.name}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
+                  required
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 font-medium"
+                />
               </div>
 
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Term Start Date
-                </label>
-                <input type="date" value={formData.start_date} onChange={e => setFormData({
-              ...formData,
-              start_date: e.target.value
-            })} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono" />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Term End Date
-                </label>
-                <input type="date" value={formData.end_date} onChange={e => setFormData({
-              ...formData,
-              end_date: e.target.value
-            })} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Status
                 </label>
-                <select value={formData.status} onChange={e => setFormData({
-              ...formData,
-              status: e.target.value
-            })} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer">
+                <select
+                  value={formData.status}
+                  onChange={e => setFormData({ ...formData, status: e.target.value })}
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
+                >
                   <option value="active">Active (Currently Operational)</option>
                   <option value="upcoming">Upcoming (Future Enrollment)</option>
                   <option value="archived">Archived (Completed Term)</option>
                   <option value="inactive">Inactive</option>
                 </select>
               </div>
+            </div>
 
-              <div className="flex items-center pt-5">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700 dark:text-slate-300">
-                  <input type="checkbox" checked={formData.is_current} onChange={e => setFormData({
-                ...formData,
-                is_current: e.target.checked
-              })} className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer" />
-                  <span>Mark as Current Primary Session for Institution</span>
-                </label>
-              </div>
+            <div className="pt-2">
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={formData.is_current}
+                  onChange={e => setFormData({ ...formData, is_current: e.target.checked })}
+                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                />
+                <span>Mark as Current Primary Session for Institution</span>
+              </label>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
@@ -394,7 +373,6 @@ export default function AcademicYearPage() {
             <thead>
               <tr className="bg-slate-50/75 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
                 <th className="py-2.5 px-3">Session Name</th>
-                <th className="py-2.5 px-3">Timeline (Start &rarr; End)</th>
                 <th className="py-2.5 px-3">Primary / Current</th>
                 <th className="py-2.5 px-3">Classes Bound</th>
                 <th className="py-2.5 px-3">Status</th>
@@ -403,14 +381,14 @@ export default function AcademicYearPage() {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
               {loading ? <tr>
-                  <td colSpan="6" className="py-12 text-center text-slate-400">
+                  <td colSpan="5" className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <div className="loader loader-sm" />
                       <span className="text-xs">Loading academic sessions...</span>
                     </div>
                   </td>
                 </tr> : filteredSessions.length === 0 ? <tr>
-                  <td colSpan="6" className="py-12 text-center text-slate-400">
+                  <td colSpan="5" className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-1">
                       
                       <span className="text-xs font-medium text-slate-600 dark:text-slate-400">No academic sessions found</span>
@@ -425,12 +403,6 @@ export default function AcademicYearPage() {
                             CURRENT
                           </span>}
                       </div>
-                    </td>
-
-                    <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300 font-mono text-[11px]">
-                      {session.start_date ? new Date(session.start_date).toLocaleDateString() : 'N/A'}
-                      {' '}&rarr;{' '}
-                      {session.end_date ? new Date(session.end_date).toLocaleDateString() : 'N/A'}
                     </td>
 
                     <td className="py-2.5 px-3">

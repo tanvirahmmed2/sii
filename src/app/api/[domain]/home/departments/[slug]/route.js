@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/websiteResolver.js';
 
 // GET: Single department details with department head, curriculum, and faculty
 export async function GET(request, context) {
@@ -21,13 +21,13 @@ export async function GET(request, context) {
     const deptRes = await queryDb(
       `SELECT d.id,
               d.name,
-              d.slug,
+              COALESCE(d.slug, LOWER(REGEXP_REPLACE(REGEXP_REPLACE(TRIM(d.name), '[^a-zA-Z0-9\\s-]', '', 'g'), '\\s+', '-', 'g'))) AS slug,
               d.code,
-              d.description,
+              COALESCE(di.description, d.description) AS description,
+              COALESCE(di.description, d.description) AS detailed_description,
               d.order_no,
               di.motto,
               di.summary,
-              COALESCE(di.description, d.description) AS detailed_description,
               COALESCE(di.expected_cost, 0.00) AS expected_cost,
               COALESCE((SELECT COUNT(*) FROM website_classes c WHERE c.department_id = d.id), 0)::int AS class_count
        FROM website_departments d
@@ -46,6 +46,7 @@ export async function GET(request, context) {
     // Department Head (like Board Members)
     const headRes = await queryDb(
       `SELECT dh.*,
+              COALESCE(dh.image, t.photo_url) AS image,
               t.email AS teacher_account_email
        FROM website_dept_heads dh
        LEFT JOIN website_teachers t ON t.id = dh.teacher_id AND t.website_id = dh.website_id

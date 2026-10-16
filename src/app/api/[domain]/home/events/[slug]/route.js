@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
+import { getStudentSession } from 'src/lib/middleware/students.js';
 
 // GET: Single event details
 export async function GET(request, context) {
@@ -18,6 +19,33 @@ export async function GET(request, context) {
       return NextResponse.json({ success: false, error: 'Event identifier required' }, { status: 400 });
     }
 
+    // Optional student session check
+    let studentId = null;
+    try {
+      const session = await getStudentSession(request);
+      if (session && session.isActive && session.isVerified && (!session.website_id || String(session.website_id) === String(website.id))) {
+        studentId = session.id;
+      }
+    } catch {}
+
+    const params = [website.id, slug];
+    let studentSelect = 'false AS is_interested, false AS is_registered';
+
+    if (studentId) {
+      params.push(studentId);
+      const sIdx = params.length;
+      studentSelect = `
+        EXISTS (
+          SELECT 1 FROM website_events_interested wei 
+          WHERE wei.event_id = e.id AND wei.student_id = $${sIdx}
+        ) AS is_interested,
+        EXISTS (
+          SELECT 1 FROM website_events_applicants ea 
+          WHERE ea.event_id = e.id AND ea.student_id = $${sIdx}
+        ) AS is_registered
+      `;
+    }
+
     const result = await queryDb(
       `SELECT id,
               website_id,
@@ -33,11 +61,13 @@ export async function GET(request, context) {
               is_active,
               created_at,
               updated_at,
-              COALESCE((SELECT COUNT(*) FROM events_applicants ea WHERE ea.event_id = e.id), 0)::int AS applicant_count
-       FROM events e
+              COALESCE(e.interested_count, (SELECT COUNT(*)::int FROM website_events_interested wei WHERE wei.event_id = e.id), 0)::int AS interested_count,
+              COALESCE((SELECT COUNT(*) FROM website_events_applicants ea WHERE ea.event_id = e.id), 0)::int AS applicant_count,
+              ${studentSelect}
+       FROM website_events e
        WHERE e.website_id = $1 AND (e.slug = $2 OR e.id::text = $2)
        LIMIT 1`,
-      [website.id, slug]
+      params
     );
 
     if (result.rows.length === 0) {
@@ -57,3 +87,4 @@ export async function GET(request, context) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+

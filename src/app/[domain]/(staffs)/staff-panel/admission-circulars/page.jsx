@@ -88,18 +88,15 @@ export default function AdmissionCircularsPage() {
     fetchCirculars();
   }, [fetchCirculars]);
 
-  // Filter classes based on selected department & session in form
+  // Filter classes based on selected department in form
   const availableClassesForForm = useMemo(() => {
     return classes.filter(cls => {
       if (form.department_id && String(cls.department_id) !== String(form.department_id)) {
         return false;
       }
-      if (form.session_id && String(cls.session_id) !== String(form.session_id)) {
-        return false;
-      }
       return true;
     });
-  }, [classes, form.department_id, form.session_id]);
+  }, [classes, form.department_id]);
 
   // Selected class object to inspect maximum seats
   const selectedClass = useMemo(() => {

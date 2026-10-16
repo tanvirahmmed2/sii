@@ -392,8 +392,6 @@ CREATE TABLE IF NOT EXISTS website_sessions (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
-    start_date DATE,
-    end_date DATE,
     is_current BOOLEAN DEFAULT FALSE,
     status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'archived', 'upcoming')),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -412,8 +410,7 @@ CREATE TRIGGER update_website_sessions_updated_at
 CREATE TABLE IF NOT EXISTS website_classes (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
-    department_id BIGINT REFERENCES website_departments(id) ON DELETE SET NULL,
+    department_id BIGINT NOT NULL REFERENCES website_departments(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
     code VARCHAR(50) NOT NULL,
     max_seats INT DEFAULT 40,
@@ -423,7 +420,6 @@ CREATE TABLE IF NOT EXISTS website_classes (
     UNIQUE(website_id, name),
     UNIQUE(website_id, code)
 );
-CREATE INDEX IF NOT EXISTS idx_website_classes_session ON website_classes(session_id);
 CREATE INDEX IF NOT EXISTS idx_website_classes_dept ON website_classes(department_id);
 
 DROP TRIGGER IF EXISTS update_website_classes_updated_at ON website_classes;
@@ -3139,15 +3135,16 @@ CREATE TABLE IF NOT EXISTS website_issued_documents (
 CREATE INDEX IF NOT EXISTS idx_web_issued_doc_serial ON website_issued_documents(website_id, category, document_serial);
 
 -- ============================================================================
--- SECTION 25: CAMPUS EVENTS & STUDENT APPLICANTS
+-- SECTION 25: CAMPUS EVENTS, APPLICANTS & STUDENT INTERESTS
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- 1. EVENTS TABLE
+-- 1. WEBSITE EVENTS TABLE
 -- Holds institutional events, sports, workshops, symposiums, cultural meets.
 -- is_applicable flag determines whether students can register/apply.
+-- interested_count caches the count of interested students.
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS events (
+CREATE TABLE IF NOT EXISTS website_events (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
@@ -3160,6 +3157,7 @@ CREATE TABLE IF NOT EXISTS events (
     image_id VARCHAR(255),
     is_applicable BOOLEAN DEFAULT TRUE,
     is_active BOOLEAN DEFAULT TRUE,
+    interested_count INT DEFAULT 0,
     created_by_type VARCHAR(50) DEFAULT 'staff',
     created_by_id BIGINT,
     created_by_name VARCHAR(255),
@@ -3167,24 +3165,25 @@ CREATE TABLE IF NOT EXISTS events (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_events_website ON events(website_id);
-CREATE INDEX IF NOT EXISTS idx_events_date ON events(event_date);
-CREATE INDEX IF NOT EXISTS idx_events_active ON events(is_active);
-CREATE INDEX IF NOT EXISTS idx_events_applicable ON events(is_applicable);
+CREATE INDEX IF NOT EXISTS idx_website_events_website ON website_events(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_events_date ON website_events(event_date);
+CREATE INDEX IF NOT EXISTS idx_website_events_active ON website_events(is_active);
+CREATE INDEX IF NOT EXISTS idx_website_events_applicable ON website_events(is_applicable);
+CREATE INDEX IF NOT EXISTS idx_website_events_interested ON website_events(interested_count);
 
-DROP TRIGGER IF EXISTS update_events_updated_at ON events;
-CREATE TRIGGER update_events_updated_at
-    BEFORE UPDATE ON events
+DROP TRIGGER IF EXISTS update_website_events_updated_at ON website_events;
+CREATE TRIGGER update_website_events_updated_at
+    BEFORE UPDATE ON website_events
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 2. EVENTS APPLICANTS TABLE
+-- 2. WEBSITE EVENTS APPLICANTS TABLE
 -- Only enrolled students can apply for applicable campus events.
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS events_applicants (
+CREATE TABLE IF NOT EXISTS website_events_applicants (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    event_id BIGINT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    event_id BIGINT NOT NULL REFERENCES website_events(id) ON DELETE CASCADE,
     student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
     applied_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     status VARCHAR(50) DEFAULT 'registered',
@@ -3194,17 +3193,59 @@ CREATE TABLE IF NOT EXISTS events_applicants (
     UNIQUE(event_id, student_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_events_applicants_website ON events_applicants(website_id);
-CREATE INDEX IF NOT EXISTS idx_events_applicants_event ON events_applicants(event_id);
-CREATE INDEX IF NOT EXISTS idx_events_applicants_student ON events_applicants(student_id);
+CREATE INDEX IF NOT EXISTS idx_website_events_applicants_website ON website_events_applicants(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_events_applicants_event ON website_events_applicants(event_id);
+CREATE INDEX IF NOT EXISTS idx_website_events_applicants_student ON website_events_applicants(student_id);
 
-DROP TRIGGER IF EXISTS update_events_applicants_updated_at ON events_applicants;
-CREATE TRIGGER update_events_applicants_updated_at
-    BEFORE UPDATE ON events_applicants
+DROP TRIGGER IF EXISTS update_website_events_applicants_updated_at ON website_events_applicants;
+CREATE TRIGGER update_website_events_applicants_updated_at
+    BEFORE UPDATE ON website_events_applicants
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE OR REPLACE VIEW website_events AS SELECT * FROM events;
-CREATE OR REPLACE VIEW website_events_applicants AS SELECT * FROM events_applicants;
+-- ----------------------------------------------------------------------------
+-- 3. WEBSITE EVENTS INTERESTED (STUDENT INTEREST LOG)
+-- Records which students clicked 'Interested' on campus events and syncs count.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_events_interested (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    event_id BIGINT NOT NULL REFERENCES website_events(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(event_id, student_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_events_interested_website ON website_events_interested(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_events_interested_event ON website_events_interested(event_id);
+CREATE INDEX IF NOT EXISTS idx_website_events_interested_student ON website_events_interested(student_id);
+
+-- Trigger to keep website_events.interested_count automatically in sync
+CREATE OR REPLACE FUNCTION update_website_events_interested_count()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        UPDATE website_events 
+        SET interested_count = (SELECT COUNT(*)::int FROM website_events_interested WHERE event_id = NEW.event_id)
+        WHERE id = NEW.event_id;
+    ELSIF TG_OP = 'DELETE' THEN
+        UPDATE website_events 
+        SET interested_count = (SELECT COUNT(*)::int FROM website_events_interested WHERE event_id = OLD.event_id)
+        WHERE id = OLD.event_id;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_website_events_interested_count ON website_events_interested;
+CREATE TRIGGER trg_website_events_interested_count
+    AFTER INSERT OR DELETE ON website_events_interested
+    FOR EACH ROW EXECUTE FUNCTION update_website_events_interested_count();
+
+-- Views for backward compatibility
+CREATE OR REPLACE VIEW events AS SELECT * FROM website_events;
+CREATE OR REPLACE VIEW events_applicants AS SELECT * FROM website_events_applicants;
+CREATE OR REPLACE VIEW website_event_interests AS SELECT * FROM website_events_interested;
+CREATE OR REPLACE VIEW website_events_interests AS SELECT * FROM website_events_interested;
 
 -- ============================================================================
 -- SECTION 26: INSTITUTION PROFILE (MISSIONS, VISIONS, MILESTONES, INFRASTRUCTURE)

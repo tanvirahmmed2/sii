@@ -275,14 +275,7 @@ export default function DepartmentInformationPage() {
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-              Departmental Curricula Profiles
-            </span>
-            <span className="text-[11px] font-medium text-slate-400">
-              {website?.name || 'Institution Workspace'}
-            </span>
-          </div>
+          
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white mt-1">
             Department Information
           </h1>
@@ -298,8 +291,11 @@ export default function DepartmentInformationPage() {
           </button>
 
           <Link href={tenantUrl('/departments')} className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors">
-            
             Departments Setup
+          </Link>
+
+          <Link href={tenantUrl('/staff-panel/department-head')} className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors">
+            Department Heads
           </Link>
 
           {!isFormOpen ? <button type="button" onClick={openCreateForm} className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-xs transition-colors cursor-pointer">
@@ -309,83 +305,6 @@ export default function DepartmentInformationPage() {
               
               Close Editor
             </button>}
-        </div>
-      </div>
-
-      {/* Analytics & Metrics Strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Department Profiles</span>
-            <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/50">
-              
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900 dark:text-white">
-              {metrics.totalProfiles}
-            </span>
-            <span className="text-[11px] text-slate-400">
-              / {metrics.totalDepts} depts
-            </span>
-          </div>
-          <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1">
-            {metrics.totalDepts > 0 ? Math.round(metrics.totalProfiles / metrics.totalDepts * 100) : 0}% documented
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Academic Disciplines</span>
-            <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50">
-              
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900 dark:text-white">
-              {metrics.totalDepts}
-            </span>
-            <span className="text-[11px] text-slate-400">total departments</span>
-          </div>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-            Configured in Departments setup
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Avg. Annual Cost</span>
-            <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/50">
-              
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-1">
-            <span className="text-2xl font-bold text-slate-900 dark:text-white">
-              ৳{metrics.avgCost.toLocaleString()}
-            </span>
-            <span className="text-[11px] text-slate-400">/ yr</span>
-          </div>
-          <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium mt-1">
-            Expected academic commitment
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Pending Profiles</span>
-            <div className="p-2 rounded-lg bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 border border-purple-100 dark:border-purple-900/50">
-              
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900 dark:text-white">
-              {metrics.unconfigured}
-            </span>
-            <span className="text-[11px] text-slate-400">pending profiles</span>
-          </div>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-            {metrics.unconfigured === 0 ? 'All departments documented' : 'Ready for profile creation'}
-          </p>
         </div>
       </div>
 

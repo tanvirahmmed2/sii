@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/websiteResolver';
 import { getStaffSession } from 'src/lib/middleware/staff';
 
 async function verifyStaffAccess(request, context) {
@@ -50,7 +50,8 @@ export async function GET(request, context) {
              s.name AS subject_name,
              s.code AS subject_code,
              sec.name AS section_name,
-             sess.name AS session_name
+             sess.name AS session_name,
+             wt.name AS teacher_name
       FROM website_period_class_subjects pcs
       JOIN website_periods p ON p.id = pcs.period_id
       JOIN website_days d ON d.id = p.day_id
@@ -59,6 +60,12 @@ export async function GET(request, context) {
       JOIN website_subjects s ON s.id = cs.subject_id
       LEFT JOIN website_sections sec ON sec.id = pcs.section_id
       LEFT JOIN website_sessions sess ON sess.id = pcs.session_id
+      LEFT JOIN website_teacher_class_periods wtcp ON (
+        wtcp.period_id = pcs.period_id
+        AND wtcp.class_id = cs.class_id
+        AND (wtcp.section_id IS NULL OR wtcp.section_id = pcs.section_id)
+      )
+      LEFT JOIN website_teachers wt ON wt.id = wtcp.teacher_id
       WHERE pcs.website_id = $1
     `;
     const params = [auth.website.id];
@@ -102,7 +109,45 @@ export async function POST(request, context) {
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const body = await request.json().catch(() => ({}));
-    const { period_id, class_subject_id, section_id = null, session_id = null, room_number = '' } = body;
+    let {
+      period_id,
+      day_id,
+      period_name,
+      start_time,
+      end_time,
+      is_break = false,
+      class_subject_id,
+      section_id = null,
+      session_id = null,
+      room_number = ''
+    } = body;
+
+    // Smart resolve: if period_id is missing but day_id and period_name are provided, lookup or create period
+    if (!period_id && day_id && period_name) {
+      const existingPeriod = await queryDb(
+        `SELECT id FROM website_periods WHERE website_id = $1 AND day_id = $2 AND LOWER(name) = LOWER($3) LIMIT 1`,
+        [auth.website.id, day_id, String(period_name).trim()]
+      );
+
+      if (existingPeriod.rows.length > 0) {
+        period_id = existingPeriod.rows[0].id;
+      } else {
+        const createPeriod = await queryDb(
+          `INSERT INTO website_periods (website_id, day_id, name, start_time, end_time, is_break)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           RETURNING id`,
+          [
+            auth.website.id,
+            day_id,
+            String(period_name).trim(),
+            start_time || '09:00',
+            end_time || '09:45',
+            Boolean(is_break)
+          ]
+        );
+        period_id = createPeriod.rows[0].id;
+      }
+    }
 
     if (!period_id || !class_subject_id) {
       return NextResponse.json({ success: false, error: 'Both Period and Class Subject are required.' }, { status: 400 });

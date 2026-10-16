@@ -267,7 +267,7 @@ const Navbar = () => {
                         departments.map((d) => (
                           <Link
                             key={d.id}
-                            href={tenantUrl(`/departments/${d.id}`)}
+                            href={tenantUrl(`/departments/${d.slug || d.id}`)}
                             className="group block p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/80 border border-transparent hover:border-slate-200 dark:hover:border-slate-700/60 transition-all"
                           >
                             <div className="flex items-center justify-between gap-2">

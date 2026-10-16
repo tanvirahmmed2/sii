@@ -87,7 +87,7 @@ export async function GET(request, context) {
     // 1. Fetch Applicants for a specific event
     if (applicantsMode && eventId) {
       const eventRes = await queryDb(
-        `SELECT * FROM events WHERE id = $1 AND website_id = $2 LIMIT 1`,
+        `SELECT * FROM website_events WHERE id = $1 AND website_id = $2 LIMIT 1`,
         [eventId, auth.website.id]
       );
 
@@ -112,7 +112,7 @@ export async function GET(request, context) {
            c.name AS class_name,
            sec.name AS section_name,
            ses.name AS session_name
-         FROM events_applicants ea
+         FROM website_events_applicants ea
          JOIN website_students s ON s.id = ea.student_id
          LEFT JOIN website_student_info i ON i.student_id = s.id
          LEFT JOIN website_classes c ON c.id = s.class_id
@@ -139,8 +139,9 @@ export async function GET(request, context) {
     let query = `
       SELECT 
         e.*,
-        (SELECT COUNT(*)::int FROM events_applicants ea WHERE ea.event_id = e.id) AS total_applicants
-      FROM events e
+        COALESCE(e.interested_count, (SELECT COUNT(*)::int FROM website_events_interested wei WHERE wei.event_id = e.id), 0)::int AS interested_count,
+        (SELECT COUNT(*)::int FROM website_events_applicants ea WHERE ea.event_id = e.id) AS total_applicants
+      FROM website_events e
       WHERE e.website_id = $1
     `;
     const params = [auth.website.id];
@@ -213,7 +214,7 @@ export async function POST(request, context) {
 
     let finalSlug = slug ? slugify(slug) : slugify(title);
     const slugCheck = await queryDb(
-      `SELECT id FROM events WHERE website_id = $1 AND slug = $2 LIMIT 1`,
+      `SELECT id FROM website_events WHERE website_id = $1 AND slug = $2 LIMIT 1`,
       [auth.website.id, finalSlug]
     );
     if (slugCheck.rowCount > 0) {
@@ -221,7 +222,7 @@ export async function POST(request, context) {
     }
 
     const insertResult = await queryDb(
-      `INSERT INTO events (
+      `INSERT INTO website_events (
         website_id,
         title,
         slug,
@@ -296,7 +297,7 @@ export async function PUT(request, context) {
     }
 
     const existingRes = await queryDb(
-      `SELECT * FROM events WHERE id = $1 AND website_id = $2`,
+      `SELECT * FROM website_events WHERE id = $1 AND website_id = $2`,
       [id, auth.website.id]
     );
 
@@ -309,7 +310,7 @@ export async function PUT(request, context) {
 
     if (slug && finalSlug !== current.slug) {
       const slugCheck = await queryDb(
-        `SELECT id FROM events WHERE website_id = $1 AND slug = $2 AND id != $3 LIMIT 1`,
+        `SELECT id FROM website_events WHERE website_id = $1 AND slug = $2 AND id != $3 LIMIT 1`,
         [auth.website.id, finalSlug, id]
       );
       if (slugCheck.rowCount > 0) {
@@ -318,7 +319,7 @@ export async function PUT(request, context) {
     }
 
     const updateRes = await queryDb(
-      `UPDATE events
+      `UPDATE website_events
        SET title = COALESCE($1, title),
            slug = $2,
            description = COALESCE($3, description),
@@ -377,7 +378,7 @@ export async function DELETE(request, context) {
     }
 
     const deleteRes = await queryDb(
-      `DELETE FROM events WHERE id = $1 AND website_id = $2 RETURNING id, title`,
+      `DELETE FROM website_events WHERE id = $1 AND website_id = $2 RETURNING id, title`,
       [id, auth.website.id]
     );
 

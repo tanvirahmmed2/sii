@@ -397,7 +397,6 @@ export default function ClassSectionPage() {
                   <th className="py-2.5 px-3">Section Name</th>
                   <th className="py-2.5 px-3">Parent Class</th>
                   <th className="py-2.5 px-3">Department</th>
-                  <th className="py-2.5 px-3">Academic Session</th>
                   <th className="py-2.5 px-3">Max Capacity</th>
                   <th className="py-2.5 px-3">Assigned Room</th>
                   <th className="py-2.5 px-3 text-right">Actions</th>
@@ -425,9 +424,6 @@ export default function ClassSectionPage() {
                       {sec.department_name ? <span className="font-semibold text-blue-600 dark:text-blue-400">
                           {sec.department_name}
                         </span> : <span className="text-slate-400 italic">General</span>}
-                    </td>
-                    <td className="py-3 px-3 text-slate-600 dark:text-slate-300">
-                      {sec.session_name || 'All Terms'}
                     </td>
                     <td className="py-3 px-3 font-mono text-slate-700 dark:text-slate-300">
                       {sec.capacity} seats

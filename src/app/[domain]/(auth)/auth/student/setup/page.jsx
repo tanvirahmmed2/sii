@@ -397,13 +397,11 @@ function StudentSetupContent() {
   };
 
   return (
-    <div className="w-full min-h-[85vh] flex flex-col items-center justify-center py-10 px-4 sm:px-6 lg:px-8">
+    <div className="w-full min-h-screen flex flex-col items-center justify-center py-10 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 sm:p-8 shadow-sm space-y-6">
         {/* Header */}
         <div className="text-center space-y-2 border-b border-slate-100 dark:border-slate-800 pb-5">
-          <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 inline-block">
-            {website?.name || 'Academic Institution'}
-          </span>
+          
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             Student Account Setup Workstation
           </h1>
@@ -519,7 +517,6 @@ function StudentSetupContent() {
                     required
                     value={emailInput}
                     onChange={(e) => setEmailInput(e.target.value)}
-                    placeholder="student@institution.edu"
                     className="w-full px-3 py-2 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg outline-none focus:ring-1 focus:ring-sky-500 text-slate-900 dark:text-white"
                   />
                 </div>

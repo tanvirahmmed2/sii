@@ -80,10 +80,9 @@ export default function StudentRegistrationPage() {
     fetchAcademicData();
   }, [getApiEndpoint]);
 
-  // Filter classes by Department and Session if chosen
+  // Filter classes by Department if chosen
   const availableClasses = classes.filter((c) => {
     if (singleDepartmentId && c.department_id && String(c.department_id) !== String(singleDepartmentId)) return false;
-    if (singleSessionId && c.session_id && String(c.session_id) !== String(singleSessionId)) return false;
     return true;
   });
 

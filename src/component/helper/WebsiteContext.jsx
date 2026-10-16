@@ -310,60 +310,87 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
     [activeSlug]
   );
 
-  const value = {
-    // Tenant website metadata
-    website,
-    setWebsite,
-    slug: activeSlug,
-    loading,
-    error,
-    tenantUrl,
-    refetch: fetchWebsiteData,
+  const value = useMemo(
+    () => ({
+      // Tenant website metadata
+      website,
+      setWebsite,
+      slug: activeSlug,
+      loading,
+      error,
+      tenantUrl,
+      refetch: fetchWebsiteData,
 
-    // Color theme tokens from websites table
-    colorTheme,
-    primaryColor: colorTheme.primary,
-    secondaryColor: colorTheme.secondary,
-    themeVariant: colorTheme.themeName,
+      // Color theme tokens from websites table
+      colorTheme,
+      primaryColor: colorTheme.primary,
+      secondaryColor: colorTheme.secondary,
+      themeVariant: colorTheme.themeName,
 
-    // Mode management (Light / Dark)
-    theme,
-    isDark: theme === 'dark',
-    setTheme,
-    toggleTheme,
+      // Mode management (Light / Dark)
+      theme,
+      isDark: theme === 'dark',
+      setTheme,
+      toggleTheme,
 
+      // Navigation
+      goBack,
 
-    // Navigation
-    goBack,
+      // Tenant sidebar toggles
+      sidebar,
+      setSidebar,
+      adminSidebar,
+      setAdminSidebar,
+      teacherSidebar,
+      TeacherSidebar: teacherSidebar, // Backwards compatibility
+      setTeacherSidebar,
+      studentSidebar,
+      setStudentSidebar,
+      staffSidebar,
+      setStaffSidebar,
 
-    // Tenant sidebar toggles
-    sidebar,
-    setSidebar,
-    adminSidebar,
-    setAdminSidebar,
-    teacherSidebar,
-    TeacherSidebar: teacherSidebar, // Backwards compatibility
-    setTeacherSidebar,
-    studentSidebar,
-    setStudentSidebar,
-    staffSidebar,
-    setStaffSidebar,
-
-    // Tenant shared data
-    departments,
-    setDepartments,
-    fetchDepartments,
-    classes,
-    setClasses,
-    clubs,
-    setClubs,
-    designations,
-    setDesignations,
-    websiteSettings,
-    setWebsiteSettings,
-    fetchWebsiteSettings,
-    getApiEndpoint,
-  };
+      // Tenant shared data
+      departments,
+      setDepartments,
+      fetchDepartments,
+      classes,
+      setClasses,
+      clubs,
+      setClubs,
+      designations,
+      setDesignations,
+      websiteSettings,
+      setWebsiteSettings,
+      fetchWebsiteSettings,
+      getApiEndpoint,
+    }),
+    [
+      website,
+      activeSlug,
+      loading,
+      error,
+      tenantUrl,
+      fetchWebsiteData,
+      colorTheme,
+      theme,
+      setTheme,
+      toggleTheme,
+      sidebar,
+      adminSidebar,
+      teacherSidebar,
+      studentSidebar,
+      staffSidebar,
+      departments,
+      fetchDepartments,
+      classes,
+      clubs,
+      designations,
+      websiteSettings,
+      fetchWebsiteSettings,
+      getApiEndpoint,
+      goBack,
+    ]
+  );
 
   return <TenantWebsiteContext.Provider value={value}>{children}</TenantWebsiteContext.Provider>;
 }

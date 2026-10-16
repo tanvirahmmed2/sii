@@ -3,8 +3,14 @@ import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import { JWT_SECRET, CREATOR_TOKEN, BASE_URL, BASE_DOMAIN, extractBaseDomain } from '../database/secret.js';
 import { query, queryDb } from '../database/db.js';
+import {
+  resolveWebsiteFromRequest,
+  resolveWebsite,
+  invalidateWebsiteCache,
+  clearWebsiteCache,
+} from './websiteResolver.js';
 
-const DEFAULT_JWT_SECRET = JWT_SECRET || 'creator_studio_jwt_secret_key_2026';
+const DEFAULT_JWT_SECRET = JWT_SECRET 
 const CREATOR_COOKIE_NAME = CREATOR_TOKEN;
 
 // Password helpers
@@ -258,125 +264,12 @@ export function verifyWebsiteToken(token) {
   }
 }
 
-let _websiteSchemaEnsured = false;
-async function ensureWebsiteSchema() {
-  if (_websiteSchemaEnsured) return;
-  _websiteSchemaEnsured = true;
-  try {
-    await query(`
-      ALTER TABLE websites
-      ADD COLUMN IF NOT EXISTS facebook_url TEXT,
-      ADD COLUMN IF NOT EXISTS twitter_url TEXT,
-      ADD COLUMN IF NOT EXISTS instagram_url TEXT,
-      ADD COLUMN IF NOT EXISTS youtube_url TEXT,
-      ADD COLUMN IF NOT EXISTS linkedin_url TEXT;
-    `);
-  } catch {}
-}
-
-/**
- * Resolve which website this request is for, based on the [slug] or [domain] param.
- */
-export async function resolveWebsiteFromRequest(request, context) {
-  try {
-    await ensureWebsiteSchema().catch(() => {});
-    const params = await context?.params;
-    let identifier = typeof context === 'string' ? context : (params?.domain || params?.slug);
-
-    if (!identifier && request) {
-      const url = request.nextUrl || (request.url ? new URL(request.url) : null);
-      identifier =
-        url?.searchParams?.get('domain') ||
-        url?.searchParams?.get('slug') ||
-        url?.searchParams?.get('subdomain') ||
-        request.headers?.get?.('x-website-domain') ||
-        request.headers?.get?.('x-domain') ||
-        request.cookies?.get?.('x-website-domain')?.value ||
-        request.cookies?.get?.('x-domain')?.value;
-
-      // Also check referer if called from client fetch on /websites/[domain] or /[domain]/...
-      if (!identifier) {
-        const referer = request.headers?.get?.('referer');
-        if (referer) {
-          const refMatch = referer.match(/\/(?:websites|website|webite)\/([^/?#]+)/i);
-          if (refMatch && refMatch[1]) {
-            identifier = decodeURIComponent(refMatch[1]).toLowerCase();
-          } else {
-            try {
-              const refUrl = new URL(referer);
-              const pathParts = refUrl.pathname.split('/').filter(Boolean);
-              if (pathParts.length > 0) {
-                const first = pathParts[0].toLowerCase();
-                if (!['creator', 'api', '_next', 'marketing', 'auth', 'admin'].includes(first)) {
-                  identifier = first;
-                }
-              }
-            } catch {}
-          }
-        }
-      }
-
-      // Check Host header
-      if (!identifier) {
-        const host = request.headers?.get?.('x-forwarded-host') || request.headers?.get?.('host') || url?.host || '';
-        const cleanHost = host.split(':')[0].toLowerCase();
-        if (cleanHost && cleanHost !== 'localhost' && cleanHost !== '127.0.0.1') {
-          const base = (BASE_DOMAIN || extractBaseDomain(BASE_URL) || '').toLowerCase();
-          if (base && cleanHost.endsWith(`.${base}`)) {
-            identifier = cleanHost.replace(`.${base}`, '');
-          } else {
-            identifier = cleanHost;
-          }
-        }
-      }
-    }
-
-    if (!identifier) return null;
-
-    const cleanId = String(identifier).trim().toLowerCase().split(':')[0];
-    const isNum = /^[0-9]+$/.test(cleanId);
-    const noWww = cleanId.replace(/^www\./, '');
-
-    const res = await query(
-      `SELECT id, creator_id, name, slug, subdomain, subdomain AS domain, custom_domain,
-              custom_domain_verified, institution_type, eiin_number, contact_email, contact_phone, address,
-              facebook_url, twitter_url, instagram_url, youtube_url, linkedin_url,
-              primary_color, secondary_color, theme, status, is_maintenance_mode,
-              COALESCE(maintenance_message, 'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.') AS maintenance_message,
-              COALESCE(currency, 'BDT') AS currency,
-              logo, logo_id, favicon, favicon_id,
-              (status = 'active') AS is_active,
-              (status = 'active' AND is_maintenance_mode = false) AS is_published
-       FROM websites 
-       WHERE LOWER(slug) = $1 
-          OR LOWER(slug) = $2
-          OR LOWER(subdomain) = $1 
-          OR LOWER(subdomain) = $2
-          OR SPLIT_PART(LOWER(subdomain), '.', 1) = $1
-          OR SPLIT_PART(LOWER(subdomain), '.', 1) = $2
-          OR LOWER(custom_domain) = $1 
-          OR LOWER(custom_domain) = $2
-          OR LOWER(custom_domain) = 'www.' || $2
-          OR LOWER(REPLACE(custom_domain, 'www.', '')) = $2
-          OR LOWER(subdomain) LIKE $3
-          OR ($4 = true AND id = $5::bigint)
-       LIMIT 1`,
-      [cleanId, noWww, `${cleanId}.%`, isNum, isNum ? Number(cleanId) : -1]
-    );
-    if (res.rows.length === 0) return null;
-    const website = res.rows[0];
-
-    // Attach settings alias referencing websites table (shallow copy to prevent circular JSON serialization)
-    const settingsCopy = { ...website };
-    website.settings = settingsCopy;
-    website.website_settings = settingsCopy;
-
-    return website;
-  } catch (error) {
-    console.error('resolveWebsiteFromRequest error:', error);
-    return null;
-  }
-}
+export {
+  resolveWebsiteFromRequest,
+  resolveWebsite,
+  invalidateWebsiteCache,
+  clearWebsiteCache,
+};
 
 /**
  * Get the currently authenticated website user from request cookie/header.

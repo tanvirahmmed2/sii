@@ -129,7 +129,7 @@ const Sidebar = () => {
                   departments.map((d) => (
                     <Link
                       key={d.id}
-                      href={tenantUrl(`/departments/${d.id}`)}
+                      href={tenantUrl(`/departments/${d.slug || d.id}`)}
                       onClick={closeSidebar}
                       className="block px-2 py-1 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                     >

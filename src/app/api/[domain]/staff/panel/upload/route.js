@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/websiteResolver.js';
 import { getStaffSession } from 'src/lib/middleware/staff';
 import { uploadImage } from 'src/lib/database/cloudinary.js';
 

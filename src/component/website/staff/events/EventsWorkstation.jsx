@@ -441,7 +441,8 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
     const applicable = events.filter((e) => e.is_applicable).length;
     const nonApplicable = total - applicable;
     const totalApplicants = events.reduce((sum, e) => sum + (parseInt(e.total_applicants, 10) || 0), 0);
-    return { total, applicable, nonApplicable, totalApplicants };
+    const totalInterested = events.reduce((sum, e) => sum + (parseInt(e.interested_count, 10) || 0), 0);
+    return { total, applicable, nonApplicable, totalApplicants, totalInterested };
   }, [events]);
 
   return (
@@ -480,7 +481,7 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
       </div>
 
       {/* KPI Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs">
           <p className="text-[11px] uppercase font-semibold text-slate-500 dark:text-slate-400 tracking-wider">
             Total Events
@@ -495,31 +496,43 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs">
           <p className="text-[11px] uppercase font-semibold text-emerald-600 dark:text-emerald-400 tracking-wider">
-            Applicable (Students Apply)
+            Applicable (RSVP)
           </p>
           <div className="flex items-baseline justify-between mt-2">
             <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
               {stats.applicable}
             </span>
-            <span className="text-xs text-emerald-600">Open for Students</span>
+            <span className="text-xs text-emerald-600">Open</span>
           </div>
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs">
           <p className="text-[11px] uppercase font-semibold text-slate-500 dark:text-slate-400 tracking-wider">
-            Information Only
+            Info Only
           </p>
           <div className="flex items-baseline justify-between mt-2">
             <span className="text-2xl font-bold text-slate-600 dark:text-slate-300 font-mono">
               {stats.nonApplicable}
             </span>
-            <span className="text-xs text-slate-500">No Applications</span>
+            <span className="text-xs text-slate-500">No RSVP</span>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs">
+          <p className="text-[11px] uppercase font-semibold text-amber-500 tracking-wider">
+            Student Interest
+          </p>
+          <div className="flex items-baseline justify-between mt-2">
+            <span className="text-2xl font-bold text-amber-500 font-mono">
+              {stats.totalInterested}
+            </span>
+            <span className="text-xs text-amber-600 font-medium">Interested</span>
           </div>
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs">
           <p className="text-[11px] uppercase font-semibold text-primary tracking-wider">
-            Total Student Applicants
+            Total Applicants
           </p>
           <div className="flex items-baseline justify-between mt-2">
             <span className="text-2xl font-bold text-primary font-mono">
@@ -600,6 +613,7 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                   <th className="py-3 px-4">Schedule & Venue</th>
                   <th className="py-3 px-4">Student Application</th>
                   <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-center">Interested</th>
                   <th className="py-3 px-4 text-center">Applicants</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
@@ -715,6 +729,14 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                           <span className={`w-1.5 h-1.5 rounded-full ${event.is_active ? 'bg-blue-500' : 'bg-rose-500'}`} />
                           <span>{event.is_active ? 'Active' : 'Inactive'}</span>
                         </button>
+                      </td>
+
+                      {/* Interested Count */}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 font-bold text-xs border border-amber-200/50 dark:border-amber-800">
+                          <span className="text-[10px]">★</span>
+                          <span>{event.interested_count || 0}</span>
+                        </span>
                       </td>
 
                       {/* Applicants */}

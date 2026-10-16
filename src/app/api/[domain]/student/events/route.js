@@ -28,18 +28,27 @@ export async function GET(request, context) {
 
     const studentId = session.id;
 
-    // Fetch all active events with applicant counts
+    // Fetch all active events with applicant counts and student interest status
     const eventsRes = await queryDb(
       `SELECT 
          e.*,
-         (SELECT COUNT(*)::int FROM events_applicants ea WHERE ea.event_id = e.id) AS total_applicants,
+         COALESCE(e.interested_count, (SELECT COUNT(*)::int FROM website_events_interested wei WHERE wei.event_id = e.id), 0)::int AS interested_count,
+         (SELECT COUNT(*)::int FROM website_events_applicants ea WHERE ea.event_id = e.id) AS total_applicants,
          EXISTS (
-           SELECT 1 FROM events_applicants ea 
+           SELECT 1 FROM website_events_applicants ea 
            WHERE ea.event_id = e.id AND ea.student_id = $1
-         ) AS is_registered
-       FROM events e
+         ) AS is_registered,
+         EXISTS (
+           SELECT 1 FROM website_events_interested wei 
+           WHERE wei.event_id = e.id AND wei.student_id = $1
+         ) AS is_interested
+       FROM website_events e
        WHERE e.website_id = $2 AND e.is_active = TRUE
-       ORDER BY e.event_date ASC, e.id DESC`,
+       ORDER BY 
+         CASE WHEN e.event_date >= CURRENT_DATE THEN 0 ELSE 1 END ASC,
+         CASE WHEN e.event_date >= CURRENT_DATE THEN e.event_date END ASC,
+         e.event_date DESC,
+         e.id DESC`,
       [studentId, website.id]
     );
 
@@ -47,18 +56,24 @@ export async function GET(request, context) {
     const joinedEventIds = events
       .filter((e) => e.is_registered)
       .map((e) => String(e.id));
+    const interestedEventIds = events
+      .filter((e) => e.is_interested)
+      .map((e) => String(e.id));
 
     const payload = {
       events,
       joinedEventIds,
+      interestedEventIds,
       totalEvents: events.length,
       registeredCount: joinedEventIds.length,
+      interestedCount: interestedEventIds.length,
     };
 
     return NextResponse.json({
       success: true,
       events,
       joinedEventIds,
+      interestedEventIds,
       payload,
       paylod: payload,
     });
@@ -68,7 +83,7 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Student applies for an event or cancels registration
+// POST: Student applies for an event, cancels registration, or toggles interest
 export async function POST(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -101,7 +116,7 @@ export async function POST(request, context) {
 
     // Verify event exists and belongs to current institution
     const eventRes = await queryDb(
-      `SELECT * FROM events WHERE id = $1 AND website_id = $2 LIMIT 1`,
+      `SELECT * FROM website_events WHERE id = $1 AND website_id = $2 LIMIT 1`,
       [parsedEventId, website.id]
     );
 
@@ -117,10 +132,59 @@ export async function POST(request, context) {
 
     const studentId = session.id;
 
+    // Handle student interest toggle
+    if (action === 'interest' || action === 'toggle_interest' || action === 'uninterest') {
+      const existingInterest = await queryDb(
+        `SELECT id FROM website_events_interested WHERE event_id = $1 AND student_id = $2 LIMIT 1`,
+        [parsedEventId, studentId]
+      );
+
+      let isInterested = false;
+      if (existingInterest.rowCount > 0 && (action === 'toggle_interest' || action === 'uninterest')) {
+        await queryDb(
+          `DELETE FROM website_events_interested WHERE event_id = $1 AND student_id = $2`,
+          [parsedEventId, studentId]
+        );
+        isInterested = false;
+      } else {
+        await queryDb(
+          `INSERT INTO website_events_interested (website_id, event_id, student_id)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (event_id, student_id) DO NOTHING`,
+          [website.id, parsedEventId, studentId]
+        );
+        isInterested = true;
+      }
+
+      const countRes = await queryDb(
+        `SELECT COUNT(*)::int AS count FROM website_events_interested WHERE event_id = $1`,
+        [parsedEventId]
+      );
+      const newCount = countRes.rows[0]?.count || 0;
+
+      await queryDb(
+        `UPDATE website_events SET interested_count = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+        [newCount, parsedEventId]
+      );
+
+      const msg = isInterested
+        ? 'You have marked interest in this event!'
+        : 'Event interest removed.';
+
+      return NextResponse.json({
+        success: true,
+        message: msg,
+        is_interested: isInterested,
+        interested_count: newCount,
+        payload: { message: msg, is_interested: isInterested, interested_count: newCount },
+        paylod: { message: msg, is_interested: isInterested, interested_count: newCount },
+      });
+    }
+
     if (action === 'leave' || action === 'cancel') {
       // Cancel registration
       await queryDb(
-        `DELETE FROM events_applicants 
+        `DELETE FROM website_events_applicants 
          WHERE event_id = $1 AND student_id = $2 AND website_id = $3`,
         [parsedEventId, studentId, website.id]
       );
@@ -148,7 +212,7 @@ export async function POST(request, context) {
 
     // Check if already registered
     const existingApp = await queryDb(
-      `SELECT id FROM events_applicants 
+      `SELECT id FROM website_events_applicants 
        WHERE event_id = $1 AND student_id = $2 LIMIT 1`,
       [parsedEventId, studentId]
     );
@@ -164,7 +228,7 @@ export async function POST(request, context) {
 
     // Register student
     const insertRes = await queryDb(
-      `INSERT INTO events_applicants (
+      `INSERT INTO website_events_applicants (
          website_id,
          event_id,
          student_id,

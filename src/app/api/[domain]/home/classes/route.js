@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/websiteResolver.js';
 
 // GET: List all classes for public tenant consumption
 export async function GET(request, context) {
@@ -16,7 +16,6 @@ export async function GET(request, context) {
     const result = await queryDb(
       `SELECT c.id,
               c.website_id,
-              c.session_id,
               c.department_id,
               c.name,
               c.code,
@@ -24,9 +23,9 @@ export async function GET(request, context) {
               c.description,
               c.created_at,
               c.updated_at,
-              s.name AS session_name,
               d.name AS department_name,
               d.code AS department_code,
+              d.slug AS department_slug,
               di.motto AS motto,
               di.summary AS summary,
               COALESCE(c.description, di.description) AS detailed_description,
@@ -40,11 +39,10 @@ export async function GET(request, context) {
                 '[]'::json
               ) AS sections
        FROM website_classes c
-       LEFT JOIN website_sessions s ON s.id = c.session_id
-       LEFT JOIN website_departments d ON d.id = c.department_id
+       JOIN website_departments d ON d.id = c.department_id AND d.website_id = c.website_id
        LEFT JOIN website_department_information di ON di.department_id = d.id AND di.website_id = c.website_id
        WHERE c.website_id = $1
-       ORDER BY c.name ASC, c.id ASC`,
+       ORDER BY d.name ASC, c.name ASC, c.id ASC`,
       [website.id]
     );
 
@@ -58,7 +56,7 @@ export async function GET(request, context) {
   } catch (error) {
     console.error('Error fetching tenant classes in home/classes:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch classes.' },
+      { success: false, error: error.message || 'Failed to fetch academic classes.' },
       { status: 500 }
     );
   }

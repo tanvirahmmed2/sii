@@ -1,6 +1,17 @@
 import { NextResponse } from 'next/server';
+import slugify from 'slugify';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyPayrollStaffAccess } from 'src/lib/middleware/payroll_auth.js';
+
+function generateGradeCode(text) {
+  if (!text) return null;
+  return slugify(String(text).trim(), {
+    replacement: '-',
+    lower: true,
+    strict: true,
+    trim: true,
+  }).toUpperCase().slice(0, 50) || null;
+}
 
 export async function GET(request, context) {
   try {
@@ -76,7 +87,9 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, message: 'Payroll title is required.' }, { status: 400 });
     }
 
-    const gradeCode = body.grade_code?.trim() || null;
+    const rawGrade = body.grade_code?.trim() || title;
+    const gradeCode = generateGradeCode(rawGrade);
+
     const basicSalary = Math.max(0, parseFloat(body.basic_salary) || 0);
     const houseRent = Math.max(0, parseFloat(body.house_rent) || 0);
     const medicalAllowance = Math.max(0, parseFloat(body.medical_allowance) || 0);
@@ -149,7 +162,9 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, message: 'Another officer payroll scale already uses this title.' }, { status: 409 });
     }
 
-    const gradeCode = body.grade_code?.trim() || null;
+    const rawGrade = body.grade_code?.trim() || title;
+    const gradeCode = generateGradeCode(rawGrade);
+
     const basicSalary = Math.max(0, parseFloat(body.basic_salary) || 0);
     const houseRent = Math.max(0, parseFloat(body.house_rent) || 0);
     const medicalAllowance = Math.max(0, parseFloat(body.medical_allowance) || 0);

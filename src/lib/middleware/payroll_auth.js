@@ -1,4 +1,4 @@
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/websiteResolver.js';
 import { getStaffSession, hasStaffModulePermission, isGeneralStaff } from 'src/lib/middleware/staff.js';
 
 /**
