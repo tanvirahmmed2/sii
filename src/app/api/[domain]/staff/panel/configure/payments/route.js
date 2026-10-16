@@ -65,20 +65,30 @@ export async function GET(request, context) {
       };
     });
 
-    // 3. Fetch task/fee routing assignments
+    // 3. Fetch task/fee routing assignments (including any hall-specific routes)
     const assignmentsRes = await queryDb(`
-      SELECT pa.id, pa.website_id, pa.purpose, pa.title, pa.description,
+      SELECT pa.id, pa.website_id, pa.purpose, pa.hostel_id, pa.title, pa.description,
              pa.gateway_account_id, pa.fallback_gateway_account_id,
              pa.is_active, pa.allow_student_portal, pa.allow_public_checkout,
              pa.created_at, pa.updated_at,
+             h.name AS hostel_name, h.type AS hostel_type,
              ga.account_name, ga.gateway_code, ga.environment,
              fga.account_name AS fallback_account_name, fga.gateway_code AS fallback_gateway_code,
              fga.environment AS fallback_environment
       FROM website_payment_purpose_assignments pa
+      LEFT JOIN website_hostels h ON h.id = pa.hostel_id
       LEFT JOIN website_payment_gateway_accounts ga ON ga.id = pa.gateway_account_id
       LEFT JOIN website_payment_gateway_accounts fga ON fga.id = pa.fallback_gateway_account_id
       WHERE pa.website_id = $1
-      ORDER BY pa.id ASC
+      ORDER BY pa.purpose ASC, pa.hostel_id ASC NULLS FIRST, pa.id ASC
+    `, [websiteId]);
+
+    // 4. Fetch residential halls/hostels for per-hall fee routing options
+    const hostelsRes = await queryDb(`
+      SELECT id, name, type, status, capacity, monthly_fee
+      FROM website_hostels
+      WHERE website_id = $1
+      ORDER BY name ASC
     `, [websiteId]);
 
     // Compute metrics
@@ -100,9 +110,16 @@ export async function GET(request, context) {
 
     return NextResponse.json({
       success: true,
+      website_currency: auth.website.currency || 'BDT',
+      website: {
+        id: auth.website.id,
+        name: auth.website.name,
+        currency: auth.website.currency || 'BDT'
+      },
       gateways: gatewaysRes.rows,
       accounts,
       assignments: assignmentsRes.rows,
+      hostels: hostelsRes.rows,
       fee_purposes: FEE_PURPOSES,
       metrics: {
         totalAccounts,
@@ -153,13 +170,33 @@ export async function POST(request, context) {
     }
 
     // Verify gateway exists in catalog
-    const gwCheck = await queryDb(`SELECT code, credential_schema FROM website_payment_gateways WHERE code = $1 AND is_active = TRUE`, [gateway_code]);
+    const gwCheck = await queryDb(`SELECT code, name, credential_schema, supported_currencies FROM website_payment_gateways WHERE code = $1 AND is_active = TRUE`, [gateway_code]);
     if (gwCheck.rows.length === 0) {
       return NextResponse.json({ success: false, error: `Invalid or unsupported gateway code: ${gateway_code}` }, { status: 400 });
     }
 
+    const gateway = gwCheck.rows[0];
+    const websiteCurrency = String(auth.website.currency || 'BDT').toUpperCase().trim();
+    const cleanCurrency = String(currency || websiteCurrency).toUpperCase().trim();
+    const supportedCurrencies = Array.isArray(gateway.supported_currencies) ? gateway.supported_currencies : ['BDT'];
+
+    // 1. Verify currency is supported by the gateway provider
+    if (!supportedCurrencies.includes(cleanCurrency)) {
+      return NextResponse.json({
+        success: false,
+        error: `Gateway '${gateway.name}' does not support currency '${cleanCurrency}'. Supported currencies: ${supportedCurrencies.join(', ')}.`
+      }, { status: 400 });
+    }
+
+    // 2. Verify gateway compatibility with the website base currency
+    if (!supportedCurrencies.includes(websiteCurrency)) {
+      return NextResponse.json({
+        success: false,
+        error: `Gateway '${gateway.name}' is incompatible with your portal base currency (${websiteCurrency}). This gateway only supports: ${supportedCurrencies.join(', ')}.`
+      }, { status: 400 });
+    }
+
     const cleanEnv = environment === 'live' ? 'live' : 'sandbox';
-    const cleanCurrency = String(currency || 'BDT').toUpperCase().trim();
 
     // If marked default, unset existing default
     if (is_default) {
@@ -195,7 +232,7 @@ export async function POST(request, context) {
 
     return NextResponse.json({
       success: true,
-      message: `Payment gateway account '${account_name}' created successfully.`,
+      message: `Payment gateway account '${account_name}' created successfully with currency ${cleanCurrency}.`,
       account: {
         ...created,
         credentials: maskedCreds
@@ -237,7 +274,7 @@ export async function PUT(request, context) {
 
     // Verify ownership
     const checkRes = await queryDb(`
-      SELECT a.*, g.credential_schema
+      SELECT a.*, g.name AS gateway_name, g.credential_schema, g.supported_currencies
       FROM website_payment_gateway_accounts a
       JOIN website_payment_gateways g ON g.code = a.gateway_code
       WHERE a.id = $1 AND a.website_id = $2
@@ -248,6 +285,27 @@ export async function PUT(request, context) {
     }
 
     const existing = checkRes.rows[0];
+    const websiteCurrency = String(auth.website.currency || 'BDT').toUpperCase().trim();
+    const newCurrency = currency !== undefined ? String(currency).toUpperCase().trim() : String(existing.currency || 'BDT').toUpperCase().trim();
+    const supportedCurrencies = Array.isArray(existing.supported_currencies)
+      ? existing.supported_currencies.map(c => String(c).toUpperCase().trim())
+      : ['BDT'];
+
+    if (currency !== undefined) {
+      if (!supportedCurrencies.includes(newCurrency)) {
+        return NextResponse.json({
+          success: false,
+          error: `Gateway '${existing.gateway_name}' does not support currency '${newCurrency}'. Supported currencies: ${supportedCurrencies.join(', ')}.`
+        }, { status: 400 });
+      }
+
+      if (!supportedCurrencies.includes(websiteCurrency)) {
+        return NextResponse.json({
+          success: false,
+          error: `Gateway '${existing.gateway_name}' is incompatible with your portal base currency (${websiteCurrency}). Supported: ${supportedCurrencies.join(', ')}.`
+        }, { status: 400 });
+      }
+    }
 
     // Merge credentials carefully so masked values don't overwrite secrets
     const mergedCreds = credentials ? mergeCredentials(existing.credentials, credentials) : existing.credentials;
@@ -255,7 +313,6 @@ export async function PUT(request, context) {
     const newName = account_name !== undefined ? account_name.trim() : existing.account_name;
     const newNumber = account_number !== undefined ? (account_number ? account_number.trim() : null) : existing.account_number;
     const newEnv = environment !== undefined ? (environment === 'live' ? 'live' : 'sandbox') : existing.environment;
-    const newCurrency = currency !== undefined ? String(currency).toUpperCase().trim() : existing.currency;
     const newActive = is_active !== undefined ? Boolean(is_active) : existing.is_active;
     const newDefault = is_default !== undefined ? Boolean(is_default) : existing.is_default;
     const newNotes = notes !== undefined ? (notes ? notes.trim() : null) : existing.notes;

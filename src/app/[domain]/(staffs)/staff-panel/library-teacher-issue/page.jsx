@@ -1,8 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useParams } from 'next/navigation';
 
 export default function LibraryTeacherIssuePage() {
+  const params = useParams();
+  const domain = params?.domain || '';
+
   const [issues, setIssues] = useState([]);
   const [metrics, setMetrics] = useState({});
   const [loading, setLoading] = useState(true);
@@ -45,7 +49,7 @@ export default function LibraryTeacherIssuePage() {
   const loadIssues = useCallback(async () => {
     setLoading(true);
     try {
-      const url = `/api/library/teacher-circulation?search=${encodeURIComponent(searchTerm)}&status=${statusFilter}`;
+      const url = `/api/${domain}/library/teacher-circulation?search=${encodeURIComponent(searchTerm)}&status=${statusFilter}`;
       const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
@@ -74,7 +78,7 @@ export default function LibraryTeacherIssuePage() {
     if (!issueModalOpen) return;
     const fetchTeachers = async () => {
       try {
-        const res = await fetch(`/api/library/search-targets?type=teachers&q=${encodeURIComponent(targetSearch)}`);
+        const res = await fetch(`/api/${domain}/library/search-targets?type=teachers&q=${encodeURIComponent(targetSearch)}`);
         const data = await res.json();
         if (data.success) setTeacherList(data.targets || []);
       } catch (err) {
@@ -90,7 +94,7 @@ export default function LibraryTeacherIssuePage() {
     if (!issueModalOpen) return;
     const fetchBooks = async () => {
       try {
-        const res = await fetch(`/api/library/search-targets?type=books&in_stock_only=true&q=${encodeURIComponent(bookSearch)}`);
+        const res = await fetch(`/api/${domain}/library/search-targets?type=books&in_stock_only=true&q=${encodeURIComponent(bookSearch)}`);
         const data = await res.json();
         if (data.success) setBookList(data.targets || []);
       } catch (err) {
@@ -156,7 +160,7 @@ export default function LibraryTeacherIssuePage() {
     setFeedback(null);
 
     try {
-      const res = await fetch('/api/library/teacher-circulation', {
+      const res = await fetch(`/api/${domain}/library/teacher-circulation`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -206,7 +210,7 @@ export default function LibraryTeacherIssuePage() {
     if (!targetIssue) return;
     setSubmitting(true);
     try {
-      const res = await fetch('/api/library/teacher-circulation', {
+      const res = await fetch(`/api/${domain}/library/teacher-circulation`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -240,7 +244,7 @@ export default function LibraryTeacherIssuePage() {
     if (!deleteTarget) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/library/teacher-circulation?id=${deleteTarget.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/${domain}/library/teacher-circulation?id=${deleteTarget.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         setFeedback({ type: 'success', message: data.message || 'Issue record deleted.' });

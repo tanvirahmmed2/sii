@@ -181,7 +181,6 @@ export async function POST(request) {
                AND (
                  whatsapp_phone_number_id = $1
                  OR meta_app_id = $2
-                 OR 1=1
                )
              ORDER BY (whatsapp_phone_number_id = $1) DESC
              LIMIT 1`,

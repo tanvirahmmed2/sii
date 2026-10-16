@@ -1,8 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useParams } from 'next/navigation';
 
 export default function LibraryBookshelfPage() {
+  const params = useParams();
+  const domain = params?.domain || '';
+
   const [shelves, setShelves] = useState([]);
   const [metrics, setMetrics] = useState({});
   const [loading, setLoading] = useState(true);
@@ -44,7 +48,7 @@ export default function LibraryBookshelfPage() {
   const loadShelves = useCallback(async () => {
     setLoading(true);
     try {
-      const url = `/api/library/shelves?search=${encodeURIComponent(searchTerm)}&status=${statusFilter}`;
+      const url = `/api/${domain}/library/shelves?search=${encodeURIComponent(searchTerm)}&status=${statusFilter}`;
       const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
@@ -130,7 +134,7 @@ export default function LibraryBookshelfPage() {
     setRosterShelf(shelf);
     setRosterLoading(true);
     try {
-      const res = await fetch(`/api/library/shelves?shelf_id=${shelf.id}`);
+      const res = await fetch(`/api/${domain}/library/shelves?shelf_id=${shelf.id}`);
       const data = await res.json();
       if (data.success) {
         setRosterShelf(data.shelf || shelf);
@@ -154,7 +158,7 @@ export default function LibraryBookshelfPage() {
     const payload = modalMode === 'add' ? formData : { ...formData, id: currentShelf.id };
 
     try {
-      const res = await fetch('/api/library/shelves', {
+      const res = await fetch(`/api/${domain}/library/shelves`, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -181,7 +185,7 @@ export default function LibraryBookshelfPage() {
     if (!deleteTarget) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/library/shelves?id=${deleteTarget.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/${domain}/library/shelves?id=${deleteTarget.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         setFeedback({ type: 'success', message: data.message || 'Shelf deleted successfully.' });

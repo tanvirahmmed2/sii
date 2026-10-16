@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import TenantLoader from 'src/component/tenant/TenantLoader';
 import {
   FiCheckCircle,
@@ -15,6 +16,9 @@ import {
 import { printStudentFeeReceipt } from 'src/lib/receipts/student_fee';
 
 export default function PaymentEducationPaidPage() {
+  const params = useParams();
+  const domain = params?.domain || '';
+
   const [payments, setPayments] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 15, total: 0, totalPages: 1 });
   const [stats, setStats] = useState({ total_collected: '0.00', paid_count: 0 });
@@ -27,7 +31,7 @@ export default function PaymentEducationPaidPage() {
 
   const loadMeta = async () => {
     try {
-      const res = await fetch('/api/fees/education/meta');
+      const res = await fetch(`/api/${domain}/fees/education/meta`);
       if (res.ok) {
         const json = await res.json();
         if (json.success) setMeta({ classes: json.classes || [] });
@@ -40,7 +44,7 @@ export default function PaymentEducationPaidPage() {
   const loadPaidPayments = async (page = 1) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
+      const qParams = new URLSearchParams({
         page: String(page),
         limit: '15',
         status: 'paid',
@@ -48,7 +52,7 @@ export default function PaymentEducationPaidPage() {
         search,
       });
 
-      const res = await fetch(`/api/fees/education/payments?${params.toString()}`);
+      const res = await fetch(`/api/${domain}/fees/education/payments?${qParams.toString()}`);
       if (res.ok) {
         const json = await res.json();
         if (json.success) {

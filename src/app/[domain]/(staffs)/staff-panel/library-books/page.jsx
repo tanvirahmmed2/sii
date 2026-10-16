@@ -1,8 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useParams } from 'next/navigation';
 
 export default function LibraryBooksPage() {
+  const params = useParams();
+  const domain = params?.domain || '';
+
   const [books, setBooks] = useState([]);
   const [metrics, setMetrics] = useState({});
   const [categories, setCategories] = useState([]);
@@ -41,10 +45,10 @@ export default function LibraryBooksPage() {
   const loadLookups = useCallback(async () => {
     try {
       const [catRes, wriRes, pubRes, shelfRes] = await Promise.all([
-        fetch('/api/library/categories?status=active').then((r) => r.json()),
-        fetch('/api/library/writers?status=active').then((r) => r.json()),
-        fetch('/api/library/publishers?status=active').then((r) => r.json()),
-        fetch('/api/library/shelves?status=active').then((r) => r.json()),
+        fetch(`/api/${domain}/library/categories?status=active`).then((r) => r.json()),
+        fetch(`/api/${domain}/library/writers?status=active`).then((r) => r.json()),
+        fetch(`/api/${domain}/library/publishers?status=active`).then((r) => r.json()),
+        fetch(`/api/${domain}/library/shelves?status=active`).then((r) => r.json()),
       ]);
       if (catRes.success) setCategories(catRes.categories || []);
       if (wriRes.success) setWriters(wriRes.writers || []);
@@ -58,7 +62,7 @@ export default function LibraryBooksPage() {
   const loadBooks = useCallback(async () => {
     setLoading(true);
     try {
-      const url = `/api/library/books?search=${encodeURIComponent(searchTerm)}&category_id=${selectedCategory}&shelf_id=${selectedShelf}&availability=${selectedAvailability}&limit=500`;
+      const url = `/api/${domain}/library/books?search=${encodeURIComponent(searchTerm)}&category_id=${selectedCategory}&shelf_id=${selectedShelf}&availability=${selectedAvailability}&limit=500`;
       const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
@@ -157,7 +161,7 @@ export default function LibraryBooksPage() {
 
     const method = bookModalMode === 'add' ? 'POST' : 'PUT';
     try {
-      const res = await fetch('/api/library/books', {
+      const res = await fetch(`/api/${domain}/library/books`, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bookForm),
@@ -185,7 +189,7 @@ export default function LibraryBooksPage() {
     if (!stockBook) return;
     setSubmitting(true);
     try {
-      const res = await fetch('/api/library/books', {
+      const res = await fetch(`/api/${domain}/library/books`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -217,7 +221,7 @@ export default function LibraryBooksPage() {
     if (!deleteTarget) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/library/books?id=${deleteTarget.id}`, {
+      const res = await fetch(`/api/${domain}/library/books?id=${deleteTarget.id}`, {
         method: 'DELETE',
       });
       const data = await res.json();

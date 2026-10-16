@@ -1,8 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useParams } from 'next/navigation';
 
 export default function LibraryStudentIssuePage() {
+  const params = useParams();
+  const domain = params?.domain || '';
+
   const [issues, setIssues] = useState([]);
   const [metrics, setMetrics] = useState({});
   const [loading, setLoading] = useState(true);
@@ -36,7 +40,7 @@ export default function LibraryStudentIssuePage() {
   const loadIssues = useCallback(async () => {
     setLoading(true);
     try {
-      const url = `/api/library/student-circulation?search=${encodeURIComponent(searchTerm)}&status=${statusFilter}`;
+      const url = `/api/${domain}/library/student-circulation?search=${encodeURIComponent(searchTerm)}&status=${statusFilter}`;
       const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
@@ -65,7 +69,7 @@ export default function LibraryStudentIssuePage() {
     if (!issueModalOpen) return;
     const fetchStudents = async () => {
       try {
-        const res = await fetch(`/api/library/search-targets?type=students&q=${encodeURIComponent(targetSearch)}`);
+        const res = await fetch(`/api/${domain}/library/search-targets?type=students&q=${encodeURIComponent(targetSearch)}`);
         const data = await res.json();
         if (data.success) setTargetList(data.targets || []);
       } catch (err) {
@@ -81,7 +85,7 @@ export default function LibraryStudentIssuePage() {
     if (!issueModalOpen) return;
     const fetchBooks = async () => {
       try {
-        const res = await fetch(`/api/library/search-targets?type=books&in_stock_only=true&q=${encodeURIComponent(bookSearch)}`);
+        const res = await fetch(`/api/${domain}/library/search-targets?type=books&in_stock_only=true&q=${encodeURIComponent(bookSearch)}`);
         const data = await res.json();
         if (data.success) setBookList(data.targets || []);
       } catch (err) {
@@ -145,7 +149,7 @@ export default function LibraryStudentIssuePage() {
     setFeedback(null);
 
     try {
-      const res = await fetch('/api/library/student-circulation', {
+      const res = await fetch(`/api/${domain}/library/student-circulation`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -178,7 +182,7 @@ export default function LibraryStudentIssuePage() {
     if (!deleteTarget) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/library/student-circulation?id=${deleteTarget.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/${domain}/library/student-circulation?id=${deleteTarget.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         setFeedback({ type: 'success', message: data.message || 'Issue record deleted.' });

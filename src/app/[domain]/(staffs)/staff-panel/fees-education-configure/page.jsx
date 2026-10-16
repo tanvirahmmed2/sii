@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import TenantLoader from 'src/component/tenant/TenantLoader';
 import {
   FiDollarSign,
@@ -20,6 +21,9 @@ import {
 } from 'react-icons/fi';
 
 export default function FeesEducationConfigurePage() {
+  const params = useParams();
+  const domain = params?.domain || '';
+
   const [fees, setFees] = useState([]);
   const [meta, setMeta] = useState({ classes: [], sessions: [], feeTypes: [], frequencies: [] });
   const [loading, setLoading] = useState(true);
@@ -48,11 +52,12 @@ export default function FeesEducationConfigurePage() {
   });
 
   const loadData = async () => {
+    if (!domain) return;
     setLoading(true);
     try {
       const [metaRes, feesRes] = await Promise.all([
-        fetch('/api/fees/education/meta'),
-        fetch('/api/fees/education'),
+        fetch(`/api/${domain}/fees/education/meta`),
+        fetch(`/api/${domain}/fees/education`),
       ]);
 
       if (metaRes.ok) {
@@ -82,8 +87,10 @@ export default function FeesEducationConfigurePage() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (domain) {
+      loadData();
+    }
+  }, [domain]);
 
   const showFeedback = (type, message) => {
     setFeedback({ type, message });
@@ -145,7 +152,7 @@ export default function FeesEducationConfigurePage() {
 
     setSaving(true);
     try {
-      const url = '/api/fees/education';
+      const url = `/api/${domain}/fees/education`;
       const method = editingFee ? 'PUT' : 'POST';
       const payload = editingFee ? { ...formData, id: editingFee.id } : formData;
 
@@ -174,7 +181,7 @@ export default function FeesEducationConfigurePage() {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this fee configuration?')) return;
     try {
-      const res = await fetch(`/api/fees/education?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/${domain}/fees/education?id=${id}`, { method: 'DELETE' });
       const resJson = await res.json();
       if (res.ok && resJson.success) {
         showFeedback('success', resJson.message || 'Fee configuration removed.');
@@ -190,7 +197,7 @@ export default function FeesEducationConfigurePage() {
   const handleToggleStatus = async (fee) => {
     const nextStatus = fee.status === 'active' ? 'inactive' : 'active';
     try {
-      const res = await fetch('/api/fees/education', {
+      const res = await fetch(`/api/${domain}/fees/education`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: fee.id, status: nextStatus }),

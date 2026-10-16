@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   FiSearch,
@@ -14,6 +15,9 @@ import {
 } from 'react-icons/fi';
 
 export default function PaymentExamPaidPage() {
+  const params = useParams();
+  const domain = params?.domain || '';
+
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,14 +42,14 @@ export default function PaymentExamPaidPage() {
   const fetchPayments = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
+      const qParams = new URLSearchParams({
         page: page.toString(),
         limit: '10',
         payment_status: 'paid'
       });
-      if (searchTerm) params.append('search', searchTerm);
+      if (searchTerm) qParams.append('search', searchTerm);
 
-      const res = await fetch(`/api/exams/payments?${params.toString()}`);
+      const res = await fetch(`/api/${domain}/exams/payments?${qParams.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setPayments(data.payments || []);
@@ -86,7 +90,7 @@ export default function PaymentExamPaidPage() {
     setSubmitting(true);
     setFeedback(null);
     try {
-      const res = await fetch('/api/exams/payments', {
+      const res = await fetch(`/api/${domain}/exams/payments`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -114,7 +118,7 @@ export default function PaymentExamPaidPage() {
       return;
     }
     try {
-      const res = await fetch(`/api/exams/payments?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/${domain}/exams/payments?id=${id}`, { method: 'DELETE' });
       const resData = await res.json();
       if (res.ok && resData.success) {
         fetchPayments(pagination.page);

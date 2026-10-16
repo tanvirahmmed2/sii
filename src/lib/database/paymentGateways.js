@@ -100,10 +100,13 @@ export async function verifyStaffPaymentAccess(request, context) {
   // Alternatively check creator session (institution owner)
   const creatorSession = await getCreatorSession(request);
   if (creatorSession) {
-    if (String(creatorSession.id) !== String(website.creator_id) && !creatorSession.is_superadmin) {
-      return { error: 'Forbidden: Tenant ownership mismatch.', status: 403 };
+    const creatorId = creatorSession?.id || creatorSession?.creator?.id;
+    const isOwner = website.creator_id && String(website.creator_id) === String(creatorId);
+    const isAdmin = Boolean(creatorSession.is_admin || creatorSession.is_superadmin || creatorSession.creator?.is_admin);
+    if (isOwner || isAdmin) {
+      return { website, user: creatorSession, role: 'creator' };
     }
-    return { website, user: creatorSession, role: 'creator' };
+    return { error: 'Forbidden: Tenant ownership mismatch.', status: 403 };
   }
 
   return { error: 'Unauthorized: Staff or administrator access required.', status: 401 };
@@ -112,8 +115,34 @@ export async function verifyStaffPaymentAccess(request, context) {
 /**
  * Test connectivity & configuration for a gateway account
  */
-export async function testGatewayAccountConnection({ gateway_code, environment, credentials }) {
+export async function testGatewayAccountConnection({ gateway_code, environment, credentials, currency, website_currency }) {
   const isLive = environment === 'live';
+
+  // Check currency compatibility if provided
+  if (gateway_code) {
+    try {
+      const gwRes = await queryDb(
+        `SELECT supported_currencies, name FROM website_payment_gateways WHERE code = $1 LIMIT 1`,
+        [gateway_code]
+      );
+      if (gwRes.rows.length > 0) {
+        const gw = gwRes.rows[0];
+        const supported = Array.isArray(gw.supported_currencies) ? gw.supported_currencies : ['BDT'];
+        if (currency && !supported.includes(String(currency).toUpperCase())) {
+          return {
+            success: false,
+            message: `Currency '${currency}' is not supported by ${gw.name}. Supported: ${supported.join(', ')}.`
+          };
+        }
+        if (website_currency && !supported.includes(String(website_currency).toUpperCase())) {
+          return {
+            success: false,
+            message: `Gateway ${gw.name} does not support portal base currency '${website_currency}'. Supported: ${supported.join(', ')}.`
+          };
+        }
+      }
+    } catch {}
+  }
 
   switch (gateway_code) {
     case 'bkash': {
@@ -236,13 +265,16 @@ export async function testGatewayAccountConnection({ gateway_code, environment, 
  * Resolves the configured and assigned payment gateway account for a specific task/purpose
  * e.g., 'residential_fees', 'education_fees', 'exam_fees', 'admission_fees'
  */
-export async function resolveGatewayRouteForTask(websiteId, purpose) {
-  const query = `
-    SELECT pa.id AS assignment_id, pa.purpose, pa.title AS assignment_title, pa.is_active AS route_active,
+export async function resolveGatewayRouteForTask(websiteId, purpose, options = {}) {
+  const hostelId = typeof options === 'object' && options !== null ? options.hostelId : options;
+
+  const selectQuery = `
+    SELECT pa.id AS assignment_id, pa.purpose, pa.title AS assignment_title, pa.hostel_id, pa.is_active AS route_active,
            pa.gateway_account_id, pa.fallback_gateway_account_id,
            ga.id AS account_id, ga.gateway_code, ga.account_name, ga.account_number,
            ga.environment, ga.currency, ga.credentials, ga.is_active AS account_active,
            gw.name AS gateway_name, gw.category AS gateway_category, gw.logo_icon,
+           h.name AS hostel_name,
            -- fallback account data
            fga.id AS fallback_account_id, fga.gateway_code AS fallback_gateway_code,
            fga.account_name AS fallback_account_name, fga.environment AS fallback_environment,
@@ -251,11 +283,26 @@ export async function resolveGatewayRouteForTask(websiteId, purpose) {
     JOIN website_payment_gateway_accounts ga ON ga.id = pa.gateway_account_id
     JOIN website_payment_gateways gw ON gw.code = ga.gateway_code
     LEFT JOIN website_payment_gateway_accounts fga ON fga.id = pa.fallback_gateway_account_id
-    WHERE pa.website_id = $1 AND pa.purpose = $2 AND pa.is_active = TRUE
-    LIMIT 1
+    LEFT JOIN website_hostels h ON h.id = pa.hostel_id
   `;
 
-  const res = await queryDb(query, [websiteId, purpose]);
+  let res;
+  if (hostelId) {
+    // 1. Try to find route specifically assigned to this residential hall
+    res = await queryDb(
+      `${selectQuery} WHERE pa.website_id = $1 AND pa.purpose = $2 AND pa.hostel_id = $3 AND pa.is_active = TRUE LIMIT 1`,
+      [websiteId, purpose, hostelId]
+    );
+  }
+
+  // 2. Fallback to default hall/purpose assignment (hostel_id IS NULL)
+  if (!res || res.rows.length === 0) {
+    res = await queryDb(
+      `${selectQuery} WHERE pa.website_id = $1 AND pa.purpose = $2 AND pa.hostel_id IS NULL AND pa.is_active = TRUE LIMIT 1`,
+      [websiteId, purpose]
+    );
+  }
+
   if (res.rows.length === 0) {
     // If no explicit route assignment exists, find any active default gateway account for this website
     const defaultRes = await queryDb(`
@@ -296,6 +343,8 @@ export async function resolveGatewayRouteForTask(websiteId, purpose) {
     return {
       source: 'fallback_route',
       purpose: row.purpose,
+      hostel_id: row.hostel_id,
+      hostel_name: row.hostel_name,
       assignment_id: row.assignment_id,
       account_id: row.fallback_account_id,
       gateway_code: row.fallback_gateway_code,
@@ -310,6 +359,8 @@ export async function resolveGatewayRouteForTask(websiteId, purpose) {
   return {
     source: 'assigned_route',
     purpose: row.purpose,
+    hostel_id: row.hostel_id,
+    hostel_name: row.hostel_name,
     assignment_id: row.assignment_id,
     assignment_title: row.assignment_title,
     account_id: row.account_id,
@@ -331,6 +382,7 @@ export async function resolveGatewayRouteForTask(websiteId, purpose) {
 export async function initiatePaymentForPurpose({
   websiteId,
   purpose,
+  hostelId = null,
   amount,
   currency = 'BDT',
   invoiceRef,
@@ -338,9 +390,19 @@ export async function initiatePaymentForPurpose({
   payer = {},
   returnUrl = ''
 }) {
-  const route = await resolveGatewayRouteForTask(websiteId, purpose);
+  const route = await resolveGatewayRouteForTask(websiteId, purpose, { hostelId });
   if (!route) {
     throw new Error(`No active payment gateway account is assigned for task '${purpose}'. Please contact school administration.`);
+  }
+
+  // Verify website base currency
+  const webRes = await queryDb(`SELECT currency, name FROM websites WHERE id = $1 LIMIT 1`, [websiteId]);
+  const webCurrency = webRes.rows[0]?.currency ? String(webRes.rows[0].currency).toUpperCase().trim() : 'BDT';
+  const effectiveCurrency = String(currency || route.currency || webCurrency).toUpperCase().trim();
+
+  // Verify that the route account currency is compatible
+  if (route.currency && String(route.currency).toUpperCase().trim() !== effectiveCurrency && String(route.currency).toUpperCase().trim() !== webCurrency) {
+    throw new Error(`Payment currency mismatch: Transaction requested in ${effectiveCurrency}, but assigned gateway account '${route.account_name}' operates in ${route.currency}.`);
   }
 
   const txnId = `TXN-${(route.gateway_code || 'GW').toUpperCase()}-${Date.now().toString().slice(-8)}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
@@ -424,12 +486,12 @@ export async function initiatePaymentForPurpose({
     payer.email || '',
     payer.phone || '',
     amount,
-    currency,
+    effectiveCurrency,
     route.environment,
     txnId,
     gatewayRef,
     checkoutUrl,
-    JSON.stringify({ payer, amount, purpose, route_source: route.source }),
+    JSON.stringify({ payer, amount, purpose, currency: effectiveCurrency, route_source: route.source }),
     `Initiated via assigned account [${route.account_name}] (${route.environment})`
   ]);
 
@@ -439,12 +501,13 @@ export async function initiatePaymentForPurpose({
     checkout_url: checkoutUrl,
     transaction_id: txnId,
     gateway_reference: gatewayRef,
+    currency: effectiveCurrency,
     gateway: {
       code: route.gateway_code,
       name: route.gateway_name,
       account_name: route.account_name,
       environment: route.environment,
-      currency: route.currency
+      currency: route.currency || effectiveCurrency
     }
   };
 }

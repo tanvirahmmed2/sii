@@ -1,8 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useParams } from 'next/navigation';
 
 export default function LibraryStudentReturnPage() {
+  const params = useParams();
+  const domain = params?.domain || '';
+
   const [issues, setIssues] = useState([]);
   const [metrics, setMetrics] = useState({});
   const [loading, setLoading] = useState(true);
@@ -32,7 +36,7 @@ export default function LibraryStudentReturnPage() {
   const loadIssues = useCallback(async () => {
     setLoading(true);
     try {
-      const url = `/api/library/student-circulation?search=${encodeURIComponent(searchTerm)}&status=${statusFilter}`;
+      const url = `/api/${domain}/library/student-circulation?search=${encodeURIComponent(searchTerm)}&status=${statusFilter}`;
       const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
@@ -108,7 +112,7 @@ export default function LibraryStudentReturnPage() {
     setFeedback(null);
 
     try {
-      const res = await fetch('/api/library/student-circulation', {
+      const res = await fetch(`/api/${domain}/library/student-circulation`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -142,7 +146,7 @@ export default function LibraryStudentReturnPage() {
     if (!deleteTarget) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/library/student-circulation?id=${deleteTarget.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/${domain}/library/student-circulation?id=${deleteTarget.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         setFeedback({ type: 'success', message: data.message || 'Record deleted successfully.' });

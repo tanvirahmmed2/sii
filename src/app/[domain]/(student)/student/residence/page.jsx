@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import TenantLoader from 'src/component/tenant/TenantLoader';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
@@ -10,6 +11,9 @@ import {
 } from 'react-icons/fi';
 
 export default function StudentHostelsPage() {
+  const params = useParams();
+  const domain = params?.domain || '';
+
   const [hostels, setHostels] = useState([]);
   const [applications, setApplications] = useState([]);
   const [activeAllocation, setActiveAllocation] = useState(null);
@@ -23,13 +27,16 @@ export default function StudentHostelsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (domain) {
+      fetchData();
+    }
+  }, [domain]);
 
   const fetchData = async () => {
+    if (!domain) return;
     setLoading(true);
     try {
-      const res = await axios.get('/api/student/residence');
+      const res = await axios.get(`/api/${domain}/student/residence`);
       const data = res.data?.payload || res.data?.paylod || res.data || {};
 
       setHostels(data.hostels || []);
@@ -53,7 +60,7 @@ export default function StudentHostelsPage() {
 
     setSubmitting(true);
     try {
-      const response = await axios.post('/api/student/residence', {
+      const response = await axios.post(`/api/${domain}/student/residence`, {
         preferred_hostel_id: preferredHostelId || null,
         reason
       });

@@ -121,6 +121,8 @@ export default function ConfigurePaymentsPage() {
   const [accounts, setAccounts] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [feePurposes, setFeePurposes] = useState([]);
+  const [hostels, setHostels] = useState([]);
+  const [websiteCurrency, setWebsiteCurrency] = useState('BDT');
   const [metrics, setMetrics] = useState({
     totalAccounts: 0,
     activeAccounts: 0,
@@ -164,6 +166,7 @@ export default function ConfigurePaymentsPage() {
 
   // Simulator State for Tab 3
   const [simTask, setSimTask] = useState('residential_fees');
+  const [simHostelId, setSimHostelId] = useState('');
   const [simAmount, setSimAmount] = useState('1500');
   const [simPayerName, setSimPayerName] = useState('Rahim Ahmed');
   const [simPayerPhone, setSimPayerPhone] = useState('01712345678');
@@ -185,23 +188,41 @@ export default function ConfigurePaymentsPage() {
       const res = await fetch(`/api/${domain}/staff/panel/configure/payments`);
       const data = await res.json();
       if (data.success) {
+        if (data.website_currency) {
+          setWebsiteCurrency(data.website_currency);
+        }
         setGateways(data.gateways || []);
         setAccounts(data.accounts || []);
         setAssignments(data.assignments || []);
         setFeePurposes(data.fee_purposes || []);
+        setHostels(data.hostels || []);
         setMetrics(data.metrics || {});
         setRecentTransactions(data.recentTransactions || []);
 
         // Initialize Routing Form state from current assignments
         const initialRouting = {};
         (data.fee_purposes || []).forEach(fp => {
-          const matched = (data.assignments || []).find(a => a.purpose === fp.code);
+          const matched = (data.assignments || []).find(a => a.purpose === fp.code && (!a.hostel_id || a.hostel_id === null));
           initialRouting[fp.code] = {
             gateway_account_id: matched?.gateway_account_id ? String(matched.gateway_account_id) : '',
             fallback_gateway_account_id: matched?.fallback_gateway_account_id ? String(matched.fallback_gateway_account_id) : '',
             is_active: matched ? Boolean(matched.is_active) : true,
             title: matched?.title || fp.label,
             description: matched?.description || fp.description
+          };
+        });
+
+        // Initialize per-hostel routes
+        (data.hostels || []).forEach(h => {
+          const matched = (data.assignments || []).find(a => a.purpose === 'residential_fees' && Number(a.hostel_id) === Number(h.id));
+          const key = `residential_fees_hostel_${h.id}`;
+          initialRouting[key] = {
+            assignment_id: matched?.id || null,
+            gateway_account_id: matched?.gateway_account_id ? String(matched.gateway_account_id) : '',
+            fallback_gateway_account_id: matched?.fallback_gateway_account_id ? String(matched.fallback_gateway_account_id) : '',
+            is_active: matched ? Boolean(matched.is_active) : true,
+            title: matched?.title || `${h.name} Fees`,
+            description: matched?.description || `Residential hall fees for ${h.name}`
           };
         });
         setRoutingForm(initialRouting);
@@ -245,12 +266,15 @@ export default function ConfigurePaymentsPage() {
     setModalMode('create');
     setEditingAccountId(null);
     setTestResult(null);
+    const chosenGw = gateways.find(g => g.code === gwCode);
+    const supported = Array.isArray(chosenGw?.supported_currencies) ? chosenGw.supported_currencies : ['BDT'];
+    const initialCurrency = supported.includes(websiteCurrency) ? websiteCurrency : supported[0];
     setFormData({
       gateway_code: gwCode,
       account_name: '',
       account_number: '',
       environment: 'sandbox',
-      currency: gwCode === 'paddle' || gwCode === 'stripe' ? 'USD' : 'BDT',
+      currency: initialCurrency,
       credentials: {},
       is_active: true,
       is_default: false,
@@ -419,31 +443,32 @@ export default function ConfigurePaymentsPage() {
   };
 
   // Handle Route Assignment Change in Form
-  const handleRoutingFieldChange = (purposeCode, field, value) => {
+  const handleRoutingFieldChange = (key, field, value) => {
     setRoutingForm(prev => ({
       ...prev,
-      [purposeCode]: {
-        ...prev[purposeCode],
+      [key]: {
+        ...prev[key],
         [field]: value
       }
     }));
   };
 
-  // Save Route Assignment for a Task
-  const handleSaveRoute = async (purposeCode) => {
-    const routeData = routingForm[purposeCode];
+  // Save Route Assignment for a Task (or specific Residential Hall)
+  const handleSaveRoute = async (key, purposeCode, hostelId = null) => {
+    const routeData = routingForm[key];
     if (!routeData || !routeData.gateway_account_id) {
-      setToast({ type: 'error', text: 'Please select a primary gateway account for this fee task.' });
+      setToast({ type: 'error', text: 'Please select a primary gateway account.' });
       return;
     }
 
-    setSavingRoute(purposeCode);
+    setSavingRoute(key);
     try {
       const res = await fetch(`/api/${domain}/staff/panel/configure/payments/assign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           purpose: purposeCode,
+          hostel_id: hostelId ? parseInt(hostelId, 10) : null,
           gateway_account_id: parseInt(routeData.gateway_account_id, 10),
           fallback_gateway_account_id: routeData.fallback_gateway_account_id ? parseInt(routeData.fallback_gateway_account_id, 10) : null,
           is_active: Boolean(routeData.is_active),
@@ -465,6 +490,30 @@ export default function ConfigurePaymentsPage() {
     }
   };
 
+  // Reset hostel-specific route to fall back to All Halls default
+  const handleResetHostelRoute = async (assignmentId, hostelName) => {
+    if (!window.confirm(`Revert "${hostelName}" to using the All Halls default payment account?`)) {
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/${domain}/staff/panel/configure/payments/assign?id=${assignmentId}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setToast({ type: 'success', text: data.message });
+        await loadData();
+      } else {
+        setToast({ type: 'error', text: data.error || 'Failed to revert hostel route.' });
+      }
+    } catch (err) {
+      setToast({ type: 'error', text: 'Error reverting hostel route.' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Run Simulator
   const handleRunSimulator = async (e) => {
     e.preventDefault();
@@ -476,8 +525,9 @@ export default function ConfigurePaymentsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           purpose: simTask,
+          hostel_id: (simTask === 'residential_fees' && simHostelId) ? parseInt(simHostelId, 10) : undefined,
           amount: parseFloat(simAmount) || 100,
-          currency: 'BDT',
+          currency: websiteCurrency || 'BDT',
           invoice_ref: `SIM-INV-${Date.now().toString().slice(-6)}`,
           payer: {
             name: simPayerName,
@@ -518,7 +568,7 @@ export default function ConfigurePaymentsPage() {
       )}
 
       {/* Top Interactive Metric Ribbons */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
         {/* Total Accounts */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 shadow-xs relative overflow-hidden group hover:border-slate-300 dark:hover:border-slate-700 transition">
           <div className="flex items-center justify-between">
@@ -581,6 +631,27 @@ export default function ConfigurePaymentsPage() {
             </span>
           </div>
           <p className="text-[11px] text-slate-400 mt-1">Safe staging & testing mode</p>
+        </div>
+
+        {/* Portal Base Currency */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 shadow-xs relative overflow-hidden group hover:border-indigo-300 dark:hover:border-indigo-800 transition">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold tracking-wider uppercase text-slate-400 dark:text-slate-500">
+              Portal Currency
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+              <FiDollarSign className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="flex items-baseline justify-between mt-2">
+            <span className="text-2xl font-bold font-mono text-slate-900 dark:text-white">
+              {websiteCurrency}
+            </span>
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 font-mono">
+              Base Unit
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-400 mt-1">Institution billing standard</p>
         </div>
 
         {/* Fee Routing Coverage */}
@@ -965,7 +1036,7 @@ export default function ConfigurePaymentsPage() {
                     {/* Primary Gateway Selector */}
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Primary Gateway Account <span className="text-rose-500">*</span>
+                        {purpose.code === 'residential_fees' ? 'All Residential Halls Default Primary Account' : 'Primary Gateway Account'} <span className="text-rose-500">*</span>
                       </label>
                       <select
                         value={currentRoute.gateway_account_id}
@@ -975,12 +1046,14 @@ export default function ConfigurePaymentsPage() {
                         <option value="">-- Choose Account --</option>
                         {accounts.map(acc => (
                           <option key={acc.id} value={acc.id}>
-                            [{acc.gateway_name}] {acc.account_name} {acc.account_number ? `(${acc.account_number})` : ''} - {acc.environment.toUpperCase()}
+                            [{acc.gateway_name}] {acc.account_name} ({acc.currency || websiteCurrency}) - {acc.environment.toUpperCase()}
                           </option>
                         ))}
                       </select>
                       <p className="text-[10px] text-slate-400 mt-1">
-                        All student and invoice payments for {purpose.label} will be directed to this account.
+                        {purpose.code === 'residential_fees'
+                          ? 'Standard fallback account used by all residential halls unless a specific hall override is assigned below.'
+                          : `All student and invoice payments for ${purpose.label} will be directed to this account.`}
                       </p>
                     </div>
 
@@ -999,7 +1072,7 @@ export default function ConfigurePaymentsPage() {
                           .filter(acc => String(acc.id) !== String(currentRoute.gateway_account_id))
                           .map(acc => (
                             <option key={acc.id} value={acc.id}>
-                              [{acc.gateway_name}] {acc.account_name} - {acc.environment.toUpperCase()}
+                              [{acc.gateway_name}] {acc.account_name} ({acc.currency || websiteCurrency}) - {acc.environment.toUpperCase()}
                             </option>
                           ))}
                       </select>
@@ -1022,7 +1095,7 @@ export default function ConfigurePaymentsPage() {
                     </label>
 
                     <button
-                      onClick={() => handleSaveRoute(purpose.code)}
+                      onClick={() => handleSaveRoute(purpose.code, purpose.code, null)}
                       disabled={savingRoute === purpose.code}
                       className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                     >
@@ -1031,11 +1104,177 @@ export default function ConfigurePaymentsPage() {
                       ) : (
                         <>
                           <FiCheck className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Update {purpose.label} Routing</span>
+                          <span>Update {purpose.label} Default Routing</span>
                         </>
                       )}
                     </button>
                   </div>
+
+                  {/* If Residential Fees: Multi-Hall Granular Routing Section */}
+                  {purpose.code === 'residential_fees' && (
+                    <div className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-800 space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <FiHome className="w-4 h-4 text-rose-500" />
+                          <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                            Residential Halls Department Granular Routing
+                          </h5>
+                        </div>
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Optionally assign dedicated payment accounts per hall, or leave on default
+                        </span>
+                      </div>
+
+                      {hostels.length === 0 ? (
+                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2.5">
+                          <FiInfo className="w-4 h-4 text-slate-400 shrink-0" />
+                          <span>No residential halls have been created for this institution yet. Once you add halls in Hostel Management, you can configure dedicated payment accounts for each individual hall here.</span>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 gap-3.5">
+                          {hostels.map(h => {
+                            const key = `residential_fees_hostel_${h.id}`;
+                            const hallRoute = routingForm[key] || {
+                              gateway_account_id: '',
+                              fallback_gateway_account_id: '',
+                              is_active: true
+                            };
+                            const hallAssignedAcc = accounts.find(a => String(a.id) === String(hallRoute.gateway_account_id));
+                            const hasCustomAssignment = Boolean(hallRoute.assignment_id && hallRoute.gateway_account_id);
+
+                            return (
+                              <div
+                                key={h.id}
+                                className={`rounded-xl p-4 border transition ${
+                                  hasCustomAssignment
+                                    ? 'bg-indigo-50/30 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-900/50'
+                                    : 'bg-slate-50/50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-800'
+                                }`}
+                              >
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200/60 dark:border-slate-800/60">
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="w-7 h-7 rounded-lg bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold text-xs">
+                                      {h.name.charAt(0)}
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold text-slate-900 dark:text-white">
+                                          {h.name}
+                                        </span>
+                                        {h.type && (
+                                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300 font-medium">
+                                            {h.type}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                        Capacity: {h.capacity || 'N/A'} beds • Monthly Fee: {h.monthly_fee ? `${h.monthly_fee} ${websiteCurrency}` : 'N/A'}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-2">
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                                      hasCustomAssignment
+                                        ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300'
+                                        : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                    }`}>
+                                      {hasCustomAssignment
+                                        ? `Dedicated Account: ${hallAssignedAcc?.account_name || 'Configured'} (${hallAssignedAcc?.environment?.toUpperCase() || ''})`
+                                        : assignedAccount
+                                          ? `Inheriting Default: ${assignedAccount.account_name}`
+                                          : 'Inherits Default (Unassigned)'}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3">
+                                  <div>
+                                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                                      Hall Dedicated Primary Account
+                                    </label>
+                                    <select
+                                      value={hallRoute.gateway_account_id}
+                                      onChange={(e) => handleRoutingFieldChange(key, 'gateway_account_id', e.target.value)}
+                                      className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white cursor-pointer"
+                                    >
+                                      <option value="">-- Inherit All Halls Default Account --</option>
+                                      {accounts.map(acc => (
+                                        <option key={acc.id} value={acc.id}>
+                                          [{acc.gateway_name}] {acc.account_name} ({acc.currency || websiteCurrency}) - {acc.environment.toUpperCase()}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                                      Hall Fallback Account (Optional)
+                                    </label>
+                                    <select
+                                      value={hallRoute.fallback_gateway_account_id}
+                                      onChange={(e) => handleRoutingFieldChange(key, 'fallback_gateway_account_id', e.target.value)}
+                                      className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white cursor-pointer"
+                                    >
+                                      <option value="">-- None (No Fallback) --</option>
+                                      {accounts
+                                        .filter(acc => String(acc.id) !== String(hallRoute.gateway_account_id))
+                                        .map(acc => (
+                                          <option key={acc.id} value={acc.id}>
+                                            [{acc.gateway_name}] {acc.account_name} ({acc.currency || websiteCurrency}) - {acc.environment.toUpperCase()}
+                                          </option>
+                                        ))}
+                                    </select>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-200/50 dark:border-slate-800/50">
+                                  <label className="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600 dark:text-slate-400">
+                                    <input
+                                      type="checkbox"
+                                      checked={hallRoute.is_active}
+                                      onChange={(e) => handleRoutingFieldChange(key, 'is_active', e.target.checked)}
+                                      className="rounded text-indigo-600 cursor-pointer"
+                                    />
+                                    <span>Active Hall Route</span>
+                                  </label>
+
+                                  <div className="flex items-center gap-2">
+                                    {hallRoute.assignment_id && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleResetHostelRoute(hallRoute.assignment_id, h.name)}
+                                        disabled={actionLoading}
+                                        className="px-3 py-1 text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition cursor-pointer font-medium"
+                                      >
+                                        Revert to Default
+                                      </button>
+                                    )}
+
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSaveRoute(key, 'residential_fees', h.id)}
+                                      disabled={savingRoute === key || !hallRoute.gateway_account_id}
+                                      className="px-3 py-1 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                                    >
+                                      {savingRoute === key ? (
+                                        <div className="loader loader-sm loader-white" />
+                                      ) : (
+                                        <>
+                                          <FiCheck className="w-3.5 h-3.5" />
+                                          <span>Save {h.name} Account</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -1080,9 +1319,32 @@ export default function ConfigurePaymentsPage() {
                 </select>
               </div>
 
+              {simTask === 'residential_fees' && hostels.length > 0 && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Target Residential Hall / Department
+                  </label>
+                  <select
+                    value={simHostelId}
+                    onChange={(e) => setSimHostelId(e.target.value)}
+                    className="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white cursor-pointer"
+                  >
+                    <option value="">-- All Halls Default (No Specific Hall) --</option>
+                    {hostels.map(h => (
+                      <option key={h.id} value={h.id}>
+                        {h.name} ({h.type || 'Hall'})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Test whether fees route to this specific hall's account or the institution's default residential account.
+                  </p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Test Amount (BDT)
+                  Test Amount ({websiteCurrency})
                 </label>
                 <input
                   type="number"
@@ -1357,13 +1619,19 @@ export default function ConfigurePaymentsPage() {
             <div className="p-6 overflow-y-auto space-y-5">
               {/* Gateway Provider Selector (If create mode) */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  Select Gateway Provider <span className="text-rose-500">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Select Gateway Provider <span className="text-rose-500">*</span>
+                  </label>
+                  <span className="text-[11px] text-slate-500">
+                    Portal Base Currency: <strong className="font-mono text-indigo-600 dark:text-indigo-400">{websiteCurrency}</strong>
+                  </span>
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {gateways.map(gw => {
                     const isSelected = formData.gateway_code === gw.code;
-                    const style = GATEWAY_STYLES[gw.code] || {};
+                    const supportedList = Array.isArray(gw.supported_currencies) ? gw.supported_currencies.map(c => String(c).toUpperCase().trim()) : ['BDT'];
+                    const isCurrencySupported = supportedList.includes(String(websiteCurrency || 'BDT').toUpperCase().trim());
                     return (
                       <button
                         key={gw.code}
@@ -1371,16 +1639,28 @@ export default function ConfigurePaymentsPage() {
                         disabled={modalMode === 'edit'}
                         onClick={() => {
                           handleFormChange('gateway_code', gw.code);
-                          handleFormChange('currency', gw.code === 'paddle' || gw.code === 'stripe' ? 'USD' : 'BDT');
+                          const supported = Array.isArray(gw.supported_currencies) ? gw.supported_currencies.map(c => String(c).toUpperCase().trim()) : ['BDT'];
+                          const currentBase = String(websiteCurrency || 'BDT').toUpperCase().trim();
+                          const initialCurrency = supported.includes(currentBase) ? currentBase : supported[0];
+                          handleFormChange('currency', initialCurrency);
                           setTestResult(null);
                         }}
-                        className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                        className={`p-2.5 rounded-xl border text-left transition cursor-pointer relative ${
                           isSelected
                             ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 ring-2 ring-indigo-500/20'
                             : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
                         } ${modalMode === 'edit' ? 'opacity-70 cursor-not-allowed' : ''}`}
                       >
-                        <div className="font-bold text-xs truncate">{gw.name}</div>
+                        <div className="flex items-center justify-between gap-1 font-bold text-xs truncate">
+                          <span className="truncate">{gw.name}</span>
+                          <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-medium ${
+                            isCurrencySupported
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                          }`}>
+                            {isCurrencySupported ? websiteCurrency : '≠ Currency'}
+                          </span>
+                        </div>
                         <span className="text-[10px] text-slate-400 uppercase font-mono block mt-0.5">
                           {gw.category}
                         </span>
@@ -1464,19 +1744,42 @@ export default function ConfigurePaymentsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Billing Currency
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Billing Currency <span className="text-rose-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      Base: <strong className="text-indigo-600 dark:text-indigo-400">{websiteCurrency}</strong>
+                    </span>
+                  </div>
                   <select
                     value={formData.currency}
                     onChange={(e) => handleFormChange('currency', e.target.value)}
                     className="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white cursor-pointer"
                   >
-                    <option value="BDT">BDT (Bangladeshi Taka)</option>
-                    <option value="USD">USD (United States Dollar)</option>
-                    <option value="EUR">EUR (Euro)</option>
-                    <option value="GBP">GBP (British Pound)</option>
+                    {Array.isArray(activeGatewayObj?.supported_currencies) && activeGatewayObj.supported_currencies.length > 0 ? (
+                      activeGatewayObj.supported_currencies.map(curr => (
+                        <option key={curr} value={curr}>
+                          {curr} {curr === websiteCurrency ? '(Matches Portal Base)' : ''}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="BDT">BDT (Bangladeshi Taka)</option>
+                        <option value="USD">USD (United States Dollar)</option>
+                      </>
+                    )}
                   </select>
+
+                  {/* Currency Compatibility Warning Notice */}
+                  {activeGatewayObj && Array.isArray(activeGatewayObj.supported_currencies) && !activeGatewayObj.supported_currencies.includes(websiteCurrency) && (
+                    <div className="mt-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-[11px] flex items-start gap-1.5">
+                      <FiAlertTriangle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
+                      <div>
+                        <strong>Notice:</strong> {activeGatewayObj.name} does not natively support your portal base currency (<span className="font-mono font-bold">{websiteCurrency}</span>). Supported: {activeGatewayObj.supported_currencies.join(', ')}.
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1604,27 +1907,50 @@ export default function ConfigurePaymentsPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveAccount}
-                disabled={actionLoading}
-                className="px-5 py-2 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-              >
-                {actionLoading ? (
-                  <div className="loader loader-sm loader-white" />
-                ) : (
-                  <span>{modalMode === 'create' ? 'Create Gateway Account' : 'Save Changes'}</span>
-                )}
-              </button>
-            </div>
+            {(() => {
+              const supportedList = Array.isArray(activeGatewayObj?.supported_currencies) ? activeGatewayObj.supported_currencies.map(c => String(c).toUpperCase().trim()) : ['BDT'];
+              const isCurIncompatible = !supportedList.includes(String(websiteCurrency || 'BDT').toUpperCase().trim());
+              return (
+                <div className="px-6 py-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+                  <div className="text-[11px] text-slate-500">
+                    {isCurIncompatible ? (
+                      <span className="text-rose-600 font-semibold flex items-center gap-1">
+                        <FiAlertTriangle className="w-3.5 h-3.5" />
+                        Incompatible with portal base currency ({websiteCurrency})
+                      </span>
+                    ) : (
+                      <span className="text-emerald-600 font-medium flex items-center gap-1">
+                        <FiCheckCircle className="w-3.5 h-3.5" />
+                        Compatible with {websiteCurrency} billing
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsModalOpen(false)}
+                      className="px-4 py-2 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveAccount}
+                      disabled={actionLoading || isCurIncompatible}
+                      className="px-5 py-2 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {actionLoading ? (
+                        <div className="loader loader-sm loader-white" />
+                      ) : isCurIncompatible ? (
+                        <span>Unsupported Currency</span>
+                      ) : (
+                        <span>{modalMode === 'create' ? 'Create Gateway Account' : 'Save Changes'}</span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}

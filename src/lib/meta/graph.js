@@ -234,10 +234,21 @@ export function getMetaConfigStatus() {
 }
 
 /**
- * Get Meta API configuration status for a specific website tenant
+ * Get Meta API configuration status for a specific website tenant.
+ * Strictly uses website_meta table with zero platform root fallback.
  */
 export async function getWebsiteMetaConfig(websiteId) {
-  if (!websiteId) return getMetaConfigStatus();
+  if (!websiteId) {
+    return {
+      configured: false,
+      isCustom: false,
+      facebook: { configured: false },
+      instagram: { configured: false },
+      whatsapp: { configured: false, phoneNumberId: null },
+      webhook: { configured: false, verifyToken: null }
+    };
+  }
+
   try {
     const res = await queryDb(
       `SELECT meta_webhook_verify_token, meta_app_secret, meta_app_id, meta_page_access_token, whatsapp_phone_number_id, is_active
@@ -246,77 +257,88 @@ export async function getWebsiteMetaConfig(websiteId) {
        LIMIT 1`,
       [websiteId]
     );
+
     if (res.rows.length === 0) {
-      return { ...getMetaConfigStatus(), isCustom: false };
+      return {
+        configured: false,
+        isCustom: false,
+        facebook: { configured: false },
+        instagram: { configured: false },
+        whatsapp: { configured: false, phoneNumberId: null },
+        webhook: { configured: false, verifyToken: null }
+      };
     }
+
     const row = res.rows[0];
-    const hasFbToken = Boolean(row.meta_page_access_token || META_PAGE_ACCESS_TOKEN || META_ACCESS_TOKEN);
-    const hasIgToken = Boolean(row.meta_page_access_token || META_PAGE_ACCESS_TOKEN || META_ACCESS_TOKEN);
-    const hasWaToken = Boolean(
-      (row.meta_page_access_token || META_ACCESS_TOKEN) &&
-      (row.whatsapp_phone_number_id || META_PHONE_NUMBER_ID)
-    );
+    const hasPageToken = Boolean(row.meta_page_access_token);
+    const hasWaToken = Boolean(row.meta_page_access_token && row.whatsapp_phone_number_id);
+
     return {
       isCustom: true,
-      appId: row.meta_app_id || META_APP_ID || null,
+      appId: row.meta_app_id || null,
       facebook: {
-        configured: hasFbToken,
-        customToken: Boolean(row.meta_page_access_token),
+        configured: hasPageToken,
+        customToken: hasPageToken,
       },
       instagram: {
-        configured: hasIgToken,
-        customToken: Boolean(row.meta_page_access_token),
+        configured: hasPageToken,
+        customToken: hasPageToken,
       },
       whatsapp: {
         configured: hasWaToken,
-        phoneNumberId: row.whatsapp_phone_number_id || META_PHONE_NUMBER_ID || null,
-        customToken: Boolean(row.meta_page_access_token),
+        phoneNumberId: row.whatsapp_phone_number_id || null,
+        customToken: hasPageToken,
       },
       webhook: {
-        configured: Boolean(row.meta_webhook_verify_token || META_WEBHOOK_VERIFY_TOKEN),
-        verifyToken: row.meta_webhook_verify_token || META_WEBHOOK_VERIFY_TOKEN || null,
+        configured: Boolean(row.meta_webhook_verify_token),
+        verifyToken: row.meta_webhook_verify_token || null,
       },
-      configured: Boolean(hasFbToken || hasIgToken || hasWaToken),
+      configured: Boolean(hasPageToken || hasWaToken),
     };
   } catch (err) {
     console.error('getWebsiteMetaConfig error:', err);
-    return getMetaConfigStatus();
+    return {
+      configured: false,
+      isCustom: false,
+      facebook: { configured: false },
+      instagram: { configured: false },
+      whatsapp: { configured: false, phoneNumberId: null },
+      webhook: { configured: false, verifyToken: null }
+    };
   }
 }
 
 /**
- * Send an outbound message through Meta Graph API using website-specific credentials
+ * Send an outbound message through Meta Graph API using website-specific credentials.
+ * Strictly uses website_meta table with zero platform root fallback.
  */
 export async function sendWebsiteMetaMessage({ websiteId, platform, recipientId, message }) {
-  let customToken = null;
-  let customPhoneId = null;
-
-  if (websiteId) {
-    try {
-      const res = await queryDb(
-        `SELECT meta_page_access_token, whatsapp_phone_number_id, is_active
-         FROM website_meta
-         WHERE website_id = $1 AND is_active = TRUE
-         LIMIT 1`,
-        [websiteId]
-      );
-      if (res.rows.length > 0) {
-        customToken = res.rows[0].meta_page_access_token;
-        customPhoneId = res.rows[0].whatsapp_phone_number_id;
-      }
-    } catch (err) {
-      console.warn('Error reading website_meta credentials:', err.message);
-    }
+  if (!websiteId) {
+    throw new Error('Website tenant ID is required to dispatch Meta platform message.');
   }
 
-  let token = customToken;
+  const res = await queryDb(
+    `SELECT meta_page_access_token, whatsapp_phone_number_id, is_active
+     FROM website_meta
+     WHERE website_id = $1 AND is_active = TRUE
+     LIMIT 1`,
+    [websiteId]
+  );
+
+  if (res.rows.length === 0) {
+    throw new Error('Meta integration is not configured or active for this institution. Please configure it in Staff Panel → Meta.');
+  }
+
+  const row = res.rows[0];
+  const token = row.meta_page_access_token;
+  const phoneId = row.whatsapp_phone_number_id;
+
   let endpoint = '';
   let body = {};
 
-  if (platform === 'facebook') {
-    token = token || META_PAGE_ACCESS_TOKEN || META_ACCESS_TOKEN;
+  if (platform === 'facebook' || platform === 'instagram') {
     if (!token) {
-      throw new Error('Facebook Page access token is not configured. Please set META_PAGE_ACCESS_TOKEN in Configuration → Meta.');
+      throw new Error(`${platform === 'facebook' ? 'Facebook Page' : 'Instagram'} access token is not configured for this institution. Please set META_PAGE_ACCESS_TOKEN in Configuration → Meta.`);
     }
     endpoint = 'https://graph.facebook.com/v19.0/me/messages';
     body = {
@@ -324,24 +346,12 @@ export async function sendWebsiteMetaMessage({ websiteId, platform, recipientId,
       message: { text: message },
       messaging_type: 'RESPONSE',
     };
-  } else if (platform === 'instagram') {
-    token = token || META_PAGE_ACCESS_TOKEN || META_ACCESS_TOKEN;
-    if (!token) {
-      throw new Error('Instagram access token is not configured. Please set META_PAGE_ACCESS_TOKEN in Configuration → Meta.');
-    }
-    endpoint = 'https://graph.facebook.com/v19.0/me/messages';
-    body = {
-      recipient: { id: recipientId },
-      message: { text: message },
-    };
   } else if (platform === 'whatsapp') {
-    token = token || META_ACCESS_TOKEN;
-    const phoneId = customPhoneId || META_PHONE_NUMBER_ID;
     if (!token) {
-      throw new Error('WhatsApp access token is not configured. Please set META_PAGE_ACCESS_TOKEN in Configuration → Meta.');
+      throw new Error('WhatsApp access token is not configured for this institution. Please set META_PAGE_ACCESS_TOKEN in Configuration → Meta.');
     }
     if (!phoneId) {
-      throw new Error('WhatsApp Phone Number ID is not configured. Please set WHATSAPP_PHONE_NUMBER_ID in Configuration → Meta.');
+      throw new Error('WhatsApp Phone Number ID is not configured for this institution. Please set WHATSAPP_PHONE_NUMBER_ID in Configuration → Meta.');
     }
     endpoint = `https://graph.facebook.com/v19.0/${phoneId}/messages`;
     body = {
@@ -355,7 +365,7 @@ export async function sendWebsiteMetaMessage({ websiteId, platform, recipientId,
     throw new Error(`Unsupported Meta platform: ${platform}`);
   }
 
-  const res = await fetch(endpoint, {
+  const fetchRes = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -364,12 +374,12 @@ export async function sendWebsiteMetaMessage({ websiteId, platform, recipientId,
     body: JSON.stringify(body),
   });
 
-  const data = await res.json();
-  if (!res.ok) {
+  const data = await fetchRes.json();
+  if (!fetchRes.ok) {
     const errorMsg =
       data.error?.message ||
       data.error?.error_user_msg ||
-      `Meta Graph API error (${res.status}): ${JSON.stringify(data.error || data)}`;
+      `Meta Graph API error (${fetchRes.status}): ${JSON.stringify(data.error || data)}`;
     throw new Error(errorMsg);
   }
 

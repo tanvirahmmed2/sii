@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'next/navigation';
 import {
   FiSearch,
   FiCheckCircle,
@@ -17,6 +18,9 @@ import {
 } from 'react-icons/fi';
 
 export default function ExamAdmitCardsPage() {
+  const params = useParams();
+  const domain = params?.domain || '';
+
   const [candidates, setCandidates] = useState([]);
   const [meta, setMeta] = useState({ classes: [], exams: [] });
   const [loading, setLoading] = useState(true);
@@ -44,7 +48,7 @@ export default function ExamAdmitCardsPage() {
   useEffect(() => {
     async function loadMeta() {
       try {
-        const res = await fetch('/api/exams/meta');
+        const res = await fetch(`/api/${domain}/exams/meta`);
         if (res.ok) {
           const data = await res.json();
           setMeta({
@@ -62,16 +66,16 @@ export default function ExamAdmitCardsPage() {
   const fetchCandidates = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
+      const qParams = new URLSearchParams({
         page: page.toString(),
         limit: '10'
       });
-      if (searchTerm) params.append('search', searchTerm);
-      if (selectedExam !== 'all') params.append('exam_id', selectedExam);
-      if (selectedClass !== 'all') params.append('class_id', selectedClass);
-      if (selectedStatus !== 'all') params.append('candidate_status', selectedStatus);
+      if (searchTerm) qParams.append('search', searchTerm);
+      if (selectedExam !== 'all') qParams.append('exam_id', selectedExam);
+      if (selectedClass !== 'all') qParams.append('class_id', selectedClass);
+      if (selectedStatus !== 'all') qParams.append('candidate_status', selectedStatus);
 
-      const res = await fetch(`/api/exams/candidates?${params.toString()}`);
+      const res = await fetch(`/api/${domain}/exams/candidates?${qParams.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setCandidates(data.candidates || []);
@@ -107,7 +111,7 @@ export default function ExamAdmitCardsPage() {
 
   const handleQuickStatus = async (id, status, autoAdmit = false) => {
     try {
-      const res = await fetch('/api/exams/candidates', {
+      const res = await fetch(`/api/${domain}/exams/candidates`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -132,7 +136,7 @@ export default function ExamAdmitCardsPage() {
     setSubmitting(true);
     setFeedback(null);
     try {
-      const res = await fetch('/api/exams/candidates', {
+      const res = await fetch(`/api/${domain}/exams/candidates`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -160,7 +164,7 @@ export default function ExamAdmitCardsPage() {
       return;
     }
     try {
-      const res = await fetch(`/api/exams/candidates?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/${domain}/exams/candidates?id=${id}`, { method: 'DELETE' });
       const resData = await res.json();
       if (res.ok && resData.success) {
         fetchCandidates(pagination.page);

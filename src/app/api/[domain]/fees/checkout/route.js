@@ -20,8 +20,9 @@ export async function POST(request, context) {
     const body = await request.json().catch(() => ({}));
     const {
       purpose = 'education_fees',
+      hostel_id,
       amount,
-      currency = 'BDT',
+      currency,
       invoice_ref,
       student_id,
       payer = {},
@@ -33,11 +34,14 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'A valid payment amount greater than zero is required.' }, { status: 400 });
     }
 
+    const finalCurrency = String(currency || website.currency || 'BDT').toUpperCase().trim();
+
     const result = await initiatePaymentForPurpose({
       websiteId: website.id,
       purpose,
+      hostelId: hostel_id ? parseInt(hostel_id, 10) : null,
       amount: numAmount,
-      currency,
+      currency: finalCurrency,
       invoiceRef: invoice_ref,
       studentId: student_id,
       payer,
@@ -60,7 +64,7 @@ export async function POST(request, context) {
 }
 
 /**
- * GET /api/[domain]/fees/checkout?purpose=residential_fees
+ * GET /api/[domain]/fees/checkout?purpose=residential_fees&hostel_id=1
  * Returns the currently active gateway routing information for the given task.
  */
 export async function GET(request, context) {
@@ -72,8 +76,9 @@ export async function GET(request, context) {
 
     const { searchParams } = new URL(request.url);
     const purpose = searchParams.get('purpose') || 'education_fees';
+    const hostelId = searchParams.get('hostel_id') ? parseInt(searchParams.get('hostel_id'), 10) : null;
 
-    const route = await resolveGatewayRouteForTask(website.id, purpose);
+    const route = await resolveGatewayRouteForTask(website.id, purpose, { hostelId });
     if (!route) {
       return NextResponse.json({
         success: false,

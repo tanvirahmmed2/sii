@@ -578,6 +578,34 @@ CREATE TRIGGER update_website_brevo_mailer_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
+-- 20B. WEBSITE SMS GATEWAYS TABLE (SMS Provider Credentials & Masking Settings)
+-- Supports: mimsms, greenweb, onnorokom, twilio, custom
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_sms_gateways (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    provider VARCHAR(50) NOT NULL DEFAULT 'mimsms',
+    sender_id VARCHAR(100) NOT NULL,
+    sender_type VARCHAR(50) NOT NULL DEFAULT 'masking' CHECK (sender_type IN ('masking', 'non-masking', 'voice')),
+    api_key TEXT NOT NULL,
+    client_id VARCHAR(100),
+    endpoint_url TEXT,
+    default_encoding VARCHAR(20) DEFAULT 'unicode' CHECK (default_encoding IN ('unicode', 'gsm')),
+    balance NUMERIC(12, 2) DEFAULT 0.00,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id)
+);
+
+DROP TRIGGER IF EXISTS update_website_sms_gateways_updated_at ON website_sms_gateways;
+CREATE TRIGGER update_website_sms_gateways_updated_at
+    BEFORE UPDATE ON website_sms_gateways
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_sms_gw_web ON website_sms_gateways(website_id);
+
+-- ----------------------------------------------------------------------------
 -- 21. WEBSITE META TABLE (Facebook, Instagram & WhatsApp Integration Keys)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_meta (
@@ -2366,6 +2394,7 @@ CREATE TABLE IF NOT EXISTS website_payment_purpose_assignments (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     purpose VARCHAR(100) NOT NULL CHECK (purpose IN ('residential_fees', 'education_fees', 'exam_fees', 'admission_fees', 'other_fees')),
+    hostel_id BIGINT REFERENCES website_hostels(id) ON DELETE CASCADE DEFAULT NULL,
     title VARCHAR(150) NOT NULL,
     description TEXT,
     gateway_account_id BIGINT NOT NULL REFERENCES website_payment_gateway_accounts(id) ON DELETE CASCADE,
@@ -2375,8 +2404,7 @@ CREATE TABLE IF NOT EXISTS website_payment_purpose_assignments (
     allow_public_checkout BOOLEAN DEFAULT TRUE,
     assigned_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, purpose)
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 DROP TRIGGER IF EXISTS update_website_payment_purpose_assignments_updated_at ON website_payment_purpose_assignments;
@@ -2385,6 +2413,7 @@ CREATE TRIGGER update_website_payment_purpose_assignments_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE INDEX IF NOT EXISTS idx_ws_pay_assign_web ON website_payment_purpose_assignments(website_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ws_pay_assign_purpose_hostel ON website_payment_purpose_assignments (website_id, purpose, COALESCE(hostel_id, 0));
 CREATE INDEX IF NOT EXISTS idx_ws_pay_assign_acc ON website_payment_purpose_assignments(gateway_account_id);
 CREATE INDEX IF NOT EXISTS idx_ws_pay_assign_purp ON website_payment_purpose_assignments(website_id, purpose);
 

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   FiPlus,
@@ -15,6 +16,9 @@ import {
 } from 'react-icons/fi';
 
 export default function FeesExamPage() {
+  const params = useParams();
+  const domain = params?.domain || '';
+
   const [fees, setFees] = useState([]);
   const [meta, setMeta] = useState({ classes: [], exams: [] });
   const [loading, setLoading] = useState(true);
@@ -45,7 +49,7 @@ export default function FeesExamPage() {
   useEffect(() => {
     async function loadMeta() {
       try {
-        const res = await fetch('/api/exams/meta');
+        const res = await fetch(`/api/${domain}/exams/meta`);
         if (res.ok) {
           const data = await res.json();
           setMeta({
@@ -70,16 +74,16 @@ export default function FeesExamPage() {
   const fetchFees = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
+      const qParams = new URLSearchParams({
         page: page.toString(),
         limit: '10'
       });
-      if (searchTerm) params.append('search', searchTerm);
-      if (selectedExam !== 'all') params.append('exam_id', selectedExam);
-      if (selectedClass !== 'all') params.append('class_id', selectedClass);
-      if (selectedStatus !== 'all') params.append('status', selectedStatus);
+      if (searchTerm) qParams.append('search', searchTerm);
+      if (selectedExam !== 'all') qParams.append('exam_id', selectedExam);
+      if (selectedClass !== 'all') qParams.append('class_id', selectedClass);
+      if (selectedStatus !== 'all') qParams.append('status', selectedStatus);
 
-      const res = await fetch(`/api/exams/fees?${params.toString()}`);
+      const res = await fetch(`/api/${domain}/exams/fees?${qParams.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setFees(data.fees || []);
@@ -136,7 +140,7 @@ export default function FeesExamPage() {
     setSubmitting(true);
     setFeedback(null);
     try {
-      const url = '/api/exams/fees';
+      const url = `/api/${domain}/exams/fees`;
       const method = editingFee ? 'PUT' : 'POST';
       const payload = editingFee ? { ...formData, id: editingFee.id } : formData;
 
@@ -169,7 +173,7 @@ export default function FeesExamPage() {
       return;
     }
     try {
-      const res = await fetch(`/api/exams/fees?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/${domain}/exams/fees?id=${id}`, { method: 'DELETE' });
       const resData = await res.json();
       if (res.ok && resData.success) {
         fetchFees(pagination.page);

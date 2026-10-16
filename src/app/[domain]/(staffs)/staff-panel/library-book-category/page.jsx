@@ -1,8 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useParams } from 'next/navigation';
 
 export default function LibraryBookCategoryPage() {
+  const params = useParams();
+  const domain = params?.domain || '';
+
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,7 +28,7 @@ export default function LibraryBookCategoryPage() {
   const loadCategories = useCallback(async () => {
     setLoading(true);
     try {
-      const url = `/api/library/categories?search=${encodeURIComponent(searchTerm)}&status=${statusFilter}`;
+      const url = `/api/${domain}/library/categories?search=${encodeURIComponent(searchTerm)}&status=${statusFilter}`;
       const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
@@ -101,7 +105,7 @@ export default function LibraryBookCategoryPage() {
     const payload = modalMode === 'add' ? formData : { ...formData, id: currentCategory.id };
 
     try {
-      const res = await fetch('/api/library/categories', {
+      const res = await fetch(`/api/${domain}/library/categories`, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -128,7 +132,7 @@ export default function LibraryBookCategoryPage() {
     if (!deleteTarget) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/library/categories?id=${deleteTarget.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/${domain}/library/categories?id=${deleteTarget.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         setFeedback({ type: 'success', message: data.message || 'Category deleted successfully.' });

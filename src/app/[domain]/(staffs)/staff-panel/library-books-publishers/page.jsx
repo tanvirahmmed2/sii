@@ -1,8 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useParams } from 'next/navigation';
 
 export default function LibraryBooksPublishersPage() {
+  const params = useParams();
+  const domain = params?.domain || '';
+
   const [publishers, setPublishers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,7 +35,7 @@ export default function LibraryBooksPublishersPage() {
   const loadPublishers = useCallback(async () => {
     setLoading(true);
     try {
-      const url = `/api/library/publishers?search=${encodeURIComponent(searchTerm)}&status=${statusFilter}`;
+      const url = `/api/${domain}/library/publishers?search=${encodeURIComponent(searchTerm)}&status=${statusFilter}`;
       const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
@@ -109,7 +113,7 @@ export default function LibraryBooksPublishersPage() {
     const payload = modalMode === 'add' ? formData : { ...formData, id: currentPublisher.id };
 
     try {
-      const res = await fetch('/api/library/publishers', {
+      const res = await fetch(`/api/${domain}/library/publishers`, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -136,7 +140,7 @@ export default function LibraryBooksPublishersPage() {
     if (!deleteTarget) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/library/publishers?id=${deleteTarget.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/${domain}/library/publishers?id=${deleteTarget.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         setFeedback({ type: 'success', message: data.message || 'Publisher deleted successfully.' });

@@ -17,16 +17,17 @@ export async function POST(request, context) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { id, gateway_code, environment, credentials } = body;
+    const { id, gateway_code, environment, credentials, currency } = body;
 
     let targetGatewayCode = gateway_code;
     let targetEnv = environment || 'sandbox';
     let targetCreds = credentials;
+    let targetCurrency = currency || auth.website.currency || 'BDT';
 
     // If an existing account ID is passed, retrieve stored credentials
     if (id) {
       const accRes = await queryDb(`
-        SELECT gateway_code, environment, credentials, account_name
+        SELECT gateway_code, environment, credentials, account_name, currency
         FROM website_payment_gateway_accounts
         WHERE id = $1 AND website_id = $2
       `, [id, auth.website.id]);
@@ -39,6 +40,7 @@ export async function POST(request, context) {
       targetGatewayCode = acc.gateway_code;
       targetEnv = environment || acc.environment;
       targetCreds = credentials && Object.keys(credentials).length > 0 ? credentials : acc.credentials;
+      targetCurrency = currency || acc.currency || auth.website.currency || 'BDT';
     }
 
     if (!targetGatewayCode) {
@@ -48,7 +50,9 @@ export async function POST(request, context) {
     const result = await testGatewayAccountConnection({
       gateway_code: targetGatewayCode,
       environment: targetEnv,
-      credentials: targetCreds
+      credentials: targetCreds,
+      currency: targetCurrency,
+      website_currency: auth.website.currency || 'BDT'
     });
 
     return NextResponse.json({

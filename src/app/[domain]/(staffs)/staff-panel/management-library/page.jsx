@@ -1,9 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 
 export default function ManagementLibraryPage() {
+  const params = useParams();
+  const domain = params?.domain || '';
+
   const [stats, setStats] = useState(null);
   const [recentStudentCirc, setRecentStudentCirc] = useState([]);
   const [recentTeacherCirc, setRecentTeacherCirc] = useState([]);
@@ -21,9 +25,9 @@ export default function ManagementLibraryPage() {
     setError(null);
     try {
       const [statsRes, studentRes, teacherRes] = await Promise.all([
-        fetch('/api/library/stats'),
-        fetch('/api/library/student-circulation?limit=100'),
-        fetch('/api/library/teacher-circulation?limit=100'),
+        fetch(`/api/${domain}/library/stats`),
+        fetch(`/api/${domain}/library/student-circulation?limit=100`),
+        fetch(`/api/${domain}/library/teacher-circulation?limit=100`),
       ]);
 
       const [statsData, studentData, teacherData] = await Promise.all([

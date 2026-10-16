@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import TenantLoader from 'src/component/tenant/TenantLoader';
 import {
   FiDollarSign,
@@ -17,6 +18,9 @@ import {
 import { printStudentFeeReceipt } from 'src/lib/receipts/student_fee';
 
 const FeesPage = () => {
+  const params = useParams();
+  const domain = params?.domain || '';
+
   const [data, setData] = useState({ fees: [], fines: [], student: {} });
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState(null);
@@ -31,8 +35,9 @@ const FeesPage = () => {
   const [paySuccessData, setPaySuccessData] = useState(null);
 
   const fetchFees = async () => {
+    if (!domain) return;
     try {
-      const res = await fetch('/api/student/fees');
+      const res = await fetch(`/api/${domain}/student/fees`);
       if (res.ok) {
         const resData = await res.json();
         setData(resData.paylod || { fees: [], fines: [], student: {} });
@@ -46,8 +51,10 @@ const FeesPage = () => {
   };
 
   useEffect(() => {
-    fetchFees();
-  }, []);
+    if (domain) {
+      fetchFees();
+    }
+  }, [domain]);
 
   const showFeedback = (type, message) => {
     setFeedback({ type, message });
@@ -75,7 +82,7 @@ const FeesPage = () => {
 
     setProcessing(true);
     try {
-      const res = await fetch('/api/student/fees/pay', {
+      const res = await fetch(`/api/${domain}/student/fees/pay`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

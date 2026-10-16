@@ -1,8 +1,15 @@
 import { queryDb } from './db.js';
 import { BREVO_API_KEY, BREVO_SENDER_EMAIL, BREVO_SENDER_NAME } from './secret.js';
 
+export function maskApiKey(key) {
+  if (!key) return '';
+  if (key.length <= 10) return '••••••••';
+  return key.slice(0, 8) + '••••••••••••••••' + key.slice(-4);
+}
+
 /**
  * Retrieves the Brevo mailer configuration for a specific website tenant.
+ * Does not fall back to platform root credentials to preserve tenant isolation.
  *
  * @param {string|number} websiteId
  * @returns {Promise<Object>}
@@ -12,9 +19,9 @@ export async function getWebsiteBrevoConfig(websiteId) {
     return {
       configured: false,
       isCustom: false,
-      apiKey: BREVO_API_KEY || null,
-      senderEmail: BREVO_SENDER_EMAIL || null,
-      senderName: BREVO_SENDER_NAME || 'Campus Administration',
+      apiKey: null,
+      senderEmail: null,
+      senderName: 'Campus Administration',
       isActive: false
     };
   }
@@ -44,14 +51,13 @@ export async function getWebsiteBrevoConfig(websiteId) {
     console.warn(`[WebsiteBrevo] Failed to query website_brevo_mailer for website ${websiteId}:`, err.message);
   }
 
-  // Fallback to platform environment credentials if available
   return {
-    configured: Boolean(BREVO_API_KEY && BREVO_SENDER_EMAIL),
+    configured: false,
     isCustom: false,
-    apiKey: BREVO_API_KEY || null,
-    senderEmail: BREVO_SENDER_EMAIL || null,
-    senderName: BREVO_SENDER_NAME || 'Campus Administration',
-    isActive: Boolean(BREVO_API_KEY)
+    apiKey: null,
+    senderEmail: null,
+    senderName: 'Campus Administration',
+    isActive: false
   };
 }
 
@@ -70,12 +76,12 @@ export async function getWebsiteBrevoConfig(websiteId) {
 export async function sendWebsiteEmail(websiteId, { to, toName, subject, html, text }) {
   const config = await getWebsiteBrevoConfig(websiteId);
 
-  if (!config.apiKey) {
-    throw new Error('BREVO_API_KEY is not configured for this website or server.');
+  if (!config.configured || !config.apiKey) {
+    throw new Error('Brevo Mailer is not configured or activated for this institution.');
   }
 
   if (!config.senderEmail) {
-    throw new Error('BREVO_SENDER_EMAIL is not configured for this website or server.');
+    throw new Error('Brevo Sender Email is not configured for this institution.');
   }
 
   const payload = {

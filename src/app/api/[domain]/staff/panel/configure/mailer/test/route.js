@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { resolveWebsiteFromRequest, getCreatorSession } from 'src/lib/middleware/creator';
 import { getStaffSession } from 'src/lib/middleware/staff';
 import { sendWebsiteEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
 
@@ -12,13 +12,26 @@ export async function POST(request, context) {
     }
 
     const staffSession = await getStaffSession(request);
-    if (!staffSession) {
-      return NextResponse.json({ success: false, error: 'Unauthorized: Staff access required.' }, { status: 401 });
-    }
+    let recipientDefault = '';
+    let actorName = 'Administrator';
 
-    const staffWebsiteId = staffSession?.website_id || staffSession?.websiteId || staffSession?.staff?.websiteId || staffSession?.staff?.website_id;
-    if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
-      return NextResponse.json({ success: false, error: 'Forbidden: Cross-tenant access denied.' }, { status: 403 });
+    if (staffSession) {
+      const staffWebsiteId = staffSession?.website_id || staffSession?.websiteId || staffSession?.staff?.websiteId || staffSession?.staff?.website_id;
+      if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
+        return NextResponse.json({ success: false, error: 'Forbidden: Cross-tenant access denied.' }, { status: 403 });
+      }
+      recipientDefault = staffSession?.staff?.email || '';
+      actorName = staffSession?.staff?.name || 'Staff Member';
+    } else {
+      const creatorSession = await getCreatorSession(request);
+      const creatorId = creatorSession?.id || creatorSession?.creator?.id;
+      const isOwner = creatorId && website.creator_id && String(website.creator_id) === String(creatorId);
+      const isAdmin = Boolean(creatorSession?.is_admin || creatorSession?.is_superadmin || creatorSession?.creator?.is_admin);
+      if (!creatorSession || (!isOwner && !isAdmin)) {
+        return NextResponse.json({ success: false, error: 'Unauthorized: Staff or administrator access required.' }, { status: 401 });
+      }
+      recipientDefault = creatorSession?.email || creatorSession?.creator?.email || '';
+      actorName = creatorSession?.name || creatorSession?.creator?.name || 'Institution Administrator';
     }
 
     const body = await request.json().catch(() => ({}));

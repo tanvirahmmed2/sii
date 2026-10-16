@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import {
   FiClock,
   FiSearch,
@@ -14,6 +15,9 @@ import {
 } from 'react-icons/fi';
 
 export default function PaymentEducationUnpaidPage() {
+  const params = useParams();
+  const domain = params?.domain || '';
+
   const [payments, setPayments] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 15, total: 0, totalPages: 1 });
   const [stats, setStats] = useState({ total_pending: '0.00', unpaid_count: 0 });
@@ -38,7 +42,7 @@ export default function PaymentEducationUnpaidPage() {
 
   const loadMeta = async () => {
     try {
-      const res = await fetch('/api/fees/education/meta');
+      const res = await fetch(`/api/${domain}/fees/education/meta`);
       if (res.ok) {
         const json = await res.json();
         if (json.success) setMeta({ classes: json.classes || [] });
@@ -51,7 +55,7 @@ export default function PaymentEducationUnpaidPage() {
   const loadUnpaidPayments = async (page = 1) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
+      const qParams = new URLSearchParams({
         page: String(page),
         limit: '15',
         status: 'unpaid',
@@ -59,7 +63,7 @@ export default function PaymentEducationUnpaidPage() {
         search,
       });
 
-      const res = await fetch(`/api/fees/education/payments?${params.toString()}`);
+      const res = await fetch(`/api/${domain}/fees/education/payments?${qParams.toString()}`);
       if (res.ok) {
         const json = await res.json();
         if (json.success) {
@@ -112,7 +116,7 @@ export default function PaymentEducationUnpaidPage() {
 
     setCollecting(true);
     try {
-      const res = await fetch('/api/fees/education/payments', {
+      const res = await fetch(`/api/${domain}/fees/education/payments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

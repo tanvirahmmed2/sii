@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { resolveWebsiteFromRequest, getCreatorSession } from 'src/lib/middleware/creator';
 import { getStaffSession } from 'src/lib/middleware/staff';
 
 async function verifyStaffAccess(request, context) {
@@ -10,16 +10,26 @@ async function verifyStaffAccess(request, context) {
   }
   const staffSession = await getStaffSession(request);
 
-  if (!staffSession) {
-    return { error: 'Unauthorized: Staff access required.', status: 401 };
+  if (staffSession) {
+    const staffWebsiteId = staffSession?.website_id || staffSession?.websiteId || staffSession?.staff?.websiteId || staffSession?.staff?.website_id;
+    if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
+      return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
+    }
+    return { website, staffSession };
   }
 
-  const staffWebsiteId = staffSession?.website_id || staffSession?.websiteId || staffSession?.staff?.websiteId || staffSession?.staff?.website_id;
-  if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
-    return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
+  // Allow institution owner/creator
+  const creatorSession = await getCreatorSession(request);
+  if (creatorSession) {
+    const creatorId = creatorSession?.id || creatorSession?.creator?.id;
+    const isOwner = website.creator_id && String(website.creator_id) === String(creatorId);
+    const isAdmin = Boolean(creatorSession.is_admin || creatorSession.is_superadmin || creatorSession.creator?.is_admin);
+    if (isOwner || isAdmin) {
+      return { website, staffSession: null, creatorSession };
+    }
   }
 
-  return { website, staffSession };
+  return { error: 'Unauthorized: Staff or administrator access required.', status: 401 };
 }
 
 function maskApiKey(key) {

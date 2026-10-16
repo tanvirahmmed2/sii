@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   FiSearch,
@@ -15,6 +16,9 @@ import {
 } from 'react-icons/fi';
 
 export default function PaymentExamListPage() {
+  const params = useParams();
+  const domain = params?.domain || '';
+
   const [payments, setPayments] = useState([]);
   const [meta, setMeta] = useState({ exams: [] });
   const [loading, setLoading] = useState(true);
@@ -43,7 +47,7 @@ export default function PaymentExamListPage() {
   useEffect(() => {
     async function loadMeta() {
       try {
-        const res = await fetch('/api/exams/meta');
+        const res = await fetch(`/api/${domain}/exams/meta`);
         if (res.ok) {
           const data = await res.json();
           setMeta({ exams: data.exams || [] });
@@ -58,15 +62,15 @@ export default function PaymentExamListPage() {
   const fetchPayments = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
+      const qParams = new URLSearchParams({
         page: page.toString(),
         limit: '10'
       });
-      if (searchTerm) params.append('search', searchTerm);
-      if (selectedExam !== 'all') params.append('exam_id', selectedExam);
-      if (selectedStatus !== 'all') params.append('payment_status', selectedStatus);
+      if (searchTerm) qParams.append('search', searchTerm);
+      if (selectedExam !== 'all') qParams.append('exam_id', selectedExam);
+      if (selectedStatus !== 'all') qParams.append('payment_status', selectedStatus);
 
-      const res = await fetch(`/api/exams/payments?${params.toString()}`);
+      const res = await fetch(`/api/${domain}/exams/payments?${qParams.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setPayments(data.payments || []);
@@ -104,7 +108,7 @@ export default function PaymentExamListPage() {
 
   const handleQuickMarkPaid = async (id) => {
     try {
-      const res = await fetch('/api/exams/payments', {
+      const res = await fetch(`/api/${domain}/exams/payments`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, mark_paid: true })
@@ -125,7 +129,7 @@ export default function PaymentExamListPage() {
     setSubmitting(true);
     setFeedback(null);
     try {
-      const res = await fetch('/api/exams/payments', {
+      const res = await fetch(`/api/${domain}/exams/payments`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -153,7 +157,7 @@ export default function PaymentExamListPage() {
       return;
     }
     try {
-      const res = await fetch(`/api/exams/payments?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/${domain}/exams/payments?id=${id}`, { method: 'DELETE' });
       const resData = await res.json();
       if (res.ok && resData.success) {
         fetchPayments(pagination.page);

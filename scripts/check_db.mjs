@@ -12,8 +12,8 @@ const pool = new Pool({
 
 async function main() {
   try {
-    const res = await pool.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;");
-    console.log('Tables in DB:', res.rows.map(r => r.table_name));
+    const res = await pool.query(`SELECT id, code, name, supported_currencies, is_active FROM website_payment_gateways ORDER BY id;`);
+    console.log('Seeded Gateways:', res.rows);
   } catch (e) {
     console.error('Error:', e.message);
   } finally {

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import TenantLoader from 'src/component/tenant/TenantLoader';
 import {
   FiDollarSign,
@@ -18,6 +19,9 @@ import {
 } from 'react-icons/fi';
 
 export default function FeesEducationMakePage() {
+  const params = useParams();
+  const domain = params?.domain || '';
+
   const [meta, setMeta] = useState({ classes: [], sections: [], sessions: [] });
   const [classFees, setClassFees] = useState([]);
   const [loadingMeta, setLoadingMeta] = useState(true);
@@ -46,7 +50,7 @@ export default function FeesEducationMakePage() {
   const loadMeta = async () => {
     setLoadingMeta(true);
     try {
-      const res = await fetch('/api/fees/education/meta');
+      const res = await fetch(`/api/${domain}/fees/education/meta`);
       if (res.ok) {
         const json = await res.json();
         if (json.success) {
@@ -86,7 +90,7 @@ export default function FeesEducationMakePage() {
     const fetchFees = async () => {
       setLoadingFees(true);
       try {
-        const res = await fetch(`/api/fees/education?class_id=${formData.class_id}&status=active`);
+        const res = await fetch(`/api/${domain}/fees/education?class_id=${formData.class_id}&status=active`);
         if (res.ok) {
           const json = await res.json();
           if (json.success) {
@@ -152,13 +156,13 @@ export default function FeesEducationMakePage() {
     const timer = setTimeout(async () => {
       setPreviewLoading(true);
       try {
-        const params = new URLSearchParams({
+        const qParams = new URLSearchParams({
           class_id: formData.class_id,
           section_id: formData.section_id || 'all',
           education_fee_id: formData.education_fee_id || '',
           month_name: formData.month_name || '',
         });
-        const res = await fetch(`/api/fees/education/make-due?${params.toString()}`);
+        const res = await fetch(`/api/${domain}/fees/education/make-due?${qParams.toString()}`);
         if (res.ok) {
           const json = await res.json();
           if (json.success) {
@@ -209,7 +213,7 @@ export default function FeesEducationMakePage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/fees/education/make-due', {
+      const res = await fetch(`/api/${domain}/fees/education/make-due`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
