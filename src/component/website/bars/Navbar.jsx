@@ -389,8 +389,14 @@ const Navbar = () => {
             </Link>
           </div>
 
-          {/* Right Action Button: Apply Online (Valid Route) */}
+          {/* Right Action Button: Pay Online & Apply Online */}
           <div className="flex items-center gap-2 shrink-0">
+            <Link
+              href={tenantUrl('/pay')}
+              className="px-3 py-1 rounded-md border border-amber-300/60 bg-amber-400/20 hover:bg-amber-400 text-white hover:text-slate-900 font-bold text-xs transition-all shadow-xs"
+            >
+              Pay Online
+            </Link>
             <Link
               href={tenantUrl('/admission/apply')}
               className="px-3 py-1 rounded-md border border-white/40 bg-white/15 hover:bg-white text-white hover:text-slate-900 font-bold text-xs transition-all shadow-xs"

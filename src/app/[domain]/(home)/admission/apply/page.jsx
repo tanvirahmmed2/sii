@@ -218,7 +218,7 @@ const ApplyFormContent = () => {
               To complete your admission application, please proceed to pay the application fee of <strong>৳{app.fee_amount || 500} {app.currency || 'BDT'}</strong> via our secure payment gateway.
             </p>
             <Link
-              href={pay?.payment_url || `/admission/payment/${app.id}`}
+              href={pay?.payment_url || `/pay/admission-fees/${app.id}`}
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg shadow-sm transition"
             >
               Pay Now via Payment Gateway <FiArrowRight />

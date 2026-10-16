@@ -260,6 +260,10 @@ const Sidebar = () => {
             <span>Admission Circular</span>
           </Link>
 
+          <Link href={tenantUrl('/pay')} onClick={closeSidebar} className={navItemClass('/pay')}>
+            <span className="font-bold text-amber-600 dark:text-amber-400">Pay Fees Online</span>
+          </Link>
+
           <Link href={tenantUrl('/admission/apply')} onClick={closeSidebar} className={navItemClass('/admission/apply')}>
             <span className="font-bold text-blue-600 dark:text-blue-400">Apply Online</span>
           </Link>

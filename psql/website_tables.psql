@@ -1446,7 +1446,50 @@ CREATE INDEX IF NOT EXISTS idx_ws_hall_seats_status ON website_hall_room_seats(w
 CREATE INDEX IF NOT EXISTS idx_ws_hall_alloc_student ON website_hall_seat_allocations(student_id);
 CREATE INDEX IF NOT EXISTS idx_ws_hall_alloc_seat ON website_hall_seat_allocations(seat_id);
 CREATE INDEX IF NOT EXISTS idx_ws_hall_alloc_status ON website_hall_seat_allocations(website_id, status);
-CREATE INDEX IF NOT EXISTS idx_ws_hall_alloc_hall ON website_hall_seat_allocations(hall_id);
+-- ----------------------------------------------------------------------------
+-- 49. WEBSITE HALL FEE PAYMENTS TABLE
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_hall_fee_payments (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    allocation_id BIGINT REFERENCES website_hall_seat_allocations(id) ON DELETE SET NULL,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    hall_id BIGINT REFERENCES website_halls(id) ON DELETE SET NULL,
+    room_id BIGINT REFERENCES website_hall_rooms(id) ON DELETE SET NULL,
+    seat_id BIGINT REFERENCES website_hall_room_seats(id) ON DELETE SET NULL,
+    invoice_no VARCHAR(100) NOT NULL,
+    title VARCHAR(255) NOT NULL DEFAULT 'Monthly Hall / Residential Fee',
+    month_name VARCHAR(50),
+    amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (amount >= 0),
+    fine_amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (fine_amount >= 0),
+    paid_amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00 CHECK (paid_amount >= 0),
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
+    due_date DATE,
+    payment_status VARCHAR(50) NOT NULL DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid', 'paid', 'partially_paid', 'waived', 'failed')),
+    payment_method VARCHAR(50) DEFAULT 'online',
+    gateway_account_id BIGINT REFERENCES website_payment_gateway_accounts(id) ON DELETE SET NULL,
+    gateway_code VARCHAR(50) DEFAULT 'online',
+    transaction_id VARCHAR(100),
+    paid_date TIMESTAMPTZ,
+    received_by VARCHAR(255),
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_hall_fee_payments_updated_at ON website_hall_fee_payments;
+CREATE TRIGGER update_website_hall_fee_payments_updated_at
+    BEFORE UPDATE ON website_hall_fee_payments
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_hall_fee_web ON website_hall_fee_payments(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_hall_fee_stu ON website_hall_fee_payments(website_id, student_id);
+CREATE INDEX IF NOT EXISTS idx_ws_hall_fee_status ON website_hall_fee_payments(website_id, payment_status);
+CREATE INDEX IF NOT EXISTS idx_ws_hall_fee_inv ON website_hall_fee_payments(website_id, invoice_no);
+
+-- Compatibility views
+CREATE OR REPLACE VIEW websites_hall_fee_payments AS SELECT * FROM website_hall_fee_payments;
+CREATE OR REPLACE VIEW website_residential_fee_payments AS SELECT * FROM website_hall_fee_payments;
 
 -- ============================================================================
 -- SECTION 14: OFFICERS & PERMISSIONS

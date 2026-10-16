@@ -183,6 +183,9 @@ const Footer = () => {
                   {dept.name}
                 </Link>
               ))}
+              <Link href={tenantUrl('/pay')} className={navLinkClass}>
+                Online Fee Payment (Pay Portal)
+              </Link>
               <Link href={tenantUrl('/admission')} className={navLinkClass}>
                 Admission Circular
               </Link>

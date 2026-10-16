@@ -180,7 +180,7 @@ export default function CandidateUploadPage() {
         </div>
         <div className="flex items-center justify-center gap-3 pt-2">
           <Link
-            href={`/admission/payment/${applicant.id}`}
+            href={`/pay/admission-fees/${applicant.id}`}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg transition"
           >
             <FiCreditCard />

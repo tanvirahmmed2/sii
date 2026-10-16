@@ -286,10 +286,10 @@ export async function POST(request, context) {
         payment_status: 'pending'
       },
       payment: {
-        payment_url: `/admission/payment/${applicant.id}`,
+        payment_url: `/pay/admission-fees/${applicant.id}`,
         invoice_ref: invoiceRef
       },
-      next_step: `/admission/payment/${applicant.id}`
+      next_step: `/pay/admission-fees/${applicant.id}`
     });
   } catch (error) {
     console.error('Error in POST /admissions/apply:', error);
