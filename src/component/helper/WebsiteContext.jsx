@@ -363,6 +363,17 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
       setWebsiteSettings,
       fetchWebsiteSettings,
       getApiEndpoint,
+
+      // Module Allowance & Package Information
+      package: website?.package || null,
+      allowedModules: website?.allowed_modules || [],
+      allowedModuleSlugs: website?.allowed_module_slugs || [],
+      hasModuleAllowance: (slug) => {
+        if (!slug) return false;
+        const target = String(slug).toLowerCase().trim();
+        const slugs = website?.allowed_module_slugs || [];
+        return slugs.includes(target);
+      },
     }),
     [
       website,

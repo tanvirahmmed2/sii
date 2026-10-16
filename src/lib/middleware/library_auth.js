@@ -1,12 +1,12 @@
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
-import { getStaffSession, hasStaffModulePermission, isGeneralStaff } from 'src/lib/middleware/staff.js';
+import { resolveWebsiteFromRequest, hasTenantModuleAllowance } from 'src/lib/middleware/websiteResolver.js';
+import { getStaffSession, hasStaffModulePermission } from 'src/lib/middleware/staff.js';
 import { getOfficerSession } from 'src/lib/middleware/officer.js';
 
 /**
  * Validates whether the incoming request is authorized to perform library operations.
- * Allows:
- *  1. Allowed Staff (General staff or staff with library/sis module permission)
- *  2. Allowed Officers (Officers in Library department or with library module permissions)
+ * Requires:
+ *  1. Tenant website subscription package must include 'library' module
+ *  2. Authenticated Staff with 'library' permission, OR Officer with 'library' department/permission
  *
  * @param {Request} request
  * @param {Object} context
@@ -19,7 +19,17 @@ export async function verifyLibraryAccess(request, context, action = 'view') {
     return { error: 'Educational institution portal not found.', status: 404 };
   }
 
-  // 1. Check Staff Session
+  // 1. Check Tenant Subscription Package Module Allowance
+  const hasAllowance = await hasTenantModuleAllowance(website, 'library');
+  if (!hasAllowance) {
+    return {
+      error: "The Library Management module is not included in this institution's current subscription plan. Please upgrade your package.",
+      status: 403,
+      code: 'MODULE_NOT_SUBSCRIBED',
+    };
+  }
+
+  // 2. Check Staff Session
   const staffSession = await getStaffSession(request);
   if (staffSession) {
     const staffWebsiteId =
@@ -32,13 +42,11 @@ export async function verifyLibraryAccess(request, context, action = 'view') {
       return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
     }
 
-    const generalStaff = await isGeneralStaff(request);
     const hasLibraryPerm =
       hasStaffModulePermission(staffSession, 'library', action) ||
-      hasStaffModulePermission(staffSession, 'management-library', action) ||
-      hasStaffModulePermission(staffSession, 'sis', action);
+      hasStaffModulePermission(staffSession, 'management-library', action);
 
-    if (generalStaff || hasLibraryPerm) {
+    if (hasLibraryPerm) {
       const staffUser = staffSession.staff || staffSession.user || staffSession;
       return {
         website,
@@ -51,6 +59,12 @@ export async function verifyLibraryAccess(request, context, action = 'view') {
         allowed: true
       };
     }
+
+    return {
+      error: `Forbidden: You do not have permission to ${action} library records.`,
+      status: 403,
+      code: 'PERMISSION_DENIED',
+    };
   }
 
   // 3. Check Officer Session
@@ -84,6 +98,12 @@ export async function verifyLibraryAccess(request, context, action = 'view') {
         allowed: true
       };
     }
+
+    return {
+      error: `Forbidden: Officer does not have permission to ${action} library records.`,
+      status: 403,
+      code: 'PERMISSION_DENIED',
+    };
   }
 
   if (!staffSession && !officerSession) {
@@ -95,3 +115,5 @@ export async function verifyLibraryAccess(request, context, action = 'view') {
     status: 403
   };
 }
+
+export default verifyLibraryAccess;

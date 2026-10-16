@@ -1,30 +1,10 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
-import { getStaffSession } from 'src/lib/middleware/staff';
+import { verifyStaffModuleAccess } from 'src/lib/middleware/staff';
+import { uploadImage, deleteImage } from 'src/lib/database/cloudinary.js';
 
-async function verifyStaffAccess(request, context) {
-  const website = await resolveWebsiteFromRequest(request, context);
-  if (!website) {
-    return { error: 'Educational institution portal not found.', status: 404 };
-  }
-  const staffSession = await getStaffSession(request);
-
-  if (!staffSession) {
-    return { error: 'Unauthorized: Staff access required.', status: 401 };
-  }
-
-  const staffWebsiteId =
-    staffSession?.website_id ||
-    staffSession?.websiteId ||
-    staffSession?.staff?.websiteId ||
-    staffSession?.staff?.website_id;
-
-  if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
-    return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
-  }
-
-  return { website, staffSession };
+async function verifyStaffAccess(request, context, action = 'view') {
+  return verifyStaffModuleAccess(request, context, 'website-builder', action);
 }
 
 function slugify(text) {
@@ -37,10 +17,27 @@ function slugify(text) {
   return base || `award-${Date.now()}`;
 }
 
+async function parseAwardRequest(request) {
+  const contentType = request.headers.get('content-type') || '';
+  if (contentType.includes('multipart/form-data')) {
+    const formData = await request.formData();
+    const data = {};
+    for (const [key, value] of formData.entries()) {
+      if (key === 'image' || key === 'file') {
+        data.imageFile = value;
+      } else {
+        data[key] = value;
+      }
+    }
+    return data;
+  }
+  return await request.json().catch(() => ({}));
+}
+
 // GET: List all awards or fetch a single award by slug
 export async function GET(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'view');
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const { searchParams } = new URL(request.url);
@@ -142,10 +139,10 @@ export async function GET(request, context) {
 // POST: Create award (supports instant demo creation & auto-slugify)
 export async function POST(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'create');
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
-    const body = await request.json().catch(() => ({}));
+    const body = await parseAwardRequest(request);
     const isDemo = Boolean(body.is_demo);
     const title = body.title ? String(body.title).trim() : (isDemo ? 'New Institutional Recognition' : '');
 
@@ -170,8 +167,9 @@ export async function POST(request, context) {
     const year = body.year !== undefined ? (body.year ? parseInt(body.year, 10) : null) : (isDemo ? currentYear : null);
     const issuer = body.issuer ? String(body.issuer).trim() : (isDemo ? 'Educational Board / Accrediting Council' : null);
     const description = body.description || (isDemo ? '<p>Details and recognition citations for this achievement.</p>' : '');
-    const isActive = body.is_active !== undefined ? Boolean(body.is_active) : (isDemo ? false : true);
+    const isActive = body.is_active !== undefined ? (body.is_active === 'true' || body.is_active === true) : (isDemo ? false : true);
 
+    // 1. Create table row first
     const awardResult = await queryDb(
       `INSERT INTO website_awards 
         (website_id, title, slug, description, year, issuer, is_active)
@@ -182,9 +180,35 @@ export async function POST(request, context) {
 
     const createdAward = awardResult.rows[0];
 
-    // Single image handling
+    // 2. Upload photo if provided and insert into website_award_images
     let savedImage = null;
-    if (body.image && body.image.image_url) {
+    const hasImageFile = body.imageFile && typeof body.imageFile === 'object' && body.imageFile.name;
+    if (hasImageFile) {
+      try {
+        const uploadRes = await uploadImage(body.imageFile, `school/${auth.website.id}/awards`);
+        const imgResult = await queryDb(
+          `INSERT INTO website_award_images 
+            (website_id, award_id, image_url, image_id, caption)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (award_id) DO UPDATE SET
+             image_url = EXCLUDED.image_url,
+             image_id = EXCLUDED.image_id,
+             caption = EXCLUDED.caption,
+             updated_at = CURRENT_TIMESTAMP
+           RETURNING *`,
+          [
+            auth.website.id,
+            createdAward.id,
+            uploadRes.url,
+            uploadRes.publicId,
+            body.caption || null,
+          ]
+        );
+        savedImage = imgResult.rows[0];
+      } catch (uploadErr) {
+        console.error('Failed to upload award photo after record creation:', uploadErr);
+      }
+    } else if (body.image && body.image.image_url) {
       const imgResult = await queryDb(
         `INSERT INTO website_award_images 
           (website_id, award_id, image_url, image_id, caption)
@@ -226,11 +250,11 @@ export async function POST(request, context) {
 // PUT: Update award (by ID or current slug)
 export async function PUT(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'edit');
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
-    const body = await request.json().catch(() => ({}));
-    const { id, current_slug, title, description, year, issuer, is_active, image, remove_image } = body;
+    const body = await parseAwardRequest(request);
+    const { id, current_slug, title, description, year, issuer, is_active, remove_image } = body;
 
     let targetAward = null;
     if (id) {
@@ -264,6 +288,8 @@ export async function PUT(request, context) {
       finalSlug = collision.rowCount > 0 ? `${candidateSlug}-${Math.floor(1000 + Math.random() * 9000)}` : candidateSlug;
     }
 
+    // 1. Update website_awards table first
+    const isActiveVal = is_active !== undefined ? (is_active === 'true' || is_active === true) : null;
     await queryDb(
       `UPDATE website_awards
        SET title = COALESCE($1, title),
@@ -280,19 +306,58 @@ export async function PUT(request, context) {
         description !== undefined ? description : null,
         year !== undefined ? (year ? parseInt(year, 10) : null) : null,
         issuer !== undefined ? (issuer ? String(issuer).trim() : null) : null,
-        is_active !== undefined ? Boolean(is_active) : null,
+        isActiveVal,
         awardId,
         auth.website.id,
       ]
     );
 
-    // Single image handling: remove or upsert
-    if (remove_image) {
+    // 2. Fetch existing image record if any
+    const existingImgRes = await queryDb(
+      `SELECT * FROM website_award_images WHERE award_id = $1 AND website_id = $2`,
+      [awardId, auth.website.id]
+    );
+    const existingImg = existingImgRes.rows[0] || null;
+
+    const shouldRemoveImage = remove_image === 'true' || remove_image === true;
+    const hasNewImageFile = body.imageFile && typeof body.imageFile === 'object' && body.imageFile.name;
+
+    if (shouldRemoveImage) {
+      if (existingImg?.image_id) {
+        await deleteImage(existingImg.image_id).catch(() => {});
+      }
       await queryDb(
         `DELETE FROM website_award_images WHERE award_id = $1 AND website_id = $2`,
         [awardId, auth.website.id]
       );
-    } else if (image && image.image_url) {
+    } else if (hasNewImageFile) {
+      try {
+        const uploadRes = await uploadImage(body.imageFile, `school/${auth.website.id}/awards`);
+        await queryDb(
+          `INSERT INTO website_award_images 
+            (website_id, award_id, image_url, image_id, caption)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (award_id) DO UPDATE SET
+             image_url = EXCLUDED.image_url,
+             image_id = EXCLUDED.image_id,
+             caption = EXCLUDED.caption,
+             updated_at = CURRENT_TIMESTAMP`,
+          [
+            auth.website.id,
+            awardId,
+            uploadRes.url,
+            uploadRes.publicId,
+            body.caption || existingImg?.caption || null,
+          ]
+        );
+
+        if (existingImg?.image_id && existingImg.image_id !== uploadRes.publicId) {
+          await deleteImage(existingImg.image_id).catch(() => {});
+        }
+      } catch (uploadErr) {
+        console.error('Failed to upload new award image:', uploadErr);
+      }
+    } else if (body.image && body.image.image_url) {
       await queryDb(
         `INSERT INTO website_award_images 
           (website_id, award_id, image_url, image_id, caption)
@@ -305,14 +370,19 @@ export async function PUT(request, context) {
         [
           auth.website.id,
           awardId,
-          String(image.image_url).trim(),
-          image.image_id || image.publicId || null,
-          image.caption || null,
+          String(body.image.image_url).trim(),
+          body.image.image_id || body.image.publicId || null,
+          body.image.caption || null,
         ]
+      );
+    } else if (body.caption !== undefined && existingImg) {
+      await queryDb(
+        `UPDATE website_award_images SET caption = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND website_id = $3`,
+        [body.caption || null, existingImg.id, auth.website.id]
       );
     }
 
-    // Refreshed record
+    // 3. Refreshed record
     const fullAward = await queryDb(
       `SELECT 
         a.id, a.website_id, a.title, a.slug, a.description, a.year, a.issuer, a.is_active, a.created_at, a.updated_at,
@@ -337,7 +407,7 @@ export async function PUT(request, context) {
 // DELETE: Delete award
 export async function DELETE(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'delete');
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const { searchParams } = new URL(request.url);
@@ -349,6 +419,24 @@ export async function DELETE(request, context) {
 
     if (!id && !slug) {
       return NextResponse.json({ success: false, error: 'Award ID or slug is required for deletion.' }, { status: 400 });
+    }
+
+    // Find image ID before deletion
+    let existingImgId = null;
+    if (id) {
+      const imgRes = await queryDb(
+        `SELECT ai.image_id FROM website_award_images ai WHERE ai.award_id = $1 AND ai.website_id = $2`,
+        [id, auth.website.id]
+      );
+      existingImgId = imgRes.rows[0]?.image_id;
+    } else {
+      const imgRes = await queryDb(
+        `SELECT ai.image_id FROM website_award_images ai 
+         JOIN website_awards a ON a.id = ai.award_id
+         WHERE a.slug = $1 AND a.website_id = $2`,
+        [slug, auth.website.id]
+      );
+      existingImgId = imgRes.rows[0]?.image_id;
     }
 
     let deleteResult;
@@ -366,6 +454,10 @@ export async function DELETE(request, context) {
 
     if (deleteResult.rowCount === 0) {
       return NextResponse.json({ success: false, error: 'Award not found or already deleted.' }, { status: 404 });
+    }
+
+    if (existingImgId) {
+      await deleteImage(existingImgId).catch(() => {});
     }
 
     return NextResponse.json({

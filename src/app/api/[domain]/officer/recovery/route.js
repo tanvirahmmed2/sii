@@ -52,7 +52,7 @@ export async function POST(request, context) {
     const cleanEmail = String(email).trim().toLowerCase();
 
     const officerRes = await queryDb(
-      `SELECT id, name, email, is_active
+      `SELECT id, name, email, is_active, recovery_token_expires
        FROM website_officers
        WHERE website_id = $1 AND LOWER(email) = $2
        LIMIT 1`,
@@ -73,6 +73,17 @@ export async function POST(request, context) {
         { success: false, error: 'This officer account is deactivated. Please contact administration.' },
         { status: 403 }
       );
+    }
+
+    // Rate limiting: 60-second cooldown on recovery requests
+    if (officer.recovery_token_expires) {
+      const remainingMs = new Date(officer.recovery_token_expires).getTime() - Date.now();
+      if (remainingMs > 59 * 60 * 1000) {
+        return NextResponse.json({
+          success: false,
+          error: 'Please wait at least 60 seconds before requesting another recovery link.'
+        }, { status: 429 });
+      }
     }
 
     const recoveryToken = crypto.randomBytes(32).toString('hex');

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { getStaffSession } from 'src/lib/middleware/staff';
+import { uploadImage, deleteImage } from 'src/lib/database/cloudinary.js';
 
 async function verifyStaffAccess(request, context) {
   const website = await resolveWebsiteFromRequest(request, context);
@@ -25,6 +26,23 @@ async function verifyStaffAccess(request, context) {
   }
 
   return { website, staffSession };
+}
+
+async function parseNewsImageRequest(request) {
+  const contentType = request.headers.get('content-type') || '';
+  if (contentType.includes('multipart/form-data')) {
+    const formData = await request.formData();
+    const data = {};
+    for (const [key, value] of formData.entries()) {
+      if (key === 'file' || key === 'image') {
+        data.file = value;
+      } else {
+        data[key] = value;
+      }
+    }
+    return data;
+  }
+  return await request.json().catch(() => ({}));
 }
 
 // GET: List images for news articles
@@ -76,24 +94,20 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Add an image to a news article
+// POST: Add an image to a news article (table-first verification and Cloudinary upload)
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
-    const body = await request.json().catch(() => ({}));
-    const { news_id, image_url, image_id, caption, is_cover = false, display_order = 0 } = body;
+    const body = await parseNewsImageRequest(request);
+    const { news_id, image_url, image_id, caption, is_cover, display_order, file } = body;
 
     if (!news_id) {
       return NextResponse.json({ success: false, error: 'News article ID is required.' }, { status: 400 });
     }
 
-    if (!image_url || !String(image_url).trim()) {
-      return NextResponse.json({ success: false, error: 'Image URL is required.' }, { status: 400 });
-    }
-
-    // Verify news article exists in tenant
+    // 1. Verify news article exists in tenant database FIRST before any upload
     const newsCheck = await queryDb(
       `SELECT id, title FROM website_news WHERE id = $1 AND website_id = $2`,
       [news_id, auth.website.id]
@@ -103,8 +117,29 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'News article not found or unauthorized.' }, { status: 404 });
     }
 
+    let finalImageUrl = image_url;
+    let finalImageId = image_id || null;
+
+    // 2. Upload to Cloudinary only if the parent news record exists
+    if (file && typeof file === 'object' && file.name) {
+      try {
+        const uploadRes = await uploadImage(file, `school/${auth.website.id}/news`);
+        finalImageUrl = uploadRes.url;
+        finalImageId = uploadRes.publicId;
+      } catch (uploadErr) {
+        console.error('Cloudinary upload error:', uploadErr);
+        return NextResponse.json({ success: false, error: 'Failed to upload photo to Cloudinary.' }, { status: 500 });
+      }
+    }
+
+    if (!finalImageUrl || !String(finalImageUrl).trim()) {
+      return NextResponse.json({ success: false, error: 'Image file or image URL is required.' }, { status: 400 });
+    }
+
+    const isCoverBool = is_cover === 'true' || is_cover === true;
+
     // If setting as cover, unset cover on any existing images for this news
-    if (is_cover) {
+    if (isCoverBool) {
       await queryDb(
         `UPDATE website_news_images SET is_cover = FALSE WHERE news_id = $1 AND website_id = $2`,
         [news_id, auth.website.id]
@@ -119,10 +154,10 @@ export async function POST(request, context) {
       [
         auth.website.id,
         news_id,
-        String(image_url).trim(),
-        image_id || null,
+        String(finalImageUrl).trim(),
+        finalImageId,
         caption || null,
-        Boolean(is_cover),
+        isCoverBool,
         parseInt(display_order, 10) || 0
       ]
     );
@@ -144,7 +179,7 @@ export async function PUT(request, context) {
     const auth = await verifyStaffAccess(request, context);
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
-    const body = await request.json().catch(() => ({}));
+    const body = await parseNewsImageRequest(request);
     const { id, caption, is_cover, display_order } = body;
 
     if (!id) {
@@ -162,9 +197,10 @@ export async function PUT(request, context) {
     }
 
     const currentImg = imgCheck.rows[0];
+    const isCoverBool = is_cover !== undefined ? (is_cover === 'true' || is_cover === true) : undefined;
 
     // If making this cover, unset others
-    if (is_cover === true) {
+    if (isCoverBool === true) {
       await queryDb(
         `UPDATE website_news_images SET is_cover = FALSE WHERE news_id = $1 AND website_id = $2`,
         [currentImg.news_id, auth.website.id]
@@ -181,7 +217,7 @@ export async function PUT(request, context) {
        RETURNING *`,
       [
         caption !== undefined ? caption : null,
-        is_cover !== undefined ? Boolean(is_cover) : null,
+        isCoverBool !== undefined ? isCoverBool : null,
         display_order !== undefined ? parseInt(display_order, 10) : null,
         id,
         auth.website.id
@@ -199,7 +235,7 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove news image
+// DELETE: Remove news image and cleanup Cloudinary
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -215,12 +251,17 @@ export async function DELETE(request, context) {
     }
 
     const deleteResult = await queryDb(
-      `DELETE FROM website_news_images WHERE id = $1 AND website_id = $2 RETURNING id, news_id`,
+      `DELETE FROM website_news_images WHERE id = $1 AND website_id = $2 RETURNING id, news_id, image_id`,
       [id, auth.website.id]
     );
 
     if (deleteResult.rowCount === 0) {
       return NextResponse.json({ success: false, error: 'News image not found or already deleted.' }, { status: 404 });
+    }
+
+    const deletedRecord = deleteResult.rows[0];
+    if (deletedRecord.image_id) {
+      await deleteImage(deletedRecord.image_id).catch(() => {});
     }
 
     return NextResponse.json({

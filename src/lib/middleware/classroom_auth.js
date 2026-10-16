@@ -1,5 +1,5 @@
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
-import { getStaffSession, hasStaffModulePermission, isGeneralStaff } from 'src/lib/middleware/staff.js';
+import { resolveWebsiteFromRequest, hasTenantModuleAllowance } from 'src/lib/middleware/websiteResolver.js';
+import { getStaffSession, hasStaffModulePermission } from 'src/lib/middleware/staff.js';
 import { getOfficerSession } from 'src/lib/middleware/officer.js';
 import { getTeacherSession } from 'src/lib/middleware/teacher.js';
 import { getStudentSession } from 'src/lib/middleware/students.js';
@@ -7,12 +7,23 @@ import { query } from 'src/lib/database/db.js';
 
 /**
  * Validates staff/officer access to manage classrooms (classes & sessions).
- * Strict Tenant Boundary. No developer bypass.
+ * Strict Tenant Boundary. Checks tenant subscription allowance and module permissions.
  */
 export async function verifyStaffClassroomAccess(request, context, action = 'view') {
   const website = await resolveWebsiteFromRequest(request, context);
   if (!website) {
-    return { error: 'Educational institution portal not found.', status: 404 };
+    return { error: 'Educational institution portal not found.', status: 404, code: 'WEBSITE_NOT_FOUND' };
+  }
+
+  // Check tenant module allowance
+  const hasAllowance = (await hasTenantModuleAllowance(website, 'routine')) || (await hasTenantModuleAllowance(website, 'sis'));
+  if (!hasAllowance) {
+    return {
+      error: "The 'routine' / 'sis' module is not included in this institution's subscription plan.",
+      status: 403,
+      code: 'MODULE_NOT_SUBSCRIBED',
+      website,
+    };
   }
 
   // 1. Check Staff Session
@@ -25,18 +36,17 @@ export async function verifyStaffClassroomAccess(request, context, action = 'vie
       staffSession?.staff?.website_id;
 
     if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
-      return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
+      return { error: 'Forbidden: Cross-tenant access denied.', status: 403, code: 'FORBIDDEN_CROSS_TENANT' };
     }
 
-    const generalStaff = await isGeneralStaff(request);
     const hasClassroomPerm =
+      hasStaffModulePermission(staffSession, 'routine', action) ||
       hasStaffModulePermission(staffSession, 'classrooms', action) ||
       hasStaffModulePermission(staffSession, 'classroom', action) ||
       hasStaffModulePermission(staffSession, 'classes', action) ||
-      hasStaffModulePermission(staffSession, 'academic', action) ||
       hasStaffModulePermission(staffSession, 'sis', action);
 
-    if (generalStaff || hasClassroomPerm) {
+    if (hasClassroomPerm) {
       const staffUser = staffSession.staff || staffSession.user || staffSession;
       return {
         website,

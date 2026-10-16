@@ -159,30 +159,6 @@ export default function CandidateUploadPage() {
     );
   }
 
-  const [paying, setPaying] = useState(false);
-
-  const handlePayNow = async () => {
-    setPaying(true);
-    try {
-      const res = await fetch(`/api/${domain}/admissions/pay`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ applicant_id: applicant.id }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        toast.success('Admission fee payment cleared successfully!');
-        setApplicant((prev) => ({ ...prev, payment_status: 'paid' }));
-      } else {
-        toast.error(data.error || 'Failed to complete payment.');
-      }
-    } catch {
-      toast.error('Network error during fee payment.');
-    } finally {
-      setPaying(false);
-    }
-  };
-
   // Payment clearance enforcement
   if (applicant.payment_status !== 'paid') {
     return (
@@ -210,13 +186,6 @@ export default function CandidateUploadPage() {
             <FiCreditCard />
             <span>Go to Payment Gateway</span>
           </Link>
-          <button
-            onClick={handlePayNow}
-            disabled={paying}
-            className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-xs rounded-lg transition cursor-pointer disabled:opacity-50"
-          >
-            {paying ? 'Processing...' : 'Instant Clear'}
-          </button>
         </div>
       </div>
     );

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/websiteResolver.js';
 import { getStaffSession } from 'src/lib/middleware/staff.js';
-import { deleteImage } from 'src/lib/database/cloudinary.js';
+import { uploadImage, deleteImage } from 'src/lib/database/cloudinary.js';
 
 async function verifyStaffAccess(request, context) {
   const website = await resolveWebsiteFromRequest(request, context);
@@ -142,6 +142,30 @@ export async function GET(request, context) {
   }
 }
 
+// Helper to parse multipart/form-data or json
+async function parseDeptHeadRequest(request) {
+  const contentType = request.headers.get('content-type') || '';
+  let body = {};
+  let imageFile = null;
+
+  if (contentType.includes('multipart/form-data') || contentType.includes('form-data')) {
+    const formData = await request.formData();
+    for (const [key, value] of formData.entries()) {
+      if (value && typeof value === 'object' && typeof value.arrayBuffer === 'function') {
+        if (key === 'file' || key === 'image' || key === 'photo') {
+          imageFile = value;
+        }
+      } else {
+        body[key] = value;
+      }
+    }
+  } else {
+    body = await request.json().catch(() => ({}));
+  }
+
+  return { body, imageFile };
+}
+
 // POST: Create or assign a department head
 export async function POST(request, context) {
   try {
@@ -150,7 +174,7 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
 
-    const body = await request.json().catch(() => ({}));
+    const { body, imageFile } = await parseDeptHeadRequest(request);
     const {
       department_id,
       teacher_id = null,
@@ -186,6 +210,7 @@ export async function POST(request, context) {
 
     const staffId = auth.staffSession?.staff_id || auth.staffSession?.id || null;
 
+    // STEP 1: CREATE OR UPSERT DEPARTMENT HEAD IN DATABASE FIRST
     const result = await queryDb(
       `INSERT INTO website_dept_heads (
         website_id, department_id, teacher_id, name, title, designation,
@@ -228,7 +253,24 @@ export async function POST(request, context) {
       ]
     );
 
-    const savedHead = await getJoinedDeptHead(result.rows[0].id, auth.website.id);
+    const createdRecordId = result.rows[0].id;
+
+    // STEP 2: ONLY AFTER TABLE ROW EXISTS, UPLOAD IMAGE TO CLOUDINARY & SAVE URL
+    if (imageFile) {
+      try {
+        const uploadRes = await uploadImage(imageFile, `school/${auth.website.id}/dept_heads`);
+        if (uploadRes?.secure_url) {
+          await queryDb(
+            `UPDATE website_dept_heads SET image = $1, image_id = $2 WHERE id = $3 AND website_id = $4`,
+            [uploadRes.secure_url, uploadRes.publicId, createdRecordId, auth.website.id]
+          );
+        }
+      } catch (uploadErr) {
+        console.error('Department head photo Cloudinary upload error:', uploadErr);
+      }
+    }
+
+    const savedHead = await getJoinedDeptHead(createdRecordId, auth.website.id);
 
     return NextResponse.json({
       success: true,
@@ -251,7 +293,7 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
 
-    const body = await request.json().catch(() => ({}));
+    const { body, imageFile } = await parseDeptHeadRequest(request);
     const {
       id,
       department_id,
@@ -308,8 +350,8 @@ export async function PUT(request, context) {
       }
     }
 
-    // If image is being replaced, clean up old image if different
-    if (image_id !== undefined && existing.image_id && existing.image_id !== image_id) {
+    // If image is being replaced by URL, clean up old image if different
+    if (image_id !== undefined && existing.image_id && existing.image_id !== image_id && !imageFile) {
       deleteImage(existing.image_id).catch(() => null);
     }
 
@@ -327,6 +369,7 @@ export async function PUT(request, context) {
     const updatedIsActive = is_active !== undefined ? Boolean(is_active) : existing.is_active;
     const updatedTeacherId = teacher_id !== undefined ? (teacher_id || null) : existing.teacher_id;
 
+    // STEP 1: UPDATE DEPARTMENT HEAD IN DATABASE FIRST
     await queryDb(
       `UPDATE website_dept_heads
        SET department_id = $1,
@@ -364,6 +407,24 @@ export async function PUT(request, context) {
         auth.website.id,
       ]
     );
+
+    // STEP 2: IF NEW FILE PROVIDED, UPLOAD TO CLOUDINARY & UPDATE TABLE ROW
+    if (imageFile) {
+      try {
+        const uploadRes = await uploadImage(imageFile, `school/${auth.website.id}/dept_heads`);
+        if (uploadRes?.secure_url) {
+          if (existing.image_id) {
+            deleteImage(existing.image_id).catch(() => null);
+          }
+          await queryDb(
+            `UPDATE website_dept_heads SET image = $1, image_id = $2 WHERE id = $3 AND website_id = $4`,
+            [uploadRes.secure_url, uploadRes.publicId, existing.id, auth.website.id]
+          );
+        }
+      } catch (uploadErr) {
+        console.error('Department head photo update Cloudinary error:', uploadErr);
+      }
+    }
 
     const savedHead = await getJoinedDeptHead(existing.id, auth.website.id);
 

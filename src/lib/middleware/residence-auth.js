@@ -1,11 +1,12 @@
-import { resolveWebsiteFromRequest } from './creator.js';
-import { getStaffSession, hasStaffModulePermission, isGeneralStaff } from './staff.js';
+import { resolveWebsiteFromRequest, hasTenantModuleAllowance } from './websiteResolver.js';
+import { getStaffSession, hasStaffModulePermission } from './staff.js';
 
 /**
  * Verifies staff authentication and permission for residence/hall operations.
- * Allowed:
- * 1. Staff with 'residence', 'hall', or 'hostel' module permissions
- * 2. Authenticated active staff members with general access
+ * Requires:
+ * 1. Tenant website subscription package must include 'hostel' module
+ * 2. Authenticated staff member belonging to this tenant
+ * 3. Staff member has explicit permission for 'hostel' or 'residence' module
  */
 export async function verifyResidenceStaffAccess(request, context, action = 'view') {
   const website = await resolveWebsiteFromRequest(request, context);
@@ -13,8 +14,18 @@ export async function verifyResidenceStaffAccess(request, context, action = 'vie
     return { error: 'Educational institution portal not found.', status: 404 };
   }
 
-  const staffSession = await getStaffSession(request);
+  // 1. Check Tenant Subscription Module Allowance
+  const hasAllowance = await hasTenantModuleAllowance(website, 'hostel') || await hasTenantModuleAllowance(website, 'residence');
+  if (!hasAllowance) {
+    return {
+      error: "The Residence & Hostel module is not included in this institution's subscription plan. Please upgrade your package.",
+      status: 403,
+      code: 'MODULE_NOT_SUBSCRIBED',
+    };
+  }
 
+  // 2. Check Staff Session
+  const staffSession = await getStaffSession(request);
   if (!staffSession) {
     return { error: 'Unauthorized: Staff access required.', status: 401 };
   }
@@ -29,13 +40,13 @@ export async function verifyResidenceStaffAccess(request, context, action = 'vie
     return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
   }
 
-  const hasResidenceModule =
+  // 3. Check Staff Granular Permission
+  const hasResidencePerm =
+    hasStaffModulePermission(staffSession, 'hostel', action) ||
     hasStaffModulePermission(staffSession, 'residence', action) ||
-    hasStaffModulePermission(staffSession, 'hall', action) ||
-    hasStaffModulePermission(staffSession, 'hostel', action);
-  const generalStaff = await isGeneralStaff(request);
+    hasStaffModulePermission(staffSession, 'hall', action);
 
-  if (!hasResidenceModule && !generalStaff) {
+  if (!hasResidencePerm) {
     return { error: `Forbidden: Insufficient privileges to ${action} residence/hall records.`, status: 403 };
   }
 

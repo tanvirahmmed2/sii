@@ -1,12 +1,11 @@
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
-import { getStaffSession, hasStaffModulePermission, isGeneralStaff } from 'src/lib/middleware/staff.js';
+import { resolveWebsiteFromRequest, hasTenantModuleAllowance } from 'src/lib/middleware/websiteResolver.js';
+import { getStaffSession, hasStaffModulePermission } from 'src/lib/middleware/staff.js';
 import { getOfficerSession } from 'src/lib/middleware/officer.js';
 
 /**
  * Validates whether the incoming request is authorized to manage education fees, batch dues, and student payment collections.
  * 
- * Strict Tenant Boundary: Only authorized tenant staff and officers can manage fees.
- * No developer admin bypass.
+ * Strict Tenant Boundary: Checks tenant subscription allowance and module permissions.
  *
  * @param {Request} request
  * @param {Object} context
@@ -16,7 +15,18 @@ import { getOfficerSession } from 'src/lib/middleware/officer.js';
 export async function verifyEducationFeeAccess(request, context, action = 'view') {
   const website = await resolveWebsiteFromRequest(request, context);
   if (!website) {
-    return { error: 'Educational institution portal not found.', status: 404 };
+    return { error: 'Educational institution portal not found.', status: 404, code: 'WEBSITE_NOT_FOUND' };
+  }
+
+  // Check tenant module allowance
+  const hasAllowance = (await hasTenantModuleAllowance(website, 'fees')) || (await hasTenantModuleAllowance(website, 'accounting'));
+  if (!hasAllowance) {
+    return {
+      error: "The 'fees' / 'accounting' module is not included in this institution's subscription plan.",
+      status: 403,
+      code: 'MODULE_NOT_SUBSCRIBED',
+      website,
+    };
   }
 
   // 1. Check Staff Session
@@ -29,20 +39,18 @@ export async function verifyEducationFeeAccess(request, context, action = 'view'
       staffSession?.staff?.website_id;
 
     if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
-      return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
+      return { error: 'Forbidden: Cross-tenant access denied.', status: 403, code: 'FORBIDDEN_CROSS_TENANT' };
     }
 
-    const generalStaff = await isGeneralStaff(request);
     const hasFeePerm =
       hasStaffModulePermission(staffSession, 'fees', action) ||
       hasStaffModulePermission(staffSession, 'fee', action) ||
       hasStaffModulePermission(staffSession, 'education-fee', action) ||
       hasStaffModulePermission(staffSession, 'fees-education', action) ||
       hasStaffModulePermission(staffSession, 'accounts', action) ||
-      hasStaffModulePermission(staffSession, 'accounting', action) ||
-      hasStaffModulePermission(staffSession, 'sis', action);
+      hasStaffModulePermission(staffSession, 'accounting', action);
 
-    if (generalStaff || hasFeePerm) {
+    if (hasFeePerm) {
       const staffUser = staffSession.staff || staffSession.user || staffSession;
       return {
         website,

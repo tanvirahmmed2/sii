@@ -48,7 +48,7 @@ export async function POST(request, context) {
     // Pre-fetch academic references for this institution
     const [deptsRes, classesRes, sectionsRes, sessionsRes] = await Promise.all([
       queryDb(`SELECT id, name, code FROM website_departments WHERE website_id = $1`, [website.id]),
-      queryDb(`SELECT id, name, code, department_id, session_id FROM website_classes WHERE website_id = $1`, [website.id]),
+      queryDb(`SELECT id, name, code, department_id FROM website_classes WHERE website_id = $1`, [website.id]),
       queryDb(`SELECT id, name, class_id FROM website_sections WHERE website_id = $1`, [website.id]),
       queryDb(`SELECT id, name FROM website_sessions WHERE website_id = $1`, [website.id]),
     ]);

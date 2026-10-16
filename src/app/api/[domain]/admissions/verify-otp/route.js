@@ -41,6 +41,14 @@ export async function POST(request, context) {
 
     const record = res.rows[0];
 
+    if (record.is_verified) {
+      return NextResponse.json({
+        success: true,
+        message: 'Email is already verified. You can proceed with the application.',
+        email: cleanEmail
+      });
+    }
+
     if (new Date() > new Date(record.expires_at)) {
       return NextResponse.json({ success: false, error: 'Verification code has expired. Please request a new code.' }, { status: 410 });
     }

@@ -39,7 +39,6 @@ function StudentSetupContent() {
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
-  const [devCode, setDevCode] = useState(null);
 
   // Loading & Saving states
   const [submittingStep, setSubmittingStep] = useState(false);
@@ -142,9 +141,6 @@ function StudentSetupContent() {
       if (res.ok && data.success) {
         toast.success(data.message || 'Verification code sent to your email!');
         setOtpSent(true);
-        if (data.payload?.dev_code) {
-          setDevCode(data.payload.dev_code);
-        }
       } else {
         toast.error(data.error || 'Failed to dispatch verification code.');
       }
@@ -552,11 +548,6 @@ function StudentSetupContent() {
                   <label className="block text-xs font-bold text-slate-900 dark:text-white">
                     Enter 6-Digit Verification Code
                   </label>
-                  {devCode && (
-                    <span className="text-[10px] bg-amber-100 text-amber-800 font-mono px-2 py-0.5 rounded font-bold">
-                      Dev Code: {devCode}
-                    </span>
-                  )}
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   Please enter the code sent to <strong>{emailInput}</strong>.

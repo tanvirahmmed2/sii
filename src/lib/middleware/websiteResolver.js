@@ -4,7 +4,7 @@ import { BASE_DOMAIN, BASE_URL, extractBaseDomain } from '../database/secret.js'
 // Configuration
 const DEFAULT_CACHE_TTL_MS = 60 * 1000; // 60 seconds TTL for valid websites
 const DEFAULT_NEGATIVE_CACHE_TTL_MS = 5 * 1000; // 5 seconds negative cache on not-found or DB errors
-const QUERY_TIMEOUT_MS = 4000; // 4s timeout prevents 20s+ DNS/pooler hangs
+const QUERY_TIMEOUT_MS = 10000; // 10s timeout prevents DNS/pooler hangs on remote connections
 
 // In-memory cache structures
 const websiteCache = new Map();
@@ -137,6 +137,7 @@ export async function extractWebsiteIdentifier(request, context) {
 
 /**
  * Execute raw database query with a strict timeout to avoid connection hangs.
+ * Also retrieves tenant subscription package information and allowed modules.
  *
  * @param {string} cleanId
  * @returns {Promise<object|null>}
@@ -146,7 +147,7 @@ async function fetchWebsiteFromDb(cleanId) {
   const noWww = cleanId.replace(/^www\./, '');
 
   const sql = `
-    SELECT id, creator_id, name, slug, subdomain, subdomain AS domain, custom_domain,
+    SELECT id, creator_id, subscription_id, name, slug, subdomain, subdomain AS domain, custom_domain,
            custom_domain_verified, institution_type, eiin_number, contact_email, contact_phone, address,
            facebook_url, twitter_url, instagram_url, youtube_url, linkedin_url,
            primary_color, secondary_color, theme, status, is_maintenance_mode,
@@ -195,6 +196,86 @@ async function fetchWebsiteFromDb(cleanId) {
     // Default color and configuration fallbacks
     website.primary_color = website.primary_color || '#1e40af';
     website.secondary_color = website.secondary_color || '#0ea5e9';
+
+    // Fetch website subscription package and allowed modules
+    let allowedModules = [];
+    let allowedModuleSlugs = [];
+    let packageInfo = null;
+
+    try {
+      const pkgRes = await query(
+        `SELECT p.id AS package_id, p.name AS package_name, p.slug AS package_slug,
+                p.max_students, p.max_teachers, p.max_staff, p.max_storage_mb, p.max_websites,
+                s.id AS subscription_id, s.status AS subscription_status,
+                COALESCE(
+                  (
+                    SELECT json_agg(
+                      json_build_object(
+                        'id', wm.id,
+                        'name', wm.name,
+                        'slug', wm.slug,
+                        'description', wm.description,
+                        'icon', wm.icon
+                      ) ORDER BY wm.id ASC
+                    )
+                    FROM package_modules pm
+                    JOIN website_modules wm ON wm.id = pm.website_module_id
+                    WHERE pm.package_id = p.id AND wm.is_active = TRUE
+                  ),
+                  '[]'::json
+                ) AS allowed_modules,
+                COALESCE(
+                  (
+                    SELECT array_agg(DISTINCT wm.slug ORDER BY wm.slug ASC)
+                    FROM package_modules pm
+                    JOIN website_modules wm ON wm.id = pm.website_module_id
+                    WHERE pm.package_id = p.id AND wm.is_active = TRUE
+                  ),
+                  ARRAY[]::varchar[]
+                ) AS allowed_module_slugs
+         FROM subscriptions s
+         JOIN packages p ON p.id = s.package_id
+         WHERE (s.id = $1 OR s.website_id = $2)
+           AND s.status = 'active'
+         ORDER BY (s.id = $1) DESC, s.id DESC
+         LIMIT 1`,
+        [website.subscription_id || 0, website.id]
+      );
+
+      if (pkgRes && pkgRes.rows && pkgRes.rows.length > 0) {
+        const pRow = pkgRes.rows[0];
+        packageInfo = {
+          id: pRow.package_id,
+          name: pRow.package_name,
+          slug: pRow.package_slug,
+          max_students: pRow.max_students,
+          max_teachers: pRow.max_teachers,
+          max_staff: pRow.max_staff,
+          max_storage_mb: pRow.max_storage_mb,
+          subscription_id: pRow.subscription_id,
+          subscription_status: pRow.subscription_status,
+        };
+        allowedModules = pRow.allowed_modules || [];
+        allowedModuleSlugs = pRow.allowed_module_slugs || [];
+      } else {
+        // Fallback: If no subscription is active, load active modules as default allowance
+        const fallbackMods = await query(
+          `SELECT id, name, slug, description, icon FROM website_modules WHERE is_active = TRUE ORDER BY id ASC`
+        ).catch(() => ({ rows: [] }));
+        allowedModules = fallbackMods.rows || [];
+        allowedModuleSlugs = allowedModules.map((m) => m.slug);
+      }
+    } catch (e) {
+      console.warn('[websiteResolver] Error loading package modules:', e.message);
+    }
+
+    website.package = packageInfo;
+    website.package_id = packageInfo?.id || null;
+    website.package_name = packageInfo?.name || null;
+    website.package_slug = packageInfo?.slug || null;
+    website.allowed_modules = allowedModules;
+    website.allowed_module_slugs = allowedModuleSlugs;
+    website.allowedModules = allowedModuleSlugs;
 
     // Shallow copy settings aliases to maintain compatibility without circular JSON references
     const settingsCopy = { ...website };
@@ -386,6 +467,50 @@ export function clearWebsiteCache() {
   inFlightResolutions.clear();
 }
 
+/**
+ * Check whether a tenant website has module allowance for a given module slug
+ * @param {object|string|number} websiteOrId
+ * @param {string} moduleSlug
+ * @returns {Promise<boolean>}
+ */
+export async function hasTenantModuleAllowance(websiteOrId, moduleSlug) {
+  if (!websiteOrId || !moduleSlug) return false;
+
+  const targetSlug = String(moduleSlug).trim().toLowerCase();
+
+  // If website object with loaded slugs was passed
+  if (typeof websiteOrId === 'object' && Array.isArray(websiteOrId.allowed_module_slugs)) {
+    return websiteOrId.allowed_module_slugs.includes(targetSlug);
+  }
+
+  // If identifier or ID passed, resolve website
+  const website = typeof websiteOrId === 'object' ? websiteOrId : await resolveWebsite(websiteOrId);
+  if (!website) return false;
+
+  if (Array.isArray(website.allowed_module_slugs)) {
+    return website.allowed_module_slugs.includes(targetSlug);
+  }
+
+  return false;
+}
+
+/**
+ * Get all allowed modules and package metadata for a tenant website
+ * @param {object|string|number} websiteOrId
+ * @returns {Promise<{ package: object|null, allowed_modules: Array, allowed_module_slugs: Array }>}
+ */
+export async function getTenantAllowedModules(websiteOrId) {
+  const website = typeof websiteOrId === 'object' ? websiteOrId : await resolveWebsite(websiteOrId);
+  if (!website) {
+    return { package: null, allowed_modules: [], allowed_module_slugs: [] };
+  }
+  return {
+    package: website.package || null,
+    allowed_modules: website.allowed_modules || [],
+    allowed_module_slugs: website.allowed_module_slugs || [],
+  };
+}
+
 const websiteResolver = {
   extractWebsiteIdentifier,
   resolveWebsite,
@@ -396,6 +521,8 @@ const websiteResolver = {
   getWebsiteFromCache,
   invalidateWebsiteCache,
   clearWebsiteCache,
+  hasTenantModuleAllowance,
+  getTenantAllowedModules,
 };
 
 export default websiteResolver;

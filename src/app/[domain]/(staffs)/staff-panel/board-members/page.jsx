@@ -82,10 +82,10 @@ export default function BoardMembersPage() {
   const [formIsActive, setFormIsActive] = useState(true);
 
   const fileInputRef = useRef(null);
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
 
   // API Endpoints
   const apiEndpoint = useMemo(() => getApiEndpoint('staff/panel/board-members'), [getApiEndpoint]);
-  const uploadEndpoint = useMemo(() => getApiEndpoint('staff/panel/upload'), [getApiEndpoint]);
 
   // Fetch Board Members
   const fetchBoardMembers = useCallback(
@@ -138,6 +138,7 @@ export default function BoardMembersPage() {
   const openCreateModal = () => {
     setModalMode('create');
     setEditingMember(null);
+    setSelectedImageFile(null);
     setFormName('');
     setFormTitle('');
     setFormDesignation('Governing Body Member');
@@ -153,6 +154,7 @@ export default function BoardMembersPage() {
   const openEditModal = (member) => {
     setModalMode('edit');
     setEditingMember(member);
+    setSelectedImageFile(null);
     setFormName(member.name || '');
     setFormTitle(member.title || '');
     setFormDesignation(member.designation || '');
@@ -164,8 +166,8 @@ export default function BoardMembersPage() {
     setIsModalOpen(true);
   };
 
-  // Handle Cloudinary Image Upload
-  const handleImageFileChange = async (e) => {
+  // Handle Local Photo Selection
+  const handleImageFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -179,40 +181,16 @@ export default function BoardMembersPage() {
       return;
     }
 
-    setUploadingImage(true);
-    const toastId = toast.loading('Uploading photo to Cloudinary...');
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'institutional_board_members');
-
-      const res = await axios.post(uploadEndpoint, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      if (res.data?.success && (res.data.url || res.data.image_url)) {
-        const uploadedUrl = res.data.url || res.data.image_url;
-        const uploadedId = res.data.image_id || res.data.publicId || '';
-        setFormImageUrl(uploadedUrl);
-        setFormImageId(uploadedId);
-        toast.success('Photo uploaded to Cloudinary successfully!', { id: toastId });
-      } else {
-        toast.error(res.data?.error || 'Failed to upload photo.', { id: toastId });
-      }
-    } catch (err) {
-      console.error('Cloudinary upload error:', err);
-      toast.error(err.response?.data?.error || 'Error uploading photo to Cloudinary.', {
-        id: toastId,
-      });
-    } finally {
-      setUploadingImage(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
+    setSelectedImageFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setFormImageUrl(objectUrl);
+    toast.success('Photo selected! Click "Save Board Member" to apply.');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   // Remove current image
   const handleRemoveImage = () => {
+    setSelectedImageFile(null);
     setFormImageUrl('');
     setFormImageId('');
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -235,23 +213,34 @@ export default function BoardMembersPage() {
 
     setSubmitting(true);
     try {
-      const payload = {
-        name: formName.trim(),
-        title: formTitle.trim(),
-        designation: formDesignation.trim(),
-        bio: formBio,
-        image: formImageUrl.trim(),
-        image_id: formImageId.trim(),
-        order_no: parseInt(formOrderNo, 10) || 0,
-        is_active: Boolean(formIsActive),
-      };
+      const formData = new FormData();
+      formData.append('name', formName.trim());
+      formData.append('title', formTitle.trim());
+      formData.append('designation', formDesignation.trim());
+      formData.append('bio', formBio);
+      formData.append('order_no', parseInt(formOrderNo, 10) || 0);
+      formData.append('is_active', Boolean(formIsActive));
+
+      if (modalMode === 'edit' && editingMember?.id) {
+        formData.append('id', editingMember.id);
+      }
+
+      if (selectedImageFile) {
+        formData.append('file', selectedImageFile);
+      } else {
+        if (formImageUrl && !formImageUrl.startsWith('blob:')) {
+          formData.append('image', formImageUrl);
+        }
+        if (formImageId) {
+          formData.append('image_id', formImageId);
+        }
+      }
 
       let res;
       if (modalMode === 'create') {
-        res = await axios.post(apiEndpoint, payload);
+        res = await axios.post(apiEndpoint, formData);
       } else {
-        payload.id = editingMember.id;
-        res = await axios.put(apiEndpoint, payload);
+        res = await axios.put(apiEndpoint, formData);
       }
 
       if (res.data?.success) {
@@ -260,6 +249,7 @@ export default function BoardMembersPage() {
             ? 'Board member added successfully!'
             : 'Board member updated successfully!'
         );
+        setSelectedImageFile(null);
         setIsModalOpen(false);
         fetchBoardMembers(true);
       } else {

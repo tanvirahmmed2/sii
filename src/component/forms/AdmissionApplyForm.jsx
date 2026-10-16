@@ -87,9 +87,6 @@ const AdmissionApplyForm = ({
       if (res.ok && data.success) {
         setOtpSent(true);
         toast.success(data.message || 'Verification code sent to your email.');
-        if (data.debug_otp) {
-          toast.success(`Debug OTP: ${data.debug_otp}`, { duration: 10000 });
-        }
       } else {
         toast.error(data.error || 'Failed to dispatch verification code.');
       }

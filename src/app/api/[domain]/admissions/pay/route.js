@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
+import { resolveWebsiteFromRequest, getCreatorSession } from 'src/lib/middleware/creator.js';
+import { getStaffSession } from 'src/lib/middleware/staff.js';
 
 /**
  * POST /api/[domain]/admissions/pay
  * Marks the admission fee as PAID in website_admission_fee_payments.
+ * Strictly restricted to authorized staff/admin (e.g. Cash Counter / Accounts).
  */
 export async function POST(request, context) {
   try {
@@ -13,8 +15,26 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Institution portal not found.' }, { status: 404 });
     }
 
+    // Require staff or administrator authorization
+    const staffSession = await getStaffSession(request);
+    const creatorSession = await getCreatorSession(request);
+
+    if (!staffSession && !creatorSession) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Staff or administrator authorization required to manually clear fee payments.' },
+        { status: 401 }
+      );
+    }
+
+    if (staffSession) {
+      const staffWebsiteId = staffSession?.website_id || staffSession?.websiteId || staffSession?.staff?.websiteId || staffSession?.staff?.website_id;
+      if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
+        return NextResponse.json({ success: false, error: 'Forbidden: Cross-tenant access denied.' }, { status: 403 });
+      }
+    }
+
     const body = await request.json().catch(() => ({}));
-    const { applicant_id, transaction_id = `TXN-${Date.now()}`, gateway_code = 'online' } = body;
+    const { applicant_id, transaction_id = `TXN-${Date.now()}`, gateway_code = 'cash' } = body;
 
     if (!applicant_id) {
       return NextResponse.json({ success: false, error: 'Applicant ID is required.' }, { status: 400 });

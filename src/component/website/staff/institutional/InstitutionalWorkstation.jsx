@@ -48,6 +48,7 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
 
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -86,7 +87,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
       milestones: getApiEndpoint('staff/panel/milestones'),
       infrastructure: getApiEndpoint('staff/panel/infrastructure'),
       board_members: getApiEndpoint('staff/panel/board-members'),
-      upload: getApiEndpoint('staff/panel/upload'),
     };
   }, [getApiEndpoint]);
 
@@ -165,6 +165,7 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
   const openCreateModal = () => {
     setModalMode('create');
     setEditingItem(null);
+    setSelectedImageFile(null);
     setFormTitle('');
     setFormName('');
     setFormDesignation('');
@@ -183,6 +184,7 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
   const openEditModal = (item) => {
     setModalMode('edit');
     setEditingItem(item);
+    setSelectedImageFile(null);
     setFormTitle(item.title || '');
     setFormName(item.name || '');
     setFormDesignation(item.designation || '');
@@ -197,8 +199,8 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
     setIsModalOpen(true);
   };
 
-  // Handle Cloudinary Image Upload
-  const handleImageFileChange = async (e) => {
+  // Handle Local Photo Selection
+  const handleImageFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -212,47 +214,16 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
       return;
     }
 
-    setUploadingImage(true);
-    const toastId = toast.loading('Uploading image to Cloudinary...');
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append(
-        'folder',
-        activeTab === 'milestones'
-          ? 'institutional_milestones'
-          : activeTab === 'infrastructure'
-          ? 'institutional_infrastructure'
-          : 'institutional_board_members'
-      );
-
-      const res = await axios.post(endpoints.upload, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      if (res.data?.success && (res.data.url || res.data.image_url)) {
-        const uploadedUrl = res.data.url || res.data.image_url;
-        const uploadedId = res.data.image_id || res.data.publicId || '';
-        setFormImageUrl(uploadedUrl);
-        setFormImageId(uploadedId);
-        toast.success('Image successfully uploaded to Cloudinary!', { id: toastId });
-      } else {
-        toast.error(res.data?.error || 'Failed to upload image.', { id: toastId });
-      }
-    } catch (err) {
-      console.error('Cloudinary upload error:', err);
-      toast.error(err.response?.data?.error || 'Error uploading image to Cloudinary.', {
-        id: toastId,
-      });
-    } finally {
-      setUploadingImage(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
+    setSelectedImageFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setFormImageUrl(objectUrl);
+    toast.success('Photo selected! Click "Save" to apply.');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   // Remove current image
   const handleRemoveImage = () => {
+    setSelectedImageFile(null);
     setFormImageUrl('');
     setFormImageId('');
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -288,44 +259,66 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
       let targetUrl = endpoints[activeTab];
       let method = modalMode === 'create' ? 'post' : 'put';
 
-      const payload = {
-        order_no: parseInt(formOrderNo, 10) || 0,
-        is_active: Boolean(formIsActive),
-      };
+      let requestData;
 
-      if (modalMode === 'edit') {
-        payload.id = editingItem.id;
-      }
+      if (['milestones', 'infrastructure', 'board_members'].includes(activeTab)) {
+        const formData = new FormData();
+        formData.append('order_no', parseInt(formOrderNo, 10) || 0);
+        formData.append('is_active', Boolean(formIsActive));
 
-      if (activeTab === 'board_members') {
-        payload.name = formName.trim();
-        payload.title = formTitle.trim();
-        payload.designation = formDesignation.trim();
-        payload.image = formImageUrl.trim();
-        payload.image_id = formImageId.trim();
-        payload.bio = formDescription;
-      } else {
-        payload.title = formTitle.trim();
-        payload.description = formDescription;
-
-        if (activeTab === 'milestones') {
-          payload.year = formYear.trim() || new Date().getFullYear().toString();
-          payload.image = formImageUrl.trim();
-          payload.image_id = formImageId.trim();
-        } else if (activeTab === 'infrastructure') {
-          payload.subtitle = formSubtitle.trim();
-          payload.facility_type = formFacilityType.trim();
-          payload.image = formImageUrl.trim();
-          payload.image_id = formImageId.trim();
+        if (modalMode === 'edit' && editingItem?.id) {
+          formData.append('id', editingItem.id);
         }
+
+        if (activeTab === 'board_members') {
+          formData.append('name', formName.trim());
+          formData.append('title', formTitle.trim());
+          formData.append('designation', formDesignation.trim());
+          formData.append('bio', formDescription);
+        } else {
+          formData.append('title', formTitle.trim());
+          formData.append('description', formDescription);
+
+          if (activeTab === 'milestones') {
+            formData.append('year', formYear.trim() || new Date().getFullYear().toString());
+          } else if (activeTab === 'infrastructure') {
+            formData.append('subtitle', formSubtitle.trim());
+            formData.append('facility_type', formFacilityType.trim());
+          }
+        }
+
+        if (selectedImageFile) {
+          formData.append('file', selectedImageFile);
+        } else {
+          if (formImageUrl && !formImageUrl.startsWith('blob:')) {
+            formData.append('image', formImageUrl);
+          }
+          if (formImageId) {
+            formData.append('image_id', formImageId);
+          }
+        }
+
+        requestData = formData;
+      } else {
+        const payload = {
+          order_no: parseInt(formOrderNo, 10) || 0,
+          is_active: Boolean(formIsActive),
+          title: formTitle.trim(),
+          description: formDescription,
+        };
+        if (modalMode === 'edit') {
+          payload.id = editingItem.id;
+        }
+        requestData = payload;
       }
 
-      const res = await axios[method](targetUrl, payload);
+      const res = await axios[method](targetUrl, requestData);
 
       if (res.data?.success) {
         toast.success(
           modalMode === 'create' ? 'Item created successfully!' : 'Item updated successfully!'
         );
+        setSelectedImageFile(null);
         setIsModalOpen(false);
         fetchData(true);
       } else {

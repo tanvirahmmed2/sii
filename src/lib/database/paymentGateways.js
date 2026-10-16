@@ -77,14 +77,46 @@ export function mergeCredentials(existing = {}, incoming = {}) {
 
 /**
  * Verifies staff or creator authorization for tenant portal
+/**
+ * Verifies staff or creator access for payment gateways and admission operations.
+ * Enforces tenant subscription module allowance and staff permissions.
  */
-export async function verifyStaffPaymentAccess(request, context) {
-  const { resolveWebsiteFromRequest, getCreatorSession } = await import('../middleware/creator.js');
-  const { getStaffSession } = await import('../middleware/staff.js');
+export async function verifyStaffPaymentAccess(request, context, moduleSlug = null, action = 'view') {
+  const { resolveWebsiteFromRequest, hasTenantModuleAllowance } = await import('../middleware/websiteResolver.js');
+  const { getCreatorSession } = await import('../middleware/creator.js');
+  const { getStaffSession, hasStaffModulePermission } = await import('../middleware/staff.js');
 
   const website = await resolveWebsiteFromRequest(request, context);
   if (!website) {
-    return { error: 'Educational institution portal not found.', status: 404 };
+    return { error: 'Educational institution portal not found.', status: 404, code: 'WEBSITE_NOT_FOUND' };
+  }
+
+  let targetModule = moduleSlug;
+  if (!targetModule) {
+    const url = request?.url || '';
+    if (url.includes('/admissions')) {
+      targetModule = 'admissions';
+    } else if (url.includes('/configure/payments')) {
+      targetModule = 'settings';
+    } else if (url.includes('/payments') || url.includes('/fees')) {
+      targetModule = 'fees';
+    }
+  }
+
+  if (targetModule) {
+    const hasAllowance =
+      (await hasTenantModuleAllowance(website, targetModule)) ||
+      (targetModule === 'settings' ? true : false) ||
+      (targetModule === 'fees' ? await hasTenantModuleAllowance(website, 'accounting') : false);
+
+    if (!hasAllowance) {
+      return {
+        error: `The '${targetModule}' module is not included in this institution's subscription plan.`,
+        status: 403,
+        code: 'MODULE_NOT_SUBSCRIBED',
+        website,
+      };
+    }
   }
 
   // Check staff session
@@ -92,9 +124,27 @@ export async function verifyStaffPaymentAccess(request, context) {
   if (staffSession) {
     const staffWebsiteId = staffSession?.website_id || staffSession?.websiteId || staffSession?.staff?.websiteId || staffSession?.staff?.website_id;
     if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
-      return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
+      return { error: 'Forbidden: Cross-tenant access denied.', status: 403, code: 'FORBIDDEN_CROSS_TENANT' };
     }
-    return { website, user: staffSession, role: 'staff' };
+
+    if (targetModule) {
+      const hasPerm =
+        hasStaffModulePermission(staffSession, targetModule, action) ||
+        (targetModule === 'fees' && hasStaffModulePermission(staffSession, 'accounting', action)) ||
+        (targetModule === 'settings' && (hasStaffModulePermission(staffSession, 'settings', action) || hasStaffModulePermission(staffSession, 'fees', action)));
+
+      if (!hasPerm) {
+        return {
+          error: `Forbidden: Insufficient privileges to ${action} ${targetModule} records.`,
+          status: 403,
+          code: 'PERMISSION_DENIED',
+          website,
+          staffSession,
+        };
+      }
+    }
+
+    return { website, user: staffSession, staffSession, role: 'staff', allowed: true };
   }
 
   // Alternatively check creator session (institution owner)
@@ -104,12 +154,12 @@ export async function verifyStaffPaymentAccess(request, context) {
     const isOwner = website.creator_id && String(website.creator_id) === String(creatorId);
     const isAdmin = Boolean(creatorSession.is_admin || creatorSession.is_superadmin || creatorSession.creator?.is_admin);
     if (isOwner || isAdmin) {
-      return { website, user: creatorSession, role: 'creator' };
+      return { website, user: creatorSession, role: 'creator', allowed: true };
     }
-    return { error: 'Forbidden: Tenant ownership mismatch.', status: 403 };
+    return { error: 'Forbidden: Tenant ownership mismatch.', status: 403, code: 'FORBIDDEN_TENANT_MISMATCH' };
   }
 
-  return { error: 'Unauthorized: Staff or administrator access required.', status: 401 };
+  return { error: 'Unauthorized: Staff or administrator access required.', status: 401, code: 'UNAUTHORIZED' };
 }
 
 /**

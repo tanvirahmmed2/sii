@@ -1,30 +1,9 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
-import { getStaffSession } from 'src/lib/middleware/staff';
+import { verifyStaffModuleAccess } from 'src/lib/middleware/staff';
 
-async function verifyStaffAccess(request, context) {
-  const website = await resolveWebsiteFromRequest(request, context);
-  if (!website) {
-    return { error: 'Educational institution portal not found.', status: 404 };
-  }
-  const staffSession = await getStaffSession(request);
-
-  if (!staffSession) {
-    return { error: 'Unauthorized: Staff access required.', status: 401 };
-  }
-
-  const staffWebsiteId =
-    staffSession?.website_id ||
-    staffSession?.websiteId ||
-    staffSession?.staff?.websiteId ||
-    staffSession?.staff?.website_id;
-
-  if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
-    return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
-  }
-
-  return { website, staffSession };
+async function verifyStaffAccess(request, context, action = 'view') {
+  return verifyStaffModuleAccess(request, context, 'notices', action);
 }
 
 function slugify(text) {
@@ -40,7 +19,7 @@ function slugify(text) {
 // GET: List all notices for this website
 export async function GET(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'view');
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const { searchParams } = new URL(request.url);
@@ -84,7 +63,7 @@ export async function GET(request, context) {
 // POST: Create a new notice
 export async function POST(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'create');
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const body = await request.json().catch(() => ({}));
@@ -140,7 +119,7 @@ export async function POST(request, context) {
 // PUT: Update an existing notice
 export async function PUT(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'edit');
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const body = await request.json().catch(() => ({}));
@@ -210,7 +189,7 @@ export async function PUT(request, context) {
 // DELETE: Delete a notice
 export async function DELETE(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'delete');
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const { searchParams } = new URL(request.url);

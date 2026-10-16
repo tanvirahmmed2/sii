@@ -1,17 +1,28 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
-import { getStaffSession } from 'src/lib/middleware/staff.js';
+import { resolveWebsiteFromRequest, hasTenantModuleAllowance } from 'src/lib/middleware/websiteResolver.js';
+import { getStaffSession, hasStaffModulePermission } from 'src/lib/middleware/staff.js';
 import { getOfficerSession } from 'src/lib/middleware/officer.js';
 
 // Verify access for either staff or officer
-async function verifyStaffOrOfficerAccess(request, context) {
+async function verifyStaffOrOfficerAccess(request, context, action = 'view') {
   const website = await resolveWebsiteFromRequest(request, context);
   if (!website) {
-    return { error: 'Educational institution portal not found.', status: 404 };
+    return { error: 'Educational institution portal not found.', status: 404, code: 'WEBSITE_NOT_FOUND' };
   }
 
-  // 1. Staff session
+  // 1. Check Tenant Subscription Package Allowance
+  const hasAllowance = await hasTenantModuleAllowance(website, 'events');
+  if (!hasAllowance) {
+    return {
+      error: "The 'events' module is not included in this institution's subscription plan.",
+      status: 403,
+      code: 'MODULE_NOT_SUBSCRIBED',
+      website,
+    };
+  }
+
+  // 2. Staff session
   try {
     const staffSession = await getStaffSession(request);
     if (staffSession) {
@@ -22,6 +33,17 @@ async function verifyStaffOrOfficerAccess(request, context) {
         staffSession?.staff?.website_id;
 
       if (!staffWebsiteId || String(staffWebsiteId) === String(website.id)) {
+        const hasPerm = hasStaffModulePermission(staffSession, 'events', action);
+        if (!hasPerm) {
+          return {
+            error: `Forbidden: Insufficient privileges to ${action} events.`,
+            status: 403,
+            code: 'PERMISSION_DENIED',
+            website,
+            staffSession,
+          };
+        }
+
         return {
           website,
           userType: 'staff',
@@ -35,7 +57,7 @@ async function verifyStaffOrOfficerAccess(request, context) {
     console.warn('Error checking staff session:', e?.message);
   }
 
-  // 2. Officer session
+  // 3. Officer session
   try {
     const officerSession = await getOfficerSession(request);
     if (officerSession) {
@@ -59,7 +81,7 @@ async function verifyStaffOrOfficerAccess(request, context) {
     console.warn('Error checking officer session:', e?.message);
   }
 
-  return { error: 'Unauthorized: Staff or Officer login required.', status: 401 };
+  return { error: 'Unauthorized: Staff or Officer login required.', status: 401, code: 'UNAUTHORIZED' };
 }
 
 function slugify(text) {
@@ -185,7 +207,7 @@ export async function GET(request, context) {
 // POST: Create a new event
 export async function POST(request, context) {
   try {
-    const auth = await verifyStaffOrOfficerAccess(request, context);
+    const auth = await verifyStaffOrOfficerAccess(request, context, 'create');
     if (auth.error) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
@@ -272,7 +294,7 @@ export async function POST(request, context) {
 // PUT: Update an existing event
 export async function PUT(request, context) {
   try {
-    const auth = await verifyStaffOrOfficerAccess(request, context);
+    const auth = await verifyStaffOrOfficerAccess(request, context, 'edit');
     if (auth.error) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
@@ -363,7 +385,7 @@ export async function PUT(request, context) {
 // DELETE: Remove an event
 export async function DELETE(request, context) {
   try {
-    const auth = await verifyStaffOrOfficerAccess(request, context);
+    const auth = await verifyStaffOrOfficerAccess(request, context, 'delete');
     if (auth.error) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }

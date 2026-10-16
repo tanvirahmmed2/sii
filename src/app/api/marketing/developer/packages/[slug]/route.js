@@ -57,7 +57,16 @@ async function fetchFullPackageBySlugOrId(slugOrId) {
                  WHERE pm.package_id = p.id
                ),
                '[]'::json
-             ) AS allowed_modules
+             ) AS allowed_modules,
+            COALESCE(
+               (
+                 SELECT json_agg(DISTINCT wm.slug ORDER BY wm.slug ASC)
+                 FROM package_modules pm
+                 JOIN website_modules wm ON pm.website_module_id = wm.id
+                 WHERE pm.package_id = p.id
+               ),
+               '[]'::json
+             ) AS allowed_module_slugs
      FROM packages p
      WHERE p.slug = $1 OR p.id::text = $1
      LIMIT 1`,

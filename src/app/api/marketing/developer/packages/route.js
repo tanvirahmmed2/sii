@@ -60,7 +60,16 @@ async function fetchPackageById(id) {
                  WHERE pm.package_id = p.id
                ),
                '[]'::json
-             ) AS allowed_modules
+             ) AS allowed_modules,
+            COALESCE(
+               (
+                 SELECT json_agg(DISTINCT tm.slug ORDER BY tm.slug ASC)
+                 FROM package_modules pm
+                 JOIN website_modules tm ON pm.website_module_id = tm.id
+                 WHERE pm.package_id = p.id
+               ),
+               '[]'::json
+             ) AS allowed_module_slugs
      FROM packages p
      WHERE p.id = $1
      LIMIT 1`,
@@ -129,7 +138,16 @@ export async function GET(request) {
                  WHERE pm.package_id = p.id
                ),
                '[]'::json
-             ) AS allowed_modules
+             ) AS allowed_modules,
+             COALESCE(
+               (
+                 SELECT json_agg(DISTINCT tm.slug ORDER BY tm.slug ASC)
+                 FROM package_modules pm
+                 JOIN website_modules tm ON pm.website_module_id = tm.id
+                 WHERE pm.package_id = p.id
+               ),
+               '[]'::json
+             ) AS allowed_module_slugs
        FROM packages p
        ORDER BY COALESCE(p.monthly_price_usd, p.monthly_price, 0) ASC, p.id ASC`
     ).catch(() => ({ rows: [] }));

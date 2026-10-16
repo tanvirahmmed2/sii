@@ -121,10 +121,14 @@ export default function UpdateNewsPage() {
     }
   }, [domain, slug, fetchNewsData]);
 
-  // Upload more photos to Cloudinary and attach directly
+  // Upload more photos to news images directly
   const handleUploadPhotos = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
+    if (!newsId) {
+      showToast('News article record not loaded yet.', true);
+      return;
+    }
 
     setUploading(true);
     let successCount = 0;
@@ -135,35 +139,22 @@ export default function UpdateNewsPage() {
 
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('folder', 'news');
+        formData.append('news_id', String(newsId));
+        formData.append('caption', '');
+        formData.append('is_cover', (images.length === 0 && successCount === 0) ? 'true' : 'false');
+        formData.append('display_order', String(images.length + successCount));
 
-        const res = await fetch(`/api/${domain}/staff/panel/upload`, {
+        const res = await fetch(`/api/${domain}/staff/panel/news/images`, {
           method: 'POST',
           body: formData,
         });
         const data = await res.json();
 
-        if (data.success && data.image_url) {
-          // If we have an existing newsId, persist immediately to news images table
-          if (newsId) {
-            const imgRes = await fetch(`/api/${domain}/staff/panel/news/images`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                news_id: newsId,
-                image_url: data.image_url,
-                image_id: data.image_id || data.publicId || null,
-                caption: '',
-                is_cover: images.length === 0,
-                display_order: images.length,
-              }),
-            });
-            const imgData = await imgRes.json();
-            if (imgData.success && imgData.image) {
-              setImages((prev) => [...prev, imgData.image]);
-              successCount++;
-            }
-          }
+        if (data.success && data.image) {
+          setImages((prev) => [...prev, data.image]);
+          successCount++;
+        } else {
+          showToast(data.error || 'Failed to upload photo', true);
         }
       }
 

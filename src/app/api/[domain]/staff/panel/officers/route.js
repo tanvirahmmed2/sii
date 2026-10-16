@@ -1,24 +1,40 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { queryDb } from 'src/lib/database/db.js';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
-import { getStaffSession, hasStaffModulePermission, isGeneralStaff, hashPassword } from 'src/lib/middleware/staff.js';
+import { resolveWebsiteFromRequest, hasTenantModuleAllowance } from 'src/lib/middleware/websiteResolver.js';
+import { getStaffSession, hasStaffModulePermission, hashPassword } from 'src/lib/middleware/staff.js';
 import { ensureOfficerSchema, revokeAllOfficerSessions } from 'src/lib/middleware/officer.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
 
 /**
  * Validates staff authorization to manage officers for this tenant website.
+ * Enforces tenant subscription allowance and explicit staff permissions.
  */
 async function verifyStaffOfficerAccess(request, context, action = 'view') {
   const website = await resolveWebsiteFromRequest(request, context);
   if (!website) {
-    return { error: 'Educational institution portal not found.', status: 404 };
+    return { error: 'Educational institution portal not found.', status: 404, code: 'WEBSITE_NOT_FOUND' };
   }
 
-  const staffSession = await getStaffSession(request);
+  // 1. Check Tenant Subscription Package Allowance
+  const hasAllowance =
+    (await hasTenantModuleAllowance(website, 'officers')) ||
+    (await hasTenantModuleAllowance(website, 'staff-payroll')) ||
+    (await hasTenantModuleAllowance(website, 'sis'));
 
+  if (!hasAllowance) {
+    return {
+      error: "The 'officers' / 'staff-payroll' module is not included in this institution's subscription plan.",
+      status: 403,
+      code: 'MODULE_NOT_SUBSCRIBED',
+      website,
+    };
+  }
+
+  // 2. Check Staff Session & Tenant Boundary
+  const staffSession = await getStaffSession(request);
   if (!staffSession) {
-    return { error: 'Unauthorized: Staff credentials required.', status: 401 };
+    return { error: 'Unauthorized: Staff credentials required.', status: 401, code: 'UNAUTHORIZED' };
   }
 
   const staffWebsiteId =
@@ -28,19 +44,31 @@ async function verifyStaffOfficerAccess(request, context, action = 'view') {
     staffSession?.staff?.website_id;
 
   if (staffSession && staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
-    return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
+    return { error: 'Forbidden: Cross-tenant access denied.', status: 403, code: 'FORBIDDEN_CROSS_TENANT' };
   }
 
-  // Check if staff has permissions for staff-payroll, sis, or general staff
-  const hasStaffPayroll = hasStaffModulePermission(staffSession, 'staff-payroll', action);
-  const hasSis = hasStaffModulePermission(staffSession, 'sis', action);
-  const generalStaff = await isGeneralStaff(request);
+  // 3. Check Staff Module Permissions
+  const hasPerm =
+    hasStaffModulePermission(staffSession, 'officers', action) ||
+    hasStaffModulePermission(staffSession, 'staff-payroll', action) ||
+    hasStaffModulePermission(staffSession, 'sis', action);
 
-  if (!hasStaffPayroll && !hasSis && !generalStaff) {
-    return { error: `Forbidden: Insufficient privileges to ${action} officer records.`, status: 403 };
+  if (!hasPerm) {
+    return {
+      error: `Forbidden: Insufficient privileges to ${action} officer records.`,
+      status: 403,
+      code: 'PERMISSION_DENIED',
+      website,
+      staffSession,
+    };
   }
 
-  return { website, staffSession, allowed: true };
+  return {
+    website,
+    staffSession,
+    staff: staffSession.staff || staffSession.user,
+    allowed: true,
+  };
 }
 
 /**

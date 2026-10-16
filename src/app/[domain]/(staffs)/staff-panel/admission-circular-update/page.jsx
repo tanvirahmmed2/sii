@@ -3,7 +3,19 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { toast } from 'react-hot-toast';
+
+// Dynamically import TiptapEditor to prevent SSR hydration mismatch
+const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor.jsx'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-44 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-xs text-slate-400">
+      Loading Tiptap Rich Text Editor...
+    </div>
+  )
+});
+
 function CircularUpdateContent() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -450,10 +462,20 @@ function CircularUpdateContent() {
           </div>
         </div>
 
-        {/* Section 6: Instructions & Guidelines */}
+        {/* Section 6: Instructions & Guidelines with Tiptap Editor */}
         <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">6. Guidelines &amp; Instructions</h3>
-          <textarea name="description" value={form.description} onChange={handleChange} rows={5} placeholder="Enter instructions for candidates, required documents, photo specifications, exam syllabus, etc..." className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-sky-500 font-sans" />
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              6. Guidelines, Instructions &amp; Syllabus (Tiptap Rich Text Editor)
+            </h3>
+            <span className="text-[10px] text-slate-400 font-medium">Powered by Tiptap Editor</span>
+          </div>
+          <TiptapEditor
+            value={form.description}
+            onChange={(val) => setForm((prev) => ({ ...prev, description: val }))}
+            placeholder="Enter instructions for candidates, required documents, photo specifications, exam syllabus, fee breakdown, etc..."
+            minHeight="220px"
+          />
         </div>
 
         {/* Bottom Form Actions */}

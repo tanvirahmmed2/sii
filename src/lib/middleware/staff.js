@@ -208,8 +208,8 @@ export async function getStaffSession(request) {
        WHERE wmp.staff_id = $1 AND wmp.website_id = $2 AND wm.is_active = TRUE
          AND (
            EXISTS (
-             SELECT 1 FROM package_website_modules pwm 
-             WHERE pwm.package_id = s.package_id AND pwm.website_module_id = wm.id
+             SELECT 1 FROM package_modules pm 
+             WHERE pm.package_id = s.package_id AND pm.website_module_id = wm.id
            )
            OR s.package_id IS NULL
          )`,
@@ -424,6 +424,73 @@ export async function isStaffRole(request) {
   return Boolean(staff && (staff.isActive || staff.is_active));
 }
 
+/**
+ * Strict validator checking:
+ * 1. Tenant website exists
+ * 2. Tenant website package includes the requested module (tenant module allowance)
+ * 3. Requester is an authenticated staff member belonging to this tenant
+ * 4. Staff member has explicit permission (can_view, can_create, can_edit, can_delete)
+ *
+ * @param {Request} request
+ * @param {Object} context
+ * @param {string} moduleSlug e.g. 'sis', 'attendance', 'exams', 'hostel', 'library'
+ * @param {'view'|'create'|'edit'|'delete'} action
+ * @returns {Promise<{ website: object, staffSession: object, staff: object, allowed: boolean } | { error: string, status: number, code: string }>}
+ */
+export async function verifyStaffModuleAccess(request, context, moduleSlug, action = 'view') {
+  const { resolveWebsiteFromRequest, hasTenantModuleAllowance } = await import('./websiteResolver.js');
+  const website = await resolveWebsiteFromRequest(request, context);
+  if (!website) {
+    return { error: 'Educational institution portal not found.', status: 404, code: 'WEBSITE_NOT_FOUND' };
+  }
+
+  // 1. Verify Tenant Subscription Package Allowance
+  const hasAllowance = await hasTenantModuleAllowance(website, moduleSlug);
+  if (!hasAllowance) {
+    return {
+      error: `The '${moduleSlug}' module is not included in this institution's subscription plan.`,
+      status: 403,
+      code: 'MODULE_NOT_SUBSCRIBED',
+      website,
+    };
+  }
+
+  // 2. Verify Staff Authentication
+  const staffSession = await getStaffSession(request);
+  if (!staffSession) {
+    return { error: 'Unauthorized: Staff authentication required.', status: 401, code: 'UNAUTHORIZED' };
+  }
+
+  const staffWebsiteId =
+    staffSession?.website_id ||
+    staffSession?.websiteId ||
+    staffSession?.staff?.websiteId ||
+    staffSession?.staff?.website_id;
+
+  if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
+    return { error: 'Forbidden: Cross-tenant access denied.', status: 403, code: 'FORBIDDEN_CROSS_TENANT' };
+  }
+
+  // 3. Verify Staff Module Permission
+  const hasPerm = hasStaffModulePermission(staffSession, moduleSlug, action);
+  if (!hasPerm) {
+    return {
+      error: `Access Denied: You do not have permission to ${action} records in the '${moduleSlug}' module.`,
+      status: 403,
+      code: 'PERMISSION_DENIED',
+      website,
+      staffSession,
+    };
+  }
+
+  return {
+    website,
+    staffSession,
+    staff: staffSession.staff || staffSession.user,
+    allowed: true,
+  };
+}
+
 const StaffMiddleware = {
   STAFF_COOKIE_NAME,
   getStaffSession,
@@ -434,6 +501,7 @@ const StaffMiddleware = {
   isGeneralStaff,
   isStaffRole,
   hasStaffModulePermission,
+  verifyStaffModuleAccess,
   createStaffSession,
   revokeStaffSession,
   revokeAllStaffSessions,

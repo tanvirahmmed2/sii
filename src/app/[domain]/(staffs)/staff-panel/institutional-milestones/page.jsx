@@ -66,10 +66,10 @@ export default function InstitutionalMilestonesPage() {
   const [formIsActive, setFormIsActive] = useState(true);
 
   const fileInputRef = useRef(null);
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
 
   // API Endpoints
   const apiEndpoint = useMemo(() => getApiEndpoint('staff/panel/milestones'), [getApiEndpoint]);
-  const uploadEndpoint = useMemo(() => getApiEndpoint('staff/panel/upload'), [getApiEndpoint]);
 
   // Fetch Milestones
   const fetchMilestones = useCallback(
@@ -122,6 +122,7 @@ export default function InstitutionalMilestonesPage() {
   const openCreateModal = () => {
     setModalMode('create');
     setEditingMilestone(null);
+    setSelectedImageFile(null);
     setFormYear(new Date().getFullYear().toString());
     setFormTitle('');
     setFormDescription('');
@@ -136,6 +137,7 @@ export default function InstitutionalMilestonesPage() {
   const openEditModal = (item) => {
     setModalMode('edit');
     setEditingMilestone(item);
+    setSelectedImageFile(null);
     setFormYear(item.year || new Date().getFullYear().toString());
     setFormTitle(item.title || '');
     setFormDescription(item.description || '');
@@ -146,8 +148,8 @@ export default function InstitutionalMilestonesPage() {
     setIsModalOpen(true);
   };
 
-  // Handle Cloudinary Image Upload
-  const handleImageFileChange = async (e) => {
+  // Handle Local Photo Selection
+  const handleImageFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -161,40 +163,16 @@ export default function InstitutionalMilestonesPage() {
       return;
     }
 
-    setUploadingImage(true);
-    const toastId = toast.loading('Uploading photo to Cloudinary...');
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'institutional_milestones');
-
-      const res = await axios.post(uploadEndpoint, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      if (res.data?.success && (res.data.url || res.data.image_url)) {
-        const uploadedUrl = res.data.url || res.data.image_url;
-        const uploadedId = res.data.image_id || res.data.publicId || '';
-        setFormImageUrl(uploadedUrl);
-        setFormImageId(uploadedId);
-        toast.success('Photo uploaded to Cloudinary successfully!', { id: toastId });
-      } else {
-        toast.error(res.data?.error || 'Failed to upload photo.', { id: toastId });
-      }
-    } catch (err) {
-      console.error('Cloudinary upload error:', err);
-      toast.error(err.response?.data?.error || 'Error uploading photo to Cloudinary.', {
-        id: toastId,
-      });
-    } finally {
-      setUploadingImage(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
+    setSelectedImageFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setFormImageUrl(objectUrl);
+    toast.success('Photo selected! Click "Save Milestone" to apply.');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   // Remove current image
   const handleRemoveImage = () => {
+    setSelectedImageFile(null);
     setFormImageUrl('');
     setFormImageId('');
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -217,22 +195,33 @@ export default function InstitutionalMilestonesPage() {
 
     setSubmitting(true);
     try {
-      const payload = {
-        year: formYear.trim() || new Date().getFullYear().toString(),
-        title: formTitle.trim(),
-        description: formDescription,
-        image: formImageUrl.trim(),
-        image_id: formImageId.trim(),
-        order_no: parseInt(formOrderNo, 10) || 0,
-        is_active: Boolean(formIsActive),
-      };
+      const formData = new FormData();
+      formData.append('year', formYear.trim() || new Date().getFullYear().toString());
+      formData.append('title', formTitle.trim());
+      formData.append('description', formDescription);
+      formData.append('order_no', parseInt(formOrderNo, 10) || 0);
+      formData.append('is_active', Boolean(formIsActive));
+
+      if (modalMode === 'edit' && editingMilestone?.id) {
+        formData.append('id', editingMilestone.id);
+      }
+
+      if (selectedImageFile) {
+        formData.append('file', selectedImageFile);
+      } else {
+        if (formImageUrl && !formImageUrl.startsWith('blob:')) {
+          formData.append('image', formImageUrl);
+        }
+        if (formImageId) {
+          formData.append('image_id', formImageId);
+        }
+      }
 
       let res;
       if (modalMode === 'create') {
-        res = await axios.post(apiEndpoint, payload);
+        res = await axios.post(apiEndpoint, formData);
       } else {
-        payload.id = editingMilestone.id;
-        res = await axios.put(apiEndpoint, payload);
+        res = await axios.put(apiEndpoint, formData);
       }
 
       if (res.data?.success) {
@@ -241,6 +230,7 @@ export default function InstitutionalMilestonesPage() {
             ? 'Milestone created successfully!'
             : 'Milestone updated successfully!'
         );
+        setSelectedImageFile(null);
         setIsModalOpen(false);
         fetchMilestones(true);
       } else {

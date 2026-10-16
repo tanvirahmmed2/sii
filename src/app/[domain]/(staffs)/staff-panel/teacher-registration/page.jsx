@@ -39,11 +39,13 @@ export default function TeacherRegistrationPage() {
 
   const fileInputRef = useRef(null);
 
-  // Available designations & departments
+  // Available designations, departments & payroll scales
   const [designations, setDesignations] = useState([]);
   const [loadingDesignations, setLoadingDesignations] = useState(true);
   const [departments, setDepartments] = useState([]);
   const [loadingDepartments, setLoadingDepartments] = useState(true);
+  const [payrolls, setPayrolls] = useState([]);
+  const [loadingPayrolls, setLoadingPayrolls] = useState(true);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -58,13 +60,13 @@ export default function TeacherRegistrationPage() {
     address: '',
     permanent_address: '',
     joining_date: new Date().toISOString().split('T')[0],
-    salary: '',
+    payroll_id: '',
     department_id: '',
     designation_id: '',
     photo_url: '',
     photo_id: '',
     password: '',
-    is_active: true
+    is_active: false
   });
 
   // Multiple Qualifications rows
@@ -72,7 +74,9 @@ export default function TeacherRegistrationPage() {
     { degree: '', institute: '', board: '', passing_year: '', result: '' }
   ]);
 
-  // Uploading state
+  // Uploading and photo states
+  const [selectedPhotoFile, setSelectedPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -90,7 +94,7 @@ export default function TeacherRegistrationPage() {
     }
   }, []);
 
-  // Fetch designations & departments
+  // Fetch designations, departments & payroll scales
   useEffect(() => {
     async function loadDesignations() {
       if (!domain) return;
@@ -130,8 +134,25 @@ export default function TeacherRegistrationPage() {
       }
     }
 
+    async function loadPayrolls() {
+      if (!domain) return;
+      try {
+        setLoadingPayrolls(true);
+        const res = await fetch(`/api/${domain}/staff/panel/teacher-payrolls`);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.payrolls)) {
+          setPayrolls(data.payrolls.filter((p) => p.is_active));
+        }
+      } catch (err) {
+        console.error('Failed to load payroll scales:', err);
+      } finally {
+        setLoadingPayrolls(false);
+      }
+    }
+
     loadDesignations();
     loadDepartments();
+    loadPayrolls();
   }, [domain]);
 
   const handleInputChange = (e) => {
@@ -162,8 +183,8 @@ export default function TeacherRegistrationPage() {
     setQualifications((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Photo upload
-  const handlePhotoSelect = async (e) => {
+  // Photo select (Local preview only - does not upload to Cloudinary until teacher record exists)
+  const handlePhotoSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -172,42 +193,38 @@ export default function TeacherRegistrationPage() {
       return;
     }
 
-    try {
-      setUploadingPhoto(true);
-      const data = new FormData();
-      data.append('file', file);
-      data.append('folder', 'teacher_photos');
-
-      const res = await fetch(`/api/${domain}/staff/panel/upload`, {
-        method: 'POST',
-        body: data
-      });
-      const json = await res.json();
-
-      if (json.success && json.url) {
-        setFormData((prev) => ({
-          ...prev,
-          photo_url: json.url,
-          photo_id: json.publicId || json.image_id || ''
-        }));
-        showToast('Teacher photo uploaded successfully!');
-      } else {
-        showToast(json.error || 'Failed to upload photo.', true);
-      }
-    } catch (err) {
-      console.error(err);
-      showToast('Error uploading photo.', true);
-    } finally {
-      setUploadingPhoto(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image size exceeds 5MB limit.', true);
+      return;
     }
+
+    // Revoke previous object URL if any
+    if (photoPreview && photoPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(photoPreview);
+    }
+
+    setSelectedPhotoFile(file);
+    const localUrl = URL.createObjectURL(file);
+    setPhotoPreview(localUrl);
+    setFormData((prev) => ({
+      ...prev,
+      photo_url: localUrl,
+      photo_id: ''
+    }));
+    showToast('Photo selected. It will be uploaded after teacher record is created.');
   };
 
   const removePhoto = () => {
+    if (photoPreview && photoPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(photoPreview);
+    }
+    setSelectedPhotoFile(null);
+    setPhotoPreview('');
     setFormData((prev) => ({ ...prev, photo_url: '', photo_id: '' }));
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Form submission
+  // Form submission: 1. Create table row first -> 2. Upload photo to Cloudinary and link to table
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -236,29 +253,38 @@ export default function TeacherRegistrationPage() {
 
     try {
       setSubmitting(true);
-      const payload = {
-        ...formData,
-        department_id: Number(formData.department_id),
-        designation_id: formData.designation_id ? Number(formData.designation_id) : null,
-        salary: formData.salary ? parseFloat(formData.salary) : 0,
-        qualifications: validQuals
-      };
+
+      const postData = new FormData();
+      Object.keys(formData).forEach((key) => {
+        if (key === 'department_id') postData.append('department_id', Number(formData.department_id));
+        else if (key === 'designation_id') postData.append('designation_id', formData.designation_id ? Number(formData.designation_id) : '');
+        else if (key === 'payroll_id') {
+          if (formData.payroll_id) postData.append('payroll_id', Number(formData.payroll_id));
+        }
+        else if (key === 'salary') { /* Connected via website_teacher_payrolls */ }
+        else if (formData[key] !== null && formData[key] !== undefined) postData.append(key, formData[key]);
+      });
+      postData.append('qualifications', JSON.stringify(validQuals));
+
+      if (selectedPhotoFile) {
+        postData.append('photo', selectedPhotoFile);
+      }
 
       const res = await fetch(`/api/${domain}/staff/panel/teacher`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: postData
       });
       const data = await res.json();
 
-      if (data.success) {
-        showToast(data.message || `Teacher "${formData.name}" registered successfully! Verification email dispatched.`);
-        setTimeout(() => {
-          router.push(`/${domain}/staff-panel/teacher-list`);
-        }, 1800);
-      } else {
+      if (!data.success || !data.teacher?.id) {
         showToast(data.error || 'Failed to register teacher.', true);
+        return;
       }
+
+      showToast(data.message || `Teacher "${formData.name}" registered successfully! Verification email dispatched.`);
+      setTimeout(() => {
+        router.push(`/${domain}/staff-panel/teacher-list`);
+      }, 1500);
     } catch (err) {
       console.error(err);
       showToast('Network error while registering teacher.', true);
@@ -366,14 +392,16 @@ export default function TeacherRegistrationPage() {
 
               <button
                 type="button"
-                disabled={uploadingPhoto}
+                disabled={uploadingPhoto || submitting}
                 onClick={() => fileInputRef.current?.click()}
                 className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition disabled:opacity-50"
               >
                 <FiUpload className="w-3.5 h-3.5" />
-                <span>{uploadingPhoto ? 'Uploading...' : 'Upload Photo'}</span>
+                <span>{selectedPhotoFile ? 'Change Photo' : 'Select Photo'}</span>
               </button>
-              <p className="text-[10px] text-slate-400 mt-1">Recommended: 300x300 JPG or PNG</p>
+              <p className="text-[10px] text-slate-400 mt-1">
+                {selectedPhotoFile ? 'Selected — ready to save' : 'Recommended: 300x300 JPG or PNG'}
+              </p>
             </div>
 
             {/* Right: Personal Details Inputs */}
@@ -630,35 +658,115 @@ export default function TeacherRegistrationPage() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Basic Monthly Salary
+              <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <FiDollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Payroll Scale / Grade</span>
+                </span>
+                <Link
+                  href={`/${domain}/staff-panel/teacher-payrolls`}
+                  target="_blank"
+                  className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Manage Scales
+                </Link>
               </label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                name="salary"
-                placeholder="e.g. 35000.00"
-                value={formData.salary}
+              <select
+                name="payroll_id"
+                value={formData.payroll_id}
                 onChange={handleInputChange}
-                className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
-              />
+                className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 cursor-pointer"
+              >
+                <option value="">-- No Payroll Scale (Unassigned) --</option>
+                {payrolls.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.title} ({p.grade_code || 'Scale'}) — Basic: ৳{Number(p.basic_salary).toLocaleString()}
+                  </option>
+                ))}
+              </select>
+              {payrolls.length === 0 && !loadingPayrolls && (
+                <p className="text-[10px] text-amber-600 mt-1">
+                  No payroll scales found.{' '}
+                  <Link href={`/${domain}/staff-panel/teacher-payrolls`} className="underline font-semibold">
+                    Create in Payroll
+                  </Link>
+                </p>
+              )}
             </div>
 
             <div className="flex flex-col justify-center pt-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  name="is_active"
-                  checked={formData.is_active}
-                  onChange={handleInputChange}
-                  className="rounded border-slate-300 text-slate-900 focus:ring-0 w-4 h-4 cursor-pointer"
-                />
-                <span className="text-xs font-semibold text-slate-900 dark:text-white">Active Faculty Status</span>
-              </label>
-              <p className="text-[10px] text-slate-400 mt-0.5 ml-6">Eligible for class routines and portal login</p>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                <span className="text-xs font-semibold text-slate-900 dark:text-white">Status: Inactive (Pending)</span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                Verification link is emailed on creation. Account automatically activates once verified.
+              </p>
             </div>
           </div>
+
+          {/* Connected Payroll Scale Details Breakdown */}
+          {(() => {
+            const selectedPayroll = payrolls.find((p) => String(p.id) === String(formData.payroll_id));
+            if (!selectedPayroll) return null;
+            return (
+              <div className="mt-3 p-3 rounded border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/20 text-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/70 dark:border-emerald-800/40 pb-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-emerald-950 dark:text-emerald-300 text-xs">
+                      {selectedPayroll.title}
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-200/60 dark:bg-emerald-800/50 text-emerald-800 dark:text-emerald-200">
+                      {selectedPayroll.grade_code || 'STANDARD'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs flex-wrap">
+                    <span className="text-slate-600 dark:text-slate-300">
+                      Gross: <strong className="text-slate-900 dark:text-white">৳{Number(selectedPayroll.gross_salary || 0).toLocaleString()}</strong>
+                    </span>
+                    <span className="text-slate-400">|</span>
+                    <span className="text-rose-600 dark:text-rose-400">
+                      Deductions: <strong>-৳{Number(selectedPayroll.total_deductions || 0).toLocaleString()}</strong>
+                    </span>
+                    <span className="text-slate-400">|</span>
+                    <span className="text-emerald-700 dark:text-emerald-400 font-bold">
+                      Net Monthly: ৳{Number(selectedPayroll.net_salary || 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 text-[11px] text-slate-600 dark:text-slate-400">
+                  <div>
+                    <span className="block text-[10px] uppercase text-slate-400">Basic</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-200">৳{Number(selectedPayroll.basic_salary || 0).toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] uppercase text-slate-400">House Rent</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-200">৳{Number(selectedPayroll.house_rent || 0).toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] uppercase text-slate-400">Medical</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-200">৳{Number(selectedPayroll.medical_allowance || 0).toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] uppercase text-slate-400">Transport</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-200">৳{Number(selectedPayroll.transport_allowance || 0).toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] uppercase text-slate-400">Other Allow.</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-200">৳{Number(selectedPayroll.other_allowance || 0).toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] uppercase text-slate-400">PF Ded.</span>
+                    <span className="font-medium text-rose-600 dark:text-rose-400">৳{Number(selectedPayroll.provident_fund || 0).toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] uppercase text-slate-400">Tax Ded.</span>
+                    <span className="font-medium text-rose-600 dark:text-rose-400">৳{Number(selectedPayroll.tax_deduction || 0).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Section 3: Academic Qualifications */}

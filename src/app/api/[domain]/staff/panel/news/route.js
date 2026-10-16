@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { getStaffSession } from 'src/lib/middleware/staff';
+import { deleteImage } from 'src/lib/database/cloudinary.js';
 
 async function verifyStaffAccess(request, context) {
   const website = await resolveWebsiteFromRequest(request, context);
@@ -401,6 +402,24 @@ export async function DELETE(request, context) {
       return NextResponse.json({ success: false, error: 'News article ID or slug required for deletion.' }, { status: 400 });
     }
 
+    // Collect image IDs for Cloudinary cleanup before deleting records
+    let imageRecords = [];
+    if (id) {
+      const imgRes = await queryDb(
+        `SELECT image_id FROM website_news_images WHERE news_id = $1 AND website_id = $2`,
+        [id, auth.website.id]
+      );
+      imageRecords = imgRes.rows;
+    } else {
+      const imgRes = await queryDb(
+        `SELECT ni.image_id FROM website_news_images ni
+         JOIN website_news n ON n.id = ni.news_id
+         WHERE n.slug = $1 AND n.website_id = $2`,
+        [slug, auth.website.id]
+      );
+      imageRecords = imgRes.rows;
+    }
+
     let deleteResult;
     if (id) {
       deleteResult = await queryDb(
@@ -416,6 +435,13 @@ export async function DELETE(request, context) {
 
     if (deleteResult.rowCount === 0) {
       return NextResponse.json({ success: false, error: 'News article not found or already deleted.' }, { status: 404 });
+    }
+
+    // Clean up images from Cloudinary
+    for (const record of imageRecords) {
+      if (record.image_id) {
+        await deleteImage(record.image_id).catch(() => {});
+      }
     }
 
     return NextResponse.json({

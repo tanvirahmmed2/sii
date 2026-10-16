@@ -57,9 +57,11 @@ export default function DepartmentHeadPage() {
   const formSectionRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  // State for pending image file
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
+
   // Endpoints
   const apiEndpoint = useMemo(() => getApiEndpoint('staff/panel/dept-heads'), [getApiEndpoint]);
-  const uploadEndpoint = useMemo(() => getApiEndpoint('staff/panel/upload'), [getApiEndpoint]);
 
   // Fetch Department Heads & lists
   const fetchData = useCallback(async (silent = false) => {
@@ -135,8 +137,8 @@ export default function DepartmentHeadPage() {
     }
   };
 
-  // Image Upload handler
-  const handleImageUpload = async (e) => {
+  // Image Select handler (Local preview only, no remote upload until submit)
+  const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -144,43 +146,23 @@ export default function DepartmentHeadPage() {
       toast.error('Please upload an image file (JPG, PNG, WebP).');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size must be less than 5MB.');
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image size must be less than 10MB.');
       return;
     }
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('folder', 'dept_heads');
-
-    setUploadingImage(true);
-    const toastId = toast.loading('Uploading head profile image to cloud...');
-
-    try {
-      const res = await axios.post(uploadEndpoint, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      if (res.data?.success) {
-        setFormImage(res.data.url || res.data.image_url);
-        setFormImageId(res.data.image_id || res.data.publicId || '');
-        toast.success('Profile photo uploaded successfully!', { id: toastId });
-      } else {
-        toast.error(res.data?.error || 'Failed to upload image.', { id: toastId });
-      }
-    } catch (err) {
-      console.error('Image upload failed:', err);
-      toast.error(err.response?.data?.error || 'Image upload failed.', { id: toastId });
-    } finally {
-      setUploadingImage(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
+    setSelectedImageFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setFormImage(objectUrl);
+    toast.success('Photo selected! Click "Save Department Head" to apply.');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   // Open Create Form
   const openCreateForm = (preselectDeptId = '') => {
     setFormMode('create');
     setEditingRecord(null);
+    setSelectedImageFile(null);
 
     // Pick first unassigned department if not specified
     const defaultDept =
@@ -214,6 +196,7 @@ export default function DepartmentHeadPage() {
   const openEditForm = (head) => {
     setFormMode('edit');
     setEditingRecord(head);
+    setSelectedImageFile(null);
 
     setFormDeptId(String(head.department_id || ''));
     setFormTeacherId(head.teacher_id ? String(head.teacher_id) : '');
@@ -240,6 +223,7 @@ export default function DepartmentHeadPage() {
   const handleCloseForm = () => {
     setIsFormOpen(false);
     setEditingRecord(null);
+    setSelectedImageFile(null);
   };
 
   // Save / Update Form Submission
@@ -261,32 +245,45 @@ export default function DepartmentHeadPage() {
     );
 
     try {
-      const payload = {
-        department_id: parseInt(formDeptId, 10),
-        teacher_id: formTeacherId ? parseInt(formTeacherId, 10) : null,
-        name: formName.trim(),
-        title: formTitle.trim() || 'Head of Department',
-        designation: formDesignation.trim() || 'Department Head',
-        image: formImage || null,
-        image_id: formImageId || null,
-        email: formEmail.trim() || null,
-        phone: formPhone.trim() || null,
-        joining_date: formJoiningDate || null,
-        bio: formBio.trim() || null,
-        message: formMessage.trim() || null,
-        order_no: parseInt(formOrderNo, 10) || 0,
-        is_active: Boolean(formIsActive),
-      };
+      const formData = new FormData();
+      formData.append('department_id', parseInt(formDeptId, 10));
+      if (formTeacherId) formData.append('teacher_id', parseInt(formTeacherId, 10));
+      formData.append('name', formName.trim());
+      formData.append('title', formTitle.trim() || 'Head of Department');
+      formData.append('designation', formDesignation.trim() || 'Department Head');
+      if (formEmail.trim()) formData.append('email', formEmail.trim());
+      if (formPhone.trim()) formData.append('phone', formPhone.trim());
+      if (formJoiningDate) formData.append('joining_date', formJoiningDate);
+      if (formBio.trim()) formData.append('bio', formBio.trim());
+      if (formMessage.trim()) formData.append('message', formMessage.trim());
+      formData.append('order_no', parseInt(formOrderNo, 10) || 0);
+      formData.append('is_active', Boolean(formIsActive));
+
+      if (formMode === 'edit' && editingRecord?.id) {
+        formData.append('id', editingRecord.id);
+      }
+
+      if (selectedImageFile) {
+        formData.append('image', selectedImageFile);
+      } else {
+        if (formImage && !formImage.startsWith('blob:')) {
+          formData.append('image', formImage);
+        }
+        if (formImageId) {
+          formData.append('image_id', formImageId);
+        }
+      }
 
       let res;
       if (formMode === 'create') {
-        res = await axios.post(apiEndpoint, payload);
+        res = await axios.post(apiEndpoint, formData);
       } else {
-        res = await axios.put(apiEndpoint, { ...payload, id: editingRecord.id });
+        res = await axios.put(apiEndpoint, formData);
       }
 
       if (res.data?.success) {
         toast.success(res.data.message || 'Department head saved successfully!', { id: toastId });
+        setSelectedImageFile(null);
         await fetchData(true);
         handleCloseForm();
       } else {
@@ -701,8 +698,10 @@ export default function DepartmentHeadPage() {
                       <button
                         type="button"
                         onClick={() => {
+                          setSelectedImageFile(null);
                           setFormImage('');
                           setFormImageId('');
+                          if (fileInputRef.current) fileInputRef.current.value = '';
                         }}
                         className="px-3 py-2 text-xs font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
                       >

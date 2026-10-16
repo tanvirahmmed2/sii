@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { queryDb } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import {
@@ -70,7 +71,7 @@ export async function POST(request, context) {
 
     // Two-Factor Authentication Check
     if (staff.is_two_factor_enabled) {
-      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpCode = crypto.randomInt(100000, 1000000).toString();
 
       await queryDb(
         `UPDATE website_staffs

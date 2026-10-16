@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { sendWebsiteEmail } from 'src/lib/database/websiteBrevo.js';
@@ -79,8 +80,23 @@ export async function POST(request, context) {
 
     const student = studentRes.rows[0];
 
-    // Generate 6-digit numeric verification OTP
-    const verificationOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    // Rate-limiting check: enforce a 60-second cooldown per student/email
+    const recentOtpRes = await queryDb(`
+      SELECT created_at FROM website_email_verifications
+      WHERE website_id = $1 AND LOWER(email) = $2 AND purpose = 'student_setup'
+        AND created_at > (CURRENT_TIMESTAMP - INTERVAL '60 seconds')
+      LIMIT 1
+    `, [website.id, cleanEmail]);
+
+    if (recentOtpRes.rows.length > 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'Please wait at least 60 seconds before requesting another verification code.'
+      }, { status: 429 });
+    }
+
+    // Generate 6-digit numeric verification OTP securely
+    const verificationOtp = crypto.randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes validity
 
     // Store OTP in website_students directly (always present for registered student)
@@ -160,15 +176,13 @@ export async function POST(request, context) {
       success: true,
       message: emailDispatched 
         ? `A 6-digit verification code has been dispatched to ${cleanEmail}. Please enter it to continue setup.`
-        : `Verification code generated. (Mailer notice: ${dispatchError || 'Dev simulation active'})`,
+        : `A verification code was requested. Please check your email inbox to proceed.`,
       payload: {
         student_id: student.id,
         registration_no: student.registration_no,
         email: cleanEmail,
         student_name: student.name,
-        expires_in_minutes: 15,
-        // In local development or testing without live Brevo SMTP, provide dev_code so user isn't blocked
-        dev_code: process.env.NODE_ENV !== 'production' || !emailDispatched ? verificationOtp : undefined
+        expires_in_minutes: 15
       }
     });
   } catch (error) {

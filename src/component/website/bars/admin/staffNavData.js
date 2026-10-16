@@ -1,948 +1,1172 @@
-// Auto-generated staff panel navigation data
+// Auto-generated staff panel navigation data with explicit module mappings
 export const staffNavData = [
   {
-    title: 'Class',
-    children: [
+    "title": "Class",
+    "module": "routine",
+    "children": [
       {
-        title: 'Departments',
-        path: '/departments'
+        "title": "Departments",
+        "module": "routine",
+        "path": "/departments"
       },
       {
-        title: 'Department Information',
-        path: '/department-information'
+        "title": "Department Information",
+        "module": "routine",
+        "path": "/department-information"
       },
       {
-        title: 'Department Head',
-        path: '/department-head'
+        "title": "Department Head",
+        "module": "routine",
+        "path": "/department-head"
       },
       {
-        title: 'Academic Year',
-        path: '/academic-year'
+        "title": "Academic Year",
+        "module": "routine",
+        "path": "/academic-year"
       },
       {
-        title: 'Class Setup',
-        path: '/class-setup'
+        "title": "Class Setup",
+        "module": "routine",
+        "path": "/class-setup"
       },
       {
-        title: 'Class Section',
-        path: '/class-section'
+        "title": "Class Section",
+        "module": "routine",
+        "path": "/class-section"
       },
       {
-        title: 'Subject',
-        path: '/subjects'
+        "title": "Subject",
+        "module": "routine",
+        "path": "/subjects"
       },
       {
-        title: 'Class Subjects',
-        path: '/class-subject'
+        "title": "Class Subjects",
+        "module": "routine",
+        "path": "/class-subject"
       },
       {
-        title: 'Class Routine',
-        path: '/class-routine'
+        "title": "Class Routine",
+        "module": "routine",
+        "path": "/class-routine"
       },
       {
-        title: 'Class Teacher',
-        path: '/class-teacher'
+        "title": "Class Teacher",
+        "module": "routine",
+        "path": "/class-teacher"
       },
       {
-        title: 'Classrooms (LMS)',
-        path: '/classrooms'
+        "title": "Classrooms (LMS)",
+        "module": "lms",
+        "path": "/classrooms"
       }
     ]
   },
   {
-    title: 'Student',
-    children: [
+    "title": "Student",
+    "module": "sis",
+    "children": [
       {
-        title: 'Students Data',
-        path: '/student-data'
+        "title": "Students Data",
+        "module": "sis",
+        "path": "/student-data"
       },
       {
-        title: 'Registration',
-        path: '/student-registration'
+        "title": "Registration",
+        "module": "sis",
+        "path": "/student-registration"
       },
       {
-        title: 'Verify Student',
-        path: '/student-verify'
+        "title": "Verify Student",
+        "module": "sis",
+        "path": "/student-verify"
       },
       {
-        title: 'Update',
-        children: [
+        "title": "Update",
+        "module": "sis",
+        "children": [
           {
-            title: 'Basic Info',
-            path: '/student-basic-info'
+            "title": "Basic Info",
+            "module": "sis",
+            "path": "/student-basic-info"
           },
           {
-            title: 'Academic Info',
-            path: '/student-academic-info'
+            "title": "Academic Info",
+            "module": "sis",
+            "path": "/student-academic-info"
           },
           {
-            title: 'Address Info',
-            path: '/student-address-info'
+            "title": "Address Info",
+            "module": "sis",
+            "path": "/student-address-info"
           },
           {
-            title: 'Student Guardian Data',
-            path: '/student-guardian-data'
+            "title": "Student Guardian Data",
+            "module": "sis",
+            "path": "/student-guardian-data"
           },
           {
-            title: 'Image',
-            path: '/student-images'
+            "title": "Image",
+            "module": "sis",
+            "path": "/student-images"
           }
         ]
       },
       {
-        title: 'Migration',
-        children: [
+        "title": "Migration",
+        "module": "sis",
+        "children": [
           {
-            title: 'General',
-            path: '/student-general-migration'
+            "title": "General",
+            "module": "sis",
+            "path": "/student-general-migration"
           },
           {
-            title: 'Merit',
-            path: '/student-merit-migration'
+            "title": "Merit",
+            "module": "sis",
+            "path": "/student-merit-migration"
           }
         ]
       },
       {
-        title: 'Delete',
-        path: '/student-delete'
+        "title": "Delete",
+        "module": "sis",
+        "path": "/student-delete"
       },
       {
-        title: 'Drop Out',
-        path: '/student-drop-out'
+        "title": "Drop Out",
+        "module": "sis",
+        "path": "/student-drop-out"
       },
       {
-        title: 'ID Card',
-        children: [
+        "title": "ID Card",
+        "module": "sis",
+        "children": [
           {
-            title: 'Templates',
-            path: '/student-id-card-templates'
+            "title": "Templates",
+            "module": "sis",
+            "path": "/student-id-card-templates"
           },
           {
-            title: 'Download',
-            path: '/student-id-card-download'
+            "title": "Download",
+            "module": "sis",
+            "path": "/student-id-card-download"
           }
         ]
       },
       {
-        title: 'Certificates & Documents',
-        children: [
+        "title": "Certificates & Documents",
+        "module": "sis",
+        "children": [
           {
-            title: 'Transfer Certificate (TC)',
-            children: [
+            "title": "Transfer Certificate (TC)",
+            "module": "sis",
+            "children": [
               {
-                title: 'Templates',
-                path: '/tc-templates'
+                "title": "Templates",
+                "module": "documents",
+                "path": "/tc-templates"
               },
               {
-                title: 'Issue & Download',
-                path: '/tc'
+                "title": "Issue & Download",
+                "module": "documents",
+                "path": "/tc"
               }
             ]
           },
           {
-            title: 'Testimonials',
-            children: [
+            "title": "Testimonials",
+            "module": "sis",
+            "children": [
               {
-                title: 'Templates',
-                path: '/testimonial-templates'
+                "title": "Templates",
+                "module": "documents",
+                "path": "/testimonial-templates"
               },
               {
-                title: 'Issue & Download',
-                path: '/testimonials'
+                "title": "Issue & Download",
+                "module": "documents",
+                "path": "/testimonials"
               }
             ]
           },
           {
-            title: 'Academic Certificates',
-            children: [
+            "title": "Academic Certificates",
+            "module": "sis",
+            "children": [
               {
-                title: 'Templates',
-                path: '/certificate-templates'
+                "title": "Templates",
+                "module": "documents",
+                "path": "/certificate-templates"
               },
               {
-                title: 'Issue & Download',
-                path: '/certificates'
+                "title": "Issue & Download",
+                "module": "documents",
+                "path": "/certificates"
               }
             ]
           },
           {
-            title: 'Payment Receipts',
-            children: [
+            "title": "Payment Receipts",
+            "module": "sis",
+            "children": [
               {
-                title: 'Templates',
-                path: '/payment-receipt-templates'
+                "title": "Templates",
+                "module": "documents",
+                "path": "/payment-receipt-templates"
               },
               {
-                title: 'Issue & Download',
-                path: '/payment-receipt'
+                "title": "Issue & Download",
+                "module": "documents",
+                "path": "/payment-receipt"
               }
             ]
           },
           {
-            title: 'Website Posters',
-            children: [
+            "title": "Website Posters",
+            "module": "sis",
+            "children": [
               {
-                title: 'Templates',
-                path: '/poster-templates'
+                "title": "Templates",
+                "module": "documents",
+                "path": "/poster-templates"
               },
               {
-                title: 'Generate & Export',
-                path: '/posters'
+                "title": "Generate & Export",
+                "module": "documents",
+                "path": "/posters"
               }
             ]
           }
         ]
       },
       {
-        title: 'Search',
-        children: [
+        "title": "Search",
+        "module": "sis",
+        "children": [
           {
-            title: 'Single Student',
-            path: '/search-single-student'
+            "title": "Single Student",
+            "module": "sis",
+            "path": "/search-single-student"
           },
           {
-            title: 'Filtered Student',
-            path: '/search-filtered-students'
+            "title": "Filtered Student",
+            "module": "sis",
+            "path": "/search-filtered-students"
           }
         ]
       }
     ]
   },
   {
-    title: 'Admissions',
-    children: [
+    "title": "Admissions",
+    "module": "admissions",
+    "children": [
       {
-        title: 'Circulars & Fees',
-        path: '/admission-circulars'
+        "title": "Circulars & Fees",
+        "module": "admissions",
+        "path": "/admission-circulars"
       },
       {
-        title: 'Applicants Review',
-        path: '/admission-applicants'
+        "title": "Applicants Review",
+        "module": "admissions",
+        "path": "/admission-applicants"
       },
       {
-        title: 'Exam Marks Upload',
-        path: '/admission-exam-marks-upload'
+        "title": "Exam Marks Upload",
+        "module": "admissions",
+        "path": "/admission-exam-marks-upload"
       },
       {
-        title: 'Exam Selection & Cutoff',
-        path: '/admission-exam-marks-process'
+        "title": "Exam Selection & Cutoff",
+        "module": "admissions",
+        "path": "/admission-exam-marks-process"
       },
       {
-        title: 'Merit Results',
-        path: '/admission-result'
+        "title": "Merit Results",
+        "module": "admissions",
+        "path": "/admission-result"
       },
       {
-        title: 'Student Enrollment',
-        path: '/admission-enrollment'
+        "title": "Student Enrollment",
+        "module": "admissions",
+        "path": "/admission-enrollment"
       }
     ]
   },
   {
-    title: 'Student Attendance',
-    children: [
+    "title": "Student Attendance",
+    "module": "attendance",
+    "children": [
       {
-        title: 'Days',
-        path: '/class-days'
+        "title": "Days",
+        "module": "attendance",
+        "path": "/class-days"
       },
       {
-        title: 'Periods',
-        path: '/class-periods'
+        "title": "Periods",
+        "module": "attendance",
+        "path": "/class-periods"
       },
       {
-        title: 'Attendance',
-        children: [
+        "title": "Attendance",
+        "module": "attendance",
+        "children": [
           {
-            title: 'Take',
-            path: '/student-attendance-take'
+            "title": "Take",
+            "module": "attendance",
+            "path": "/student-attendance-take"
           },
           {
-            title: 'Update',
-            path: '/student-attendance-update'
+            "title": "Update",
+            "module": "attendance",
+            "path": "/student-attendance-update"
           },
           {
-            title: 'Leave Input',
-            path: '/student-attendance-leave'
+            "title": "Leave Input",
+            "module": "attendance",
+            "path": "/student-attendance-leave"
           },
           {
-            title: 'Devices',
-            path: '/student-attendance-devices'
+            "title": "Devices",
+            "module": "attendance",
+            "path": "/student-attendance-devices"
           }
         ]
       },
       {
-        title: 'Report',
-        children: [
+        "title": "Report",
+        "module": "attendance",
+        "children": [
           {
-            title: 'Daily Details',
-            path: '/student-daily-attendance-report'
+            "title": "Daily Details",
+            "module": "attendance",
+            "path": "/student-daily-attendance-report"
           },
           {
-            title: 'Monthly Details',
-            path: '/student-monthly-attendance-report'
+            "title": "Monthly Details",
+            "module": "attendance",
+            "path": "/student-monthly-attendance-report"
           },
           {
-            title: 'Yearly Details',
-            path: '/student-yearly-attendance-report'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    title: 'Teacher',
-    children: [
-      {
-        title: 'Designations',
-        path: '/teacher-designations'
-      },
-      {
-        title: 'Registration',
-        path: '/teacher-registration'
-      },
-      {
-        title: 'Assign',
-        path: '/teacher-assign'
-      },
-      {
-        title: 'Update',
-        path: '/teacher-update'
-      },
-      {
-        title: 'Payroll',
-        path: '/teacher-payroll'
-      },
-      {
-        title: 'Qualifications',
-        path: '/teacher-qualifications'
-      },
-      {
-        title: 'ID Card',
-        children: [
-          {
-            title: 'Templates',
-            path: '/teacher-id-card'
-          },
-          {
-            title: 'Download',
-            path: '/teacher-id-card-download'
-          }
-        ]
-      },
-      {
-        title: 'List',
-        path: '/teacher-list'
-      },
-      {
-        title: 'Settings',
-        path: '/teacher-settings'
-      }
-    ]
-  },
-  {
-    title: 'Teacher Attendance',
-    children: [
-      {
-        title: 'Periods',
-        path: '/teacher-class-periods'
-      },
-      {
-        title: 'Attendance',
-        children: [
-          {
-            title: 'Take',
-            path: '/teacher-attendance-take'
-          },
-          {
-            title: 'Update',
-            path: '/teacher-attendance-update'
-          },
-          {
-            title: 'Leave Input',
-            path: '/teacher-attendance-leave'
-          },
-          {
-            title: 'Devices',
-            path: '/teacher-attendance-devices'
-          }
-        ]
-      },
-      {
-        title: 'Report',
-        children: [
-          {
-            title: 'Daily Details',
-            path: '/teacher-daily-attendance-report'
-          },
-          {
-            title: 'Monthly Details',
-            path: '/teacher-monthly-attendance-report'
-          },
-          {
-            title: 'Yearly Details',
-            path: '/teacher-yearly-attendance-report'
+            "title": "Yearly Details",
+            "module": "attendance",
+            "path": "/student-yearly-attendance-report"
           }
         ]
       }
     ]
   },
   {
-    title: 'Exam',
-    children: [
+    "title": "Teacher",
+    "module": "staff-payroll",
+    "children": [
       {
-        title: 'List',
-        path: '/exam-list'
+        "title": "Designations",
+        "module": "staff-payroll",
+        "path": "/teacher-designations"
       },
       {
-        title: 'Grade',
-        path: '/exam-grade'
+        "title": "Registration",
+        "module": "staff-payroll",
+        "path": "/teacher-registration"
       },
       {
-        title: 'Configuration',
-        path: '/exam-configuration'
+        "title": "Assign",
+        "module": "staff-payroll",
+        "path": "/teacher-assign"
       },
       {
-        title: 'Admit Cards',
-        path: '/exam-admit-cards'
+        "title": "Update",
+        "module": "staff-payroll",
+        "path": "/teacher-update"
       },
       {
-        title: 'Download Admit Card',
-        path: '/exam-admit-card-download'
+        "title": "Payroll",
+        "module": "staff-payroll",
+        "path": "/teacher-payroll"
       },
       {
-        title: 'Marks',
-        children: [
+        "title": "Qualifications",
+        "module": "staff-payroll",
+        "path": "/teacher-qualifications"
+      },
+      {
+        "title": "ID Card",
+        "module": "staff-payroll",
+        "children": [
           {
-            title: 'Mark Input',
-            path: '/exam-mark-input'
+            "title": "Templates",
+            "module": "staff-payroll",
+            "path": "/teacher-id-card"
           },
           {
-            title: 'Mark Update',
-            path: '/exam-mark-update'
+            "title": "Download",
+            "module": "staff-payroll",
+            "path": "/teacher-id-card-download"
           }
         ]
       },
       {
-        title: 'Result',
-        children: [
-          {
-            title: 'Result List',
-            path: '/exam-result-list'
-          },
-          {
-            title: 'Result Process',
-            path: '/exam-result-process'
-          },
-          {
-            title: 'Result Publish',
-            path: '/exam-result-publish'
-          }
-        ]
+        "title": "List",
+        "module": "staff-payroll",
+        "path": "/teacher-list"
       },
       {
-        title: 'Mark Sheet',
-        path: '/exam-mark-sheet'
-      },
-      {
-        title: 'Mark Sheet Download',
-        path: '/exam-mark-sheet-download'
-      },
-      {
-        title: 'Attendance',
-        children: [
-          {
-            title: 'Submit',
-            path: '/exam-attendance-submit'
-          },
-          {
-            title: 'List',
-            path: '/exam-attendance-list'
-          }
-        ]
+        "title": "Settings",
+        "module": "staff-payroll",
+        "path": "/teacher-settings"
       }
     ]
   },
   {
-    title: 'Admission',
-    children: [
+    "title": "Teacher Attendance",
+    "module": "attendance",
+    "children": [
       {
-        title: 'Circulars',
-        path: '/admission-circulars'
+        "title": "Periods",
+        "module": "attendance",
+        "path": "/teacher-class-periods"
       },
       {
-        title: 'Update Circular',
-        path: '/admission-circular-update'
-      },
-      {
-        title: 'Applicants',
-        path: '/admission-applicants'
-      },
-      {
-        title: 'Exam Marks Upload',
-        path: '/admission-exam-marks-upload'
-      },
-      {
-        title: 'Exam Selection & Cutoff',
-        path: '/admission-exam-marks-process'
-      },
-      {
-        title: 'Result',
-        path: '/admission-result'
-      },
-      {
-        title: 'Spams',
-        path: '/admission-spams'
-      }
-    ]
-  },
-  {
-    title: 'TC & Testimonials',
-    children: [
-      {
-        title: 'TC',
-        path: '/tc'
-      },
-      {
-        title: 'Testimonials',
-        path: '/testimonials'
-      }
-    ]
-  },
-  {
-    title: 'Library',
-    children: [
-      {
-        title: 'Setup',
-        children: [
+        "title": "Attendance",
+        "module": "attendance",
+        "children": [
           {
-            title: 'Book Category',
-            path: '/library-book-category'
+            "title": "Take",
+            "module": "attendance",
+            "path": "/teacher-attendance-take"
           },
           {
-            title: 'Writer',
-            path: '/library-book-writer'
+            "title": "Update",
+            "module": "attendance",
+            "path": "/teacher-attendance-update"
           },
           {
-            title: 'Books',
-            path: '/library-books'
+            "title": "Leave Input",
+            "module": "attendance",
+            "path": "/teacher-attendance-leave"
           },
           {
-            title: 'Publishers',
-            path: '/library-books-publishers'
-          },
-          {
-            title: 'Book Shelf',
-            path: '/library-bookshelf'
+            "title": "Devices",
+            "module": "attendance",
+            "path": "/teacher-attendance-devices"
           }
         ]
       },
       {
-        title: 'Student',
-        children: [
+        "title": "Report",
+        "module": "attendance",
+        "children": [
           {
-            title: 'Book Issue',
-            path: '/library-student-issue'
+            "title": "Daily Details",
+            "module": "attendance",
+            "path": "/teacher-daily-attendance-report"
           },
           {
-            title: 'Book Return',
-            path: '/library-student-return'
-          }
-        ]
-      },
-      {
-        title: 'Teacher',
-        children: [
-          {
-            title: 'Book Issue',
-            path: '/library-teacher-issue'
+            "title": "Monthly Details",
+            "module": "attendance",
+            "path": "/teacher-monthly-attendance-report"
           },
           {
-            title: 'Book Return',
-            path: '/library-teacher-return'
+            "title": "Yearly Details",
+            "module": "attendance",
+            "path": "/teacher-yearly-attendance-report"
           }
         ]
       }
     ]
   },
   {
-    title: 'Residence',
-    children: [
+    "title": "Exam",
+    "module": "exams",
+    "children": [
       {
-        title: 'List',
-        path: '/residence-list'
+        "title": "List",
+        "module": "exams",
+        "path": "/exam-list"
       },
       {
-        title: 'Room',
-        path: '/residence-room'
+        "title": "Grade",
+        "module": "exams",
+        "path": "/exam-grade"
       },
       {
-        title: 'Allocations',
-        path: '/residence-allocations'
+        "title": "Configuration",
+        "module": "exams",
+        "path": "/exam-configuration"
       },
       {
-        title: 'Applicants',
-        path: '/residence-applicants'
+        "title": "Admit Cards",
+        "module": "exams",
+        "path": "/exam-admit-cards"
       },
       {
-        title: 'Reports',
-        children: [
+        "title": "Download Admit Card",
+        "module": "exams",
+        "path": "/exam-admit-card-download"
+      },
+      {
+        "title": "Marks",
+        "module": "exams",
+        "children": [
           {
-            title: 'Vacancy',
-            path: '/residence-report-vacancy'
+            "title": "Mark Input",
+            "module": "exams",
+            "path": "/exam-mark-input"
           },
           {
-            title: 'Fees',
-            path: '/residence-report-fees'
-          },
-          {
-            title: 'Report',
-            path: '/residence-report'
+            "title": "Mark Update",
+            "module": "exams",
+            "path": "/exam-mark-update"
           }
         ]
       },
       {
-        title: 'Disallocate',
-        path: '/residence-disallocations'
-      }
-    ]
-  },
-  {
-    title: 'Notices',
-    path: '/notices'
-  },
-  {
-    title: 'Clubs',
-    children: [
-      {
-        title: 'Category',
-        path: '/club-category'
-      },
-      {
-        title: 'Create',
-        path: '/club-create'
-      },
-      {
-        title: 'List',
-        path: '/club-list'
-      },
-      {
-        title: 'Moderator',
-        path: '/club-moderator'
-      },
-      {
-        title: 'Members',
-        path: '/club-members'
-      },
-      {
-        title: 'Images',
-        path: '/club-images'
-      },
-      {
-        title: 'News',
-        path: '/club-news'
-      },
-      {
-        title: 'Notices',
-        path: '/club-notices'
-      }
-    ]
-  },
-  {
-    title: 'News',
-    children: [
-      {
-        title: 'List',
-        path: '/news-list'
-      },
-      {
-        title: 'Create',
-        path: '/news-create'
-      }
-    ]
-  },
-  {
-    title: 'Awards',
-    children: [
-      {
-        title: 'List',
-        path: '/awards-list'
-      },
-      {
-        title: 'Create',
-        path: '/awards-create'
-      }
-    ]
-  },
-  {
-    title: 'Alumni',
-    children: [
-      {
-        title: 'List',
-        path: '/alumni-list'
-      },
-      {
-        title: 'Create',
-        path: '/alumni-create'
-      }
-    ]
-  },
-  {
-    title: 'Institution Profile',
-    children: [
-      {
-        title: 'Missions',
-        path: '/institutional-missions'
-      },
-      {
-        title: 'Visions',
-        path: '/institutional-visions'
-      },
-      {
-        title: 'Milestones',
-        path: '/institutional-milestones'
-      },
-      {
-        title: 'Infrastructure',
-        path: '/institutional-infrastructure'
-      },
-      {
-        title: 'Board Members',
-        path: '/institutional-board-members'
-      }
-    ]
-  },
-  {
-    title: 'Officers',
-    children: [
-      {
-        title: 'Hall',
-        path: '/management-hall'
-      },
-      {
-        title: 'Library',
-        path: '/management-library'
-      },
-      {
-        title: 'Club',
-        path: '/management-club'
-      },
-      {
-        title: 'Others',
-        path: '/management-others'
-      },
-      {
-        title: 'Payrolls',
-        path: '/management-payrolls'
-      }
-    ]
-  },
-  {
-    title: 'Messages',
-    children: [
-      {
-        title: 'Contacts',
-        path: '/contacts'
-      },
-      {
-        title: 'Facebook',
-        path: '/message-facebook'
-      },
-      {
-        title: 'Whatsapp',
-        path: '/message-whatsapp'
-      },
-      {
-        title: 'Instagram',
-        path: '/message-instagram'
-      }
-    ]
-  },
-  {
-    title: 'Salaries',
-    children: [
-      {
-        title: 'Payrolls',
-        path: '/salary-payrolls'
-      },
-      {
-        title: 'Teacher Salaries',
-        path: '/salary-teacher'
-      },
-      {
-        title: 'Teacher Payments',
-        path: '/salary-teacher-payments'
-      },
-      {
-        title: 'Officer Salaries',
-        path: '/salary-officers'
-      },
-      {
-        title: 'Officer Payments',
-        path: '/salary-officer-payments'
-      }
-    ]
-  },
-  {
-    title: 'Fees',
-    children: [
-      {
-        title: 'Education Fee',
-        children: [
+        "title": "Result",
+        "module": "exams",
+        "children": [
           {
-            title: 'Configure',
-            path: '/fees-education-configure'
+            "title": "Result List",
+            "module": "exams",
+            "path": "/exam-result-list"
           },
           {
-            title: 'Make',
-            path: '/fees-education-make'
+            "title": "Result Process",
+            "module": "exams",
+            "path": "/exam-result-process"
+          },
+          {
+            "title": "Result Publish",
+            "module": "exams",
+            "path": "/exam-result-publish"
           }
         ]
       },
       {
-        title: 'Exam',
-        path: '/fees-exam'
+        "title": "Mark Sheet",
+        "module": "exams",
+        "path": "/exam-mark-sheet"
       },
       {
-        title: 'Admission',
-        path: '/fees-admissions'
+        "title": "Mark Sheet Download",
+        "module": "exams",
+        "path": "/exam-mark-sheet-download"
       },
       {
-        title: 'Residence',
-        path: '/fees-residence'
-      },
-      {
-        title: 'Others',
-        path: '/fees-others'
-      }
-    ]
-  },
-  {
-    title: 'Payments',
-    children: [
-      {
-        title: 'Education',
-        children: [
+        "title": "Attendance",
+        "module": "exams",
+        "children": [
           {
-            title: 'List',
-            path: '/payment-education-list'
+            "title": "Submit",
+            "module": "exams",
+            "path": "/exam-attendance-submit"
           },
           {
-            title: 'Paid',
-            path: '/payment-education-paid'
-          },
-          {
-            title: 'Unpaid',
-            path: '/payment-education-unpaid'
-          }
-        ]
-      },
-      {
-        title: 'Exam',
-        children: [
-          {
-            title: 'List',
-            path: '/payment-exam-list'
-          },
-          {
-            title: 'Paid',
-            path: '/payment-exam-paid'
-          },
-          {
-            title: 'Unpaid',
-            path: '/payment-exam-unpaid'
-          }
-        ]
-      },
-      {
-        title: 'Residence',
-        children: [
-          {
-            title: 'List',
-            path: '/payment-residence-list'
-          },
-          {
-            title: 'Paid',
-            path: '/payment-residence-paid'
-          },
-          {
-            title: 'Unpaid',
-            path: '/payment-residence-unpaid'
+            "title": "List",
+            "module": "exams",
+            "path": "/exam-attendance-list"
           }
         ]
       }
     ]
   },
   {
-    title: 'Purchase',
-    children: [
+    "title": "Admission",
+    "module": "admissions",
+    "children": [
       {
-        title: 'Inventory',
-        children: [
+        "title": "Circulars",
+        "module": "admissions",
+        "path": "/admission-circulars"
+      },
+      {
+        "title": "Update Circular",
+        "module": "admissions",
+        "path": "/admission-circular-update"
+      },
+      {
+        "title": "Applicants",
+        "module": "admissions",
+        "path": "/admission-applicants"
+      },
+      {
+        "title": "Exam Marks Upload",
+        "module": "admissions",
+        "path": "/admission-exam-marks-upload"
+      },
+      {
+        "title": "Exam Selection & Cutoff",
+        "module": "admissions",
+        "path": "/admission-exam-marks-process"
+      },
+      {
+        "title": "Result",
+        "module": "admissions",
+        "path": "/admission-result"
+      },
+      {
+        "title": "Spams",
+        "module": "admissions",
+        "path": "/admission-spams"
+      }
+    ]
+  },
+  {
+    "title": "TC & Testimonials",
+    "module": "documents",
+    "children": [
+      {
+        "title": "TC",
+        "module": "documents",
+        "path": "/tc"
+      },
+      {
+        "title": "Testimonials",
+        "module": "documents",
+        "path": "/testimonials"
+      }
+    ]
+  },
+  {
+    "title": "Library",
+    "module": "library",
+    "children": [
+      {
+        "title": "Setup",
+        "module": "library",
+        "children": [
           {
-            title: 'List',
-            path: '/inventory-list'
+            "title": "Book Category",
+            "module": "library",
+            "path": "/library-book-category"
           },
           {
-            title: 'New',
-            path: '/inventory-new'
+            "title": "Writer",
+            "module": "library",
+            "path": "/library-book-writer"
           },
           {
-            title: 'Supplier',
-            path: '/inventory-supplier'
+            "title": "Books",
+            "module": "library",
+            "path": "/library-books"
+          },
+          {
+            "title": "Publishers",
+            "module": "library",
+            "path": "/library-books-publishers"
+          },
+          {
+            "title": "Book Shelf",
+            "module": "library",
+            "path": "/library-bookshelf"
           }
         ]
       },
       {
-        title: 'Expenses',
-        children: [
+        "title": "Student",
+        "module": "library",
+        "children": [
           {
-            title: 'List',
-            path: '/inventory-expenses'
+            "title": "Book Issue",
+            "module": "library",
+            "path": "/library-student-issue"
           },
           {
-            title: 'Transactions',
-            path: '/inventory-transactions'
+            "title": "Book Return",
+            "module": "library",
+            "path": "/library-student-return"
+          }
+        ]
+      },
+      {
+        "title": "Teacher",
+        "module": "library",
+        "children": [
+          {
+            "title": "Book Issue",
+            "module": "library",
+            "path": "/library-teacher-issue"
           },
           {
-            title: 'Unpaid',
-            path: '/inventory-unpaid'
+            "title": "Book Return",
+            "module": "library",
+            "path": "/library-teacher-return"
           }
         ]
       }
     ]
   },
   {
-    title: 'Configuration',
-    children: [
+    "title": "Residence",
+    "module": "hostel",
+    "children": [
       {
-        title: 'Payments',
-        path: '/configure-payments'
+        "title": "List",
+        "module": "hostel",
+        "path": "/residence-list"
       },
       {
-        title: 'Meta',
-        path: '/configure-meta'
+        "title": "Room",
+        "module": "hostel",
+        "path": "/residence-room"
       },
       {
-        title: 'Mailer',
-        path: '/configure-mailer'
+        "title": "Allocations",
+        "module": "hostel",
+        "path": "/residence-allocations"
       },
       {
-        title: 'SMS',
-        path: '/configure-sms'
+        "title": "Applicants",
+        "module": "hostel",
+        "path": "/residence-applicants"
+      },
+      {
+        "title": "Reports",
+        "module": "hostel",
+        "children": [
+          {
+            "title": "Vacancy",
+            "module": "hostel",
+            "path": "/residence-report-vacancy"
+          },
+          {
+            "title": "Fees",
+            "module": "hostel",
+            "path": "/residence-report-fees"
+          },
+          {
+            "title": "Report",
+            "module": "hostel",
+            "path": "/residence-report"
+          }
+        ]
+      },
+      {
+        "title": "Disallocate",
+        "module": "hostel",
+        "path": "/residence-disallocations"
       }
     ]
   },
   {
-    title: 'Settings',
-    path: '/settings'
+    "title": "Notices",
+    "module": "notices",
+    "path": "/notices"
   },
   {
-    title: 'Profile',
-    path: '/staff-profile'
+    "title": "Clubs",
+    "module": "clubs",
+    "children": [
+      {
+        "title": "Category",
+        "module": "clubs",
+        "path": "/club-category"
+      },
+      {
+        "title": "Create",
+        "module": "clubs",
+        "path": "/club-create"
+      },
+      {
+        "title": "List",
+        "module": "clubs",
+        "path": "/club-list"
+      },
+      {
+        "title": "Moderator",
+        "module": "clubs",
+        "path": "/club-moderator"
+      },
+      {
+        "title": "Members",
+        "module": "clubs",
+        "path": "/club-members"
+      },
+      {
+        "title": "Images",
+        "module": "clubs",
+        "path": "/club-images"
+      },
+      {
+        "title": "News",
+        "module": "clubs",
+        "path": "/club-news"
+      },
+      {
+        "title": "Notices",
+        "module": "clubs",
+        "path": "/club-notices"
+      }
+    ]
   },
   {
-    title: 'Staff Settings',
-    path: '/staff-settings'
+    "title": "News",
+    "module": "website-builder",
+    "children": [
+      {
+        "title": "List",
+        "module": "website-builder",
+        "path": "/news-list"
+      },
+      {
+        "title": "Create",
+        "module": "website-builder",
+        "path": "/news-create"
+      }
+    ]
+  },
+  {
+    "title": "Awards",
+    "module": "website-builder",
+    "children": [
+      {
+        "title": "List",
+        "module": "website-builder",
+        "path": "/awards-list"
+      },
+      {
+        "title": "Create",
+        "module": "website-builder",
+        "path": "/awards-create"
+      }
+    ]
+  },
+  {
+    "title": "Alumni",
+    "module": "sis",
+    "children": [
+      {
+        "title": "List",
+        "module": "sis",
+        "path": "/alumni-list"
+      },
+      {
+        "title": "Create",
+        "module": "sis",
+        "path": "/alumni-create"
+      }
+    ]
+  },
+  {
+    "title": "Institution Profile",
+    "module": "website-builder",
+    "children": [
+      {
+        "title": "Missions",
+        "module": "website-builder",
+        "path": "/institutional-missions"
+      },
+      {
+        "title": "Visions",
+        "module": "website-builder",
+        "path": "/institutional-visions"
+      },
+      {
+        "title": "Milestones",
+        "module": "website-builder",
+        "path": "/institutional-milestones"
+      },
+      {
+        "title": "Infrastructure",
+        "module": "website-builder",
+        "path": "/institutional-infrastructure"
+      },
+      {
+        "title": "Board Members",
+        "module": "website-builder",
+        "path": "/institutional-board-members"
+      }
+    ]
+  },
+  {
+    "title": "Officers",
+    "module": "officers",
+    "children": [
+      {
+        "title": "Hall",
+        "module": "officers",
+        "path": "/management-hall"
+      },
+      {
+        "title": "Library",
+        "module": "officers",
+        "path": "/management-library"
+      },
+      {
+        "title": "Club",
+        "module": "officers",
+        "path": "/management-club"
+      },
+      {
+        "title": "Others",
+        "module": "officers",
+        "path": "/management-others"
+      },
+      {
+        "title": "Payrolls",
+        "module": "officers",
+        "path": "/management-payrolls"
+      }
+    ]
+  },
+  {
+    "title": "Messages",
+    "module": "communications",
+    "children": [
+      {
+        "title": "Contacts",
+        "module": "communications",
+        "path": "/contacts"
+      },
+      {
+        "title": "Facebook",
+        "module": "communications",
+        "path": "/message-facebook"
+      },
+      {
+        "title": "Whatsapp",
+        "module": "communications",
+        "path": "/message-whatsapp"
+      },
+      {
+        "title": "Instagram",
+        "module": "communications",
+        "path": "/message-instagram"
+      }
+    ]
+  },
+  {
+    "title": "Salaries",
+    "module": "staff-payroll",
+    "children": [
+      {
+        "title": "Payrolls",
+        "module": "staff-payroll",
+        "path": "/salary-payrolls"
+      },
+      {
+        "title": "Teacher Salaries",
+        "module": "staff-payroll",
+        "path": "/salary-teacher"
+      },
+      {
+        "title": "Teacher Payments",
+        "module": "staff-payroll",
+        "path": "/salary-teacher-payments"
+      },
+      {
+        "title": "Officer Salaries",
+        "module": "staff-payroll",
+        "path": "/salary-officers"
+      },
+      {
+        "title": "Officer Payments",
+        "module": "staff-payroll",
+        "path": "/salary-officer-payments"
+      }
+    ]
+  },
+  {
+    "title": "Fees",
+    "module": "fees",
+    "children": [
+      {
+        "title": "Education Fee",
+        "module": "fees",
+        "children": [
+          {
+            "title": "Configure",
+            "module": "fees",
+            "path": "/fees-education-configure"
+          },
+          {
+            "title": "Make",
+            "module": "fees",
+            "path": "/fees-education-make"
+          }
+        ]
+      },
+      {
+        "title": "Exam",
+        "module": "fees",
+        "path": "/fees-exam"
+      },
+      {
+        "title": "Admission",
+        "module": "fees",
+        "path": "/fees-admissions"
+      },
+      {
+        "title": "Residence",
+        "module": "fees",
+        "path": "/fees-residence"
+      },
+      {
+        "title": "Others",
+        "module": "fees",
+        "path": "/fees-others"
+      }
+    ]
+  },
+  {
+    "title": "Payments",
+    "module": "fees",
+    "children": [
+      {
+        "title": "Education",
+        "module": "fees",
+        "children": [
+          {
+            "title": "List",
+            "module": "fees",
+            "path": "/payment-education-list"
+          },
+          {
+            "title": "Paid",
+            "module": "fees",
+            "path": "/payment-education-paid"
+          },
+          {
+            "title": "Unpaid",
+            "module": "fees",
+            "path": "/payment-education-unpaid"
+          }
+        ]
+      },
+      {
+        "title": "Exam",
+        "module": "fees",
+        "children": [
+          {
+            "title": "List",
+            "module": "fees",
+            "path": "/payment-exam-list"
+          },
+          {
+            "title": "Paid",
+            "module": "fees",
+            "path": "/payment-exam-paid"
+          },
+          {
+            "title": "Unpaid",
+            "module": "fees",
+            "path": "/payment-exam-unpaid"
+          }
+        ]
+      },
+      {
+        "title": "Residence",
+        "module": "fees",
+        "children": [
+          {
+            "title": "List",
+            "module": "fees",
+            "path": "/payment-residence-list"
+          },
+          {
+            "title": "Paid",
+            "module": "fees",
+            "path": "/payment-residence-paid"
+          },
+          {
+            "title": "Unpaid",
+            "module": "fees",
+            "path": "/payment-residence-unpaid"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Purchase",
+    "module": "accounting",
+    "children": [
+      {
+        "title": "Inventory",
+        "module": "accounting",
+        "children": [
+          {
+            "title": "List",
+            "module": "accounting",
+            "path": "/inventory-list"
+          },
+          {
+            "title": "New",
+            "module": "accounting",
+            "path": "/inventory-new"
+          },
+          {
+            "title": "Supplier",
+            "module": "accounting",
+            "path": "/inventory-supplier"
+          }
+        ]
+      },
+      {
+        "title": "Expenses",
+        "module": "accounting",
+        "children": [
+          {
+            "title": "List",
+            "module": "accounting",
+            "path": "/inventory-expenses"
+          },
+          {
+            "title": "Transactions",
+            "module": "accounting",
+            "path": "/inventory-transactions"
+          },
+          {
+            "title": "Unpaid",
+            "module": "accounting",
+            "path": "/inventory-unpaid"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Configuration",
+    "module": "settings",
+    "children": [
+      {
+        "title": "Payments",
+        "module": "settings",
+        "path": "/configure-payments"
+      },
+      {
+        "title": "Meta",
+        "module": "settings",
+        "path": "/configure-meta"
+      },
+      {
+        "title": "Mailer",
+        "module": "communications",
+        "path": "/configure-mailer"
+      },
+      {
+        "title": "SMS",
+        "module": "communications",
+        "path": "/configure-sms"
+      }
+    ]
+  },
+  {
+    "title": "Settings",
+    "module": "settings",
+    "path": "/settings"
+  },
+  {
+    "title": "Profile",
+    "module": null,
+    "path": "/staff-profile"
+  },
+  {
+    "title": "Staff Settings",
+    "module": null,
+    "path": "/staff-settings"
   }
 ];
 
 export default staffNavData;
+

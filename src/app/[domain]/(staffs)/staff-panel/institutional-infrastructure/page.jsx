@@ -83,12 +83,13 @@ export default function InstitutionalInfrastructurePage() {
 
   const fileInputRef = useRef(null);
 
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
+
   // API Endpoints
   const apiEndpoint = useMemo(
     () => getApiEndpoint('staff/panel/infrastructure'),
     [getApiEndpoint]
   );
-  const uploadEndpoint = useMemo(() => getApiEndpoint('staff/panel/upload'), [getApiEndpoint]);
 
   // Fetch Facilities
   const fetchFacilities = useCallback(
@@ -147,6 +148,7 @@ export default function InstitutionalInfrastructurePage() {
     setFormDescription('');
     setFormImageUrl('');
     setFormImageId('');
+    setSelectedImageFile(null);
     setFormOrderNo(facilities.length > 0 ? facilities.length + 1 : 1);
     setFormIsActive(true);
     setIsModalOpen(true);
@@ -156,6 +158,7 @@ export default function InstitutionalInfrastructurePage() {
   const openEditModal = (item) => {
     setModalMode('edit');
     setEditingFacility(item);
+    setSelectedImageFile(null);
     setFormTitle(item.title || '');
     setFormSubtitle(item.subtitle || '');
     setFormFacilityType(item.facility_type || 'Campus Facility');
@@ -167,8 +170,8 @@ export default function InstitutionalInfrastructurePage() {
     setIsModalOpen(true);
   };
 
-  // Handle Cloudinary Image Upload
-  const handleImageFileChange = async (e) => {
+  // Handle Local Photo Selection
+  const handleImageFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -182,40 +185,16 @@ export default function InstitutionalInfrastructurePage() {
       return;
     }
 
-    setUploadingImage(true);
-    const toastId = toast.loading('Uploading photo to Cloudinary...');
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'institutional_infrastructure');
-
-      const res = await axios.post(uploadEndpoint, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      if (res.data?.success && (res.data.url || res.data.image_url)) {
-        const uploadedUrl = res.data.url || res.data.image_url;
-        const uploadedId = res.data.image_id || res.data.publicId || '';
-        setFormImageUrl(uploadedUrl);
-        setFormImageId(uploadedId);
-        toast.success('Photo uploaded to Cloudinary successfully!', { id: toastId });
-      } else {
-        toast.error(res.data?.error || 'Failed to upload photo.', { id: toastId });
-      }
-    } catch (err) {
-      console.error('Cloudinary upload error:', err);
-      toast.error(err.response?.data?.error || 'Error uploading photo to Cloudinary.', {
-        id: toastId,
-      });
-    } finally {
-      setUploadingImage(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
+    setSelectedImageFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setFormImageUrl(objectUrl);
+    toast.success('Photo selected! Click "Save Facility" to apply.');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   // Remove current image
   const handleRemoveImage = () => {
+    setSelectedImageFile(null);
     setFormImageUrl('');
     setFormImageId('');
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -238,23 +217,34 @@ export default function InstitutionalInfrastructurePage() {
 
     setSubmitting(true);
     try {
-      const payload = {
-        title: formTitle.trim(),
-        subtitle: formSubtitle.trim(),
-        facility_type: formFacilityType.trim(),
-        description: formDescription,
-        image: formImageUrl.trim(),
-        image_id: formImageId.trim(),
-        order_no: parseInt(formOrderNo, 10) || 0,
-        is_active: Boolean(formIsActive),
-      };
+      const formData = new FormData();
+      formData.append('title', formTitle.trim());
+      formData.append('subtitle', formSubtitle.trim());
+      formData.append('facility_type', formFacilityType.trim());
+      formData.append('description', formDescription);
+      formData.append('order_no', parseInt(formOrderNo, 10) || 0);
+      formData.append('is_active', Boolean(formIsActive));
+
+      if (modalMode === 'edit' && editingFacility?.id) {
+        formData.append('id', editingFacility.id);
+      }
+
+      if (selectedImageFile) {
+        formData.append('file', selectedImageFile);
+      } else {
+        if (formImageUrl && !formImageUrl.startsWith('blob:')) {
+          formData.append('image', formImageUrl);
+        }
+        if (formImageId) {
+          formData.append('image_id', formImageId);
+        }
+      }
 
       let res;
       if (modalMode === 'create') {
-        res = await axios.post(apiEndpoint, payload);
+        res = await axios.post(apiEndpoint, formData);
       } else {
-        payload.id = editingFacility.id;
-        res = await axios.put(apiEndpoint, payload);
+        res = await axios.put(apiEndpoint, formData);
       }
 
       if (res.data?.success) {
@@ -263,6 +253,7 @@ export default function InstitutionalInfrastructurePage() {
             ? 'Facility created successfully!'
             : 'Facility updated successfully!'
         );
+        setSelectedImageFile(null);
         setIsModalOpen(false);
         fetchFacilities(true);
       } else {

@@ -255,13 +255,11 @@ export default function TeacherVerifyPage() {
   const { website, tenantUrl } = useTenantWebsite();
 
   return (
-    <div className="w-full min-h-[80vh] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="w-full min-h-screen flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-6 sm:p-8 shadow-xs space-y-6">
         
         <div className="text-center space-y-1.5 border-b border-slate-100 dark:border-slate-800 pb-5">
-          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block">
-            {website?.name || 'Faculty Onboarding'}
-          </span>
+          
           <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
             Teacher Profile Verification
           </h1>

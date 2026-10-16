@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { queryDb } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
@@ -26,7 +27,7 @@ export async function POST(request, context) {
     const cleanEmail = String(email).trim().toLowerCase();
 
     const staffRes = await queryDb(
-      `SELECT id, name, email, is_active, is_two_factor_enabled
+      `SELECT id, name, email, is_active, is_two_factor_enabled, two_factor_expires
        FROM website_staffs
        WHERE website_id = $1 AND LOWER(email) = $2
        LIMIT 1`,
@@ -49,7 +50,19 @@ export async function POST(request, context) {
       );
     }
 
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // Rate limiting: 60s cooldown check
+    if (staff.two_factor_expires) {
+      const remainingMs = new Date(staff.two_factor_expires).getTime() - Date.now();
+      // If code was generated less than 60s ago (expiry was set to 10 mins = 600s, so remaining > 540s)
+      if (remainingMs > 9 * 60 * 1000) {
+        return NextResponse.json({
+          success: false,
+          error: 'Please wait at least 60 seconds before requesting another verification code.'
+        }, { status: 429 });
+      }
+    }
+
+    const otpCode = crypto.randomInt(100000, 1000000).toString();
 
     await queryDb(
       `UPDATE website_staffs

@@ -2,7 +2,19 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { toast } from 'react-hot-toast';
+
+// Dynamically import TiptapEditor to prevent SSR hydration mismatch
+const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor.jsx'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-44 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-xs text-slate-400">
+      Loading Tiptap Rich Text Editor...
+    </div>
+  )
+});
+
 export default function AdmissionCircularsPage() {
   const params = useParams();
   const domain = params?.domain || '';
@@ -718,13 +730,18 @@ export default function AdmissionCircularsPage() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Circular Description / Guidelines
-              </label>
-              <textarea rows={2} placeholder="Enter intake guidelines, prerequisites, and instructions..." value={form.description} onChange={e => setForm({
-            ...form,
-            description: e.target.value
-          })} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden" />
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                  Circular Description &amp; Detailed Guidelines (Tiptap Rich Text Editor)
+                </label>
+                <span className="text-[10px] text-slate-400 font-medium">Powered by Tiptap Editor</span>
+              </div>
+              <TiptapEditor
+                value={form.description}
+                onChange={(val) => setForm((prev) => ({ ...prev, description: val }))}
+                placeholder="Compose detailed circular guidelines, admission criteria, fee breakdown, syllabus highlights, and instructions for applicants..."
+                minHeight="220px"
+              />
             </div>
 
             {/* Actions */}

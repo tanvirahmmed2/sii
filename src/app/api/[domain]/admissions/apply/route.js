@@ -20,14 +20,15 @@ export async function GET(request, context) {
       SELECT a.*, c.name AS class_name, s.name AS session_name,
              d.name AS department_name,
              af.fee_title, af.amount AS fee_amount, af.currency AS fee_currency, af.late_fee,
-             ex.exam_date AS admission_exam_date, ex.venue AS exam_venue, ex.instructions AS exam_instructions
+             ex.exam_date AS admission_exam_date, ex.admit_publish_date AS admission_admit_publish_date,
+             ex.venue AS exam_venue, ex.instructions AS exam_instructions
       FROM website_admissions a
       LEFT JOIN website_classes c ON c.id = a.class_id
       LEFT JOIN website_sessions s ON s.id = a.session_id
       LEFT JOIN website_departments d ON d.id = a.department_id
       LEFT JOIN website_admission_fees af ON af.admission_id = a.id AND af.status = 'active'
       LEFT JOIN website_admission_exams ex ON ex.admission_id = a.id
-      WHERE a.website_id = $1 AND a.status = 'open' AND a.is_published = TRUE
+      WHERE a.website_id = $1 AND a.is_published = TRUE AND a.status IN ('open', 'upcoming')
     `;
     const params = [website.id];
 
@@ -40,9 +41,30 @@ export async function GET(request, context) {
 
     const res = await queryDb(sql, params);
 
+    // Fetch subjects for any exam-based circulars
+    const examSubjectsRes = await queryDb(`
+      SELECT id, admission_id, admission_exam_id, title, mark, time
+      FROM website_admission_exam_subjects
+      WHERE website_id = $1
+      ORDER BY id ASC
+    `, [website.id]);
+
+    const subjectsByAdmission = {};
+    for (const sub of examSubjectsRes.rows) {
+      if (!subjectsByAdmission[sub.admission_id]) {
+        subjectsByAdmission[sub.admission_id] = [];
+      }
+      subjectsByAdmission[sub.admission_id].push(sub);
+    }
+
+    const circularsWithSubjects = res.rows.map((circ) => ({
+      ...circ,
+      exam_subjects: subjectsByAdmission[circ.id] || []
+    }));
+
     return NextResponse.json({
       success: true,
-      circulars: res.rows
+      circulars: circularsWithSubjects
     });
   } catch (error) {
     console.error('Error in GET /admissions/apply:', error);
@@ -97,11 +119,29 @@ export async function POST(request, context) {
     if (!applicant_name || !applicant_name.trim()) {
       return NextResponse.json({ success: false, error: 'Applicant candidate name is required.' }, { status: 400 });
     }
-    if (!email || !email.trim()) {
-      return NextResponse.json({ success: false, error: 'Candidate email address is required.' }, { status: 400 });
+    if (!email || !email.trim() || !email.includes('@')) {
+      return NextResponse.json({ success: false, error: 'A valid candidate email address is required.' }, { status: 400 });
     }
     if (!phone || !phone.trim()) {
       return NextResponse.json({ success: false, error: 'Contact phone number is required.' }, { status: 400 });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+
+    // 0. Enforce backend email verification check
+    const verifiedCheck = await queryDb(`
+      SELECT id, is_verified, expires_at
+      FROM website_email_verifications
+      WHERE website_id = $1 AND LOWER(email) = $2 AND purpose = 'admission' AND is_verified = TRUE
+      ORDER BY id DESC
+      LIMIT 1
+    `, [website.id, cleanEmail]);
+
+    if (verifiedCheck.rows.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'Email verification required. Please verify your email with the one-time passcode before submitting.'
+      }, { status: 403 });
     }
 
     const admId = parseInt(targetAdmId, 10);
@@ -221,6 +261,11 @@ export async function POST(request, context) {
       feeCurrency,
       invoiceRef
     ]);
+
+    // Consume verified token record to prevent replay attack
+    try {
+      await queryDb(`DELETE FROM website_email_verifications WHERE id = $1`, [verifiedCheck.rows[0].id]);
+    } catch (_) {}
 
     return NextResponse.json({
       success: true,

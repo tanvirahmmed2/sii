@@ -45,12 +45,16 @@ function TeacherUpdateContent() {
   const [allTeachers, setAllTeachers] = useState([]);
   const [selectedTeacherId, setSelectedTeacherId] = useState(initialTeacherId);
 
-  // Designations & Departments
+  // Designations, Departments & Payroll scales
   const [designations, setDesignations] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [payrolls, setPayrolls] = useState([]);
+  const [loadingPayrolls, setLoadingPayrolls] = useState(true);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [selectedPhotoFile, setSelectedPhotoFile] = useState(null);
+  const [resendingVerification, setResendingVerification] = useState(false);
 
   // Form data
   const [formData, setFormData] = useState({
@@ -66,13 +70,14 @@ function TeacherUpdateContent() {
     address: '',
     permanent_address: '',
     joining_date: '',
-    salary: '',
+    payroll_id: '',
     department_id: '',
     designation_id: '',
     photo_url: '',
     photo_id: '',
     password: '',
-    is_active: true
+    is_active: true,
+    is_registered: false
   });
 
   // Toast feedback
@@ -89,25 +94,33 @@ function TeacherUpdateContent() {
     }
   }, []);
 
-  // Fetch designations & departments
+  // Fetch designations, departments & payroll scales
   useEffect(() => {
     async function loadData() {
       if (!domain) return;
       try {
-        const [desRes, deptRes] = await Promise.all([
+        setLoadingPayrolls(true);
+        const [desRes, deptRes, payRes] = await Promise.all([
           fetch(`/api/${domain}/staff/panel/teacher/designations`),
-          fetch(`/api/${domain}/staff/panel/departments`)
+          fetch(`/api/${domain}/staff/panel/departments`),
+          fetch(`/api/${domain}/staff/panel/teacher-payrolls`)
         ]);
         const desData = await desRes.json();
         const deptData = await deptRes.json();
+        const payData = await payRes.json();
         if (desData.success) {
           setDesignations(desData.designations || []);
         }
         if (deptData.success) {
           setDepartments(deptData.departments || []);
         }
+        if (payData.success && Array.isArray(payData.payrolls)) {
+          setPayrolls(payData.payrolls.filter((p) => p.is_active));
+        }
       } catch (err) {
         console.error(err);
+      } finally {
+        setLoadingPayrolls(false);
       }
     }
     loadData();
@@ -155,13 +168,14 @@ function TeacherUpdateContent() {
           address: t.address || '',
           permanent_address: t.permanent_address || '',
           joining_date: t.joining_date ? t.joining_date.split('T')[0] : '',
-          salary: t.salary !== null && t.salary !== undefined ? String(t.salary) : '',
+          payroll_id: t.payroll_id ? String(t.payroll_id) : '',
           department_id: t.department_id ? String(t.department_id) : '',
           designation_id: t.designation_id ? String(t.designation_id) : '',
           photo_url: t.photo_url || '',
           photo_id: t.photo_id || '',
           password: '',
-          is_active: Boolean(t.is_active)
+          is_active: Boolean(t.is_active),
+          is_registered: Boolean(t.is_registered)
         });
       } else {
         showToast(data.error || 'Failed to load teacher profile.', true);
@@ -188,44 +202,58 @@ function TeacherUpdateContent() {
     }));
   };
 
-  // Photo upload
-  const handlePhotoSelect = async (e) => {
+  // Photo select (client-side preview only, no remote upload until submit)
+  const handlePhotoSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    try {
-      setUploadingPhoto(true);
-      const data = new FormData();
-      data.append('file', file);
-      data.append('folder', 'teacher_photos');
-
-      const res = await fetch(`/api/${domain}/staff/panel/upload`, {
-        method: 'POST',
-        body: data
-      });
-      const json = await res.json();
-
-      if (json.success && json.url) {
-        setFormData((prev) => ({
-          ...prev,
-          photo_url: json.url,
-          photo_id: json.publicId || json.image_id || ''
-        }));
-        showToast('Photo uploaded.');
-      } else {
-        showToast(json.error || 'Failed to upload photo.', true);
-      }
-    } catch (err) {
-      console.error(err);
-      showToast('Error uploading photo.', true);
-    } finally {
-      setUploadingPhoto(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+    if (!file.type.startsWith('image/')) {
+      showToast('Please select a valid image file.', true);
+      return;
     }
+    if (file.size > 10 * 1024 * 1024) {
+      showToast('Image size exceeds 10MB limit.', true);
+      return;
+    }
+
+    setSelectedPhotoFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setFormData((prev) => ({
+      ...prev,
+      photo_url: objectUrl
+    }));
+    showToast('Photo selected. Click "Save Changes" to upload and apply.');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const removePhoto = () => {
+    setSelectedPhotoFile(null);
     setFormData((prev) => ({ ...prev, photo_url: '', photo_id: '' }));
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Resend verification link
+  const handleResendVerification = async () => {
+    if (!formData.id || !domain) return;
+    try {
+      setResendingVerification(true);
+      const res = await fetch(`/api/${domain}/staff/panel/teacher/resend-verification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teacherId: formData.id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || 'Verification link resent successfully!');
+      } else {
+        showToast(data.error || 'Failed to resend verification link.', true);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Network error while resending verification link.', true);
+    } finally {
+      setResendingVerification(false);
+    }
   };
 
   // Submit update
@@ -251,22 +279,30 @@ function TeacherUpdateContent() {
 
     try {
       setSubmitting(true);
-      const payload = {
-        ...formData,
-        department_id: Number(formData.department_id),
-        designation_id: formData.designation_id ? Number(formData.designation_id) : null,
-        salary: formData.salary ? parseFloat(formData.salary) : 0
-      };
+      const putData = new FormData();
+      Object.keys(formData).forEach((key) => {
+        if (key === 'department_id') putData.append('department_id', Number(formData.department_id));
+        else if (key === 'designation_id') putData.append('designation_id', formData.designation_id ? Number(formData.designation_id) : '');
+        else if (key === 'payroll_id') {
+          putData.append('payroll_id', formData.payroll_id ? Number(formData.payroll_id) : '');
+        }
+        else if (key === 'salary') { /* Handled via connected payroll scale */ }
+        else if (formData[key] !== null && formData[key] !== undefined) putData.append(key, formData[key]);
+      });
+
+      if (selectedPhotoFile) {
+        putData.append('photo', selectedPhotoFile);
+      }
 
       const res = await fetch(`/api/${domain}/staff/panel/teacher`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: putData
       });
       const data = await res.json();
 
       if (data.success) {
         showToast('Teacher profile updated successfully!');
+        setSelectedPhotoFile(null);
         loadTeacherDetails(formData.id);
       } else {
         showToast(data.error || 'Failed to update teacher.', true);
@@ -358,6 +394,30 @@ function TeacherUpdateContent() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Pending Email Verification Banner */}
+          {formData.id && !formData.is_registered && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 text-xs">
+              <div>
+                <span className="font-bold flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                  <span>Account Pending Email Verification</span>
+                </span>
+                <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">
+                  This faculty profile is currently inactive until verified by the teacher via their invitation link.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={resendingVerification}
+                className="px-3 py-1.5 rounded bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition shadow-xs shrink-0"
+              >
+                <FiMail className={`w-3.5 h-3.5 ${resendingVerification ? 'animate-spin' : ''}`} />
+                <span>{resendingVerification ? 'Sending Link...' : 'Resend Verification Link'}</span>
+              </button>
+            </div>
+          )}
+
           {/* Section 1: Personal & Contact */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-2">
@@ -637,18 +697,40 @@ function TeacherUpdateContent() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Basic Monthly Salary
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <FiDollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Payroll Scale / Grade</span>
+                  </span>
+                  <Link
+                    href={`/${domain}/staff-panel/teacher-payrolls`}
+                    target="_blank"
+                    className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    Manage Scales
+                  </Link>
                 </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  name="salary"
-                  value={formData.salary}
+                <select
+                  name="payroll_id"
+                  value={formData.payroll_id}
                   onChange={handleInputChange}
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
-                />
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 cursor-pointer"
+                >
+                  <option value="">-- No Payroll Scale (Unassigned) --</option>
+                  {payrolls.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.title} ({p.grade_code || 'Scale'}) — Basic: ৳{Number(p.basic_salary).toLocaleString()}
+                    </option>
+                  ))}
+                </select>
+                {payrolls.length === 0 && !loadingPayrolls && (
+                  <p className="text-[10px] text-amber-600 mt-1">
+                    No payroll scales found.{' '}
+                    <Link href={`/${domain}/staff-panel/teacher-payrolls`} className="underline font-semibold">
+                      Create in Payroll
+                    </Link>
+                  </p>
+                )}
               </div>
 
               <div className="flex flex-col justify-center pt-2">
@@ -665,7 +747,70 @@ function TeacherUpdateContent() {
                 <p className="text-[10px] text-slate-400 mt-0.5 ml-6">Controls portal authentication access</p>
               </div>
             </div>
-          </div>
+
+            {/* Connected Payroll Scale Details Breakdown */}
+            {(() => {
+              const selectedPayroll = payrolls.find((p) => String(p.id) === String(formData.payroll_id));
+              if (!selectedPayroll) return null;
+              return (
+                <div className="mt-3 p-3 rounded border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/20 text-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/70 dark:border-emerald-800/40 pb-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-emerald-950 dark:text-emerald-300 text-xs">
+                        {selectedPayroll.title}
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-200/60 dark:bg-emerald-800/50 text-emerald-800 dark:text-emerald-200">
+                        {selectedPayroll.grade_code || 'STANDARD'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs flex-wrap">
+                      <span className="text-slate-600 dark:text-slate-300">
+                        Gross: <strong className="text-slate-900 dark:text-white">৳{Number(selectedPayroll.gross_salary || 0).toLocaleString()}</strong>
+                      </span>
+                      <span className="text-slate-400">|</span>
+                      <span className="text-rose-600 dark:text-rose-400">
+                        Deductions: <strong>-৳{Number(selectedPayroll.total_deductions || 0).toLocaleString()}</strong>
+                      </span>
+                      <span className="text-slate-400">|</span>
+                      <span className="text-emerald-700 dark:text-emerald-400 font-bold">
+                        Net Monthly: ৳{Number(selectedPayroll.net_salary || 0).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 text-[11px] text-slate-600 dark:text-slate-400">
+                    <div>
+                      <span className="block text-[10px] uppercase text-slate-400">Basic</span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200">৳{Number(selectedPayroll.basic_salary || 0).toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase text-slate-400">House Rent</span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200">৳{Number(selectedPayroll.house_rent || 0).toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase text-slate-400">Medical</span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200">৳{Number(selectedPayroll.medical_allowance || 0).toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase text-slate-400">Transport</span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200">৳{Number(selectedPayroll.transport_allowance || 0).toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase text-slate-400">Other Allow.</span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200">৳{Number(selectedPayroll.other_allowance || 0).toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase text-slate-400">PF Ded.</span>
+                      <span className="font-medium text-rose-600 dark:text-rose-400">৳{Number(selectedPayroll.provident_fund || 0).toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase text-slate-400">Tax Ded.</span>
+                      <span className="font-medium text-rose-600 dark:text-rose-400">৳{Number(selectedPayroll.tax_deduction || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+        </div>
 
           {/* Form Actions */}
           <div className="flex items-center justify-end gap-3 p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs">

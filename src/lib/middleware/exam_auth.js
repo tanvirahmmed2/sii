@@ -1,12 +1,12 @@
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
-import { getStaffSession, hasStaffModulePermission, isGeneralStaff } from 'src/lib/middleware/staff.js';
-import { getOfficerSession } from 'src/lib/middleware/officer.js';
+import { resolveWebsiteFromRequest, hasTenantModuleAllowance } from 'src/lib/middleware/websiteResolver.js';
+import { getStaffSession, hasStaffModulePermission } from 'src/lib/middleware/staff.js';
+import { getOfficerSession, hasOfficerModulePermission } from 'src/lib/middleware/officer.js';
 
 /**
  * Validates whether the incoming request is authorized to manage exams and academic candidate operations.
- * Allows:
- *  1. Allowed Staff (General staff or staff with exam/sis/academic module permission)
- *  2. Allowed Officers (Officers in Exam/Academic department or with exam module permissions)
+ * Requires:
+ *  1. Tenant website subscription package must include 'exams' module
+ *  2. Authenticated Staff with 'exams' permission, OR Officer with 'exams' permission
  *
  * @param {Request} request
  * @param {Object} context
@@ -19,7 +19,17 @@ export async function verifyExamAccess(request, context, action = 'view') {
     return { error: 'Educational institution portal not found.', status: 404 };
   }
 
-  // 1. Check Staff Session
+  // 1. Check Tenant Subscription Package Module Allowance
+  const hasAllowance = await hasTenantModuleAllowance(website, 'exams');
+  if (!hasAllowance) {
+    return {
+      error: "The Examinations & Report Cards module is not included in this institution's current subscription plan. Please upgrade your package.",
+      status: 403,
+      code: 'MODULE_NOT_SUBSCRIBED',
+    };
+  }
+
+  // 2. Check Staff Session
   const staffSession = await getStaffSession(request);
   if (staffSession) {
     const staffWebsiteId =
@@ -32,15 +42,12 @@ export async function verifyExamAccess(request, context, action = 'view') {
       return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
     }
 
-    const generalStaff = await isGeneralStaff(request);
     const hasExamPerm =
-      hasStaffModulePermission(staffSession, 'exam', action) ||
       hasStaffModulePermission(staffSession, 'exams', action) ||
-      hasStaffModulePermission(staffSession, 'exam-list', action) ||
-      hasStaffModulePermission(staffSession, 'examination', action) ||
-      hasStaffModulePermission(staffSession, 'sis', action);
+      hasStaffModulePermission(staffSession, 'exam', action) ||
+      hasStaffModulePermission(staffSession, 'examination', action);
 
-    if (generalStaff || hasExamPerm) {
+    if (hasExamPerm) {
       const staffUser = staffSession.staff || staffSession.user || staffSession;
       return {
         website,
@@ -49,11 +56,17 @@ export async function verifyExamAccess(request, context, action = 'view') {
           id: staffUser?.id || staffSession?.id,
           name: staffUser?.name || 'Staff Member',
           email: staffUser?.email || null,
-          role: staffSession?.role || 'staff'
+          role: staffSession?.role || 'staff',
         },
-        allowed: true
+        allowed: true,
       };
     }
+
+    return {
+      error: `Forbidden: You do not have permission to ${action} examination records.`,
+      status: 403,
+      code: 'PERMISSION_DENIED',
+    };
   }
 
   // 3. Check Officer Session
@@ -72,8 +85,12 @@ export async function verifyExamAccess(request, context, action = 'view') {
     const officer = officerSession.officer || officerSession.user || officerSession;
     const dept = (officer?.department || officer?.designation || '').toLowerCase();
     const isExamDept = dept.includes('exam') || dept.includes('academic') || dept.includes('controller') || dept.includes('registrar');
+    const hasOfficerPerm =
+      hasOfficerModulePermission(officerSession, 'exams', action) ||
+      hasOfficerModulePermission(officerSession, 'exam', action) ||
+      isExamDept;
 
-    if (isExamDept || officer?.is_admin || officer?.can_manage_exams) {
+    if (hasOfficerPerm) {
       return {
         website,
         actor: {
@@ -81,15 +98,23 @@ export async function verifyExamAccess(request, context, action = 'view') {
           id: officer?.id || officerSession?.id,
           name: officer?.name || 'Officer',
           email: officer?.email || null,
-          department: officer?.department || null
+          department: officer?.department || null,
         },
-        allowed: true
+        allowed: true,
       };
     }
+
+    return {
+      error: `Forbidden: Officer does not have permission to ${action} examination records.`,
+      status: 403,
+      code: 'PERMISSION_DENIED',
+    };
   }
 
   return {
-    error: 'Unauthorized: Insufficient examination management permissions.',
-    status: 403
+    error: 'Unauthorized: Staff or Officer examination credentials required.',
+    status: 401,
   };
 }
+
+export default verifyExamAccess;

@@ -15,13 +15,24 @@ export function maskApiKey(key) {
  * @returns {Promise<Object>}
  */
 export async function getWebsiteBrevoConfig(websiteId) {
+  let institutionName = 'Campus Administration';
+  if (websiteId) {
+    try {
+      const siteRes = await queryDb(`SELECT name FROM websites WHERE id = $1 LIMIT 1`, [websiteId]);
+      if (siteRes.rows.length > 0 && siteRes.rows[0].name) {
+        institutionName = siteRes.rows[0].name;
+      }
+    } catch (_) {}
+  }
+
   if (!websiteId) {
     return {
       configured: false,
       isCustom: false,
       apiKey: null,
       senderEmail: null,
-      senderName: 'Campus Administration',
+      senderName: institutionName,
+      websiteName: institutionName,
       isActive: false
     };
   }
@@ -42,7 +53,8 @@ export async function getWebsiteBrevoConfig(websiteId) {
         isCustom: true,
         apiKey: row.brevo_api_key,
         senderEmail: row.brevo_sender_email,
-        senderName: row.brevo_sender_name || 'Campus Administration',
+        senderName: row.brevo_sender_name || institutionName,
+        websiteName: institutionName,
         isActive: Boolean(row.is_active),
         updatedAt: row.updated_at
       };
@@ -56,38 +68,24 @@ export async function getWebsiteBrevoConfig(websiteId) {
     isCustom: false,
     apiKey: null,
     senderEmail: null,
-    senderName: 'Campus Administration',
+    senderName: institutionName,
+    websiteName: institutionName,
     isActive: false
   };
 }
 
 /**
- * Sends a transactional email using the website tenant's Brevo mailer configuration.
- *
- * @param {Object} options
- * @param {string|number} options.websiteId - Website tenant ID
- * @param {string} options.to - Recipient email address
- * @param {string} [options.toName] - Recipient display name
- * @param {string} options.subject - Email subject
- * @param {string} options.html - HTML email body
- * @param {string} [options.text] - Plain text email body (optional)
- * @returns {Promise<Object>} Brevo API response { messageId }
+ * Sends a transactional email using the main platform Brevo credentials.
  */
-export async function sendWebsiteEmail(websiteId, { to, toName, subject, html, text }) {
-  const config = await getWebsiteBrevoConfig(websiteId);
-
-  if (!config.configured || !config.apiKey) {
-    throw new Error('Brevo Mailer is not configured or activated for this institution.');
-  }
-
-  if (!config.senderEmail) {
-    throw new Error('Brevo Sender Email is not configured for this institution.');
+async function sendViaMainBrevoMailer({ to, toName, subject, html, text, fallbackSenderName }) {
+  if (!BREVO_API_KEY) {
+    throw new Error('Main platform BREVO_API_KEY is not defined in environment secrets.');
   }
 
   const payload = {
     sender: {
-      name: config.senderName,
-      email: config.senderEmail,
+      name: fallbackSenderName || BREVO_SENDER_NAME || 'Campus Administration',
+      email: BREVO_SENDER_EMAIL || 'noreply@campus.edu',
     },
     to: [
       {
@@ -103,29 +101,111 @@ export async function sendWebsiteEmail(websiteId, { to, toName, subject, html, t
     payload.textContent = text;
   }
 
-  try {
-    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: {
-        'accept': 'application/json',
-        'api-key': config.apiKey,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'accept': 'application/json',
+      'api-key': BREVO_API_KEY,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
 
-    const data = await response.json();
+  const data = await response.json();
 
-    if (!response.ok) {
-      console.error(`[WebsiteBrevo] Email dispatch failed for website ${websiteId}:`, data);
-      throw new Error(data.message || 'Failed to dispatch email via Brevo SMTP API.');
-    }
-
-    return data;
-  } catch (error) {
-    console.error(`[WebsiteBrevo] Exception sending email for website ${websiteId}:`, error.message);
-    throw error;
+  if (!response.ok) {
+    console.error('[MainBrevo] Email dispatch failed via main platform mailer:', data);
+    throw new Error(data.message || 'Failed to dispatch email via main Brevo SMTP API.');
   }
+
+  return data;
+}
+
+/**
+ * Sends a transactional email using the website tenant's Brevo mailer configuration.
+ * If the website mailer is not set up or fails, automatically falls back to the main website/platform mailer.
+ *
+ * @param {string|number} websiteId - Website tenant ID
+ * @param {Object} options
+ * @param {string} options.to - Recipient email address
+ * @param {string} [options.toName] - Recipient display name
+ * @param {string} options.subject - Email subject
+ * @param {string} options.html - HTML email body
+ * @param {string} [options.text] - Plain text email body (optional)
+ * @returns {Promise<Object>} Brevo API response { messageId }
+ */
+export async function sendWebsiteEmail(websiteId, { to, toName, subject, html, text }) {
+  const config = await getWebsiteBrevoConfig(websiteId);
+
+  // If website mailer is configured and active, attempt sending via its credentials
+  if (config.configured && config.apiKey && config.senderEmail) {
+    try {
+      const payload = {
+        sender: {
+          name: config.senderName || 'Campus Administration',
+          email: config.senderEmail,
+        },
+        to: [
+          {
+            email: to,
+            name: toName || to,
+          },
+        ],
+        subject: subject,
+        htmlContent: html,
+      };
+
+      if (text) {
+        payload.textContent = text;
+      }
+
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'api-key': config.apiKey,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.warn(`[WebsiteBrevo] Custom mailer failed for website ${websiteId} (${data.message || 'Error'}). Falling back to main platform mailer...`);
+        return await sendViaMainBrevoMailer({
+          to,
+          toName,
+          subject,
+          html,
+          text,
+          fallbackSenderName: config.senderName
+        });
+      }
+
+      return data;
+    } catch (error) {
+      console.warn(`[WebsiteBrevo] Exception in custom mailer for website ${websiteId}: ${error.message}. Falling back to main platform mailer...`);
+      return await sendViaMainBrevoMailer({
+        to,
+        toName,
+        subject,
+        html,
+        text,
+        fallbackSenderName: config.senderName
+      });
+    }
+  }
+
+  // Website mailer is not configured or not active -> fall back to main website mailer
+  return await sendViaMainBrevoMailer({
+    to,
+    toName,
+    subject,
+    html,
+    text,
+    fallbackSenderName: config.senderName
+  });
 }
 
 /**

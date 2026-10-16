@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getStaffSession } from 'src/lib/middleware/staff';
 import Navbar from 'src/component/website/bars/admin/Navbar';
 import Sidebar from 'src/component/website/bars/admin/Sidebar';
+import StaffModuleRouteGuard from 'src/component/staff/StaffModuleRouteGuard';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +28,9 @@ const StaffPanelLayout = async ({ children }) => {
 
         {/* Main Content Area */}
         <main className="flex-1 w-full min-w-0 p-4 sm:p-6 lg:p-8 transition-all duration-200">
-          {children}
+          <StaffModuleRouteGuard allowedModules={allowedModules}>
+            {children}
+          </StaffModuleRouteGuard>
         </main>
       </div>
     </div>

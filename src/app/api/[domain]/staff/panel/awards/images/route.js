@@ -1,36 +1,16 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
-import { getStaffSession } from 'src/lib/middleware/staff';
+import { verifyStaffModuleAccess } from 'src/lib/middleware/staff';
+import { deleteImage } from 'src/lib/database/cloudinary.js';
 
-async function verifyStaffAccess(request, context) {
-  const website = await resolveWebsiteFromRequest(request, context);
-  if (!website) {
-    return { error: 'Educational institution portal not found.', status: 404 };
-  }
-  const staffSession = await getStaffSession(request);
-
-  if (!staffSession) {
-    return { error: 'Unauthorized: Staff access required.', status: 401 };
-  }
-
-  const staffWebsiteId =
-    staffSession?.website_id ||
-    staffSession?.websiteId ||
-    staffSession?.staff?.websiteId ||
-    staffSession?.staff?.website_id;
-
-  if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
-    return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
-  }
-
-  return { website, staffSession };
+async function verifyStaffAccess(request, context, action = 'view') {
+  return verifyStaffModuleAccess(request, context, 'website-builder', action);
 }
 
 // GET: List all award images with award metadata
 export async function GET(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'view');
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const { searchParams } = new URL(request.url);
@@ -78,7 +58,7 @@ export async function GET(request, context) {
 // POST: Upsert single image for an award
 export async function POST(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'create');
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const body = await request.json().catch(() => ({}));
@@ -136,7 +116,7 @@ export async function POST(request, context) {
 // DELETE: Remove image for an award
 export async function DELETE(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'delete');
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const { searchParams } = new URL(request.url);
@@ -154,18 +134,23 @@ export async function DELETE(request, context) {
     let deleteResult;
     if (targetAwardId) {
       deleteResult = await queryDb(
-        `DELETE FROM website_award_images WHERE award_id = $1 AND website_id = $2 RETURNING id`,
+        `DELETE FROM website_award_images WHERE award_id = $1 AND website_id = $2 RETURNING id, image_id`,
         [targetAwardId, auth.website.id]
       );
     } else {
       deleteResult = await queryDb(
-        `DELETE FROM website_award_images WHERE id = $1 AND website_id = $2 RETURNING id`,
+        `DELETE FROM website_award_images WHERE id = $1 AND website_id = $2 RETURNING id, image_id`,
         [targetImageId, auth.website.id]
       );
     }
 
     if (deleteResult.rowCount === 0) {
       return NextResponse.json({ success: false, error: 'Award image not found.' }, { status: 404 });
+    }
+
+    const deletedRecord = deleteResult.rows[0];
+    if (deletedRecord.image_id) {
+      await deleteImage(deletedRecord.image_id).catch(() => {});
     }
 
     return NextResponse.json({

@@ -31,7 +31,7 @@ export async function POST(request, context) {
 
     const studentRes = await queryDb(
       `SELECT s.id, s.registration_no, s.is_active,
-              i.name, i.email
+              i.name, i.email, i.recovery_token_expires
        FROM website_students s
        JOIN website_student_info i ON s.id = i.student_id
        WHERE s.website_id = $1 AND (LOWER(i.email) = $2 OR LOWER(s.registration_no) = $2)
@@ -49,8 +49,20 @@ export async function POST(request, context) {
 
     const student = studentRes.rows[0];
 
-    // Generate 6-digit numeric recovery code
-    const sixDigitCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // Rate limiting: 60-second cooldown on password recovery requests
+    if (student.recovery_token_expires) {
+      const remainingMs = new Date(student.recovery_token_expires).getTime() - Date.now();
+      // Expiry was set to 60 mins = 3600s; if generated < 60s ago, remaining > 59 mins (3540s)
+      if (remainingMs > 59 * 60 * 1000) {
+        return NextResponse.json({
+          success: false,
+          error: 'Please wait at least 60 seconds before requesting another recovery code.'
+        }, { status: 429 });
+      }
+    }
+
+    // Generate 6-digit numeric recovery code securely
+    const sixDigitCode = crypto.randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     await queryDb(

@@ -4,7 +4,9 @@ import React, { useContext, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
-import staffNavData from './staffNavData';
+import staffNavDataDefault, { staffNavData as staffNavDataNamed } from './staffNavData';
+
+const staffNavData = staffNavDataDefault || staffNavDataNamed || [];
 
 // Helper to convert route to clean staff-panel path
 const getStaffUrl = (rawPath) => {
@@ -172,7 +174,50 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
   const { adminSidebar, setAdminSidebar, tenantUrl } = useContext(TenantWebsiteContext);
   const [filterQuery, setFilterQuery] = useState('');
 
-  // Extract flat list of links for quick search
+  // Filter navigation items by allowedModules if specified
+  const filteredNavData = useMemo(() => {
+    // If dev admin or no explicit restrictions provided, allow everything
+    if (isDevAdmin || !Array.isArray(allowedModules)) {
+      return staffNavData;
+    }
+
+    const allowedSet = new Set(allowedModules.map((m) => String(m).toLowerCase().trim()));
+
+    const filterItem = (item) => {
+      // If item has a specific module, check if allowed
+      const isSelfAllowed = !item.module || allowedSet.has(item.module.toLowerCase());
+
+      if (item.children && Array.isArray(item.children)) {
+        const allowedChildren = item.children
+          .map(filterItem)
+          .filter(Boolean);
+
+        // If at least one child is allowed, keep the group with allowed children
+        if (allowedChildren.length > 0) {
+          return {
+            ...item,
+            children: allowedChildren,
+          };
+        }
+
+        // If no children allowed, keep only if item itself has direct path and is allowed
+        if (item.path && isSelfAllowed) {
+          return { ...item, children: [] };
+        }
+
+        return null;
+      }
+
+      // Leaf item
+      return isSelfAllowed ? item : null;
+    };
+
+    return staffNavData
+      .map(filterItem)
+      .filter(Boolean);
+  }, [allowedModules, isDevAdmin]);
+
+  // Extract flat list of links for quick search from filteredNavData
   const flatSearchList = useMemo(() => {
     if (!filterQuery.trim()) return [];
     const q = filterQuery.toLowerCase();
@@ -194,9 +239,9 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
       }
     };
 
-    recurse(staffNavData);
+    recurse(filteredNavData);
     return results.slice(0, 15);
-  }, [filterQuery]);
+  }, [filterQuery, filteredNavData]);
 
   const isDashboardActive = pathname === '/staff-panel' || pathname.endsWith('/staff-panel');
 
@@ -280,10 +325,10 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
               {/* Dynamic Module Tree */}
               <div className="pt-2 space-y-1">
                 <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 pb-1">
-                  System Modules
+                  System Modules ({filteredNavData.length})
                 </p>
 
-                {staffNavData.map((module, idx) => (
+                {filteredNavData.map((module, idx) => (
                   <NavModuleAccordion
                     key={`${module.title}-${idx}`}
                     module={module}

@@ -51,8 +51,9 @@ export default function UpdateAwardPage() {
 
   // Single Image State (Strictly 1 image for Award)
   const [image, setImage] = useState(null); // { image_url, image_id, caption }
+  const [selectedPhotoFile, setSelectedPhotoFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [removeImage, setRemoveImage] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Notifications
   const [toastMessage, setToastMessage] = useState(null);
@@ -113,39 +114,31 @@ export default function UpdateAwardPage() {
     }
   }, [domain, slug, fetchAwardData]);
 
-  const handleFileUpload = async (e) => {
+  const handlePhotoSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploadingImage(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'awards');
-
-      const res = await fetch(`/api/${domain}/staff/panel/upload`, {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-
-      if (data.success && data.image_url) {
-        setImage({
-          image_url: data.image_url,
-          image_id: data.image_id || data.publicId || null,
-          caption: image?.caption || '',
-        });
-        setRemoveImage(false);
-        showToast('Photo uploaded to Cloudinary');
-      } else {
-        showToast(data.error || 'Failed to upload photo', true);
-      }
-    } catch (err) {
-      console.error('Upload error:', err);
-      showToast('Network error while uploading photo', true);
-    } finally {
-      setUploadingImage(false);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
     }
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
+    setSelectedPhotoFile(file);
+    setImage((prev) => ({
+      image_url: objectUrl,
+      caption: prev?.caption || '',
+    }));
+    setRemoveImage(false);
+  };
+
+  const handleRemovePhoto = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+    setSelectedPhotoFile(null);
+    setRemoveImage(true);
+    setImage(null);
   };
 
   const handleSave = async (e) => {
@@ -157,27 +150,33 @@ export default function UpdateAwardPage() {
 
     setSaving(true);
     try {
-      const payload = {
-        id: awardId,
-        current_slug: slug,
-        title: title.trim(),
-        year: year ? parseInt(year, 10) : null,
-        issuer: issuer.trim() || null,
-        description: description,
-        is_active: isActive,
-        remove_image: removeImage,
-        image: !removeImage && image ? image : null,
-      };
+      const formData = new FormData();
+      formData.append('id', String(awardId));
+      formData.append('current_slug', slug);
+      formData.append('title', title.trim());
+      if (year) formData.append('year', String(year));
+      if (issuer) formData.append('issuer', issuer.trim());
+      formData.append('description', description || '');
+      formData.append('is_active', isActive ? 'true' : 'false');
+      formData.append('remove_image', removeImage ? 'true' : 'false');
+      if (image?.caption) formData.append('caption', image.caption);
+      if (selectedPhotoFile) {
+        formData.append('image', selectedPhotoFile);
+      }
 
       const res = await fetch(`/api/${domain}/staff/panel/awards`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: formData,
       });
       const data = await res.json();
 
       if (data.success) {
         showToast('Award updated successfully!');
+        if (selectedPhotoFile && previewUrl) {
+          URL.revokeObjectURL(previewUrl);
+          setPreviewUrl(null);
+          setSelectedPhotoFile(null);
+        }
         if (data.award?.slug && data.award.slug !== slug) {
           router.replace(`/${domain}/staff-panel/awards-list/${data.award.slug}`);
         } else {
@@ -340,7 +339,7 @@ export default function UpdateAwardPage() {
               {image && !removeImage && (
                 <button
                   type="button"
-                  onClick={() => setRemoveImage(true)}
+                  onClick={handleRemovePhoto}
                   className="text-xs text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <FiTrash2 className="text-xs" /> Remove photo
@@ -356,14 +355,14 @@ export default function UpdateAwardPage() {
                 <div className="space-y-2 flex-1 w-full">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                      <FiCheckCircle /> Cloudinary CDN Stored
+                      <FiCheckCircle /> {selectedPhotoFile ? 'Selected for Upload' : 'Stored Photo'}
                     </span>
                     <label className="text-xs font-semibold text-secondary hover:underline cursor-pointer">
                       <span>Replace Photo</span>
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={handleFileUpload}
+                        onChange={handlePhotoSelect}
                         className="hidden"
                       />
                     </label>
@@ -387,23 +386,18 @@ export default function UpdateAwardPage() {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={handleFileUpload}
-                  disabled={uploadingImage}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                  onChange={handlePhotoSelect}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
                 <div className="flex flex-col items-center justify-center space-y-2 pointer-events-none">
                   <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
-                    {uploadingImage ? (
-                      <div className="loader loader-sm" />
-                    ) : (
-                      <FiUploadCloud className="text-2xl" />
-                    )}
+                    <FiUploadCloud className="text-2xl" />
                   </div>
                   <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                    {uploadingImage ? 'Uploading photo to Cloudinary...' : 'Click or drop photo here to upload'}
+                    Click or drop photo here to select
                   </p>
                   <p className="text-[11px] text-slate-400">
-                    Supports high-resolution PNG, JPG, WEBP.
+                    Supports high-resolution PNG, JPG, WEBP. Uploads to Cloudinary on saving.
                   </p>
                 </div>
               </div>
@@ -450,7 +444,7 @@ export default function UpdateAwardPage() {
             </Link>
             <button
               type="submit"
-              disabled={saving || uploadingImage}
+              disabled={saving}
               className="px-5 py-2 rounded-xl text-xs font-semibold bg-secondary hover:bg-secondary-dark text-white shadow-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-2"
             >
               {saving ? (
