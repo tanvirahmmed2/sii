@@ -3,8 +3,20 @@ import crypto from 'crypto';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest, hasTenantModuleAllowance } from 'src/lib/middleware/websiteResolver.js';
 import { getStaffSession, hasStaffModulePermission, hashPassword } from 'src/lib/middleware/staff.js';
-import { ensureOfficerSchema, revokeAllOfficerSessions } from 'src/lib/middleware/officer.js';
+import { revokeAllOfficerSessions } from 'src/lib/middleware/officer.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
+import { uploadImage, deleteImage } from 'src/lib/database/cloudinary.js';
+
+const VALID_DEPARTMENTS = [
+  'Hall',
+  'Library',
+  'Club',
+  'Accounts',
+  'Administration',
+  'General',
+  'Hostel',
+  'Inventory'
+];
 
 /**
  * Validates staff authorization to manage officers for this tenant website.
@@ -103,10 +115,42 @@ function buildOfficerVerificationUrl(website, token, request) {
   return `${protocol}://${cleanSub}.${baseDomain}${port}/auth/access/officer/verify?token=${encodeURIComponent(token)}`;
 }
 
-// GET: Fetch officers roster, permissions matrix, active sessions, and website package modules
+/**
+ * Helper to parse multipart/form-data or application/json for officer endpoints
+ */
+async function parseOfficerRequest(request) {
+  const contentType = request.headers.get('content-type') || '';
+  let body = {};
+  let imageFile = null;
+
+  if (contentType.includes('multipart/form-data') || contentType.includes('form-data')) {
+    const formData = await request.formData();
+    for (const [key, value] of formData.entries()) {
+      if (value && typeof value === 'object' && typeof value.arrayBuffer === 'function') {
+        if (key === 'file' || key === 'photo' || key === 'image') {
+          imageFile = value;
+        }
+      } else {
+        body[key] = value;
+      }
+    }
+    if (typeof body.permissions === 'string') {
+      try {
+        body.permissions = JSON.parse(body.permissions);
+      } catch (e) {
+        body.permissions = {};
+      }
+    }
+  } else {
+    body = await request.json().catch(() => ({}));
+  }
+
+  return { body, imageFile };
+}
+
+// GET: Fetch officers roster, stats, or single officer profile with assigned payroll
 export async function GET(request, context) {
   try {
-    await ensureOfficerSchema().catch(() => {});
     const auth = await verifyStaffOfficerAccess(request, context, 'view');
     if (auth.error) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
@@ -115,24 +159,47 @@ export async function GET(request, context) {
     const { website } = auth;
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+    const email = searchParams.get('email');
     const search = searchParams.get('search')?.trim()?.toLowerCase();
     const department = searchParams.get('department')?.trim();
     const status = searchParams.get('status'); // 'all', 'active', 'inactive', 'pending'
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
+    const offset = (page - 1) * limit;
 
     // 1. Single officer retrieval
-    if (id) {
-      const singleRes = await queryDb(
-        `SELECT wo.id, wo.website_id, wo.name, wo.email, wo.phone, wo.department,
-                wo.designation, wo.nid_number, wo.gender, wo.blood_group, wo.date_of_birth,
-                wo.religion, wo.address, wo.permanent_address, wo.joining_date, wo.salary,
-                wo.photo_url, wo.photo_id, wo.is_active, wo.is_registered, wo.is_two_factor_enabled,
-                wo.bio, wo.username, wo.created_at, wo.updated_at
-         FROM website_officers wo
-         WHERE wo.website_id = $1 AND wo.id = $2
-         LIMIT 1`,
-        [website.id, id]
-      );
+    if (id || email) {
+      let singleQuery = `
+        SELECT wo.id, wo.website_id, wo.name, wo.email, wo.phone, wo.department,
+               wo.designation, wo.nid_number, wo.gender, wo.blood_group, wo.date_of_birth,
+               wo.religion, wo.address, wo.permanent_address, wo.joining_date, wo.salary,
+               wo.photo_url, wo.photo_id, wo.is_active, wo.is_registered, wo.is_two_factor_enabled,
+               wo.bio, wo.username, wo.created_at, wo.updated_at,
+               os.payroll_id,
+               op.title AS payroll_title,
+               op.grade_code AS payroll_grade_code,
+               op.basic_salary AS payroll_basic_salary,
+               (COALESCE(op.basic_salary, 0) + COALESCE(op.house_rent, 0) + COALESCE(op.medical_allowance, 0) + COALESCE(op.transport_allowance, 0) + COALESCE(op.other_allowance, 0)) AS payroll_gross_salary,
+               ((COALESCE(op.basic_salary, 0) + COALESCE(op.house_rent, 0) + COALESCE(op.medical_allowance, 0) + COALESCE(op.transport_allowance, 0) + COALESCE(op.other_allowance, 0)) - 
+                (COALESCE(op.provident_fund, 0) + COALESCE(op.tax_deduction, 0) + COALESCE(op.other_deductions, 0))) AS payroll_net_salary
+        FROM website_officers wo
+        LEFT JOIN website_officer_salaries os ON os.officer_id = wo.id AND os.website_id = wo.website_id
+        LEFT JOIN website_officer_payrolls op ON op.id = os.payroll_id AND op.website_id = wo.website_id
+        WHERE wo.website_id = $1
+      `;
+      const singleParams = [website.id];
 
+      if (id) {
+        singleParams.push(id);
+        singleQuery += ` AND wo.id = $2`;
+      } else {
+        singleParams.push(email.trim());
+        singleQuery += ` AND LOWER(wo.email) = LOWER($2)`;
+      }
+
+      singleQuery += ` LIMIT 1`;
+
+      const singleRes = await queryDb(singleQuery, singleParams);
       if (singleRes.rows.length === 0) {
         return NextResponse.json({ success: false, error: 'Officer not found.' }, { status: 404 });
       }
@@ -178,7 +245,6 @@ export async function GET(request, context) {
       [website.id]
     );
 
-    // Fallback if website package link is not yet established
     if (packageModulesRes.rows.length === 0) {
       packageModulesRes = await queryDb(
         `SELECT id, name, slug, description, icon, is_active
@@ -189,66 +255,89 @@ export async function GET(request, context) {
     }
     const packageModules = packageModulesRes.rows;
 
-    // 3. Query all officers for this website
-    let officersQuery = `
-      SELECT wo.id, wo.website_id, wo.name, wo.email, wo.phone, wo.department,
-             wo.designation, wo.nid_number, wo.gender, wo.blood_group, wo.date_of_birth,
-             wo.joining_date, wo.salary, wo.photo_url, wo.is_active, wo.is_registered,
-             wo.is_two_factor_enabled, wo.bio, wo.username, wo.created_at, wo.updated_at,
-             wo.verification_token, wo.verification_token_expires
-      FROM website_officers wo
-      WHERE wo.website_id = $1
-    `;
+    // 3. Build filter clauses for roster list
+    const whereClauses = ['wo.website_id = $1'];
     const params = [website.id];
+    let paramIndex = 2;
 
     if (search) {
+      whereClauses.push(
+        `(LOWER(wo.name) LIKE $${paramIndex} OR LOWER(wo.email) LIKE $${paramIndex} OR wo.phone LIKE $${paramIndex} OR LOWER(wo.designation) LIKE $${paramIndex})`
+      );
       params.push(`%${search}%`);
-      officersQuery += ` AND (LOWER(wo.name) LIKE $${params.length} OR LOWER(wo.email) LIKE $${params.length} OR wo.phone LIKE $${params.length} OR LOWER(wo.designation) LIKE $${params.length})`;
+      paramIndex++;
     }
 
     if (department && department !== 'all') {
+      whereClauses.push(`wo.department = $${paramIndex}`);
       params.push(department);
-      officersQuery += ` AND wo.department = $${params.length}`;
+      paramIndex++;
     }
 
     if (status === 'active') {
-      officersQuery += ` AND wo.is_active = TRUE AND wo.is_registered = TRUE`;
+      whereClauses.push(`wo.is_active = TRUE AND wo.is_registered = TRUE`);
     } else if (status === 'pending') {
-      officersQuery += ` AND wo.is_registered = FALSE`;
+      whereClauses.push(`wo.is_registered = FALSE`);
     } else if (status === 'inactive') {
-      officersQuery += ` AND wo.is_active = FALSE`;
+      whereClauses.push(`wo.is_active = FALSE`);
     }
 
-    officersQuery += ` ORDER BY wo.id DESC`;
+    const whereStr = whereClauses.join(' AND ');
 
-    const officersRes = await queryDb(officersQuery, params);
+    // 4. Count total matching officers
+    const countRes = await queryDb(
+      `SELECT COUNT(*)::int AS count FROM website_officers wo WHERE ${whereStr}`,
+      params
+    );
+    const total = countRes.rows[0]?.count || 0;
 
-    // 4. Fetch all permissions for this website's officers
-    const permsRes = await queryDb(
-      `SELECT wop.officer_id, wop.website_module_id, wop.can_view, wop.can_create, wop.can_edit, wop.can_delete,
-              wm.name AS module_name, wm.slug AS module_slug, wm.icon AS module_icon
-       FROM website_officer_permissions wop
-       JOIN website_modules wm ON wm.id = wop.website_module_id
-       WHERE wop.website_id = $1`,
+    // 5. Aggregated metrics for cards
+    const statsRes = await queryDb(
+      `SELECT 
+         COUNT(*)::int AS total_officers,
+         COUNT(*) FILTER (WHERE is_active = TRUE AND is_registered = TRUE)::int AS active_officers,
+         COUNT(*) FILTER (WHERE is_registered = FALSE)::int AS pending_officers,
+         COUNT(*) FILTER (WHERE is_active = FALSE)::int AS inactive_officers,
+         COUNT(DISTINCT department)::int AS total_departments
+       FROM website_officers
+       WHERE website_id = $1`,
       [website.id]
     );
+    const stats = statsRes.rows[0] || {
+      total_officers: 0,
+      active_officers: 0,
+      pending_officers: 0,
+      inactive_officers: 0,
+      total_departments: 0,
+    };
 
-    const permsMap = {};
-    for (const p of permsRes.rows) {
-      if (!permsMap[p.officer_id]) permsMap[p.officer_id] = {};
-      permsMap[p.officer_id][p.module_slug] = {
-        website_module_id: p.website_module_id,
-        module_name: p.module_name,
-        module_slug: p.module_slug,
-        module_icon: p.module_icon,
-        can_view: Boolean(p.can_view),
-        can_create: Boolean(p.can_create),
-        can_edit: Boolean(p.can_edit),
-        can_delete: Boolean(p.can_delete),
-      };
-    }
+    // 6. Query list with joined salaries and payrolls
+    const listQuery = `
+      SELECT wo.id, wo.website_id, wo.name, wo.email, wo.phone, wo.department,
+             wo.designation, wo.nid_number, wo.gender, wo.blood_group, wo.date_of_birth,
+             wo.religion, wo.address, wo.permanent_address, wo.joining_date, wo.salary,
+             wo.photo_url, wo.photo_id, wo.is_active, wo.is_registered,
+             wo.is_two_factor_enabled, wo.bio, wo.username, wo.created_at, wo.updated_at,
+             wo.verification_token, wo.verification_token_expires,
+             os.payroll_id,
+             op.title AS payroll_title,
+             op.grade_code AS payroll_grade_code,
+             op.basic_salary AS payroll_basic_salary,
+             (COALESCE(op.basic_salary, 0) + COALESCE(op.house_rent, 0) + COALESCE(op.medical_allowance, 0) + COALESCE(op.transport_allowance, 0) + COALESCE(op.other_allowance, 0)) AS payroll_gross_salary,
+             ((COALESCE(op.basic_salary, 0) + COALESCE(op.house_rent, 0) + COALESCE(op.medical_allowance, 0) + COALESCE(op.transport_allowance, 0) + COALESCE(op.other_allowance, 0)) - 
+              (COALESCE(op.provident_fund, 0) + COALESCE(op.tax_deduction, 0) + COALESCE(op.other_deductions, 0))) AS payroll_net_salary
+      FROM website_officers wo
+      LEFT JOIN website_officer_salaries os ON os.officer_id = wo.id AND os.website_id = wo.website_id
+      LEFT JOIN website_officer_payrolls op ON op.id = os.payroll_id AND op.website_id = wo.website_id
+      WHERE ${whereStr}
+      ORDER BY wo.is_active DESC, wo.id DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+    params.push(limit, offset);
 
-    // 5. Fetch active sessions counts
+    const officersRes = await queryDb(listQuery, params);
+
+    // 7. Active login sessions count
     const sessionsRes = await queryDb(
       `SELECT officer_id, COUNT(*)::int AS active_sessions
        FROM website_officer_login_sessions
@@ -264,28 +353,30 @@ export async function GET(request, context) {
 
     const officers = officersRes.rows.map((o) => ({
       ...o,
-      permissions: permsMap[o.id] || {},
       activeSessions: sessionsMap[o.id] || 0,
     }));
-
-    // Stats
-    const totalOfficers = officers.length;
-    const activeOfficers = officers.filter((o) => o.is_active && o.is_registered).length;
-    const pendingOfficers = officers.filter((o) => !o.is_registered).length;
 
     return NextResponse.json({
       success: true,
       officers,
       packageModules,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
       stats: {
-        total: totalOfficers,
-        active: activeOfficers,
-        pending: pendingOfficers,
+        total: stats.total_officers || total,
+        active: stats.active_officers || 0,
+        pending: stats.pending_officers || 0,
+        inactive: stats.inactive_officers || 0,
+        departments: stats.total_departments || 0,
       },
       payload: {
         officers,
         packageModules,
-        stats: { total: totalOfficers, active: activeOfficers, pending: pendingOfficers },
+        stats,
       },
     });
   } catch (error) {
@@ -294,17 +385,16 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create new officer, assign package module permissions, and dispatch verification email
+// POST: Create new officer, optionally assign direct payroll scale, and dispatch verification email
 export async function POST(request, context) {
   try {
-    await ensureOfficerSchema().catch(() => {});
     const auth = await verifyStaffOfficerAccess(request, context, 'create');
     if (auth.error) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
 
     const { website } = auth;
-    const body = await request.json().catch(() => ({}));
+    const { body, imageFile } = await parseOfficerRequest(request);
     const {
       name,
       email,
@@ -320,12 +410,13 @@ export async function POST(request, context) {
       permanent_address = null,
       joining_date = null,
       salary = 0.00,
+      payroll_id = null,
       photo_url = null,
       photo_id = null,
       password = null,
       is_active = true,
       bio = null,
-      permissions = {}, // { [module_slug or module_id]: { can_view, can_create, can_edit, can_delete } }
+      permissions = {},
     } = body;
 
     if (!name || !name.trim()) {
@@ -341,6 +432,12 @@ export async function POST(request, context) {
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedPhone = phone.trim();
 
+    // Normalize department to valid DB check constraint
+    let validDept = 'General';
+    if (department && VALID_DEPARTMENTS.includes(department.trim())) {
+      validDept = department.trim();
+    }
+
     // Check duplicate email for this website
     const existing = await queryDb(
       `SELECT id FROM website_officers WHERE website_id = $1 AND LOWER(email) = $2 LIMIT 1`,
@@ -354,6 +451,41 @@ export async function POST(request, context) {
       );
     }
 
+    // Verify and calculate direct payroll assignment
+    let finalSalary = Number(salary) || 0.00;
+    let selectedPayroll = null;
+    const targetPayrollId = payroll_id || body.payrollId || null;
+
+    if (
+      targetPayrollId &&
+      String(targetPayrollId).trim() !== '' &&
+      String(targetPayrollId) !== '0' &&
+      String(targetPayrollId) !== 'none' &&
+      String(targetPayrollId) !== 'null'
+    ) {
+      const payrollCheck = await queryDb(
+        `SELECT id, title, grade_code, basic_salary, house_rent, medical_allowance, transport_allowance, other_allowance,
+                provident_fund, tax_deduction, other_deductions
+         FROM website_officer_payrolls
+         WHERE id = $1 AND website_id = $2 LIMIT 1`,
+        [Number(targetPayrollId), website.id]
+      );
+      if (payrollCheck.rows.length > 0) {
+        selectedPayroll = payrollCheck.rows[0];
+        const gross =
+          Number(selectedPayroll.basic_salary) +
+          Number(selectedPayroll.house_rent) +
+          Number(selectedPayroll.medical_allowance) +
+          Number(selectedPayroll.transport_allowance) +
+          Number(selectedPayroll.other_allowance);
+        const deductions =
+          Number(selectedPayroll.provident_fund) +
+          Number(selectedPayroll.tax_deduction) +
+          Number(selectedPayroll.other_deductions);
+        finalSalary = Math.max(0, gross - deductions);
+      }
+    }
+
     // Default demo password if not provided; officer will establish permanent password during verification
     const rawPass = password && password.trim() ? password.trim() : `Officer@${Math.floor(100000 + Math.random() * 900000)}`;
     const hashedPassword = await hashPassword(rawPass);
@@ -361,6 +493,7 @@ export async function POST(request, context) {
     // Cryptographic verification token valid for 7 days
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
+    // STEP 1: Insert into website_officers table
     const insertOfficerRes = await queryDb(
       `INSERT INTO website_officers (
          website_id, name, email, phone, department, designation, nid_number,
@@ -378,8 +511,8 @@ export async function POST(request, context) {
         name.trim(),
         trimmedEmail,
         trimmedPhone,
-        department.trim(),
-        designation.trim(),
+        validDept,
+        designation?.trim() || 'Officer',
         nid_number?.trim() || null,
         ['male', 'female', 'other'].includes(gender) ? gender : 'male',
         blood_group?.trim() || null,
@@ -388,7 +521,7 @@ export async function POST(request, context) {
         address?.trim() || null,
         permanent_address?.trim() || null,
         joining_date || null,
-        Number(salary) || 0.00,
+        finalSalary,
         photo_url?.trim() || null,
         photo_id?.trim() || null,
         hashedPassword,
@@ -400,33 +533,56 @@ export async function POST(request, context) {
 
     const createdOfficer = insertOfficerRes.rows[0];
 
-    // Fetch allowed modules for this website's package to enforce RBAC integrity
-    const packageModulesRes = await queryDb(
-      `SELECT DISTINCT wm.id, wm.slug
-       FROM website_modules wm
-       JOIN package_modules pm ON pm.website_module_id = wm.id
-       JOIN subscriptions s ON s.package_id = pm.package_id
-       JOIN websites w ON (w.subscription_id = s.id OR s.website_id = w.id)
-       WHERE w.id = $1 AND wm.is_active = TRUE`,
-      [website.id]
-    );
-
-    let allowedModulesList = packageModulesRes.rows;
-    if (allowedModulesList.length === 0) {
-      const allMods = await queryDb(`SELECT id, slug FROM website_modules WHERE is_active = TRUE`);
-      allowedModulesList = allMods.rows;
+    // STEP 2: Directly assign payroll in website_officer_salaries without separate salary page
+    if (selectedPayroll) {
+      await queryDb(
+        `INSERT INTO website_officer_salaries (
+           website_id, officer_id, payroll_id, effective_date, status, remarks
+         ) VALUES ($1, $2, $3, COALESCE($4::date, CURRENT_DATE), 'active', 'Assigned on officer registration')
+         ON CONFLICT (website_id, officer_id) DO UPDATE SET
+           payroll_id = EXCLUDED.payroll_id,
+           effective_date = EXCLUDED.effective_date,
+           status = EXCLUDED.status,
+           remarks = EXCLUDED.remarks,
+           updated_at = CURRENT_TIMESTAMP`,
+        [website.id, createdOfficer.id, selectedPayroll.id, joining_date || null]
+      );
+      createdOfficer.payroll_id = selectedPayroll.id;
+      createdOfficer.payroll_title = selectedPayroll.title;
+      createdOfficer.payroll_grade_code = selectedPayroll.grade_code;
+      createdOfficer.payroll_basic_salary = selectedPayroll.basic_salary;
     }
 
-    const allowedModuleMap = {};
-    allowedModulesList.forEach((m) => {
-      allowedModuleMap[m.slug] = m.id;
-      allowedModuleMap[m.id] = m.id;
-    });
+    // STEP 3: Upload photo to Cloudinary if image file provided
+    if (imageFile) {
+      try {
+        const uploadRes = await uploadImage(imageFile, `school/${website.id}/officers`);
+        if (uploadRes?.secure_url) {
+          const updatePhotoRes = await queryDb(
+            `UPDATE website_officers SET photo_url = $1, photo_id = $2 WHERE id = $3 AND website_id = $4 RETURNING *`,
+            [uploadRes.secure_url, uploadRes.publicId, createdOfficer.id, website.id]
+          );
+          if (updatePhotoRes.rows[0]) {
+            createdOfficer.photo_url = updatePhotoRes.rows[0].photo_url;
+            createdOfficer.photo_id = updatePhotoRes.rows[0].photo_id;
+          }
+        }
+      } catch (uploadErr) {
+        console.error('Officer photo Cloudinary upload error:', uploadErr);
+      }
+    }
 
-    // Save granted permissions
+    // STEP 4: Save granted permissions if provided
     if (permissions && typeof permissions === 'object') {
+      const allMods = await queryDb(`SELECT id, slug FROM website_modules WHERE is_active = TRUE`);
+      const modMap = {};
+      allMods.rows.forEach((m) => {
+        modMap[m.slug] = m.id;
+        modMap[m.id] = m.id;
+      });
+
       for (const [key, perm] of Object.entries(permissions)) {
-        const moduleId = allowedModuleMap[key] || allowedModuleMap[perm.website_module_id] || allowedModuleMap[perm.module_slug];
+        const moduleId = modMap[key] || modMap[perm.website_module_id] || modMap[perm.module_slug];
         if (moduleId) {
           const canView = perm.can_view !== undefined ? Boolean(perm.can_view) : true;
           const canCreate = Boolean(perm.can_create);
@@ -448,10 +604,8 @@ export async function POST(request, context) {
       }
     }
 
-    // Generate verification link
+    // STEP 5: Generate verification link & dispatch email
     const verificationUrl = buildOfficerVerificationUrl(website, verificationToken, request);
-
-    // Send invitation email using tenant's website Brevo mailer, or fallback to main platform Brevo mailer
     let emailSent = false;
     let emailError = null;
     try {
@@ -460,7 +614,7 @@ export async function POST(request, context) {
         subtitle: `${website.name} — Administrative Portal`,
         recipientName: name.trim(),
         bodyParagraphs: [
-          `You have been registered as an administrative officer (${designation} - ${department}) at ${website.name}.`,
+          `You have been registered as an administrative officer (${designation} - ${validDept}) at ${website.name}.`,
           'Please verify your officer identity and establish your login credentials using the secure link below.',
           'This invitation link is valid for 7 days. Once verified, you will be able to access the Officer Panel to manage your designated campus operations.',
         ],
@@ -474,12 +628,18 @@ export async function POST(request, context) {
         toName: name.trim(),
         subject: `${website.name} - Complete Your Officer Account Setup`,
         html: emailHtml,
-        websiteId: website.id, // Automatic fallback to main mailer if website mailer is not configured
+        websiteId: website.id,
       });
       emailSent = true;
     } catch (mailErr) {
       emailError = mailErr.message;
       console.warn('[Staff Officer Create] Email dispatch note:', mailErr.message);
+    }
+
+    if (createdOfficer) {
+      delete createdOfficer.password;
+      delete createdOfficer.two_factor_code;
+      delete createdOfficer.two_factor_expires;
     }
 
     return NextResponse.json({
@@ -491,27 +651,27 @@ export async function POST(request, context) {
       message: emailSent
         ? 'Officer created successfully! Verification invitation has been dispatched to their email.'
         : 'Officer created successfully. Verification link generated.',
-    });
+    }, { status: 201 });
   } catch (error) {
     console.error('Error creating officer:', error);
     return NextResponse.json({ success: false, error: error.message || 'Failed to create officer.' }, { status: 500 });
   }
 }
 
-// PUT: Update officer profile details and update permissions
+// PUT: Update officer profile details, sync assigned payroll scale, and update permissions
 export async function PUT(request, context) {
   try {
-    await ensureOfficerSchema().catch(() => {});
     const auth = await verifyStaffOfficerAccess(request, context, 'edit');
     if (auth.error) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
 
     const { website } = auth;
-    const body = await request.json().catch(() => ({}));
+    const { body, imageFile } = await parseOfficerRequest(request);
     const {
       id,
       name,
+      email,
       phone,
       department,
       designation,
@@ -524,6 +684,10 @@ export async function PUT(request, context) {
       permanent_address,
       joining_date,
       salary,
+      payroll_id,
+      photo_url,
+      photo_id,
+      password,
       is_active,
       bio,
       permissions = {},
@@ -534,55 +698,198 @@ export async function PUT(request, context) {
     }
 
     const checkRes = await queryDb(
-      `SELECT id FROM website_officers WHERE website_id = $1 AND id = $2 LIMIT 1`,
+      `SELECT id, password, photo_id FROM website_officers WHERE website_id = $1 AND id = $2 LIMIT 1`,
       [website.id, id]
     );
 
     if (checkRes.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Officer not found.' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Officer not found or access denied.' }, { status: 404 });
     }
 
-    await queryDb(
+    const currentOfficer = checkRes.rows[0];
+
+    // Check duplicate email
+    if (email && email.trim()) {
+      const emailConflict = await queryDb(
+        `SELECT id FROM website_officers WHERE website_id = $1 AND LOWER(email) = LOWER($2) AND id != $3 LIMIT 1`,
+        [website.id, email.trim(), id]
+      );
+      if (emailConflict.rows.length > 0) {
+        return NextResponse.json({ success: false, error: 'Another officer is already using this email.' }, { status: 409 });
+      }
+    }
+
+    // Handle password update if provided
+    let passwordHash = currentOfficer.password;
+    if (password && password.trim()) {
+      passwordHash = await hashPassword(password.trim());
+    }
+
+    // Validate department
+    let validDept = undefined;
+    if (department !== undefined) {
+      if (VALID_DEPARTMENTS.includes(department.trim())) {
+        validDept = department.trim();
+      } else {
+        validDept = 'General';
+      }
+    }
+
+    // Direct Payroll scale synchronization
+    const targetPayrollId = payroll_id !== undefined ? payroll_id : body.payrollId;
+    let selectedPayroll = null;
+    let computedSalary = undefined;
+
+    if (targetPayrollId !== undefined) {
+      if (
+        targetPayrollId &&
+        String(targetPayrollId).trim() !== '' &&
+        String(targetPayrollId) !== '0' &&
+        String(targetPayrollId) !== 'null' &&
+        String(targetPayrollId) !== 'none'
+      ) {
+        const payrollCheck = await queryDb(
+          `SELECT id, title, grade_code, basic_salary, house_rent, medical_allowance, transport_allowance, other_allowance,
+                  provident_fund, tax_deduction, other_deductions
+           FROM website_officer_payrolls WHERE id = $1 AND website_id = $2 LIMIT 1`,
+          [Number(targetPayrollId), website.id]
+        );
+        if (payrollCheck.rows.length > 0) {
+          selectedPayroll = payrollCheck.rows[0];
+          const gross =
+            Number(selectedPayroll.basic_salary) +
+            Number(selectedPayroll.house_rent) +
+            Number(selectedPayroll.medical_allowance) +
+            Number(selectedPayroll.transport_allowance) +
+            Number(selectedPayroll.other_allowance);
+          const deductions =
+            Number(selectedPayroll.provident_fund) +
+            Number(selectedPayroll.tax_deduction) +
+            Number(selectedPayroll.other_deductions);
+          computedSalary = Math.max(0, gross - deductions);
+        }
+      } else {
+        computedSalary = 0.00;
+      }
+    }
+
+    const finalSalaryToUpdate =
+      computedSalary !== undefined
+        ? computedSalary
+        : salary !== undefined && salary !== null && salary !== ''
+        ? Number(salary)
+        : null;
+
+    // STEP 1: Update website_officers row
+    const updateRes = await queryDb(
       `UPDATE website_officers SET
          name = COALESCE($1, name),
-         phone = COALESCE($2, phone),
-         department = COALESCE($3, department),
-         designation = COALESCE($4, designation),
-         nid_number = COALESCE($5, nid_number),
-         gender = COALESCE($6, gender),
-         blood_group = COALESCE($7, blood_group),
-         date_of_birth = COALESCE($8, date_of_birth),
-         religion = COALESCE($9, religion),
-         address = COALESCE($10, address),
-         permanent_address = COALESCE($11, permanent_address),
-         joining_date = COALESCE($12, joining_date),
-         salary = COALESCE($13, salary),
-         is_active = COALESCE($14, is_active),
-         bio = COALESCE($15, bio),
+         email = COALESCE($2, email),
+         phone = COALESCE($3, phone),
+         department = COALESCE($4, department),
+         designation = COALESCE($5, designation),
+         nid_number = $6,
+         gender = COALESCE($7, gender),
+         blood_group = $8,
+         date_of_birth = $9,
+         religion = $10,
+         address = $11,
+         permanent_address = $12,
+         joining_date = COALESCE($13::date, joining_date),
+         salary = COALESCE($14, salary),
+         photo_url = COALESCE($15, photo_url),
+         photo_id = COALESCE($16, photo_id),
+         password = $17,
+         is_active = COALESCE($18, is_active),
+         bio = $19,
          updated_at = CURRENT_TIMESTAMP
-       WHERE website_id = $16 AND id = $17`,
+       WHERE website_id = $20 AND id = $21
+       RETURNING *`,
       [
         name?.trim() || null,
+        email?.trim()?.toLowerCase() || null,
         phone?.trim() || null,
-        department?.trim() || null,
+        validDept,
         designation?.trim() || null,
-        nid_number?.trim() || null,
-        gender || null,
-        blood_group?.trim() || null,
-        date_of_birth || null,
-        religion?.trim() || null,
-        address?.trim() || null,
-        permanent_address?.trim() || null,
+        nid_number !== undefined ? (nid_number?.trim() || null) : null,
+        gender && ['male', 'female', 'other'].includes(gender) ? gender : null,
+        blood_group !== undefined ? (blood_group?.trim() || null) : null,
+        date_of_birth !== undefined ? (date_of_birth || null) : null,
+        religion !== undefined ? (religion?.trim() || null) : null,
+        address !== undefined ? (address?.trim() || null) : null,
+        permanent_address !== undefined ? (permanent_address?.trim() || null) : null,
         joining_date || null,
-        salary !== undefined ? Number(salary) : null,
+        finalSalaryToUpdate,
+        photo_url !== undefined ? (photo_url?.trim() || null) : null,
+        photo_id !== undefined ? (photo_id?.trim() || null) : null,
+        passwordHash,
         is_active !== undefined ? Boolean(is_active) : null,
-        bio?.trim() || null,
+        bio !== undefined ? (bio?.trim() || null) : null,
         website.id,
         id,
       ]
     );
 
-    // If permissions provided, update them
+    let updatedOfficer = updateRes.rows[0];
+
+    // STEP 2: Sync payroll scale assignment in website_officer_salaries
+    if (targetPayrollId !== undefined) {
+      if (selectedPayroll) {
+        await queryDb(
+          `INSERT INTO website_officer_salaries (
+             website_id, officer_id, payroll_id, effective_date, status, remarks
+           ) VALUES ($1, $2, $3, COALESCE($4::date, CURRENT_DATE), 'active', 'Updated from officer profile')
+           ON CONFLICT (website_id, officer_id) DO UPDATE SET
+             payroll_id = EXCLUDED.payroll_id,
+             effective_date = COALESCE(EXCLUDED.effective_date, website_officer_salaries.effective_date),
+             status = 'active',
+             remarks = 'Updated from officer profile',
+             updated_at = CURRENT_TIMESTAMP`,
+          [website.id, id, selectedPayroll.id, joining_date || null]
+        );
+        updatedOfficer.payroll_id = selectedPayroll.id;
+        updatedOfficer.payroll_title = selectedPayroll.title;
+        updatedOfficer.payroll_grade_code = selectedPayroll.grade_code;
+        updatedOfficer.payroll_basic_salary = selectedPayroll.basic_salary;
+      } else if (
+        !targetPayrollId ||
+        String(targetPayrollId) === '0' ||
+        String(targetPayrollId) === 'null' ||
+        String(targetPayrollId) === 'none'
+      ) {
+        await queryDb(
+          `DELETE FROM website_officer_salaries WHERE website_id = $1 AND officer_id = $2`,
+          [website.id, id]
+        );
+        updatedOfficer.payroll_id = null;
+        updatedOfficer.payroll_title = null;
+        updatedOfficer.payroll_grade_code = null;
+        updatedOfficer.payroll_basic_salary = null;
+      }
+    }
+
+    // STEP 3: Handle photo update if imageFile provided
+    if (imageFile) {
+      try {
+        const uploadRes = await uploadImage(imageFile, `school/${website.id}/officers`);
+        if (uploadRes?.secure_url) {
+          if (currentOfficer.photo_id) {
+            deleteImage(currentOfficer.photo_id).catch(() => {});
+          }
+          const photoUpdateRes = await queryDb(
+            `UPDATE website_officers SET photo_url = $1, photo_id = $2 WHERE id = $3 AND website_id = $4 RETURNING *`,
+            [uploadRes.secure_url, uploadRes.publicId, id, website.id]
+          );
+          if (photoUpdateRes.rows[0]) {
+            updatedOfficer = photoUpdateRes.rows[0];
+          }
+        }
+      } catch (uploadErr) {
+        console.error('Officer photo update Cloudinary error:', uploadErr);
+      }
+    }
+
+    // STEP 4: Update module permissions if provided
     if (permissions && typeof permissions === 'object') {
       const allMods = await queryDb(`SELECT id, slug FROM website_modules WHERE is_active = TRUE`);
       const modMap = {};
@@ -618,17 +925,26 @@ export async function PUT(request, context) {
       await revokeAllOfficerSessions(id, website.id);
     }
 
-    return NextResponse.json({ success: true, message: 'Officer profile and permissions updated successfully.' });
+    if (updatedOfficer) {
+      delete updatedOfficer.password;
+      delete updatedOfficer.two_factor_code;
+      delete updatedOfficer.two_factor_expires;
+    }
+
+    return NextResponse.json({
+      success: true,
+      officer: updatedOfficer,
+      message: 'Officer profile and payroll updated successfully.',
+    });
   } catch (error) {
     console.error('Error updating officer:', error);
     return NextResponse.json({ success: false, error: error.message || 'Failed to update officer.' }, { status: 500 });
   }
 }
 
-// DELETE: Delete or deactivate an officer
+// DELETE: Delete an officer and cascade cleanup
 export async function DELETE(request, context) {
   try {
-    await ensureOfficerSchema().catch(() => {});
     const auth = await verifyStaffOfficerAccess(request, context, 'delete');
     if (auth.error) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
@@ -645,15 +961,22 @@ export async function DELETE(request, context) {
     await revokeAllOfficerSessions(id, website.id);
 
     const deleteRes = await queryDb(
-      `DELETE FROM website_officers WHERE website_id = $1 AND id = $2 RETURNING id, name`,
+      `DELETE FROM website_officers WHERE website_id = $1 AND id = $2 RETURNING id, name, photo_id`,
       [website.id, id]
     );
 
     if (deleteRes.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Officer not found.' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Officer not found or already deleted.' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, message: `Officer ${deleteRes.rows[0].name} removed successfully.` });
+    if (deleteRes.rows[0].photo_id) {
+      deleteImage(deleteRes.rows[0].photo_id).catch(() => {});
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Officer ${deleteRes.rows[0].name} removed successfully.`,
+    });
   } catch (error) {
     console.error('Error deleting officer:', error);
     return NextResponse.json({ success: false, error: error.message || 'Failed to delete officer.' }, { status: 500 });

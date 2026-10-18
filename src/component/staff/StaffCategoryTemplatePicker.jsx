@@ -236,7 +236,7 @@ export default function StaffCategoryTemplatePicker({
 
                     <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
                       <span className="text-slate-400 capitalize">
-                        {tpl.orientation} layout
+                        {parseFloat(tpl.dimension_width) >= parseFloat(tpl.dimension_height) ? 'Landscape' : 'Portrait'}
                       </span>
 
                       <div className="flex items-center gap-2">
@@ -273,7 +273,7 @@ export default function StaffCategoryTemplatePicker({
               </h2>
               {currentTpl && (
                 <span className="text-[10px] font-mono text-slate-500">
-                  {currentTpl.dimension_width} × {currentTpl.dimension_height} {currentTpl.dimension_unit} ({currentTpl.orientation})
+                  {currentTpl.dimension_width} × {currentTpl.dimension_height} {currentTpl.dimension_unit} ({parseFloat(currentTpl.dimension_width) >= parseFloat(currentTpl.dimension_height) ? 'Landscape' : 'Portrait'})
                 </span>
               )}
             </div>

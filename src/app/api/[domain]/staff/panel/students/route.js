@@ -406,6 +406,37 @@ export async function PUT(request, context) {
         [Boolean(is_active), website.id, student_id]
       );
 
+      // Synchronize with website_student_exits
+      if (!is_active) {
+        const stuInfo = await queryDb(
+          `SELECT class_id, section_id, session_id FROM website_students WHERE website_id = $1 AND id = $2`,
+          [website.id, student_id]
+        );
+        const sRow = stuInfo.rows[0];
+        const staffId = auth.staffSession?.id || auth.staffSession?.staff?.id || null;
+        await queryDb(
+          `INSERT INTO website_student_exits (
+             website_id, student_id, exit_type, exit_date, reason,
+             last_class_id, last_section_id, last_session_id, recorded_by_staff_id
+           )
+           VALUES ($1, $2, 'dropped_out', CURRENT_DATE, $3, $4, $5, $6, $7)`,
+          [
+            website.id,
+            student_id,
+            body.reason || 'Marked as dropped out from Dropout Desk',
+            sRow?.class_id || null,
+            sRow?.section_id || null,
+            sRow?.session_id || null,
+            staffId,
+          ]
+        );
+      } else {
+        await queryDb(
+          `DELETE FROM website_student_exits WHERE website_id = $1 AND student_id = $2 AND exit_type = 'dropped_out'`,
+          [website.id, student_id]
+        );
+      }
+
       return NextResponse.json({
         success: true,
         message: `Student status updated to ${is_active ? 'Active' : 'Dropped Out'}.`,

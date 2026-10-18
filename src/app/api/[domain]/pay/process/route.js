@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { queryDb, pool } from '@/lib/database/db';
-import { resolveDomain } from '@/lib/domain/tenant';
+import { queryDb, pool } from 'src/lib/database/db';
+import { resolveDomain } from 'src/lib/domain/tenant';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,7 +100,7 @@ export async function POST(request, { params }) {
         FROM website_education_fee_payments p
         JOIN website_students s ON s.id = p.student_id
         WHERE p.id = $1 AND p.website_id = $2
-        FOR UPDATE
+        FOR UPDATE OF p
       `, [invoice_id, website.id]);
 
       if (invRes.rows.length === 0) {
@@ -167,7 +167,7 @@ export async function POST(request, { params }) {
         FROM website_exam_fee_payments p
         JOIN website_students s ON s.id = p.student_id
         WHERE p.id = $1 AND p.website_id = $2
-        FOR UPDATE
+        FOR UPDATE OF p
       `, [invoice_id, website.id]);
 
       if (invRes.rows.length === 0) {
@@ -246,7 +246,7 @@ export async function POST(request, { params }) {
         JOIN website_admission_applicants a ON a.id = p.applicant_id
         LEFT JOIN website_admissions c ON c.id = p.admission_id
         WHERE p.id = $1 AND p.website_id = $2
-        FOR UPDATE
+        FOR UPDATE OF p
       `, [invoice_id, website.id]);
 
       if (invRes.rows.length === 0) {
@@ -272,12 +272,10 @@ export async function POST(request, { params }) {
         WHERE id = $3
       `, [gw, txnId, inv.id]);
 
-      // Update applicant status and advance to step 2 (Upload documents & photo)
+      // Update applicant updated_at timestamp
       await client.query(`
         UPDATE website_admission_applicants
-        SET status = 'fee_paid',
-            step = 2,
-            updated_at = CURRENT_TIMESTAMP
+        SET updated_at = CURRENT_TIMESTAMP
         WHERE id = $1
       `, [inv.applicant_record_id]);
 
@@ -330,7 +328,7 @@ export async function POST(request, { params }) {
           LEFT JOIN website_hall_rooms r ON r.id = p.room_id
           LEFT JOIN website_hall_room_seats st ON st.id = p.seat_id
           WHERE p.id = $1 AND p.website_id = $2
-          FOR UPDATE
+          FOR UPDATE OF p
         `, [invoice_id, website.id]);
 
         if (invRes.rows.length === 0) {

@@ -1,28 +1,43 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { toast } from 'react-hot-toast';
 import TenantLoader from 'src/component/tenant/TenantLoader';
-import { FiCreditCard, FiPrinter, FiLock, FiCheckCircle, FiUser, FiClock, FiCalendar, FiShield, FiHash } from 'react-icons/fi';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
+import { exportElementAsJpeg, exportElementAsPdf } from 'src/lib/export/documentExporter';
+import { 
+  FiCreditCard, FiPrinter, FiLock, FiCheckCircle, 
+  FiUser, FiClock, FiDownload, FiLayers 
+} from 'react-icons/fi';
 import { printStudentIDCard } from 'src/lib/receipts/student_id_card';
 
-const StudentIDCardPage = () => {
+export default function StudentIDCardPage() {
+  const { website, getApiEndpoint } = useTenantWebsite();
   const [student, setStudent] = useState(null);
   const [idCard, setIdCard] = useState(null);
+  const [template, setTemplate] = useState(null);
   const [isProvided, setIsProvided] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
+  const [cardSideView, setCardSideView] = useState('both'); // 'both' | 'front' | 'back'
+
+  const cardFrontRef = useRef(null);
+  const cardBackRef = useRef(null);
 
   useEffect(() => {
     const fetchIDCard = async () => {
       try {
-        const res = await fetch('/api/student/id-card');
+        const res = await fetch(getApiEndpoint('student/id-card'));
         if (res.ok) {
           const data = await res.json();
           const payload = data.payload || data.paylod || data || {};
           const cardData = payload.idCard || payload.card || data.card || null;
           const studentData = payload.student || data.student || null;
+          const tpl = payload.template || data.template || null;
 
           setStudent(studentData);
           setIdCard(cardData);
+          setTemplate(tpl);
           setIsProvided(Boolean(cardData));
         }
       } catch (error) {
@@ -33,7 +48,7 @@ const StudentIDCardPage = () => {
     };
 
     fetchIDCard();
-  }, []);
+  }, [getApiEndpoint]);
 
   if (loading) {
     return <TenantLoader fullScreen={false} />;
@@ -41,7 +56,89 @@ const StudentIDCardPage = () => {
 
   const cardNumber = idCard?.id_card_no || idCard?.card_number || `ID-${student?.registration_number || student?.id || 'STUDENT'}`;
   const issueDateFormatted = idCard?.issue_date ? new Date(idCard.issue_date).toLocaleDateString('en-GB') : 'Active Session';
-  const expiryDateFormatted = idCard?.expiry_date ? new Date(idCard.expiry_date).toLocaleDateString('en-GB') : '31/12/2026';
+  const expiryDateFormatted = idCard?.expiry_date ? new Date(idCard.expiry_date).toLocaleDateString('en-GB') : '31/12/2027';
+
+  // Compile card HTML using active template
+  const compileCard = () => {
+    if (!template) return null;
+    let frontHtml = template.custom_html || template.html_content || '';
+    let backHtml = template.custom_html_back || template.html_back_content || '';
+    const css = template.custom_css || template.css_content || '';
+
+    const replacements = {
+      '{{student_name}}': student?.name || 'Student Name',
+      '{{registration_no}}': student?.registration_number || student?.registration_no || student?.student_unique_id || 'REG-0001',
+      '{{roll_no}}': student?.roll || student?.roll_no || '01',
+      '{{student_unique_id}}': student?.student_unique_id || student?.registration_number || 'STU-0001',
+      '{{class_name}}': student?.class_name || 'Class',
+      '{{section_name}}': student?.section_name || 'Sec A',
+      '{{session_name}}': student?.session_name || '2026-2027',
+      '{{blood_group}}': student?.blood_group || 'O+',
+      '{{student_photo}}': student?.photo_url || student?.image || '/default-avatar.png',
+      '{{card_number}}': cardNumber,
+      '{{issue_date}}': issueDateFormatted,
+      '{{valid_upto}}': expiryDateFormatted,
+      '{{expiry_date}}': expiryDateFormatted,
+      '{{emergency_contact}}': student?.emergency_phone || student?.number || website?.phone || '+880 1700-000000',
+      '{{institution_name}}': website?.name || 'Educational Institution',
+      '{{school_name}}': website?.name || 'Educational Institution',
+      '{{institution_logo}}': website?.logo_url || '/school-logo.png',
+      '{{school_logo}}': website?.logo_url || '/school-logo.png',
+      '{{institution_address}}': website?.address || 'Main Campus',
+      '{{institution_phone}}': website?.phone || '+880 2 000000',
+    };
+
+    Object.entries(replacements).forEach(([k, v]) => {
+      const reg = new RegExp(k.replace(/([{}])/g, '\\$1'), 'g');
+      frontHtml = frontHtml.replace(reg, v);
+      if (backHtml) {
+        backHtml = backHtml.replace(reg, v);
+      }
+    });
+
+    return { frontHtml, backHtml, css };
+  };
+
+  const cardCompiled = compileCard();
+  const cardWidth = template ? `${template.dimension_width * 3.7795}px` : '240px';
+  const cardHeight = template ? `${template.dimension_height * 3.7795}px` : '380px';
+
+  const handleDownloadJpeg = async () => {
+    setIsExporting(true);
+    toast.loading('Exporting High-Res ID Card JPEG...', { id: 'card-export' });
+    try {
+      if (cardFrontRef.current) {
+        await exportElementAsJpeg(cardFrontRef.current, `Student_ID_${student?.registration_number || 'card'}_Front`);
+      }
+      if (cardBackRef.current && (cardSideView === 'both' || cardSideView === 'back')) {
+        await exportElementAsJpeg(cardBackRef.current, `Student_ID_${student?.registration_number || 'card'}_Back`);
+      }
+      toast.success('ID Card JPEG downloaded successfully!', { id: 'card-export' });
+    } catch {
+      toast.error('Failed to export JPEG.', { id: 'card-export' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    setIsExporting(true);
+    toast.loading('Generating Official ID Card PDF...', { id: 'card-export' });
+    try {
+      const target = cardFrontRef.current || cardBackRef.current;
+      if (target) {
+        await exportElementAsPdf(target, `Student_ID_${student?.registration_number || 'card'}`, {
+          widthMm: template?.dimension_width || 54,
+          heightMm: template?.dimension_height || 86,
+        });
+        toast.success('Official ID Card PDF downloaded!', { id: 'card-export' });
+      }
+    } catch {
+      toast.error('Failed to export PDF.', { id: 'card-export' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto pb-12 animate-fade-up">
@@ -58,16 +155,32 @@ const StudentIDCardPage = () => {
         </div>
 
         {isProvided && student && (
-          <button
-            onClick={() => printStudentIDCard({
-              id_card_no: cardNumber,
-              student: student,
-              expiry_date: expiryDateFormatted
-            })}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer shrink-0"
-          >
-            <FiPrinter className="text-sm" /> Print Official ID Card
-          </button>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              onClick={handleDownloadJpeg}
+              disabled={isExporting}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50"
+            >
+              <FiDownload className="text-xs" /> JPEG
+            </button>
+            <button
+              onClick={handleDownloadPdf}
+              disabled={isExporting}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50"
+            >
+              <FiDownload className="text-xs" /> PDF
+            </button>
+            <button
+              onClick={() => printStudentIDCard({
+                id_card_no: cardNumber,
+                student: student,
+                expiry_date: expiryDateFormatted,
+              })}
+              className="flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+            >
+              <FiPrinter className="text-xs" /> Print Card
+            </button>
+          </div>
         )}
       </div>
 
@@ -106,44 +219,95 @@ const StudentIDCardPage = () => {
 
       {/* ID Card Display */}
       {isProvided && student ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-          {/* Visual Card Preview */}
-          <div className="bg-white border border-slate-200/70 rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center shadow-xs">
-            <div className="w-[300px] h-[450px] bg-white border-2 border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col justify-between relative overflow-hidden">
-              <div className="bg-slate-900 text-white p-3 text-center rounded-xl">
-                <p className="text-xs font-bold uppercase tracking-wider">Institutional Student ID</p>
-                <p className="text-[9px] text-indigo-400 uppercase font-semibold">Official Campus Pass</p>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Visual Card Canvas Preview */}
+          <div className="lg:col-span-7 bg-white border border-slate-200/70 rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center shadow-xs space-y-4">
+            <div className="flex items-center justify-between w-full border-b border-slate-100 pb-3">
+              <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-1">
+                <FiLayers className="text-indigo-600" />
+                {template?.name || 'Institutional Identity Card'}
+              </span>
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setCardSideView('both')}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                    cardSideView === 'both' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500'
+                  }`}
+                >
+                  Both
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCardSideView('front')}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                    cardSideView === 'front' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500'
+                  }`}
+                >
+                  Front
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCardSideView('back')}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                    cardSideView === 'back' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500'
+                  }`}
+                >
+                  Back
+                </button>
               </div>
+            </div>
 
-              <div className="flex flex-col items-center space-y-2 my-4">
-                <div className="w-20 h-20 rounded-full border-2 border-indigo-600 bg-indigo-50 flex items-center justify-center font-bold text-2xl text-indigo-700 overflow-hidden">
-                  {student.photo_url || student.image ? (
-                    <img src={student.photo_url || student.image} alt={student.name} className="w-full h-full object-cover" />
-                  ) : (
-                    student.name ? student.name.charAt(0).toUpperCase() : 'S'
-                  )}
+            {/* Template CSS */}
+            {cardCompiled && (
+              <style dangerouslySetInnerHTML={{ __html: cardCompiled.css }} />
+            )}
+
+            <div className="flex flex-wrap items-center justify-center gap-4 p-4 bg-slate-50 rounded-2xl w-full overflow-x-auto">
+              {/* FRONT SIDE */}
+              {(cardSideView === 'both' || cardSideView === 'front') && (
+                <div className="flex flex-col items-center gap-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Front</span>
+                  <div
+                    ref={cardFrontRef}
+                    className="rounded overflow-hidden shadow-md bg-white border border-slate-200"
+                    style={{ width: cardWidth, height: cardHeight }}
+                  >
+                    {cardCompiled ? (
+                      <div
+                        dangerouslySetInnerHTML={{ __html: cardCompiled.frontHtml }}
+                        style={{ width: '100%', height: '100%' }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center p-4 text-center text-xs text-slate-400">
+                        Default ID Card Layout
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <h3 className="font-bold text-slate-900 text-center text-sm">{student.name}</h3>
-                <span className="bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
-                  {student.class_name} {student.section_name ? `(${student.section_name})` : ''}
-                </span>
-              </div>
+              )}
 
-              <div className="space-y-1.5 text-xs text-slate-700 border-t border-slate-100 pt-3">
-                <div className="flex justify-between"><span className="text-slate-400">Roll:</span> <span className="font-bold">{student.roll || student.roll_no || 'N/A'}</span></div>
-                <div className="flex justify-between"><span className="text-slate-400">Reg No:</span> <span className="font-bold font-mono">{student.registration_number || student.registration_no}</span></div>
-                <div className="flex justify-between"><span className="text-slate-400">Blood Group:</span> <span className="font-bold text-rose-600">{student.blood_group || 'N/A'}</span></div>
-              </div>
-
-              <div className="text-[9px] text-slate-400 border-t border-slate-100 pt-2 flex justify-between">
-                <span>Card: {cardNumber}</span>
-                <span>Valid: {expiryDateFormatted}</span>
-              </div>
+              {/* BACK SIDE */}
+              {(cardSideView === 'both' || cardSideView === 'back') && cardCompiled?.backHtml && (
+                <div className="flex flex-col items-center gap-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Back</span>
+                  <div
+                    ref={cardBackRef}
+                    className="rounded overflow-hidden shadow-md bg-white border border-slate-200"
+                    style={{ width: cardWidth, height: cardHeight }}
+                  >
+                    <div
+                      dangerouslySetInnerHTML={{ __html: cardCompiled.backHtml }}
+                      style={{ width: '100%', height: '100%' }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Identity Credentials Specification Table */}
-          <div className="bg-white border border-slate-200/70 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col gap-4">
+          <div className="lg:col-span-5 bg-white border border-slate-200/70 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col gap-4">
             <div>
               <h3 className="text-base font-bold text-slate-800">Identity Record Specifications</h3>
               <p className="text-xs text-slate-400 font-medium">Certified institutional registration parameters</p>
@@ -153,7 +317,7 @@ const StudentIDCardPage = () => {
               <table className="w-full text-left border-collapse text-xs">
                 <tbody className="divide-y divide-slate-100">
                   <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-400 w-40">Card Serial Number</td>
+                    <td className="py-2.5 px-3 font-semibold text-slate-400 w-36">Serial Number</td>
                     <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{cardNumber}</td>
                   </tr>
                   <tr className="hover:bg-slate-50/60">
@@ -161,15 +325,15 @@ const StudentIDCardPage = () => {
                     <td className="py-2.5 px-3 font-bold text-slate-800">{student.name}</td>
                   </tr>
                   <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-400">Registration Number</td>
+                    <td className="py-2.5 px-3 font-semibold text-slate-400">Reg Number</td>
                     <td className="py-2.5 px-3 font-mono font-bold text-slate-700">{student.registration_number || student.registration_no}</td>
                   </tr>
                   <tr className="hover:bg-slate-50/60">
                     <td className="py-2.5 px-3 font-semibold text-slate-400">Class &amp; Section</td>
-                    <td className="py-2.5 px-3 font-medium text-slate-800">{student.class_name} {student.section_name ? `(Section ${student.section_name})` : ''}</td>
+                    <td className="py-2.5 px-3 font-medium text-slate-800">{student.class_name} {student.section_name ? `(${student.section_name})` : ''}</td>
                   </tr>
                   <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-400">Class Roll Number</td>
+                    <td className="py-2.5 px-3 font-semibold text-slate-400">Roll Number</td>
                     <td className="py-2.5 px-3 font-bold text-slate-800">{student.roll || student.roll_no || 'N/A'}</td>
                   </tr>
                   <tr className="hover:bg-slate-50/60">
@@ -183,10 +347,6 @@ const StudentIDCardPage = () => {
                   <tr className="hover:bg-slate-50/60">
                     <td className="py-2.5 px-3 font-semibold text-slate-400">Expiration Date</td>
                     <td className="py-2.5 px-3 font-medium text-slate-700">{expiryDateFormatted}</td>
-                  </tr>
-                  <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-400">Emergency Phone</td>
-                    <td className="py-2.5 px-3 font-mono text-slate-700">{student.emergency_phone || student.phone || 'Campus Administration'}</td>
                   </tr>
                   <tr className="hover:bg-slate-50/60">
                     <td className="py-2.5 px-3 font-semibold text-slate-400">Card Status</td>
@@ -214,6 +374,4 @@ const StudentIDCardPage = () => {
       )}
     </div>
   );
-};
-
-export default StudentIDCardPage;
+}

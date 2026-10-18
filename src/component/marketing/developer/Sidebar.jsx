@@ -37,14 +37,13 @@ export const ADMIN_NAV_SECTIONS = [
   {
     title: 'Template Studio & Design',
     links: [
-      { href: '/developer/templates', label: 'All Templates', exact: true },
       { href: '/developer/templates/student-id-card', label: 'Student ID Cards' },
       { href: '/developer/templates/teacher-id-card', label: 'Teacher ID Cards' },
+      { href: '/developer/templates/officer-id-card', label: 'Officer ID Cards' },
       { href: '/developer/templates/tc', label: 'Transfer Certificates (TC)' },
       { href: '/developer/templates/testimonial', label: 'Testimonials' },
       { href: '/developer/templates/certificate', label: 'Academic Certificates' },
       { href: '/developer/templates/payment-receipt', label: 'Payment Receipts' },
-      { href: '/developer/templates/poster', label: 'Website Posters' },
     ],
   },
   {

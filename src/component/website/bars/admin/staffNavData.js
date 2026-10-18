@@ -138,6 +138,11 @@ export const staffNavData = [
         "path": "/student-drop-out"
       },
       {
+        "title": "Exit & Transfers",
+        "module": "sis",
+        "path": "/student-exits"
+      },
+      {
         "title": "ID Card",
         "module": "sis",
         "children": [
@@ -153,92 +158,7 @@ export const staffNavData = [
           }
         ]
       },
-      {
-        "title": "Certificates & Documents",
-        "module": "sis",
-        "children": [
-          {
-            "title": "Transfer Certificate (TC)",
-            "module": "sis",
-            "children": [
-              {
-                "title": "Templates",
-                "module": "documents",
-                "path": "/tc-templates"
-              },
-              {
-                "title": "Issue & Download",
-                "module": "documents",
-                "path": "/tc"
-              }
-            ]
-          },
-          {
-            "title": "Testimonials",
-            "module": "sis",
-            "children": [
-              {
-                "title": "Templates",
-                "module": "documents",
-                "path": "/testimonial-templates"
-              },
-              {
-                "title": "Issue & Download",
-                "module": "documents",
-                "path": "/testimonials"
-              }
-            ]
-          },
-          {
-            "title": "Academic Certificates",
-            "module": "sis",
-            "children": [
-              {
-                "title": "Templates",
-                "module": "documents",
-                "path": "/certificate-templates"
-              },
-              {
-                "title": "Issue & Download",
-                "module": "documents",
-                "path": "/certificates"
-              }
-            ]
-          },
-          {
-            "title": "Payment Receipts",
-            "module": "sis",
-            "children": [
-              {
-                "title": "Templates",
-                "module": "documents",
-                "path": "/payment-receipt-templates"
-              },
-              {
-                "title": "Issue & Download",
-                "module": "documents",
-                "path": "/payment-receipt"
-              }
-            ]
-          },
-          {
-            "title": "Website Posters",
-            "module": "sis",
-            "children": [
-              {
-                "title": "Templates",
-                "module": "documents",
-                "path": "/poster-templates"
-              },
-              {
-                "title": "Generate & Export",
-                "module": "documents",
-                "path": "/posters"
-              }
-            ]
-          }
-        ]
-      },
+
       {
         "title": "Search",
         "module": "sis",
@@ -397,7 +317,7 @@ export const staffNavData = [
           {
             "title": "Templates",
             "module": "staff-payroll",
-            "path": "/teacher-id-card"
+            "path": "/teacher-id-card-templates"
           },
           {
             "title": "Download",
@@ -616,14 +536,68 @@ export const staffNavData = [
     "module": "documents",
     "children": [
       {
-        "title": "TC",
+        "title": "Transfer Certificate (TC)",
         "module": "documents",
-        "path": "/tc"
+        "children": [
+          {
+            "title": "Templates",
+            "module": "documents",
+            "path": "/tc-templates"
+          },
+          {
+            "title": "Download",
+            "module": "documents",
+            "path": "/tc"
+          }
+        ]
       },
       {
         "title": "Testimonials",
         "module": "documents",
-        "path": "/testimonials"
+        "children": [
+          {
+            "title": "Templates",
+            "module": "documents",
+            "path": "/testimonial-templates"
+          },
+          {
+            "title": "Download",
+            "module": "documents",
+            "path": "/testimonials"
+          }
+        ]
+      },
+      {
+        "title": "Academic Certificates",
+        "module": "documents",
+        "children": [
+          {
+            "title": "Templates",
+            "module": "documents",
+            "path": "/certificate-templates"
+          },
+          {
+            "title": "Download",
+            "module": "documents",
+            "path": "/certificates"
+          }
+        ]
+      },
+      {
+        "title": "Payment Receipts",
+        "module": "documents",
+        "children": [
+          {
+            "title": "Templates",
+            "module": "documents",
+            "path": "/payment-receipt-templates"
+          },
+          {
+            "title": "Download",
+            "module": "documents",
+            "path": "/payment-receipt"
+          }
+        ]
       }
     ]
   },
@@ -800,6 +774,27 @@ export const staffNavData = [
     ]
   },
   {
+    "title": "Website Posters",
+    "module": "website-builder,documents",
+    "children": [
+      {
+        "title": "Posters Hub",
+        "module": "website-builder,documents",
+        "path": "/posters"
+      },
+      {
+        "title": "Design in Studio",
+        "module": "website-builder,documents",
+        "path": "/posters/studio/new"
+      },
+      {
+        "title": "Base Templates",
+        "module": "website-builder,documents",
+        "path": "/poster-templates"
+      }
+    ]
+  },
+  {
     "title": "News",
     "module": "website-builder",
     "children": [
@@ -883,6 +878,42 @@ export const staffNavData = [
     "module": "officers",
     "children": [
       {
+        "title": "Registration",
+        "module": "officers",
+        "path": "/officer-registration"
+      },
+      {
+        "title": "List",
+        "module": "officers",
+        "path": "/officer-list"
+      },
+      {
+        "title": "Update",
+        "module": "officers",
+        "path": "/officer-update"
+      },
+      {
+        "title": "Payroll",
+        "module": "officers",
+        "path": "/officer-payroll"
+      },
+      {
+        "title": "ID Card",
+        "module": "officers",
+        "children": [
+          {
+            "title": "Templates",
+            "module": "officers",
+            "path": "/officer-id-card-templates"
+          },
+          {
+            "title": "Download",
+            "module": "officers",
+            "path": "/officer-id-card-download"
+          }
+        ]
+      },
+      {
         "title": "Hall",
         "module": "officers",
         "path": "/management-hall"
@@ -901,11 +932,6 @@ export const staffNavData = [
         "title": "Others",
         "module": "officers",
         "path": "/management-others"
-      },
-      {
-        "title": "Payrolls",
-        "module": "officers",
-        "path": "/management-payrolls"
       }
     ]
   },

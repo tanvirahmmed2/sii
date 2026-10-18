@@ -67,7 +67,14 @@ export default function StaffModuleRouteGuard({ children, allowedModules = null,
     }
 
     const allowedSet = new Set(allowedModules.map((m) => String(m).toLowerCase().trim()));
-    const isAllowed = allowedSet.has(targetModule.toLowerCase());
+    let isAllowed = false;
+    if (Array.isArray(targetModule)) {
+      isAllowed = targetModule.some((m) => allowedSet.has(m.toLowerCase().trim()));
+    } else if (typeof targetModule === 'string' && targetModule.includes(',')) {
+      isAllowed = targetModule.split(',').some((m) => allowedSet.has(m.toLowerCase().trim()));
+    } else {
+      isAllowed = allowedSet.has(String(targetModule).toLowerCase().trim());
+    }
 
     return {
       allowed: isAllowed,

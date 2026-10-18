@@ -92,90 +92,9 @@ export async function clearOfficerSessionCookie(response) {
   }
 }
 
-let _officerSchemaEnsured = false;
 export async function ensureOfficerSchema() {
-  if (_officerSchemaEnsured) return;
-  _officerSchemaEnsured = true;
-  try {
-    await queryDb(`
-      CREATE TABLE IF NOT EXISTS website_officers (
-        id BIGSERIAL PRIMARY KEY,
-        website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-        name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) NOT NULL,
-        phone VARCHAR(50) NOT NULL,
-        department VARCHAR(100) DEFAULT 'General',
-        designation VARCHAR(100) DEFAULT 'Officer',
-        nid_number VARCHAR(100),
-        gender VARCHAR(20) DEFAULT 'male',
-        blood_group VARCHAR(10),
-        date_of_birth DATE,
-        religion VARCHAR(50),
-        address TEXT,
-        permanent_address TEXT,
-        joining_date DATE DEFAULT CURRENT_DATE,
-        salary NUMERIC(12, 2) DEFAULT 0.00,
-        photo_url TEXT,
-        photo_id VARCHAR(255),
-        password VARCHAR(255) NOT NULL,
-        recovery_token VARCHAR(255),
-        recovery_token_expires TIMESTAMPTZ,
-        two_factor_code VARCHAR(10),
-        two_factor_expires TIMESTAMPTZ,
-        is_active BOOLEAN DEFAULT TRUE,
-        is_registered BOOLEAN DEFAULT FALSE,
-        is_two_factor_enabled BOOLEAN DEFAULT FALSE,
-        verification_token VARCHAR(255),
-        verification_token_expires TIMESTAMPTZ,
-        bio TEXT,
-        username VARCHAR(255),
-        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(website_id, email),
-        UNIQUE(website_id, username)
-      );
-
-      CREATE TABLE IF NOT EXISTS website_officer_permissions (
-        id BIGSERIAL PRIMARY KEY,
-        website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-        officer_id BIGINT NOT NULL REFERENCES website_officers(id) ON DELETE CASCADE,
-        website_module_id BIGINT NOT NULL REFERENCES website_modules(id) ON DELETE CASCADE,
-        can_view BOOLEAN DEFAULT TRUE,
-        can_create BOOLEAN DEFAULT FALSE,
-        can_edit BOOLEAN DEFAULT FALSE,
-        can_delete BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(officer_id, website_module_id)
-      );
-
-      CREATE TABLE IF NOT EXISTS website_officer_login_sessions (
-        id BIGSERIAL PRIMARY KEY,
-        website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-        officer_id BIGINT NOT NULL REFERENCES website_officers(id) ON DELETE CASCADE,
-        token TEXT UNIQUE NOT NULL,
-        ip_address VARCHAR(45),
-        user_agent TEXT,
-        device_info TEXT,
-        is_active BOOLEAN DEFAULT TRUE,
-        expires_at TIMESTAMPTZ NOT NULL,
-        last_active_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE INDEX IF NOT EXISTS idx_ws_officers_website ON website_officers(website_id);
-      CREATE INDEX IF NOT EXISTS idx_ws_officers_email ON website_officers(website_id, email);
-      CREATE INDEX IF NOT EXISTS idx_ws_officers_vtoken ON website_officers(verification_token);
-      CREATE INDEX IF NOT EXISTS idx_ws_officers_rtoken ON website_officers(recovery_token);
-      CREATE INDEX IF NOT EXISTS idx_ws_officer_perms_officer ON website_officer_permissions(officer_id);
-      CREATE INDEX IF NOT EXISTS idx_ws_officer_perms_website ON website_officer_permissions(website_id);
-      CREATE INDEX IF NOT EXISTS idx_ws_officer_perms_module ON website_officer_permissions(website_module_id);
-      CREATE INDEX IF NOT EXISTS idx_ws_officer_sessions_token ON website_officer_login_sessions(token);
-    `);
-  } catch (err) {
-    console.warn('[OfficerSchema] ensureOfficerSchema notice:', err?.message);
-  }
+  // Schema is managed directly in database via website_tables.psql
+  return Promise.resolve();
 }
 
 /**

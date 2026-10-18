@@ -30,6 +30,7 @@ export default function OfficerSidebar({ isOpen, onClose }) {
   // Core navigation links
   const coreLinks = [
     { label: 'Workstation Overview', href: '/officer' },
+    { label: 'Officer ID Card', href: '/officer/id-card' },
   ];
 
   // Dynamic modules based on permissions

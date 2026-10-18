@@ -43,6 +43,7 @@ const Sidebar = () => {
     { label: 'Marks & Results Entry', href: '/teacher/marks' },
     { label: 'Leave Applications', href: '/teacher/leaves' },
     { label: 'Salary Ledger', href: '/teacher/salary' },
+    { label: 'Teacher ID Card', href: '/teacher/id-card' },
     { label: 'Faculty Profile', href: '/teacher/profile' },
   ];
 

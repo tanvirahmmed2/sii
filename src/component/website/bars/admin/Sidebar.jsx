@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useContext, useState, useMemo } from 'react';
+import React, { useContext, useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
@@ -20,7 +20,7 @@ const getStaffUrl = (rawPath) => {
 const hasActiveChild = (item, pathname) => {
   if (item.path) {
     const target = getStaffUrl(item.path);
-    if (pathname === target || pathname.startsWith(target + '/') || pathname.endsWith(target)) {
+    if (pathname === target || (target !== '/staff-panel' && pathname.startsWith(target + '/'))) {
       return true;
     }
   }
@@ -37,6 +37,13 @@ const SubCollapsibleGroup = ({ group, pathname, setAdminSidebar }) => {
     [group, pathname]
   );
   const [isOpen, setIsOpen] = useState(isInitiallyActive);
+
+  // Sync open state when navigation changes
+  useEffect(() => {
+    if (isInitiallyActive) {
+      setIsOpen(true);
+    }
+  }, [isInitiallyActive]);
 
   return (
     <div className="flex flex-col space-y-0.5 my-0.5">
@@ -58,8 +65,19 @@ const SubCollapsibleGroup = ({ group, pathname, setAdminSidebar }) => {
       {isOpen && (
         <div className="flex flex-col space-y-0.5 pl-2.5 border-l border-slate-200 dark:border-slate-800 ml-1.5 py-0.5">
           {group.children?.map((child, idx) => {
+            if (child.children && Array.isArray(child.children)) {
+              return (
+                <SubCollapsibleGroup
+                  key={child.title || idx}
+                  group={child}
+                  pathname={pathname}
+                  setAdminSidebar={setAdminSidebar}
+                />
+              );
+            }
+
             const target = getStaffUrl(child.path);
-            const isActive = pathname === target || pathname.startsWith(target + '/') || pathname.endsWith(target);
+            const isActive = pathname === target || (target !== '/staff-panel' && pathname.startsWith(target + '/'));
 
             return (
               <Link
@@ -91,10 +109,17 @@ const NavModuleAccordion = ({ module, pathname, setAdminSidebar }) => {
   );
   const [isOpen, setIsOpen] = useState(isInitiallyActive);
 
+  // Sync open state when navigation changes
+  useEffect(() => {
+    if (isInitiallyActive) {
+      setIsOpen(true);
+    }
+  }, [isInitiallyActive]);
+
   // If module is a direct link without children
   if (module.path && (!module.children || module.children.length === 0)) {
     const target = getStaffUrl(module.path);
-    const isActive = pathname === target || pathname.startsWith(target + '/') || pathname.endsWith(target);
+    const isActive = pathname === target || (target !== '/staff-panel' && pathname.startsWith(target + '/'));
 
     return (
       <Link
@@ -145,7 +170,7 @@ const NavModuleAccordion = ({ module, pathname, setAdminSidebar }) => {
 
             // Direct leaf link inside top accordion
             const target = getStaffUrl(item.path);
-            const isActive = pathname === target || pathname.startsWith(target + '/') || pathname.endsWith(target);
+            const isActive = pathname === target || (target !== '/staff-panel' && pathname.startsWith(target + '/'));
 
             return (
               <Link
@@ -184,8 +209,17 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
     const allowedSet = new Set(allowedModules.map((m) => String(m).toLowerCase().trim()));
 
     const filterItem = (item) => {
-      // If item has a specific module, check if allowed
-      const isSelfAllowed = !item.module || allowedSet.has(item.module.toLowerCase());
+      // If item has a specific module, check if allowed (supports array or comma-separated)
+      let isSelfAllowed = !item.module;
+      if (item.module) {
+        if (Array.isArray(item.module)) {
+          isSelfAllowed = item.module.some((m) => allowedSet.has(m.toLowerCase().trim()));
+        } else if (typeof item.module === 'string' && item.module.includes(',')) {
+          isSelfAllowed = item.module.split(',').some((m) => allowedSet.has(m.toLowerCase().trim()));
+        } else {
+          isSelfAllowed = allowedSet.has(String(item.module).toLowerCase().trim());
+        }
+      }
 
       if (item.children && Array.isArray(item.children)) {
         const allowedChildren = item.children
@@ -220,13 +254,18 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
   // Extract flat list of links for quick search from filteredNavData
   const flatSearchList = useMemo(() => {
     if (!filterQuery.trim()) return [];
-    const q = filterQuery.toLowerCase();
+    const q = filterQuery.toLowerCase().trim();
     const results = [];
 
     const recurse = (items, parent = '') => {
       for (const item of items) {
         const fullTitle = parent ? `${parent} > ${item.title}` : item.title;
-        if (item.path && item.title.toLowerCase().includes(q)) {
+        if (
+          item.path &&
+          (item.title.toLowerCase().includes(q) ||
+            fullTitle.toLowerCase().includes(q) ||
+            item.path.toLowerCase().includes(q))
+        ) {
           results.push({
             title: item.title,
             fullTitle,

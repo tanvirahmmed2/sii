@@ -112,6 +112,31 @@ export function proxy(request) {
     'officer', 'officer-panel'
   ]);
 
+  // Legacy admission payment redirect: /admission/payment/:id -> /pay/admission-fees/:id
+  const admissionPaymentMatch = pathname.match(/^(?:\/([^/]+))?\/admission\/payment(?:\/([^/?#]+))?\/?$/i);
+  if (admissionPaymentMatch) {
+    const possibleTenant = admissionPaymentMatch[1]?.toLowerCase();
+    const applicantId = admissionPaymentMatch[2];
+    const hasPathTenant = possibleTenant && !PLATFORM_RESERVED.has(possibleTenant) && possibleTenant !== 'admission';
+    const targetPath = applicantId
+      ? (hasPathTenant ? `/${possibleTenant}/pay/admission-fees/${applicantId}` : `/pay/admission-fees/${applicantId}`)
+      : (hasPathTenant ? `/${possibleTenant}/pay/admission-fees` : `/pay/admission-fees`);
+
+    const redirectUrl = new URL(targetPath, request.url);
+    redirectUrl.search = request.nextUrl.search;
+    return NextResponse.redirect(redirectUrl, 308);
+  }
+
+  // Legacy admission payment API compatibility rewrite: /api/.../admissions/payment -> /api/.../pay/admission-fees
+  const apiAdmissionPaymentMatch = pathname.match(/^(?:\/api\/([^/]+)|\/api)\/admissions\/payment\/?$/i);
+  if (apiAdmissionPaymentMatch) {
+    const pathTenant = apiAdmissionPaymentMatch[1];
+    const resolvedTenant = pathTenant || tenantDomain || request.cookies.get('x-website-domain')?.value || 'afit';
+    const targetUrl = request.nextUrl.clone();
+    targetUrl.pathname = `/api/${resolvedTenant}/pay/admission-fees`;
+    return NextResponse.rewrite(targetUrl);
+  }
+
   // Clean /staff-panel handling: if URL has /[tenant]/staff-panel, redirect to clean /staff-panel
   const tenantStaffMatch = pathname.match(/^\/([^/]+)(\/staff-panel(?:\/.*)?)$/i);
   if (tenantStaffMatch) {

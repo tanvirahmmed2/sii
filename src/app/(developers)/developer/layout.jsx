@@ -79,8 +79,8 @@ export default function DeveloperLayout({ children }) {
     );
   }
 
-  // If in GrapesJS Studio builder, render full screen for optimum canvas space
-  const isBuilder = pathname.includes('/templates/builder');
+  // If in Fabric.js Studio builder, render full screen for optimum canvas space
+  const isBuilder = pathname.includes('/builder');
   if (isBuilder) {
     return <div className="h-screen w-screen overflow-hidden">{children}</div>;
   }

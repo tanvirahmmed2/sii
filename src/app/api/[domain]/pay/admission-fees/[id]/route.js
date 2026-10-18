@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { queryDb, pool } from '@/lib/database/db';
-import { resolveWebsiteFromRequest } from '@/lib/middleware/creator';
+import { queryDb, pool } from 'src/lib/database/db';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { fetchAssignedGatewaysForPurpose } from 'src/lib/database/paymentGateways';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,26 +21,8 @@ export async function GET(request, context) {
       return NextResponse.json({ success: false, error: 'Missing applicant ID.' }, { status: 400 });
     }
 
-    // Active gateways
-    const gwRes = await queryDb(`
-      SELECT ga.id, ga.gateway_code AS code, ga.account_name, ga.account_number,
-             ga.environment, ga.currency, ga.is_default,
-             gw.name AS label, gw.category, gw.logo_icon
-      FROM website_payment_gateway_accounts ga
-      JOIN website_payment_gateways gw ON gw.code = ga.gateway_code
-      WHERE ga.website_id = $1 AND ga.is_active = TRUE
-      ORDER BY ga.is_default DESC, ga.id ASC
-    `, [website.id]);
-
-    // Sanitize gateways
-    const sanitizedGateways = gwRes.rows.map(gw => ({
-      id: gw.id,
-      code: gw.code,
-      label: gw.label || gw.code.toUpperCase(),
-      category: gw.category,
-      logo_icon: gw.logo_icon,
-      is_default: gw.is_default
-    }));
+    // Active gateways specifically assigned for admission fees
+    const sanitizedGateways = await fetchAssignedGatewaysForPurpose(website.id, 'admission_fees');
 
     const maskEmail = (email) => {
       if (!email || typeof email !== 'string') return null;
@@ -62,9 +45,11 @@ export async function GET(request, context) {
     const appRes = await queryDb(`
       SELECT a.id, a.application_no, a.applicant_name, a.email, a.phone,
              a.status, a.admission_id, adm.title AS circular_title,
-             adm.fee_amount, adm.fee_currency
+             COALESCE(af.amount, 500.00) AS fee_amount,
+             COALESCE(af.currency, 'BDT') AS fee_currency
       FROM website_admission_applicants a
       LEFT JOIN website_admissions adm ON adm.id = a.admission_id
+      LEFT JOIN website_admission_fees af ON af.admission_id = a.admission_id AND af.status = 'active'
       WHERE a.website_id = $1
         AND (
           CAST(a.id AS TEXT) = $2 OR
@@ -175,13 +160,16 @@ export async function POST(request, context) {
     // Fetch applicant and invoice
     const appRes = await client.query(`
       SELECT a.id, a.application_no, a.applicant_name, a.email, a.phone, a.status,
-             c.title AS circular_title, c.fee_amount, c.fee_currency,
+             c.title AS circular_title,
+             COALESCE(af.amount, 500.00) AS fee_amount,
+             COALESCE(af.currency, 'BDT') AS fee_currency,
              p.id AS payment_id, p.payment_status, p.invoice_no
       FROM website_admission_applicants a
       LEFT JOIN website_admissions c ON c.id = a.admission_id
+      LEFT JOIN website_admission_fees af ON af.admission_id = a.admission_id AND af.status = 'active'
       LEFT JOIN website_admission_fee_payments p ON p.applicant_id = a.id
       WHERE a.website_id = $1 AND (CAST(a.id AS TEXT) = $2 OR a.application_no = $2)
-      FOR UPDATE
+      FOR UPDATE OF a
     `, [website.id, id]);
 
     if (appRes.rows.length === 0) {
@@ -223,14 +211,19 @@ export async function POST(request, context) {
       `, [website.id, app.id, gw, dueAmount, currency, txnId, invNo]);
     }
 
-    // Advance applicant status to fee_paid and step = 2 (Media upload)
+    // Update applicant updated_at timestamp
     await client.query(`
       UPDATE website_admission_applicants
-      SET status = 'fee_paid',
-          step = 2,
-          updated_at = CURRENT_TIMESTAMP
+      SET updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
     `, [app.id]);
+
+    let finalAccountId = gateway_account_id || null;
+    if (!finalAccountId) {
+      const assigned = await fetchAssignedGatewaysForPurpose(website.id, 'admission_fees');
+      const match = assigned.find(g => g.code === gw);
+      if (match) finalAccountId = match.id;
+    }
 
     // Record in transaction audit
     await client.query(`
@@ -244,7 +237,7 @@ export async function POST(request, context) {
         $9, 'completed', $10, $11, $12
       )
     `, [
-      website.id, gateway_account_id || null, gw, invNo,
+      website.id, finalAccountId, gw, invNo,
       app.applicant_name, app.email, payerPhone, dueAmount,
       currency, txnId, `ONLINE-GATEWAY-${gw.toUpperCase()}`,
       `Admission fee payment for ${app.application_no} (${app.circular_title})`

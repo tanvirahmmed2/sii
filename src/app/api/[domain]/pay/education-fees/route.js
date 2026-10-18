@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { queryDb, pool } from '@/lib/database/db';
-import { resolveWebsiteFromRequest } from '@/lib/middleware/creator';
+import { queryDb, pool } from 'src/lib/database/db';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { fetchAssignedGatewaysForPurpose } from 'src/lib/database/paymentGateways';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,26 +19,8 @@ export async function GET(request, context) {
     const { searchParams } = new URL(request.url);
     const identifier = (searchParams.get('identifier') || '').trim();
 
-    // Fetch active gateways for education fees
-    const gwRes = await queryDb(`
-      SELECT ga.id, ga.gateway_code AS code, ga.account_name, ga.account_number,
-             ga.environment, ga.currency, ga.is_default,
-             gw.name AS label, gw.category, gw.logo_icon
-      FROM website_payment_gateway_accounts ga
-      JOIN website_payment_gateways gw ON gw.code = ga.gateway_code
-      WHERE ga.website_id = $1 AND ga.is_active = TRUE
-      ORDER BY ga.is_default DESC, ga.id ASC
-    `, [website.id]);
-
-    // Sanitize gateways
-    const sanitizedGateways = gwRes.rows.map(gw => ({
-      id: gw.id,
-      code: gw.code,
-      label: gw.label || gw.code.toUpperCase(),
-      category: gw.category,
-      logo_icon: gw.logo_icon,
-      is_default: gw.is_default
-    }));
+    // Fetch assigned gateways specifically for education fees
+    const sanitizedGateways = await fetchAssignedGatewaysForPurpose(website.id, 'education_fees');
 
     if (!identifier) {
       return NextResponse.json({
@@ -177,7 +160,7 @@ export async function POST(request, context) {
       FROM website_education_fee_payments p
       JOIN website_students s ON s.id = p.student_id
       WHERE p.id = $1 AND p.website_id = $2
-      FOR UPDATE
+      FOR UPDATE OF p
     `, [invoice_id, website.id]);
 
     if (invRes.rows.length === 0) {
@@ -194,6 +177,13 @@ export async function POST(request, context) {
     const dueAmount = parseFloat(inv.amount) + parseFloat(inv.fine_amount || 0) - parseFloat(inv.paid_amount || 0);
     const txnId = `TXN-${gw.toUpperCase()}-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
     const payerPhone = payment_details.account_number || payment_details.phone || inv.mobile_number;
+
+    let finalAccountId = gateway_account_id || null;
+    if (!finalAccountId) {
+      const assigned = await fetchAssignedGatewaysForPurpose(website.id, 'education_fees');
+      const match = assigned.find(g => g.code === gw);
+      if (match) finalAccountId = match.id;
+    }
 
     // Update invoice record
     await client.query(`
@@ -220,7 +210,7 @@ export async function POST(request, context) {
         $10, 'completed', $11, $12, $13
       )
     `, [
-      website.id, gateway_account_id || null, gw, inv.invoice_no,
+      website.id, finalAccountId, gw, inv.invoice_no,
       inv.student_id, inv.full_name, inv.email, payerPhone, dueAmount,
       inv.currency || 'BDT', txnId, `ONLINE-GATEWAY-${gw.toUpperCase()}`,
       `Paid tuition fee for ${inv.title || inv.month_name}`

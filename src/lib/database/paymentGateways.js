@@ -561,3 +561,88 @@ export async function initiatePaymentForPurpose({
     }
   };
 }
+
+/**
+ * Fetches the specific active payment gateways assigned to a purpose/fee category.
+ * e.g., 'admission_fees', 'education_fees', 'exam_fees', 'residential_fees'
+ * Only shows the assigned gateway accounts configured in website_payment_purpose_assignments.
+ */
+export async function fetchAssignedGatewaysForPurpose(websiteId, purpose, options = {}) {
+  const hostelId = typeof options === 'object' && options !== null ? options.hostelId : options;
+
+  let assignRes;
+  if (hostelId) {
+    assignRes = await queryDb(`
+      SELECT pa.gateway_account_id, pa.fallback_gateway_account_id
+      FROM website_payment_purpose_assignments pa
+      WHERE pa.website_id = $1 AND pa.purpose = $2 AND pa.hostel_id = $3
+        AND pa.is_active = TRUE AND pa.allow_public_checkout = TRUE
+      LIMIT 1
+    `, [websiteId, purpose, hostelId]);
+  }
+
+  if (!assignRes || assignRes.rows.length === 0) {
+    assignRes = await queryDb(`
+      SELECT pa.gateway_account_id, pa.fallback_gateway_account_id
+      FROM website_payment_purpose_assignments pa
+      WHERE pa.website_id = $1 AND pa.purpose = $2 AND pa.hostel_id IS NULL
+        AND pa.is_active = TRUE AND pa.allow_public_checkout = TRUE
+      LIMIT 1
+    `, [websiteId, purpose]);
+  }
+
+  if (assignRes.rows.length > 0) {
+    const { gateway_account_id, fallback_gateway_account_id } = assignRes.rows[0];
+    const accountIds = [gateway_account_id, fallback_gateway_account_id].filter(Boolean);
+
+    if (accountIds.length > 0) {
+      const gwRes = await queryDb(`
+        SELECT ga.id, ga.gateway_code AS code, ga.account_name, ga.account_number,
+               ga.environment, ga.currency, ga.is_default,
+               gw.name AS label, gw.category, gw.logo_icon,
+               CASE WHEN ga.id = $2 THEN 1 ELSE 2 END AS sort_priority
+        FROM website_payment_gateway_accounts ga
+        JOIN website_payment_gateways gw ON gw.code = ga.gateway_code
+        WHERE ga.website_id = $1 AND ga.id = ANY($3::bigint[]) AND ga.is_active = TRUE
+        ORDER BY sort_priority ASC, ga.id ASC
+      `, [websiteId, gateway_account_id, accountIds]);
+
+      if (gwRes.rows.length > 0) {
+        return gwRes.rows.map(gw => ({
+          id: gw.id,
+          code: gw.code,
+          label: gw.label || gw.code.toUpperCase(),
+          account_name: gw.account_name,
+          category: gw.category,
+          logo_icon: gw.logo_icon,
+          is_default: gw.is_default,
+          is_fallback: gw.sort_priority === 2
+        }));
+      }
+    }
+  }
+
+  // Fallback if no specific purpose assignment exists: return active gateways deduplicated by gateway_code
+  const fallbackGwRes = await queryDb(`
+    SELECT DISTINCT ON (ga.gateway_code)
+           ga.id, ga.gateway_code AS code, ga.account_name, ga.account_number,
+           ga.environment, ga.currency, ga.is_default,
+           gw.name AS label, gw.category, gw.logo_icon
+    FROM website_payment_gateway_accounts ga
+    JOIN website_payment_gateways gw ON gw.code = ga.gateway_code
+    WHERE ga.website_id = $1 AND ga.is_active = TRUE
+    ORDER BY ga.gateway_code, ga.is_default DESC, ga.id ASC
+  `, [websiteId]);
+
+  return fallbackGwRes.rows.map(gw => ({
+    id: gw.id,
+    code: gw.code,
+    label: gw.label || gw.code.toUpperCase(),
+    account_name: gw.account_name,
+    category: gw.category,
+    logo_icon: gw.logo_icon,
+    is_default: gw.is_default,
+    is_fallback: false
+  }));
+}
+

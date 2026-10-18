@@ -61,7 +61,7 @@ export async function GET(request, context) {
     let card = null;
     try {
       const cardRes = await queryDb(
-        `SELECT * FROM website_student_id_cards WHERE website_id = $1 AND student_id = $2 LIMIT 1`,
+        `SELECT * FROM website_student_ids WHERE website_id = $1 AND student_id = $2 ORDER BY id DESC LIMIT 1`,
         [website.id, studentId]
       );
       if (cardRes.rows.length > 0) {
@@ -95,16 +95,74 @@ export async function GET(request, context) {
       registration_number: student.registration_no
     };
 
+    // Fetch class-assigned template or school default template
+    let template = null;
+    try {
+      if (student.class_id) {
+        const classTplRes = await queryDb(
+          `SELECT st.id, st.name, st.html_content, st.html_back_content, st.css_content,
+                  st.dimension_width, st.dimension_height, st.dimension_unit
+           FROM website_class_student_id_templates ct
+           JOIN developer_student_id_templates st ON st.id = ct.system_template_id
+           WHERE ct.website_id = $1 AND ct.class_id = $2
+           LIMIT 1`,
+          [website.id, student.class_id]
+        );
+        if (classTplRes.rows.length > 0) {
+          template = classTplRes.rows[0];
+        }
+      }
+
+      if (!template) {
+        const webTplRes = await queryDb(
+          `SELECT wt.id, wt.name,
+                  COALESCE(wt.custom_html, st.html_content) AS html_content,
+                  COALESCE(wt.custom_html_back, st.html_back_content) AS html_back_content,
+                  COALESCE(wt.custom_css, st.css_content) AS css_content,
+                  st.dimension_width, st.dimension_height, st.dimension_unit
+           FROM website_student_id_templates wt
+           LEFT JOIN developer_student_id_templates st ON wt.system_template_id = st.id
+           WHERE wt.website_id = $1 AND wt.is_default = TRUE
+           LIMIT 1`,
+          [website.id]
+        );
+        if (webTplRes.rows.length > 0) {
+          template = webTplRes.rows[0];
+        }
+      }
+
+      if (!template) {
+        const sysTplRes = await queryDb(
+          `SELECT id, name, html_content, html_back_content, css_content,
+                  dimension_width, dimension_height, dimension_unit
+           FROM developer_student_id_templates
+           WHERE is_active = TRUE
+           ORDER BY is_system_default DESC, id ASC
+           LIMIT 1`
+        );
+        if (sysTplRes.rows.length > 0) {
+          template = sysTplRes.rows[0];
+        }
+      }
+    } catch (e) {
+      console.warn('Error resolving student ID template:', e);
+    }
+
     const payload = {
       card,
       idCard,
       student: formattedStudent,
+      template,
       isProvided: true,
       institution: {
         name: website.name || 'Campus Academic Portal',
         slug: website.slug,
         address: website.address || 'Academic Campus',
-        logo: website.logo_icon || website.logo
+        logo: website.logo_icon || website.logo,
+        logo_url: website.logo_url || website.logo,
+        phone: website.phone,
+        email: website.email,
+        domain: website.domain,
       }
     };
 
@@ -113,6 +171,7 @@ export async function GET(request, context) {
       card,
       idCard,
       student: formattedStudent,
+      template,
       isProvided: true,
       institution: payload.institution,
       payload,

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { queryDb, pool } from '@/lib/database/db';
-import { resolveWebsiteFromRequest } from '@/lib/middleware/creator';
+import { queryDb, pool } from 'src/lib/database/db';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { fetchAssignedGatewaysForPurpose } from 'src/lib/database/paymentGateways';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,32 +21,49 @@ export async function GET(request, context) {
     const identifier = (searchParams.get('identifier') || '').trim();
     const type = (searchParams.get('type') || 'all').toLowerCase();
 
-    // Fetch active gateways for this tenant
-    const gwRes = await queryDb(`
-      SELECT ga.id, ga.gateway_code AS code, ga.account_name, ga.account_number,
-             ga.environment, ga.currency, ga.is_default,
-             gw.name AS label, gw.category, gw.logo_icon
-      FROM website_payment_gateway_accounts ga
-      JOIN website_payment_gateways gw ON gw.code = ga.gateway_code
-      WHERE ga.website_id = $1 AND ga.is_active = TRUE
-      ORDER BY ga.is_default DESC, ga.id ASC
-    `, [website.id]);
+    // Fetch assigned gateways per purpose
+    const [eduGateways, examGateways, admGateways, resGateways] = await Promise.all([
+      fetchAssignedGatewaysForPurpose(website.id, 'education_fees'),
+      fetchAssignedGatewaysForPurpose(website.id, 'exam_fees'),
+      fetchAssignedGatewaysForPurpose(website.id, 'admission_fees'),
+      fetchAssignedGatewaysForPurpose(website.id, 'residential_fees')
+    ]);
 
-    // Sanitize gateways: only expose public gateway info
-    const sanitizedGateways = gwRes.rows.map(gw => ({
-      id: gw.id,
-      code: gw.code,
-      label: gw.label || gw.code.toUpperCase(),
-      category: gw.category,
-      logo_icon: gw.logo_icon,
-      is_default: gw.is_default
-    }));
+    const gatewaysByPurpose = {
+      education_fees: eduGateways,
+      exam_fees: examGateways,
+      admission_fees: admGateways,
+      residential_fees: resGateways
+    };
+
+    // Determine relevant gateways for the current filter
+    let sanitizedGateways;
+    if (type === 'admission' || type === 'admission_fees') {
+      sanitizedGateways = admGateways;
+    } else if (type === 'education' || type === 'education_fees') {
+      sanitizedGateways = eduGateways;
+    } else if (type === 'exam' || type === 'exam_fees') {
+      sanitizedGateways = examGateways;
+    } else if (type === 'residential' || type === 'residential_fees') {
+      sanitizedGateways = resGateways;
+    } else {
+      // De-duplicate gateways by code for overall tenant display
+      const seenCodes = new Set();
+      sanitizedGateways = [];
+      [...eduGateways, ...examGateways, ...admGateways, ...resGateways].forEach(gw => {
+        if (!seenCodes.has(gw.code)) {
+          seenCodes.add(gw.code);
+          sanitizedGateways.push(gw);
+        }
+      });
+    }
 
     if (!identifier) {
       return NextResponse.json({
         success: true,
         message: 'Enter student roll, registration, or application tracking number to query dues.',
         available_gateways: sanitizedGateways,
+        gateways_by_purpose: gatewaysByPurpose,
         portals: [
           { name: 'Education Fees', path: '/pay/education-fees' },
           { name: 'Examination Fees', path: '/pay/exam-fees' },
@@ -172,7 +190,8 @@ export async function GET(request, context) {
         amount: parseFloat(r.amount),
         fine_amount: parseFloat(r.fine_amount || 0),
         paid_amount: parseFloat(r.paid_amount || 0),
-        net_due: parseFloat(r.net_due)
+        net_due: parseFloat(r.net_due),
+        assigned_gateways: eduGateways
       }));
     }
 
@@ -193,7 +212,8 @@ export async function GET(request, context) {
         category: 'exam_fees',
         category_label: 'Examination Fee',
         amount: parseFloat(r.amount),
-        net_due: parseFloat(r.net_due)
+        net_due: parseFloat(r.net_due),
+        assigned_gateways: examGateways
       }));
     }
 
@@ -217,7 +237,8 @@ export async function GET(request, context) {
         category: 'admission_fees',
         category_label: 'Admission Application Fee',
         amount: parseFloat(r.amount),
-        net_due: parseFloat(r.net_due)
+        net_due: parseFloat(r.net_due),
+        assigned_gateways: admGateways
       }));
     }
 
@@ -244,7 +265,8 @@ export async function GET(request, context) {
         amount: parseFloat(r.amount),
         fine_amount: parseFloat(r.fine_amount || 0),
         paid_amount: parseFloat(r.paid_amount || 0),
-        net_due: parseFloat(r.net_due)
+        net_due: parseFloat(r.net_due),
+        assigned_gateways: resGateways
       }));
 
       if (resDues.length === 0) {
@@ -272,7 +294,8 @@ export async function GET(request, context) {
               amount: rent,
               net_due: rent,
               currency: 'BDT',
-              payment_status: 'unpaid'
+              payment_status: 'unpaid',
+              assigned_gateways: resGateways
             });
           }
         }
@@ -294,7 +317,8 @@ export async function GET(request, context) {
         total_due_amount: totalDue,
         currency: 'BDT'
       },
-      available_gateways: sanitizedGateways
+      available_gateways: sanitizedGateways,
+      gateways_by_purpose: gatewaysByPurpose
     });
   } catch (error) {
     console.error('Error in GET /api/[domain]/pay:', error);

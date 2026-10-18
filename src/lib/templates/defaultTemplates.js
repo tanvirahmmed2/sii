@@ -11,7 +11,6 @@ export const DEFAULT_TEMPLATES = [
     dimension_width: 54,
     dimension_height: 86,
     dimension_unit: 'mm',
-    orientation: 'portrait',
     available_merge_tags: [
       { tag: '{{student_name}}', label: 'Student Name', sample: 'Alex Morgan' },
       { tag: '{{registration_no}}', label: 'Registration No', sample: 'REG-2026-081' },
@@ -199,7 +198,6 @@ export const DEFAULT_TEMPLATES = [
     dimension_width: 86,
     dimension_height: 54,
     dimension_unit: 'mm',
-    orientation: 'landscape',
     available_merge_tags: [
       { tag: '{{teacher_name}}', label: 'Teacher Name', sample: 'Dr. Marcus Vance' },
       { tag: '{{designation}}', label: 'Designation', sample: 'Senior Lecturer, Physics' },
@@ -363,6 +361,189 @@ export const DEFAULT_TEMPLATES = [
 }`,
   },
 
+  // 2B. Officer & Administrative Staff ID Card (CR80 Landscape - 86mm x 54mm)
+  {
+    name: 'Corporate Navy Officer & Staff ID',
+    slug: 'corporate-navy-officer-staff-id',
+    category: 'officer_id_card',
+    description: 'Executive administrative pass for campus provosts, librarians, club officers, accountants, and general staff.',
+    dimension_width: 86,
+    dimension_height: 54,
+    dimension_unit: 'mm',
+    available_merge_tags: [
+      { tag: '{{officer_name}}', label: 'Officer Name', sample: 'Mohammad Rafiqul Islam' },
+      { tag: '{{employee_id}}', label: 'Employee ID', sample: 'OFF-2026-0012' },
+      { tag: '{{designation}}', label: 'Designation', sample: 'Senior Administrative Officer' },
+      { tag: '{{department}}', label: 'Department', sample: 'Administration & Accounts' },
+      { tag: '{{phone}}', label: 'Phone', sample: '+880 1711-234567' },
+      { tag: '{{email}}', label: 'Email', sample: 'rafiqul@campus.edu' },
+      { tag: '{{blood_group}}', label: 'Blood Group', sample: 'B+' },
+      { tag: '{{officer_photo}}', label: 'Photo URL', sample: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300' },
+      { tag: '{{school_name}}', label: 'Institution Name', sample: 'Dhaka Model Academy' },
+      { tag: '{{school_logo}}', label: 'Institution Logo', sample: 'https://api.iconify.design/lucide:shield-check.svg' },
+      { tag: '{{valid_upto}}', label: 'Valid Upto', sample: 'Dec 2028' },
+    ],
+    html_content: `<div class="id-card-wrapper officer-id-card">
+  <div class="brand-bar">
+    <div class="brand-info">
+      <img src="{{school_logo}}" alt="Logo" class="school-logo" />
+      <div>
+        <h3 class="school-title">{{school_name}}</h3>
+        <span class="role-badge">ADMINISTRATIVE OFFICER PASS</span>
+      </div>
+    </div>
+    <span class="blood-pill">{{blood_group}}</span>
+  </div>
+
+  <div class="card-content">
+    <div class="photo-col">
+      <img src="{{officer_photo}}" alt="{{officer_name}}" class="officer-avatar" />
+    </div>
+    <div class="info-col">
+      <h4 class="officer-name">{{officer_name}}</h4>
+      <p class="officer-designation">{{designation}}</p>
+      <div class="officer-grid">
+        <div class="item"><span class="k">Dept:</span> <span class="v">{{department}}</span></div>
+        <div class="item"><span class="k">Staff ID:</span> <span class="v font-mono">{{employee_id}}</span></div>
+        <div class="item"><span class="k">Phone:</span> <span class="v">{{phone}}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-bottom">
+    <span class="auth-notice">Valid Thru: <strong>{{valid_upto}}</strong> • Official Staff Pass</span>
+    <span class="sign-block">Authorized Signatory</span>
+  </div>
+</div>`,
+    css_content: `.id-card-wrapper {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  background: #0f172a;
+  color: #f8fafc;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.brand-bar {
+  background: linear-gradient(135deg, #1e1b4b, #312e81);
+  padding: 8px 12px;
+  border-bottom: 2px solid #6366f1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.brand-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.school-logo {
+  width: 24px;
+  height: 24px;
+  background: white;
+  border-radius: 4px;
+  padding: 2px;
+}
+.school-title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #f1f5f9;
+}
+.role-badge {
+  font-size: 7.5px;
+  color: #a5b4fc;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+}
+.blood-pill {
+  background: #e11d48;
+  color: white;
+  font-size: 8px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.card-content {
+  flex: 1;
+  display: flex;
+  padding: 8px 12px;
+  gap: 12px;
+  align-items: center;
+  background: #090d16;
+}
+.photo-col {
+  width: 60px;
+  height: 72px;
+  flex-shrink: 0;
+}
+.officer-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1.5px solid #4338ca;
+  background: #1e293b;
+}
+.info-col {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+.officer-name {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.officer-designation {
+  margin: 1px 0 5px;
+  font-size: 9px;
+  color: #818cf8;
+  font-weight: 500;
+}
+.officer-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 8px;
+}
+.officer-grid .item {
+  display: flex;
+  gap: 4px;
+}
+.officer-grid .k {
+  color: #64748b;
+  font-weight: 600;
+}
+.officer-grid .v {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+.card-bottom {
+  padding: 5px 12px;
+  background: #030712;
+  border-top: 1px solid #1e1b4b;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 7.5px;
+  color: #64748b;
+}
+.sign-block {
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+}`,
+  },
+
   // 3. Transfer Certificate (TC) - A4 Portrait (210mm x 297mm)
   {
     name: 'Formal Royal Transfer Certificate (TC)',
@@ -372,7 +553,6 @@ export const DEFAULT_TEMPLATES = [
     dimension_width: 210,
     dimension_height: 297,
     dimension_unit: 'mm',
-    orientation: 'portrait',
     available_merge_tags: [
       { tag: '{{tc_serial}}', label: 'TC Serial No', sample: 'TC-2026-00412' },
       { tag: '{{student_name}}', label: 'Student Name', sample: 'Julianna Hayes' },
@@ -585,7 +765,6 @@ export const DEFAULT_TEMPLATES = [
     dimension_width: 210,
     dimension_height: 297,
     dimension_unit: 'mm',
-    orientation: 'portrait',
     available_merge_tags: [
       { tag: '{{student_name}}', label: 'Student Name', sample: 'Sophia Alverez' },
       { tag: '{{father_name}}', label: 'Father Name', sample: 'Carlos Alverez' },
@@ -758,7 +937,6 @@ export const DEFAULT_TEMPLATES = [
     dimension_width: 297,
     dimension_height: 210,
     dimension_unit: 'mm',
-    orientation: 'landscape',
     available_merge_tags: [
       { tag: '{{recipient_name}}', label: 'Recipient Name', sample: 'Elena Rostova' },
       { tag: '{{award_title}}', label: 'Award Title', sample: 'Academic Excellence Award' },
@@ -936,7 +1114,6 @@ export const DEFAULT_TEMPLATES = [
     dimension_width: 210,
     dimension_height: 148,
     dimension_unit: 'mm',
-    orientation: 'landscape',
     available_merge_tags: [
       { tag: '{{receipt_no}}', label: 'Receipt No', sample: 'REC-2026-9041' },
       { tag: '{{payment_date}}', label: 'Date', sample: '12 Oct 2026' },
@@ -1144,7 +1321,6 @@ export const DEFAULT_TEMPLATES = [
     dimension_width: 1080,
     dimension_height: 1080,
     dimension_unit: 'px',
-    orientation: 'portrait',
     available_merge_tags: [
       { tag: '{{poster_title}}', label: 'Headline Title', sample: 'ADMISSIONS OPEN 2026-2027' },
       { tag: '{{poster_subtitle}}', label: 'Subtitle', sample: 'Playgroup to Grade 12 • World-Class Cambridge Curriculum' },

@@ -2899,46 +2899,29 @@ CREATE INDEX IF NOT EXISTS idx_ws_subm_assign ON website_classroom_assignment_su
 CREATE INDEX IF NOT EXISTS idx_ws_subm_stu ON website_classroom_assignment_submissions(website_id, student_id);
 
 -- ----------------------------------------------------------------------------
--- 72. WEBSITE STUDENT ID CARDS TABLE
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_student_id_cards (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    card_number VARCHAR(100) NOT NULL,
-    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    expiry_date DATE NOT NULL,
-    barcode_data VARCHAR(255),
-    card_status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (card_status IN ('active', 'expired', 'lost', 'revoked')),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, student_id)
-);
-
-DROP TRIGGER IF EXISTS update_website_student_id_cards_updated_at ON website_student_id_cards;
-CREATE TRIGGER update_website_student_id_cards_updated_at
-    BEFORE UPDATE ON website_student_id_cards
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE INDEX IF NOT EXISTS idx_ws_idcard_web ON website_student_id_cards(website_id);
-CREATE INDEX IF NOT EXISTS idx_ws_idcard_stu ON website_student_id_cards(website_id, student_id);
-
--- ----------------------------------------------------------------------------
--- 73. WEBSITE STUDENT TESTIMONIALS & CERTIFICATES TABLE
+-- 72. WEBSITE STUDENT TESTIMONIALS & CERTIFICATES TABLE
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_student_testimonials (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    testimonial_no VARCHAR(100),
+    template_id BIGINT REFERENCES website_document_templates(id) ON DELETE SET NULL,
     certificate_type VARCHAR(100) NOT NULL DEFAULT 'Character Certificate',
-    purpose TEXT NOT NULL,
+    purpose TEXT,
+    examination_name VARCHAR(255),
+    session_name VARCHAR(100),
     passing_year VARCHAR(20),
     gpa NUMERIC(4, 2),
-    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'issued', 'rejected')),
+    conduct VARCHAR(100) DEFAULT 'Good',
+    father_name VARCHAR(255),
+    mother_name VARCHAR(255),
+    status VARCHAR(50) NOT NULL DEFAULT 'issued' CHECK (status IN ('pending', 'approved', 'issued', 'rejected')),
     certificate_number VARCHAR(100),
-    issue_date DATE,
+    issue_date DATE DEFAULT CURRENT_DATE,
     issued_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
     remarks TEXT,
+    custom_data JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -3083,38 +3066,25 @@ CREATE INDEX IF NOT EXISTS idx_ws_alloc_stu ON website_hostel_allocations(websit
 CREATE INDEX IF NOT EXISTS idx_ws_app_stu ON website_hostel_applications(website_id, student_id);
 
 -- ============================================================================
--- SECTION: DOCUMENT & VISUAL TEMPLATES (GRAPESJS ENGINE)
+-- SECTION: DOCUMENT & VISUAL TEMPLATES (FABRIC.JS ENGINE - SEPARATE TABLES PER TASK)
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- 1. SYSTEM DOCUMENT TEMPLATES (Developer Master Templates)
--- Reusable master templates created by developers across 7 core document categories:
--- student_id_card, teacher_id_card, tc, testimonial, certificate, payment_receipt, poster
+-- 1. STUDENT ID CARD TEMPLATES
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS system_document_templates (
+CREATE TABLE IF NOT EXISTS system_student_id_templates (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
-    category VARCHAR(50) NOT NULL CHECK (
-        category IN (
-            'student_id_card', 
-            'teacher_id_card', 
-            'tc', 
-            'testimonial', 
-            'certificate', 
-            'payment_receipt', 
-            'poster'
-        )
-    ),
     description TEXT,
     dimension_width NUMERIC(8, 2) NOT NULL DEFAULT 86.00,
     dimension_height NUMERIC(8, 2) NOT NULL DEFAULT 54.00,
     dimension_unit VARCHAR(10) NOT NULL DEFAULT 'mm' CHECK (dimension_unit IN ('mm', 'px', 'in')),
-    orientation VARCHAR(20) NOT NULL DEFAULT 'landscape' CHECK (orientation IN ('portrait', 'landscape')),
-    grapes_data JSONB NOT NULL DEFAULT '{}',
-    html_content TEXT NOT NULL,
+    fabric_data JSONB NOT NULL DEFAULT '{}',
+    fabric_back_data JSONB DEFAULT '{}',
+    html_content TEXT NOT NULL DEFAULT '',
+    html_back_content TEXT,
     css_content TEXT NOT NULL DEFAULT '',
-    thumbnail_url TEXT,
     available_merge_tags JSONB NOT NULL DEFAULT '[]',
     is_active BOOLEAN DEFAULT TRUE,
     is_system_default BOOLEAN DEFAULT FALSE,
@@ -3123,51 +3093,337 @@ CREATE TABLE IF NOT EXISTS system_document_templates (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_sys_doc_tpl_cat ON system_document_templates(category, is_active);
-DROP TRIGGER IF EXISTS update_system_document_templates_updated_at ON system_document_templates;
-CREATE TRIGGER update_system_document_templates_updated_at
-    BEFORE UPDATE ON system_document_templates
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- ----------------------------------------------------------------------------
--- 2. WEBSITE DOCUMENT TEMPLATES (Tenant School Activations & Custom Overrides)
--- Represents the template chosen and activated by an individual school website.
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_document_templates (
+CREATE TABLE IF NOT EXISTS website_student_id_templates (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    system_template_id BIGINT REFERENCES system_document_templates(id) ON DELETE SET NULL,
+    system_template_id BIGINT REFERENCES system_student_id_templates(id) ON DELETE SET NULL,
     name VARCHAR(255) NOT NULL,
-    category VARCHAR(50) NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
     is_default BOOLEAN DEFAULT FALSE,
+    dimension_width NUMERIC(8, 2) DEFAULT 86.00,
+    dimension_height NUMERIC(8, 2) DEFAULT 54.00,
+    dimension_unit VARCHAR(10) DEFAULT 'mm',
+    custom_fabric_data JSONB,
+    custom_fabric_back_data JSONB,
     custom_html TEXT,
+    custom_html_back TEXT,
     custom_css TEXT,
-    custom_grapes_data JSONB,
     custom_variables JSONB DEFAULT '{}',
     created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, category, name)
+    UNIQUE(website_id, name)
 );
 
-CREATE INDEX IF NOT EXISTS idx_web_doc_tpl_lookup ON website_document_templates(website_id, category, is_default);
-DROP TRIGGER IF EXISTS update_website_document_templates_updated_at ON website_document_templates;
-CREATE TRIGGER update_website_document_templates_updated_at
-    BEFORE UPDATE ON website_document_templates
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- ----------------------------------------------------------------------------
+-- 2. TEACHER ID CARD TEMPLATES
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS system_teacher_id_templates (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    description TEXT,
+    dimension_width NUMERIC(8, 2) NOT NULL DEFAULT 86.00,
+    dimension_height NUMERIC(8, 2) NOT NULL DEFAULT 54.00,
+    dimension_unit VARCHAR(10) NOT NULL DEFAULT 'mm' CHECK (dimension_unit IN ('mm', 'px', 'in')),
+    fabric_data JSONB NOT NULL DEFAULT '{}',
+    fabric_back_data JSONB DEFAULT '{}',
+    html_content TEXT NOT NULL DEFAULT '',
+    html_back_content TEXT,
+    css_content TEXT NOT NULL DEFAULT '',
+    available_merge_tags JSONB NOT NULL DEFAULT '[]',
+    is_active BOOLEAN DEFAULT TRUE,
+    is_system_default BOOLEAN DEFAULT FALSE,
+    created_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS website_teacher_id_templates (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    system_template_id BIGINT REFERENCES system_teacher_id_templates(id) ON DELETE SET NULL,
+    name VARCHAR(255) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    is_default BOOLEAN DEFAULT FALSE,
+    dimension_width NUMERIC(8, 2) DEFAULT 86.00,
+    dimension_height NUMERIC(8, 2) DEFAULT 54.00,
+    dimension_unit VARCHAR(10) DEFAULT 'mm',
+    custom_fabric_data JSONB,
+    custom_fabric_back_data JSONB,
+    custom_html TEXT,
+    custom_html_back TEXT,
+    custom_css TEXT,
+    custom_variables JSONB DEFAULT '{}',
+    created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, name)
+);
 
 -- ----------------------------------------------------------------------------
--- 3. WEBSITE ISSUED DOCUMENTS (Issuance & Audit Log)
+-- 3. OFFICER ID CARD TEMPLATES
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS system_officer_id_templates (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    description TEXT,
+    dimension_width NUMERIC(8, 2) NOT NULL DEFAULT 86.00,
+    dimension_height NUMERIC(8, 2) NOT NULL DEFAULT 54.00,
+    dimension_unit VARCHAR(10) NOT NULL DEFAULT 'mm' CHECK (dimension_unit IN ('mm', 'px', 'in')),
+    fabric_data JSONB NOT NULL DEFAULT '{}',
+    fabric_back_data JSONB DEFAULT '{}',
+    html_content TEXT NOT NULL DEFAULT '',
+    html_back_content TEXT,
+    css_content TEXT NOT NULL DEFAULT '',
+    available_merge_tags JSONB NOT NULL DEFAULT '[]',
+    is_active BOOLEAN DEFAULT TRUE,
+    is_system_default BOOLEAN DEFAULT FALSE,
+    created_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS website_officer_id_templates (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    system_template_id BIGINT REFERENCES system_officer_id_templates(id) ON DELETE SET NULL,
+    name VARCHAR(255) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    is_default BOOLEAN DEFAULT FALSE,
+    dimension_width NUMERIC(8, 2) DEFAULT 86.00,
+    dimension_height NUMERIC(8, 2) DEFAULT 54.00,
+    dimension_unit VARCHAR(10) DEFAULT 'mm',
+    custom_fabric_data JSONB,
+    custom_fabric_back_data JSONB,
+    custom_html TEXT,
+    custom_html_back TEXT,
+    custom_css TEXT,
+    custom_variables JSONB DEFAULT '{}',
+    created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, name)
+);
+
+-- ----------------------------------------------------------------------------
+-- 4. STUDENT TRANSFER CERTIFICATE (TC) TEMPLATES
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS system_student_tc_templates (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    description TEXT,
+    dimension_width NUMERIC(8, 2) NOT NULL DEFAULT 210.00,
+    dimension_height NUMERIC(8, 2) NOT NULL DEFAULT 297.00,
+    dimension_unit VARCHAR(10) NOT NULL DEFAULT 'mm' CHECK (dimension_unit IN ('mm', 'px', 'in')),
+    fabric_data JSONB NOT NULL DEFAULT '{}',
+    fabric_back_data JSONB DEFAULT '{}',
+    html_content TEXT NOT NULL DEFAULT '',
+    css_content TEXT NOT NULL DEFAULT '',
+    available_merge_tags JSONB NOT NULL DEFAULT '[]',
+    is_active BOOLEAN DEFAULT TRUE,
+    is_system_default BOOLEAN DEFAULT FALSE,
+    created_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS website_student_tc_templates (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    system_template_id BIGINT REFERENCES system_student_tc_templates(id) ON DELETE SET NULL,
+    name VARCHAR(255) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    is_default BOOLEAN DEFAULT FALSE,
+    custom_fabric_data JSONB,
+    custom_fabric_back_data JSONB,
+    custom_html TEXT,
+    custom_css TEXT,
+    custom_variables JSONB DEFAULT '{}',
+    created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, name)
+);
+
+-- ----------------------------------------------------------------------------
+-- 5. STUDENT TESTIMONIAL TEMPLATES
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS system_student_testimonial_templates (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    description TEXT,
+    dimension_width NUMERIC(8, 2) NOT NULL DEFAULT 210.00,
+    dimension_height NUMERIC(8, 2) NOT NULL DEFAULT 297.00,
+    dimension_unit VARCHAR(10) NOT NULL DEFAULT 'mm' CHECK (dimension_unit IN ('mm', 'px', 'in')),
+    fabric_data JSONB NOT NULL DEFAULT '{}',
+    fabric_back_data JSONB DEFAULT '{}',
+    html_content TEXT NOT NULL DEFAULT '',
+    css_content TEXT NOT NULL DEFAULT '',
+    available_merge_tags JSONB NOT NULL DEFAULT '[]',
+    is_active BOOLEAN DEFAULT TRUE,
+    is_system_default BOOLEAN DEFAULT FALSE,
+    created_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS website_student_testimonial_templates (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    system_template_id BIGINT REFERENCES system_student_testimonial_templates(id) ON DELETE SET NULL,
+    name VARCHAR(255) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    is_default BOOLEAN DEFAULT FALSE,
+    custom_fabric_data JSONB,
+    custom_fabric_back_data JSONB,
+    custom_html TEXT,
+    custom_css TEXT,
+    custom_variables JSONB DEFAULT '{}',
+    created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, name)
+);
+
+-- ----------------------------------------------------------------------------
+-- 6. STUDENT CERTIFICATE TEMPLATES
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS system_student_certificate_templates (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    description TEXT,
+    dimension_width NUMERIC(8, 2) NOT NULL DEFAULT 297.00,
+    dimension_height NUMERIC(8, 2) NOT NULL DEFAULT 210.00,
+    dimension_unit VARCHAR(10) NOT NULL DEFAULT 'mm' CHECK (dimension_unit IN ('mm', 'px', 'in')),
+    fabric_data JSONB NOT NULL DEFAULT '{}',
+    fabric_back_data JSONB DEFAULT '{}',
+    html_content TEXT NOT NULL DEFAULT '',
+    css_content TEXT NOT NULL DEFAULT '',
+    available_merge_tags JSONB NOT NULL DEFAULT '[]',
+    is_active BOOLEAN DEFAULT TRUE,
+    is_system_default BOOLEAN DEFAULT FALSE,
+    created_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS website_student_certificate_templates (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    system_template_id BIGINT REFERENCES system_student_certificate_templates(id) ON DELETE SET NULL,
+    name VARCHAR(255) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    is_default BOOLEAN DEFAULT FALSE,
+    custom_fabric_data JSONB,
+    custom_fabric_back_data JSONB,
+    custom_html TEXT,
+    custom_css TEXT,
+    custom_variables JSONB DEFAULT '{}',
+    created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, name)
+);
+
+-- ----------------------------------------------------------------------------
+-- 7. PAYMENT RECEIPT TEMPLATES
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS system_payment_receipt_templates (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    description TEXT,
+    dimension_width NUMERIC(8, 2) NOT NULL DEFAULT 210.00,
+    dimension_height NUMERIC(8, 2) NOT NULL DEFAULT 297.00,
+    dimension_unit VARCHAR(10) NOT NULL DEFAULT 'mm' CHECK (dimension_unit IN ('mm', 'px', 'in')),
+    fabric_data JSONB NOT NULL DEFAULT '{}',
+    fabric_back_data JSONB DEFAULT '{}',
+    html_content TEXT NOT NULL DEFAULT '',
+    css_content TEXT NOT NULL DEFAULT '',
+    available_merge_tags JSONB NOT NULL DEFAULT '[]',
+    is_active BOOLEAN DEFAULT TRUE,
+    is_system_default BOOLEAN DEFAULT FALSE,
+    created_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS website_payment_receipt_templates (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    system_template_id BIGINT REFERENCES system_payment_receipt_templates(id) ON DELETE SET NULL,
+    name VARCHAR(255) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    is_default BOOLEAN DEFAULT FALSE,
+    custom_fabric_data JSONB,
+    custom_fabric_back_data JSONB,
+    custom_html TEXT,
+    custom_css TEXT,
+    custom_variables JSONB DEFAULT '{}',
+    created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, name)
+);
+
+-- ----------------------------------------------------------------------------
+-- 8. POSTER & EVENT FLYER TEMPLATES
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS system_poster_templates (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    description TEXT,
+    dimension_width NUMERIC(8, 2) NOT NULL DEFAULT 210.00,
+    dimension_height NUMERIC(8, 2) NOT NULL DEFAULT 297.00,
+    dimension_unit VARCHAR(10) NOT NULL DEFAULT 'mm' CHECK (dimension_unit IN ('mm', 'px', 'in')),
+    fabric_data JSONB NOT NULL DEFAULT '{}',
+    fabric_back_data JSONB DEFAULT '{}',
+    html_content TEXT NOT NULL DEFAULT '',
+    css_content TEXT NOT NULL DEFAULT '',
+    available_merge_tags JSONB NOT NULL DEFAULT '[]',
+    is_active BOOLEAN DEFAULT TRUE,
+    is_system_default BOOLEAN DEFAULT FALSE,
+    created_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS website_poster_templates (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    system_template_id BIGINT REFERENCES system_poster_templates(id) ON DELETE SET NULL,
+    name VARCHAR(255) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    is_default BOOLEAN DEFAULT FALSE,
+    custom_fabric_data JSONB,
+    custom_fabric_back_data JSONB,
+    custom_html TEXT,
+    custom_css TEXT,
+    custom_variables JSONB DEFAULT '{}',
+    created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, name)
+);
+
+-- ----------------------------------------------------------------------------
+-- 9. WEBSITE ISSUED DOCUMENTS (Issuance & Audit Log)
 -- Maintains legal verification codes, serial numbers, and issuance history.
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_issued_documents (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    template_id BIGINT REFERENCES website_document_templates(id) ON DELETE SET NULL,
+    template_id BIGINT,
+    task_type VARCHAR(50) NOT NULL,
     category VARCHAR(50) NOT NULL,
     document_serial VARCHAR(100) NOT NULL,
-    recipient_type VARCHAR(50) NOT NULL CHECK (recipient_type IN ('student', 'teacher', 'general')),
+    recipient_type VARCHAR(50) NOT NULL CHECK (recipient_type IN ('student', 'teacher', 'officer', 'general')),
     recipient_id BIGINT,
     issued_data JSONB NOT NULL DEFAULT '{}',
     issued_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
@@ -3421,4 +3677,277 @@ CREATE TRIGGER update_website_board_members_updated_at
     BEFORE UPDATE ON website_board_members
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- ============================================================================
+-- SECTION 26: ISSUED IDENTITY CARDS, CERTIFICATES & STUDENT EXITS
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 1. WEBSITE STUDENT IDS TABLE (Issued Student ID Cards)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_student_ids (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    card_number VARCHAR(100) NOT NULL,
+    template_id BIGINT REFERENCES website_student_id_templates(id) ON DELETE SET NULL,
+    session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
+    class_id BIGINT REFERENCES website_classes(id) ON DELETE SET NULL,
+    section_id BIGINT REFERENCES website_sections(id) ON DELETE SET NULL,
+    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    expiry_date DATE,
+    valid_upto VARCHAR(50),
+    barcode_data VARCHAR(255),
+    card_status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (card_status IN ('active', 'expired', 'lost', 'revoked', 'reissued')),
+    issued_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    custom_data JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, card_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ws_student_ids_web ON website_student_ids(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_student_ids_student ON website_student_ids(website_id, student_id);
+CREATE INDEX IF NOT EXISTS idx_ws_student_ids_card_no ON website_student_ids(website_id, card_number);
+CREATE INDEX IF NOT EXISTS idx_ws_student_ids_status ON website_student_ids(website_id, card_status);
+
+DROP TRIGGER IF EXISTS update_website_student_ids_updated_at ON website_student_ids;
+CREATE TRIGGER update_website_student_ids_updated_at
+    BEFORE UPDATE ON website_student_ids
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 2. WEBSITE TEACHER IDS TABLE (Issued Faculty / Teacher ID Cards)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_teacher_ids (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    teacher_id BIGINT NOT NULL REFERENCES website_teachers(id) ON DELETE CASCADE,
+    card_number VARCHAR(100) NOT NULL,
+    template_id BIGINT REFERENCES website_teacher_id_templates(id) ON DELETE SET NULL,
+    department_id BIGINT REFERENCES website_departments(id) ON DELETE SET NULL,
+    designation_id BIGINT REFERENCES website_designations(id) ON DELETE SET NULL,
+    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    expiry_date DATE,
+    valid_upto VARCHAR(50),
+    barcode_data VARCHAR(255),
+    card_status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (card_status IN ('active', 'expired', 'lost', 'revoked', 'reissued')),
+    issued_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    custom_data JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, card_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ws_teacher_ids_web ON website_teacher_ids(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_teacher_ids_teacher ON website_teacher_ids(website_id, teacher_id);
+CREATE INDEX IF NOT EXISTS idx_ws_teacher_ids_card_no ON website_teacher_ids(website_id, card_number);
+CREATE INDEX IF NOT EXISTS idx_ws_teacher_ids_status ON website_teacher_ids(website_id, card_status);
+
+DROP TRIGGER IF EXISTS update_website_teacher_ids_updated_at ON website_teacher_ids;
+CREATE TRIGGER update_website_teacher_ids_updated_at
+    BEFORE UPDATE ON website_teacher_ids
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 3. WEBSITE STUDENT TCS TABLE & VIEW (Issued Transfer Certificates)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_student_tcs (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    tc_number VARCHAR(100) NOT NULL,
+    template_id BIGINT REFERENCES website_student_tc_templates(id) ON DELETE SET NULL,
+    admission_date DATE,
+    leaving_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    last_class_id BIGINT REFERENCES website_classes(id) ON DELETE SET NULL,
+    last_class_passed VARCHAR(100),
+    promoted_class VARCHAR(100),
+    reason_for_leaving TEXT NOT NULL,
+    destination_school VARCHAR(255),
+    dues_status VARCHAR(100) DEFAULT 'Cleared',
+    conduct VARCHAR(100) DEFAULT 'Good',
+    remarks TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'issued' CHECK (status IN ('draft', 'issued', 'cancelled', 'verified')),
+    issued_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    custom_data JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, tc_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ws_student_tcs_web ON website_student_tcs(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_student_tcs_student ON website_student_tcs(website_id, student_id);
+CREATE INDEX IF NOT EXISTS idx_ws_student_tcs_no ON website_student_tcs(website_id, tc_number);
+CREATE INDEX IF NOT EXISTS idx_ws_student_tcs_status ON website_student_tcs(website_id, status);
+
+DROP TRIGGER IF EXISTS update_website_student_tcs_updated_at ON website_student_tcs;
+CREATE TRIGGER update_website_student_tcs_updated_at
+    BEFORE UPDATE ON website_student_tcs
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Plural synonym view for website_student_tcs
+CREATE OR REPLACE VIEW website_students_tcs AS SELECT * FROM website_student_tcs;
+
+-- ----------------------------------------------------------------------------
+-- 4. WEBSITE STUDENT CERTIFICATES TABLE (Issued Academic/Achievement Certificates)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_student_certificates (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    certificate_no VARCHAR(100) NOT NULL,
+    template_id BIGINT REFERENCES website_student_certificate_templates(id) ON DELETE SET NULL,
+    certificate_type VARCHAR(100) NOT NULL DEFAULT 'Academic Excellence',
+    award_title VARCHAR(255) NOT NULL,
+    achievement_description TEXT,
+    recipient_name VARCHAR(255),
+    event_date DATE DEFAULT CURRENT_DATE,
+    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    status VARCHAR(50) NOT NULL DEFAULT 'issued' CHECK (status IN ('draft', 'issued', 'revoked')),
+    issued_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    custom_data JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, certificate_no)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ws_student_certs_web ON website_student_certificates(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_student_certs_student ON website_student_certificates(website_id, student_id);
+CREATE INDEX IF NOT EXISTS idx_ws_student_certs_no ON website_student_certificates(website_id, certificate_no);
+CREATE INDEX IF NOT EXISTS idx_ws_student_certs_type ON website_student_certificates(website_id, certificate_type);
+
+DROP TRIGGER IF EXISTS update_website_student_certificates_updated_at ON website_student_certificates;
+CREATE TRIGGER update_website_student_certificates_updated_at
+    BEFORE UPDATE ON website_student_certificates
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 5. WEBSITE STUDENT EXIT & TRANSFER RECORDS TABLE
+-- Stores why and where students left: graduated, transferred, dropped_out, rusticated
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_student_exits (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    exit_type VARCHAR(50) NOT NULL CHECK (exit_type IN ('graduated', 'transferred', 'dropped_out', 'rusticated')),
+    exit_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    reason TEXT,
+    destination_institution VARCHAR(255),
+    destination_address TEXT,
+    last_class_id BIGINT REFERENCES website_classes(id) ON DELETE SET NULL,
+    last_section_id BIGINT REFERENCES website_sections(id) ON DELETE SET NULL,
+    last_session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
+    tc_id BIGINT REFERENCES website_student_tcs(id) ON DELETE SET NULL,
+    financial_clearance BOOLEAN DEFAULT TRUE,
+    library_clearance BOOLEAN DEFAULT TRUE,
+    hall_clearance BOOLEAN DEFAULT TRUE,
+    clearance_notes TEXT,
+    recorded_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ws_student_exits_web ON website_student_exits(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_student_exits_student ON website_student_exits(website_id, student_id);
+CREATE INDEX IF NOT EXISTS idx_ws_student_exits_type ON website_student_exits(website_id, exit_type);
+CREATE INDEX IF NOT EXISTS idx_ws_student_exits_date ON website_student_exits(website_id, exit_date);
+
+DROP TRIGGER IF EXISTS update_website_student_exits_updated_at ON website_student_exits;
+CREATE TRIGGER update_website_student_exits_updated_at
+    BEFORE UPDATE ON website_student_exits
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 6. WEBSITE OFFICER IDS TABLE (Issued Officer / Administrative Staff ID Cards)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_officer_ids (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    officer_id BIGINT NOT NULL REFERENCES website_officers(id) ON DELETE CASCADE,
+    card_number VARCHAR(100) NOT NULL,
+    template_id BIGINT REFERENCES website_officer_id_templates(id) ON DELETE SET NULL,
+    department VARCHAR(100),
+    designation VARCHAR(100),
+    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    expiry_date DATE,
+    valid_upto VARCHAR(50),
+    barcode_data VARCHAR(255),
+    card_status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (card_status IN ('active', 'expired', 'lost', 'revoked', 'reissued')),
+    issued_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    custom_data JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, card_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ws_officer_ids_web ON website_officer_ids(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_officer_ids_officer ON website_officer_ids(website_id, officer_id);
+CREATE INDEX IF NOT EXISTS idx_ws_officer_ids_card_no ON website_officer_ids(website_id, card_number);
+CREATE INDEX IF NOT EXISTS idx_ws_officer_ids_status ON website_officer_ids(website_id, card_status);
+
+DROP TRIGGER IF EXISTS update_website_officer_ids_updated_at ON website_officer_ids;
+CREATE TRIGGER update_website_officer_ids_updated_at
+    BEFORE UPDATE ON website_officer_ids
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 7. WEBSITE STUDENT TESTIMONIALS TABLE (Issued Character & Academic Testimonials)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_student_testimonials (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    testimonial_no VARCHAR(100) NOT NULL,
+    certificate_number VARCHAR(100),
+    template_id BIGINT REFERENCES website_student_testimonial_templates(id) ON DELETE SET NULL,
+    certificate_type VARCHAR(100) DEFAULT 'Academic & Character Testimonial',
+    purpose VARCHAR(255),
+    examination_name VARCHAR(255),
+    session_name VARCHAR(100),
+    passing_year VARCHAR(20),
+    gpa VARCHAR(20),
+    conduct VARCHAR(100) DEFAULT 'Exemplary',
+    academic_character VARCHAR(100) DEFAULT 'Very Good',
+    status VARCHAR(50) NOT NULL DEFAULT 'issued' CHECK (status IN ('draft', 'issued', 'revoked')),
+    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    issued_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    remarks TEXT,
+    custom_data JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, testimonial_no)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ws_student_testim_web ON website_student_testimonials(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_student_testim_student ON website_student_testimonials(website_id, student_id);
+CREATE INDEX IF NOT EXISTS idx_ws_student_testim_no ON website_student_testimonials(website_id, testimonial_no);
+CREATE INDEX IF NOT EXISTS idx_ws_student_testim_status ON website_student_testimonials(website_id, status);
+
+DROP TRIGGER IF EXISTS update_website_student_testimonials_updated_at ON website_student_testimonials;
+CREATE TRIGGER update_website_student_testimonials_updated_at
+    BEFORE UPDATE ON website_student_testimonials
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 8. WEBSITE CLASS STUDENT ID TEMPLATES TABLE (Class-Specific ID Card Design Mapping)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_class_student_id_templates (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    class_id BIGINT NOT NULL REFERENCES website_classes(id) ON DELETE CASCADE,
+    system_template_id BIGINT REFERENCES developer_student_id_templates(id) ON DELETE SET NULL,
+    template_id BIGINT REFERENCES website_student_id_templates(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, class_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ws_class_student_id_tpls_web ON website_class_student_id_templates(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_class_student_id_tpls_class ON website_class_student_id_templates(website_id, class_id);
+
+DROP TRIGGER IF EXISTS update_website_class_student_id_templates_updated_at ON website_class_student_id_templates;
+CREATE TRIGGER update_website_class_student_id_templates_updated_at
+    BEFORE UPDATE ON website_class_student_id_templates
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 

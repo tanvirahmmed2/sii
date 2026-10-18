@@ -4,18 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import {
-  FiUserCheck,
-  FiSearch,
-  FiCreditCard,
-  FiArrowLeft,
-  FiArrowRight,
-  FiCheckCircle,
-  FiAlertCircle,
-  FiFileText,
-  FiShield
-} from 'react-icons/fi';
-import UniversalGatewayCheckout from '@/component/payment/UniversalGatewayCheckout';
+import UniversalGatewayCheckout from 'src/component/payment/UniversalGatewayCheckout';
 
 export default function AdmissionFeesSearchPage() {
   const router = useRouter();
@@ -27,7 +16,7 @@ export default function AdmissionFeesSearchPage() {
   const [data, setData] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
 
-  // Modal
+  // Modal State
   const [activeInvoice, setActiveInvoice] = useState(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
 
@@ -69,182 +58,174 @@ export default function AdmissionFeesSearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 py-10 px-4 sm:px-6">
-      <div className="max-w-5xl mx-auto space-y-8">
-        <div>
-          <Link
-            href="/pay"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-blue-600 transition mb-4"
-          >
-            <FiArrowLeft /> Back to Central Pay Portal
-          </Link>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-semibold">
-                <FiUserCheck className="w-3.5 h-3.5" />
-                <span>Admission Application Clearance</span>
-              </div>
-              <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight mt-2">
-                Admission Application Fees
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                Enter your Application Tracking Number (e.g. ADM-2026-XXXX) or registered phone to pay application dues.
-              </p>
+    <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 p-4 sm:p-5 space-y-4">
+      {/* 1. Header & Navigation */}
+      <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Link
+                href="/pay"
+                className="text-xs font-medium text-slate-500 hover:text-slate-900 dark:hover:text-white"
+              >
+                &larr; Central Pay Portal
+              </Link>
+              <span className="text-slate-300">/</span>
+              <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-primary/10 text-primary-dark border-primary/20 uppercase tracking-wider">
+                Admission Clearance
+              </span>
+            </div>
+            <h1 className="text-base font-semibold text-slate-900 dark:text-white">
+              Admission Application Fees Clearance
+            </h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Enter your Application Tracking Number (e.g. ADM-2026-XXXX) or registered phone to settle fees and advance to candidate photo upload.
+            </p>
+          </div>
+          <div className="text-right">
+            <span className="text-[10px] font-semibold uppercase text-slate-400">Step Progression</span>
+            <div className="font-mono text-xs font-medium text-primary-dark">
+              Fee Settlement &rarr; Media Upload
             </div>
           </div>
         </div>
 
-        {/* Lookup Box */}
-        <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={trackingNo}
-                onChange={(e) => setTrackingNo(e.target.value)}
-                placeholder="Enter Application Tracking No (e.g. ADM-2026-0001) or Phone..."
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border-0 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={searching}
-              className="px-7 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-2xl shadow-md transition flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {searching ? 'Finding...' : 'Track Application'}
-            </button>
-          </form>
-        </div>
+        {/* Search Input Form */}
+        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+          <input
+            type="text"
+            value={trackingNo}
+            onChange={(e) => setTrackingNo(e.target.value)}
+            placeholder="Enter Application Tracking No (e.g. ADM-2026-0001) or Phone..."
+            className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-primary"
+          />
+          <button
+            type="submit"
+            disabled={searching}
+            className="w-full sm:w-auto px-4 py-1.5 rounded bg-primary hover:bg-primary-dark text-white font-medium text-xs transition-colors cursor-pointer disabled:opacity-50 flex-shrink-0"
+          >
+            {searching ? 'Finding...' : 'Track Application'}
+          </button>
+        </form>
+      </div>
 
-        {/* Results */}
-        {hasSearched && (
-          <div>
-            {data?.applicant ? (
-              <div className="space-y-6">
-                {/* Applicant Bio Strip */}
-                <div className="p-6 rounded-3xl bg-blue-500/5 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-800/60 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                        Candidate Profile
-                      </span>
-                      <span className="text-xs font-mono font-bold bg-white dark:bg-slate-800 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300">
-                        {data.applicant.application_no}
-                      </span>
-                    </div>
-                    <h3 className="font-black text-slate-900 dark:text-white text-xl">
-                      {data.applicant.applicant_name}
-                    </h3>
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                      <span>Circular: <strong>{data.applicant.circular_title}</strong></span>
-                      <span>•</span>
-                      <span>Phone: <strong>{data.applicant.masked_phone || data.applicant.phone}</strong></span>
-                      <span>•</span>
-                      <span>Status: <strong className="uppercase">{data.applicant.status}</strong></span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 border-t md:border-t-0 md:border-l border-blue-200 dark:border-blue-800/60 pt-4 md:pt-0 md:pl-6">
-                    <div>
-                      <span className="text-xs text-slate-400">Application Fee</span>
-                      <div className="text-2xl font-black text-rose-600 dark:text-rose-400">
-                        ৳{data.summary?.total_due_amount?.toFixed(2) || '0.00'}
-                      </div>
-                    </div>
-                    <Link
-                      href={`/pay/admission-fees/${data.applicant.id}`}
-                      className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-2"
-                    >
-                      <span>Direct Checkout Page</span>
-                      <FiArrowRight />
-                    </Link>
+      {/* 2. Dues Results */}
+      {hasSearched && (
+        <div className="w-full space-y-4">
+          {data?.applicant ? (
+            <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
+              {/* Profile Card Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-2">
+                <div>
+                  <div className="text-[10px] uppercase font-semibold text-slate-400">Candidate Profile</div>
+                  <h2 className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
+                    {data.applicant.applicant_name}
+                  </h2>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mt-0.5">
+                    <span>Tracking: <strong className="font-mono font-medium text-slate-800 dark:text-slate-200">{data.applicant.application_no}</strong></span>
+                    <span>•</span>
+                    <span>Circular: {data.applicant.circular_title}</span>
+                    <span>•</span>
+                    <span>Phone: {data.applicant.masked_phone || data.applicant.phone}</span>
+                    <span>•</span>
+                    <span className="capitalize">Status: {data.applicant.status}</span>
                   </div>
                 </div>
 
-                {/* Admission Dues Card */}
-                <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-                  <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                    <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">
-                      Application Fee Invoices
-                    </h4>
-                  </div>
-
-                  {(!data.dues?.admission || data.dues.admission.length === 0) ? (
-                    <div className="p-10 text-center space-y-3">
-                      <FiCheckCircle className="w-10 h-10 text-emerald-500 mx-auto" />
-                      <h4 className="font-bold text-slate-900 dark:text-white text-sm">Application Fee Settled!</h4>
-                      <p className="text-xs text-slate-500">Your application fee has already been confirmed.</p>
-                      <Link
-                        href={`/admission/upload/${data.applicant.id}`}
-                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition"
-                      >
-                        <span>Upload Candidate Media</span>
-                        <FiArrowRight />
-                      </Link>
+                <div className="flex items-center gap-3 text-right">
+                  <div>
+                    <div className="text-[10px] uppercase font-semibold text-slate-400">Application Fee</div>
+                    <div className="font-mono text-sm font-semibold text-secondary-dark">
+                      ৳{parseFloat(data.summary?.total_due_amount || 0).toFixed(2)} BDT
                     </div>
-                  ) : (
-                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {data.dues.admission.map((inv) => (
-                        <div
-                          key={inv.id}
-                          className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition"
-                        >
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-mono font-bold text-blue-600">
-                                #{inv.invoice_no}
-                              </span>
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 uppercase">
-                                {inv.payment_status}
-                              </span>
-                            </div>
-                            <h5 className="font-bold text-sm text-slate-900 dark:text-white">
-                              {inv.title}
-                            </h5>
-                            <p className="text-xs text-slate-400">
-                              Settling this invoice advances your application to Step 2 (Photo & Signature Upload).
-                            </p>
-                          </div>
+                  </div>
+                  <Link
+                    href={`/pay/admission-fees/${data.applicant.id}`}
+                    className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium text-xs transition-colors"
+                  >
+                    Direct Checkout &rarr;
+                  </Link>
+                </div>
+              </div>
 
-                          <div className="flex items-center justify-between sm:justify-end gap-5">
-                            <div className="text-right">
-                              <div className="text-[11px] text-slate-400">Payable Fee</div>
-                              <div className="text-lg font-black text-slate-900 dark:text-white">
-                                ৳{parseFloat(inv.net_due || inv.amount).toFixed(2)}
-                              </div>
-                            </div>
+              {/* Invoices Table */}
+              {(!data.dues?.admission || data.dues.admission.length === 0) ? (
+                <div className="py-6 text-center text-xs text-slate-500 space-y-2">
+                  <div className="font-medium text-slate-900 dark:text-white">Application Fee Confirmed</div>
+                  <p className="text-slate-400">Your application fee has already been verified. Proceed to candidate media upload.</p>
+                  <Link
+                    href={`/admission/upload/${data.applicant.id}`}
+                    className="inline-block mt-2 px-3 py-1.5 rounded bg-primary hover:bg-primary-dark text-white font-medium text-xs transition-colors"
+                  >
+                    Upload Photo & Signature &rarr;
+                  </Link>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 text-[10px] uppercase font-semibold">
+                        <th className="pb-2">Invoice No</th>
+                        <th className="pb-2">Circular Description</th>
+                        <th className="pb-2">Application Tracking</th>
+                        <th className="pb-2">Payable Amount</th>
+                        <th className="pb-2">Status</th>
+                        <th className="pb-2 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal text-slate-700 dark:text-slate-300">
+                      {data.dues.admission.map((inv) => (
+                        <tr key={inv.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                          <td className="py-2.5 font-mono text-slate-900 dark:text-white font-medium">
+                            #{inv.invoice_no}
+                          </td>
+                          <td className="py-2.5 font-medium text-slate-800 dark:text-slate-200">
+                            {inv.title}
+                          </td>
+                          <td className="py-2.5 font-mono text-slate-600 dark:text-slate-400">
+                            {data.applicant.application_no}
+                          </td>
+                          <td className="py-2.5 font-mono font-medium text-slate-900 dark:text-white">
+                            ৳{parseFloat(inv.net_due || inv.amount).toFixed(2)} BDT
+                          </td>
+                          <td className="py-2.5">
+                            <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200 uppercase">
+                              {inv.payment_status}
+                            </span>
+                          </td>
+                          <td className="py-2.5 text-right">
                             <button
                               type="button"
                               onClick={() => openPay(inv)}
-                              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-2"
+                              className="px-3 py-1 rounded bg-primary hover:bg-primary-dark text-white font-medium text-xs transition-colors cursor-pointer"
                             >
-                              <FiCreditCard />
-                              <span>Pay Application Fee</span>
+                              Pay Fee
                             </button>
-                          </div>
-                        </div>
+                          </td>
+                        </tr>
                       ))}
-                    </div>
-                  )}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
-            ) : !searching ? (
-              <div className="p-10 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
-                <FiAlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-2" />
-                <h4 className="font-bold text-slate-900 dark:text-white text-sm">No Application Found</h4>
-                <p className="text-xs text-slate-500 mt-1">Please verify your Application Tracking Number or Phone.</p>
-              </div>
-            ) : null}
-          </div>
-        )}
-
-        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center gap-2 text-xs text-slate-500">
-          <FiShield className="text-blue-500" />
-          <span>Official admission gateway with automated candidate ledger registration.</span>
+              )}
+            </div>
+          ) : !searching ? (
+            <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 text-center space-y-1">
+              <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200 uppercase">
+                Not Found
+              </span>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white mt-2">
+                No Application Matching &quot;{trackingNo}&quot;
+              </h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Please verify your Application Tracking Number or Phone and try again.
+              </p>
+            </div>
+          ) : null}
         </div>
-      </div>
+      )}
 
+      {/* 3. Checkout Modal */}
       <UniversalGatewayCheckout
         isOpen={checkoutOpen}
         onClose={() => setCheckoutOpen(false)}

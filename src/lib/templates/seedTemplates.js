@@ -1,44 +1,45 @@
 import { queryDb } from '../database/db.js';
-import { DEFAULT_TEMPLATES } from './defaultTemplates.js';
+import { TASK_CONFIGS, generateStarterFabricJSON } from './fabricTemplates.js';
 
 export async function seedSystemTemplates(developerId = null) {
   const results = [];
-  for (const tpl of DEFAULT_TEMPLATES) {
+  for (const [key, cfg] of Object.entries(TASK_CONFIGS)) {
     try {
+      const fabricJSON = generateStarterFabricJSON(key);
+      const defaultSlug = `default-${cfg.slug}`;
+      const defaultName = `Standard Default ${cfg.name}`;
+
       const checkRes = await queryDb(
-        `SELECT id FROM system_document_templates WHERE slug = $1 LIMIT 1`,
-        [tpl.slug]
+        `SELECT id FROM ${cfg.systemTable} WHERE slug = $1 LIMIT 1`,
+        [defaultSlug]
       );
 
       if (checkRes.rows.length === 0) {
         const insertRes = await queryDb(
-          `INSERT INTO system_document_templates 
-           (name, slug, category, description, dimension_width, dimension_height, dimension_unit, orientation, grapes_data, html_content, css_content, available_merge_tags, is_active, is_system_default, created_by_developer_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, TRUE, TRUE, $13)
-           RETURNING id, name, slug, category`,
+          `INSERT INTO ${cfg.systemTable} 
+           (name, slug, description, dimension_width, dimension_height, dimension_unit, fabric_data, fabric_back_data, available_merge_tags, is_active, is_system_default, created_by_developer_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, TRUE, $10)
+           RETURNING id, name, slug`,
           [
-            tpl.name,
-            tpl.slug,
-            tpl.category,
-            tpl.description,
-            tpl.dimension_width,
-            tpl.dimension_height,
-            tpl.dimension_unit,
-            tpl.orientation,
-            JSON.stringify(tpl.grapes_data || {}),
-            tpl.html_content,
-            tpl.css_content,
-            JSON.stringify(tpl.available_merge_tags || []),
+            defaultName,
+            defaultSlug,
+            `Official standard visual template for ${cfg.name}. Built with Fabric.js vector canvas.`,
+            cfg.dimension_width,
+            cfg.dimension_height,
+            cfg.dimension_unit,
+            JSON.stringify(fabricJSON),
+            cfg.hasBackSide ? JSON.stringify({ version: '5.3.0', background: '#ffffff', objects: [] }) : '{}',
+            JSON.stringify(cfg.mergeTags || []),
             developerId,
           ]
         );
-        results.push({ action: 'created', template: insertRes.rows[0] });
+        results.push({ action: 'created', table: cfg.systemTable, template: insertRes.rows[0] });
       } else {
-        results.push({ action: 'already_exists', slug: tpl.slug });
+        results.push({ action: 'already_exists', table: cfg.systemTable, slug: defaultSlug });
       }
     } catch (e) {
-      console.error(`Error seeding template ${tpl.slug}:`, e.message);
-      results.push({ action: 'error', slug: tpl.slug, error: e.message });
+      console.error(`Error seeding template for ${cfg.systemTable}:`, e.message);
+      results.push({ action: 'error', table: cfg.systemTable, error: e.message });
     }
   }
   return results;

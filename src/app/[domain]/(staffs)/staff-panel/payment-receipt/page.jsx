@@ -89,7 +89,6 @@ export default function PaymentReceiptPage() {
       await exportElementAsPdf(printDocRef.current, `Receipt_${receiptNo}`, {
         widthMm: 210,
         heightMm: 148,
-        orientation: 'landscape',
       });
       toast.success('Official Payment Receipt PDF downloaded!', { id: 'rec-export' });
     } catch {

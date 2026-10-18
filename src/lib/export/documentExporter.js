@@ -54,13 +54,9 @@ export async function exportElementAsPdf(element, filename = 'document', options
   const imgData = canvas.toDataURL('image/jpeg', 0.98);
 
   const rect = element.getBoundingClientRect();
-  const isLandscape = options.orientation
-    ? options.orientation === 'landscape'
-    : rect.width > rect.height;
-
-  // Compute PDF dimensions in millimeters
   const widthMm = options.widthMm || (rect.width * 0.264583);
   const heightMm = options.heightMm || (rect.height * 0.264583);
+  const isLandscape = widthMm >= heightMm;
 
   const pdf = new jsPDF({
     orientation: isLandscape ? 'landscape' : 'portrait',
@@ -97,9 +93,9 @@ export async function exportMultipleCardsAsPdf(elements = [], filename = 'batch_
 
     const imgData = canvas.toDataURL('image/jpeg', 0.98);
     const rect = el.getBoundingClientRect();
-    const isLandscape = options.orientation ? options.orientation === 'landscape' : rect.width > rect.height;
     const widthMm = options.widthMm || (rect.width * 0.264583);
     const heightMm = options.heightMm || (rect.height * 0.264583);
+    const isLandscape = widthMm >= heightMm;
 
     if (i === 0) {
       pdf = new jsPDF({
