@@ -67,7 +67,7 @@ export default function StudentLoginPage() {
             Student Portal Login
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Sign in with your verified student registration credentials.
+            Login with your verified student registration credentials.
           </p>
         </div>
 

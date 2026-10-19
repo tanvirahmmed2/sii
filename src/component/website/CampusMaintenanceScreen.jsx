@@ -89,7 +89,7 @@ export default function CampusMaintenanceScreen() {
             className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-medium text-xs transition flex items-center gap-2"
           >
             <FiCpu size={14} className="text-sky-400" />
-            <span>Student Portal Sign In</span>
+            <span>Student Portal Login</span>
           </Link>
         </div>
       </main>

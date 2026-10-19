@@ -41,7 +41,7 @@ export default function OfficerLoginPage() {
         toast.success(data.message || 'Two-factor authentication code sent to your email.');
         setStep('2fa');
       } else {
-        toast.success(data.message || 'Welcome back! Signed in successfully.');
+        toast.success(data.message || 'Welcome back! Logged in successfully.');
         router.refresh();
         router.push(tenantUrl('/officer'));
       }
@@ -97,7 +97,7 @@ export default function OfficerLoginPage() {
             Officer Portal Login
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Sign in to access Residential, Library, Club, and Administrative desks.
+            Login to access Residential, Library, Club, and Administrative desks.
           </p>
         </div>
 
@@ -140,7 +140,7 @@ export default function OfficerLoginPage() {
               onClick={() => setStep('credentials')}
               className="w-full text-center text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 pt-2"
             >
-              Back to email sign-in
+              Back to email login
             </button>
           </form>
         ) : (
@@ -186,7 +186,7 @@ export default function OfficerLoginPage() {
               disabled={loading}
               className="w-full py-2 px-4 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition-colors cursor-pointer disabled:opacity-50"
             >
-              {loading ? 'Authenticating...' : 'Sign In to Officer Portal'}
+              {loading ? 'Authenticating...' : 'Login to Officer Portal'}
             </button>
           </form>
         )}

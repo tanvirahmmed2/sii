@@ -431,7 +431,7 @@ export default function StaffSettingsPage() {
                   Two-Factor Authentication (2FA) via Email
                 </span>
                 <p className="text-[11px] text-slate-500 max-w-lg leading-relaxed">
-                  When enabled, signing into your staff desk will require a 6-digit one-time passcode sent directly to your registered email address ({email}).
+                  When enabled, logging into your staff desk will require a 6-digit one-time passcode sent directly to your registered email address ({email}).
                 </p>
               </div>
 

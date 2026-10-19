@@ -102,9 +102,9 @@ export async function POST(request, context) {
           subtitle: `${website.name} — Teacher Operations Portal`,
           recipientName: teacher.name,
           bodyParagraphs: [
-            'A sign-in request to your teacher dashboard was detected.',
+            'A login request to your teacher dashboard was detected.',
             'Please use the 6-digit security code below to complete your authentication. This code expires in 10 minutes.',
-            'If you did not initiate this sign-in attempt, please notify your administrator.',
+            'If you did not initiate this login attempt, please notify your administrator.',
           ],
           code: otpCode,
           codeLabel: 'Two-Factor Authentication Code',

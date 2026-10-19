@@ -78,7 +78,7 @@ export async function POST(request, context) {
         recipientName: teacher.name,
         bodyParagraphs: [
           'A new two-factor authentication code was requested for your teacher account.',
-          'Please use the code below to complete sign-in. This code is valid for 10 minutes.',
+          'Please use the code below to complete login. This code is valid for 10 minutes.',
         ],
         code: otpCode,
         codeLabel: 'Security Passcode',

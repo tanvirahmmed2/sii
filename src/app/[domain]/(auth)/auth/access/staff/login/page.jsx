@@ -161,7 +161,7 @@ export default function StaffLoginPage() {
               disabled={loading || otpCode.length !== 6}
               className="w-full py-2.5 rounded bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-60 text-center"
             >
-              {loading ? 'Verifying Code...' : 'Authenticate & Sign In →'}
+              {loading ? 'Verifying Code...' : 'Authenticate & Login →'}
             </button>
 
             <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
@@ -227,7 +227,7 @@ export default function StaffLoginPage() {
               disabled={loading}
               className="w-full py-2.5 rounded bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-60 text-center"
             >
-              {loading ? 'Authenticating...' : 'Sign In to Staff Desk →'}
+              {loading ? 'Authenticating...' : 'Login to Staff Desk →'}
             </button>
           </form>
         )}

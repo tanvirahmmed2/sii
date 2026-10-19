@@ -86,7 +86,7 @@ export async function POST(request, context) {
           subtitle: `${website.name} — Staff Operations Portal`,
           recipientName: staff.name,
           bodyParagraphs: [
-            'A sign-in request to your staff portal was detected. Please use the verification code below to complete your authentication.',
+            'A login request to your staff portal was detected. Please use the verification code below to complete your authentication.',
             'This security code will expire in 10 minutes. If you did not initiate this request, please contact your systems administrator immediately.',
           ],
           code: otpCode,

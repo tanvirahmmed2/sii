@@ -108,13 +108,13 @@ export default function AdminRecoveryForm() {
         <div className="space-y-4">
           <div className="p-3 rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-xs font-normal space-y-1">
             <p className="font-medium">Password Reset Complete</p>
-            <p>Your password has been updated. You can now sign in with your new password.</p>
+            <p>Your password has been updated. You can now login with your new password.</p>
           </div>
           <Link
             href={`/developer-auth/login?email=${encodeURIComponent(email)}`}
             className="block text-center w-full py-2.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium transition-colors"
           >
-            Sign In with New Password
+            Login with New Password
           </Link>
         </div>
       )}

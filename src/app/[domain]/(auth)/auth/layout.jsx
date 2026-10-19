@@ -1,6 +1,6 @@
 export const metadata = {
   title: 'Campus Authentication | Access Center',
-  description: 'Select your role to sign in to your student, teacher, staff, or officer campus workstation.',
+  description: 'Select your role to login to your student, teacher, staff, or officer campus workstation.',
 };
 
 export default function CampusAuthLayout({ children }) {

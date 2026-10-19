@@ -146,7 +146,7 @@ export default function CreatorLayout({ children, params }) {
               onClick={() => router.replace(`/creator/login?redirect=/creator/${creatorId}`)}
               className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
             >
-              Sign In
+              Login
             </button>
           </div>
         </div>

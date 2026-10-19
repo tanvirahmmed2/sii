@@ -161,7 +161,7 @@ function CreatorVerifyContent() {
       }}
       topRightLink={{
         prompt: 'Already verified?',
-        text: 'Sign In',
+        text: 'Login',
         href: '/creator/login',
       }}
     >
@@ -203,7 +203,7 @@ function CreatorVerifyContent() {
                   href="/creator/login"
                   className="w-full block py-2 rounded bg-secondary hover:bg-secondary-dark text-white text-xs font-medium text-center transition-colors"
                 >
-                  Proceed to Sign In
+                  Proceed to Login
                 </Link>
               )}
             </div>
@@ -287,7 +287,7 @@ function CreatorVerifyContent() {
                 href="/creator/login"
                 className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               >
-                Back to Sign In
+                Back to Login
               </Link>
             </div>
           </div>

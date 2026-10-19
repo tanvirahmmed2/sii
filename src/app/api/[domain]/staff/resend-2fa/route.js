@@ -77,7 +77,7 @@ export async function POST(request, context) {
         subtitle: `${website.name} — Staff Operations Portal`,
         recipientName: staff.name,
         bodyParagraphs: [
-          'A new two-factor security code was requested for your staff portal sign-in.',
+          'A new two-factor security code was requested for your staff portal login.',
           'Please enter the 6-digit code below to authenticate. This code is valid for 10 minutes.',
         ],
         code: otpCode,

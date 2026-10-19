@@ -90,7 +90,7 @@ function CreatorLoginForm() {
           return;
         }
 
-        setError(data.error || 'Sign in failed. Check your credentials.');
+        setError(data.error || 'Login failed. Check your credentials.');
         return;
       }
 
@@ -142,9 +142,9 @@ function CreatorLoginForm() {
   }
 
   return (
-    <div className="w-full bg-white border border-slate-200 rounded p-5 space-y-4 text-xs text-slate-800">
+    <div className="w-full bg-white border border-slate-200 rounded p-5 space-y-4 text-xs text-slate-800 h-screen flex items-center justify-center">
       <div>
-        <h1 className="text-base font-semibold text-slate-900">Creator Sign In</h1>
+        <h1 className="text-base font-semibold text-slate-900">Creator Login</h1>
         <p className="text-slate-500 text-xs mt-0.5">
           Access your websites workspace and creator studio.
         </p>
@@ -253,7 +253,7 @@ function CreatorLoginForm() {
             disabled={loading}
             className="w-full py-2 px-3 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
       )}
@@ -271,10 +271,10 @@ function CreatorLoginForm() {
 export default function CreatorLoginPage() {
   return (
     <CreatorAuthLayout
-      headline="Creator Sign In"
+      headline="Creator Login"
       description="Access your school, academy, and portfolio website deployments."
     >
-      <Suspense fallback={<LoadingScreen fullScreen={false} size="sm" label="Loading sign in..." />}>
+      <Suspense fallback={<LoadingScreen fullScreen={false} size="sm" label="Loading login..." />}>
         <CreatorLoginForm />
       </Suspense>
     </CreatorAuthLayout>

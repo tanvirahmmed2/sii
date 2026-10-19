@@ -63,7 +63,7 @@ const EventCard = ({ event, href, className = '', onInterestChange }) => {
       }
     } catch (err) {
       if (err.response?.status === 401 || err.response?.data?.requireAuth) {
-        toast.error('Please sign in to your student account to mark your interest.', {
+        toast.error('Please login to your student account to mark your interest.', {
           icon: '🎓',
           duration: 4000,
         });

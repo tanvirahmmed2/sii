@@ -121,7 +121,7 @@ export async function POST(request) {
             success: true,
             alreadyVerified: true,
             email,
-            message: 'Your developer account is already verified! You can sign in.',
+            message: 'Your developer account is already verified! You can login.',
           });
         }
       }

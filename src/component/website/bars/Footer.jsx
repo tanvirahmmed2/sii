@@ -82,7 +82,7 @@ const Footer = () => {
       style={{ backgroundColor: footerBg }}
     >
       {/* Top Bar: Follow us on */}
-      <div className="w-full border-b border-white/10 bg-black/15">
+      <div className="w-full border-b border-white/10 bg-secondary-dark">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="text-xs sm:text-sm font-semibold tracking-wider uppercase text-white/90">
@@ -110,61 +110,80 @@ const Footer = () => {
           </div>
         </div>
       </div>
-
-      <div className="w-full px-4 sm:px-6 lg:px-8 py-12 space-y-10 max-w-7xl mx-auto">
-        {/* Top Tier: Institution Profile & Navigation Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
-          {/* Col 1 & 2: Institution Meta */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="space-y-1.5">
-              <span className="text-lg font-bold text-white tracking-tight">
-                {schoolName}
-              </span>
-              {eiin && (
-                <p className="text-xs font-mono text-white/70">
-                  Government EIIN: {eiin}
-                </p>
-              )}
-            </div>
-
-            <p className="text-xs text-white/75 leading-relaxed max-w-sm">
-              Committed to academic excellence, innovative pedagogy, and developing future-ready leaders. Official institutional management portal and digital registry.
+      <div className="px-4 sm:px-6 lg:px-8 py-12 bg-secondary w-full flex flex-col items-start space-y-4">
+        <div className="space-y-1.5">
+          <span className="text-lg font-bold text-white tracking-tight">
+            {schoolName}
+          </span>
+          {eiin && (
+            <p className="text-xs font-mono text-white/70">
+              Government EIIN: {eiin}
             </p>
+          )}
+        </div>
 
-            <div className="space-y-1.5 text-xs text-white/75 pt-1">
-              {address && (
-                <p className="flex items-start gap-1.5">
-                  <span className="font-semibold text-white">Address:</span>
-                  <span>{address}</span>
-                </p>
-              )}
-              {phone && (
-                <p className="flex items-center gap-1.5">
-                  <span className="font-semibold text-white">Telephone:</span>
-                  <span>{phone}</span>
-                </p>
-              )}
-              {email && (
-                <p className="flex items-center gap-1.5">
-                  <span className="font-semibold text-white">Email:</span>
-                  <span>{email}</span>
-                </p>
-              )}
-            </div>
+        <p className="text-xs text-white/75 leading-relaxed max-w-sm">
+          Committed to academic excellence, innovative pedagogy, and developing future-ready leaders. Official institutional management portal and digital registry.
+        </p>
 
-            {/* Theme Switcher */}
-            <div className="flex flex-wrap items-center gap-2 pt-2">
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="px-3 py-1.5 text-xs font-semibold rounded-md border border-white/20 text-white/90 hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
-                title={`Switch to ${isDark ? 'Light' : 'Dark'} mode`}
-              >
-                <span>{isDark ? '☀ Switch to Light Mode' : '☾ Switch to Dark Mode'}</span>
-              </button>
+        <div className="space-y-1.5 text-xs text-white/75 pt-1">
+          {address && (
+            <p className="flex items-start gap-1.5">
+              <span className="font-semibold text-white">Address:</span>
+              <span>{address}</span>
+            </p>
+          )}
+          {phone && (
+            <p className="flex items-center gap-1.5">
+              <span className="font-semibold text-white">Telephone:</span>
+              <span>{phone}</span>
+            </p>
+          )}
+          {email && (
+            <p className="flex items-center gap-1.5">
+              <span className="font-semibold text-white">Email:</span>
+              <span>{email}</span>
+            </p>
+          )}
+        </div>
+
+        {/* Theme Switcher */}
+        <div className="flex flex-wrap items-center gap-2 pt-2">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="px-3 py-1.5 text-xs font-semibold rounded-md border border-white/20 text-white/90 hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
+            title={`Switch to ${isDark ? 'Light' : 'Dark'} mode`}
+          >
+            <span>{isDark ? '☀ Switch to Light Mode' : '☾ Switch to Dark Mode'}</span>
+          </button>
+        </div>
+      </div>
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-12 space-y-10 bg-secondary-dark">
+        {/* Top Tier: Institution Profile & Navigation Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {/* Col 1 & 2: Institution Meta */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-white/15 pb-1.5">
+              About
+            </h3>
+            <div className={linkColClass}>
+
+              <Link href={tenantUrl('/about')} className={navLinkClass}>
+                Read
+              </Link>
+              <Link href={tenantUrl('/about/history')} className={navLinkClass}>
+                History
+              </Link>
+              <Link href={tenantUrl('/about/mission')} className={navLinkClass}>
+                Mission
+              </Link>
+              <Link href={tenantUrl('/about/vision')} className={navLinkClass}>
+                Vision
+              </Link>
+
             </div>
           </div>
-
           {/* Col 3: Academic Departments & Admissions */}
           <div className="space-y-3">
             <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-white/15 pb-1.5">
@@ -238,22 +257,22 @@ const Footer = () => {
             </h3>
             <div className={linkColClass}>
               <Link href={tenantUrl('/verify-student')} className={navLinkClass}>
-                Verify Student
+                Student
               </Link>
               <Link href={tenantUrl('/verify-id-card')} className={navLinkClass}>
-                Verify ID Card
+                ID Card
               </Link>
               <Link href={tenantUrl('/verify-testimonial')} className={navLinkClass}>
-                Verify Testimonial
+                Testimonial
               </Link>
               <Link href={tenantUrl('/verify-tc')} className={navLinkClass}>
-                Verify Transfer Cert
+                Transfer Cert
               </Link>
               <Link href={tenantUrl('/auth/student')} className={navLinkClass}>
                 Student Portal
               </Link>
-              <Link href={tenantUrl('/auth/access')} className={navLinkClass}>
-                Staff &amp; Teacher Login
+              <Link href={tenantUrl('/auth/access/teacher')} className={navLinkClass}>
+                Teacher Login
               </Link>
             </div>
           </div>
@@ -272,9 +291,7 @@ const Footer = () => {
             Copyright &copy; {new Date().getFullYear()} {schoolName}. All rights reserved.
           </p>
           <div className="flex flex-wrap items-center gap-4">
-            <Link href={tenantUrl('/about')} className="hover:text-white transition-colors">
-              About Us
-            </Link>
+
             <Link href={tenantUrl('/policies')} className="hover:text-white transition-colors">
               Campus Policies
             </Link>

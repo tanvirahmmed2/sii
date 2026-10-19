@@ -246,7 +246,7 @@ export default function CreatorRecoveryPage() {
               href="/creator/login"
               className="inline-block py-2 px-4 rounded bg-slate-900 text-white font-medium"
             >
-              Sign In Now &rarr;
+              Login Now &rarr;
             </Link>
           </div>
         )}
@@ -254,7 +254,7 @@ export default function CreatorRecoveryPage() {
         <div className="pt-2 border-t border-slate-100 text-center text-slate-500 text-[11px]">
           Remember your password?{' '}
           <Link href="/creator/login" className="font-semibold text-slate-800 hover:underline">
-            Sign in
+            Login
           </Link>
         </div>
       </div>

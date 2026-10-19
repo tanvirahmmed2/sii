@@ -366,7 +366,7 @@ export default function DeveloperOverviewPage() {
       <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 text-center space-y-3">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Session Unavailable</h2>
         <p className="text-xs text-slate-500 font-normal">
-          Unable to locate active developer credentials. Please sign in to access developer modules.
+          Unable to locate active developer credentials. Please login to access developer modules.
         </p>
         <div>
           <Link

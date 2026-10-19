@@ -20,7 +20,7 @@ export default function AccessPortalSelectionPage() {
     },
     {
       title: 'Officer',
-      description: 'Direct sign-in for assigned department officers, approvals, and administrative duties.',
+      description: 'Direct login for assigned department officers, approvals, and administrative duties.',
       href: tenantUrl('/auth/access/officer/login'),
     },
   ];

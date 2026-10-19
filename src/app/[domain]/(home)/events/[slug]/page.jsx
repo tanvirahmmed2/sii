@@ -81,7 +81,7 @@ const EventDetailPage = ({ params: paramsPromise }) => {
       }
     } catch (err) {
       if (err.response?.status === 401 || err.response?.data?.requireAuth) {
-        toast.error('Please sign in to your student account to mark your interest in this event.', {
+        toast.error('Please login to your student account to mark your interest in this event.', {
           icon: '🎓',
           duration: 4000,
         });

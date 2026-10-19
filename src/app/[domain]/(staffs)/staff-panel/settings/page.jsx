@@ -954,7 +954,7 @@ export default function WebsiteSettingsPage() {
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-500 max-w-xl leading-relaxed">
-                  When enabled, all public web pages (home, admissions, news, facilities) show an elegant maintenance screen. Staff, teachers, officers, and students can still securely sign in and access panel workstations.
+                  When enabled, all public web pages (home, admissions, news, facilities) show an elegant maintenance screen. Staff, teachers, officers, and students can still securely login and access panel workstations.
                 </p>
               </div>
 

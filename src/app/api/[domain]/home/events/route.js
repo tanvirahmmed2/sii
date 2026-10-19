@@ -109,7 +109,7 @@ export async function POST(request, context) {
         {
           success: false,
           requireAuth: true,
-          error: 'Please sign in to your student account to mark your interest in this event.',
+          error: 'Please login to your student account to mark your interest in this event.',
         },
         { status: 401 }
       );

@@ -141,14 +141,14 @@ function CheckoutContent() {
       <div className="w-full my-8 px-4 sm:px-6 bg-white border border-slate-200 rounded p-6 text-center space-y-3 text-xs text-slate-800">
         <h1 className="text-sm font-semibold text-slate-900">Creator Authentication Required</h1>
         <p className="text-slate-500">
-          Sign in to your creator account to complete your package order.
+          Login to your creator account to complete your package order.
         </p>
         <div className="pt-2 flex flex-col gap-2">
           <Link
             href={`/creator/login?redirect=${encodeURIComponent(`/creator/checkout?packageId=${selectedPkgId || ''}`)}`}
             className="w-full py-2 px-3 rounded bg-slate-900 text-white font-medium"
           >
-            Sign In &rarr;
+            Login &rarr;
           </Link>
           <Link
             href="/creator/register"

@@ -288,7 +288,7 @@ function OfficerVerifyContent() {
 
         <div className="border-t border-slate-100 dark:border-slate-800 pt-4 text-center">
           <Link href={tenantUrl('/auth/access/officer/login')} className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
-            Already verified? Sign in here →
+            Already verified? Login here →
           </Link>
         </div>
 

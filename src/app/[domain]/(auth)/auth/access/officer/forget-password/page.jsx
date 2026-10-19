@@ -81,7 +81,7 @@ function OfficerForgetPasswordContent() {
         throw new Error(data.error || 'Failed to reset password.');
       }
 
-      toast.success(data.message || 'Password reset successfully! You can now sign in.');
+      toast.success(data.message || 'Password reset successfully! You can now login.');
       router.push(tenantUrl('/auth/access/officer/login'));
     } catch (err) {
       toast.error(err.message);

@@ -230,7 +230,7 @@ export default function CreatorRegisterPage() {
         <div className="pt-2 border-t border-slate-100 text-center text-slate-500 text-[11px]">
           Already have an account?{' '}
           <Link href="/creator/login" className="font-semibold text-slate-800 hover:underline">
-            Sign in
+            Login
           </Link>
         </div>
       </div>

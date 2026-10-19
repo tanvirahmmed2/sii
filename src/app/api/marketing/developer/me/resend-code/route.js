@@ -44,7 +44,7 @@ export async function POST(request) {
       return NextResponse.json({
         success: true,
         alreadyVerified: true,
-        message: 'Your developer account is already verified! You can sign in immediately.',
+        message: 'Your developer account is already verified! You can login immediately.',
       });
     }
 

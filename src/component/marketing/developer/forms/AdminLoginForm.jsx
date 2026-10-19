@@ -105,14 +105,14 @@ export default function AdminLoginForm() {
           {SITE_NAME} Developer Access
         </h1>
         <p className="text-xs font-normal text-slate-500 dark:text-slate-400">
-          Sign in to the developer administration console.
+          Login to the developer administration console.
         </p>
       </div>
 
       {verifiedSuccess && (
         <div className="p-3 rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-xs font-normal space-y-0.5">
           <p className="font-medium">Account verified successfully.</p>
-          <p>Your administrator account is now active. Please sign in below.</p>
+          <p>Your administrator account is now active. Please login below.</p>
         </div>
       )}
 
@@ -202,7 +202,7 @@ export default function AdminLoginForm() {
           disabled={loading}
           className="w-full py-2.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium disabled:opacity-50 transition-colors cursor-pointer"
         >
-          {loading ? 'Authenticating...' : 'Sign In'}
+          {loading ? 'Authenticating...' : 'Login'}
         </button>
       </form>
 

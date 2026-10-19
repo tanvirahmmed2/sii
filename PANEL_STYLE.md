@@ -215,7 +215,7 @@ To eliminate financial calculation errors and confusing user representations, th
 | `/creator/[id]/settings` | Security & Sessions | `w-full space-y-4` | Active device logins table with remote revoke, password reset, 2FA toggle |
 | `/creator/[id]/reviews` | Testimonials | `w-full space-y-4` | Platform rating, review submission, edit/delete actions |
 | `/creator/[id]/updates` | Changelog | `w-full space-y-4` | Version release feed, technical change summaries |
-| `/creator/login` | Sign In | `w-full ...` | Text-only password visibility toggle, 2FA prompt, auto-redirect |
+| `/creator/login` | Login | `w-full ...` | Text-only password visibility toggle, 2FA prompt, auto-redirect |
 | `/creator/register` | Registration | `w-full ...` | Simplified onboarding form, zero icon fields |
 | `/creator/recovery` | Password Recovery | `w-full ...` | 3-step recovery flow (email &rarr; OTP &rarr; reset) |
 | `/creator/verify` | Account Activation | `w-full ...` | URL auto-validation, 6-digit code entry, resend handler |

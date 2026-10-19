@@ -201,7 +201,7 @@ export async function PUT(request, context) {
 
     return NextResponse.json({
       success: true,
-      message: 'Faculty account setup completed successfully! You may now sign in.',
+      message: 'Faculty account setup completed successfully! You may now login.',
     });
   } catch (error) {
     console.error('Error completing teacher verification setup:', error);

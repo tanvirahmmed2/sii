@@ -86,7 +86,7 @@ export async function POST(request, context) {
           subtitle: `${website.name} — Administrative Portal`,
           recipientName: officer.name,
           bodyParagraphs: [
-            'A sign-in request to your Officer account was detected. Use the verification passcode below to complete your authentication.',
+            'A login request to your Officer account was detected. Use the verification passcode below to complete your authentication.',
             'This security code will expire in 10 minutes. If you did not initiate this request, please contact your systems administrator immediately.',
           ],
           code: otpCode,
@@ -96,7 +96,7 @@ export async function POST(request, context) {
         await sendEmail({
           to: officer.email,
           toName: officer.name,
-          subject: `${website.name} - Officer Portal Sign-In Verification Code`,
+          subject: `${website.name} - Officer Portal Login Verification Code`,
           html,
           websiteId: website.id,
         });
@@ -155,7 +155,7 @@ export async function POST(request, context) {
   } catch (error) {
     console.error('Error during officer login:', error);
     return NextResponse.json(
-      { success: false, error: 'Internal Server Error during officer sign-in.' },
+      { success: false, error: 'Internal Server Error during officer login.' },
       { status: 500 }
     );
   }

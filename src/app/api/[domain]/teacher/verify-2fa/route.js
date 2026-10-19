@@ -94,7 +94,7 @@ export async function POST(request, context) {
 
     const response = NextResponse.json({
       success: true,
-      message: 'Two-factor verification successful! Signed in.',
+      message: 'Two-factor verification successful! Logged in.',
       token,
       teacher: { id: teacher.id, name: teacher.name, email: teacher.email },
     });

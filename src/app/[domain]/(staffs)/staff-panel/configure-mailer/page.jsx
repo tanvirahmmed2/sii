@@ -442,7 +442,7 @@ export default function ConfigureMailerPage() {
 
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 space-y-1.5">
             <p className="font-bold text-slate-700 dark:text-slate-300">Quick Guide:</p>
-            <p>1. Sign up at brevo.com</p>
+            <p>1. Register at brevo.com</p>
             <p>2. Verify your institution sending domain (SPF &amp; DKIM records)</p>
             <p>3. Generate an API key under SMTP &amp; API keys</p>
           </div>

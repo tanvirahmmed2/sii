@@ -76,7 +76,7 @@ export default function AboutPage() {
           Ready to experience the next evolution in portfolio creation?
         </h3>
         <p className="text-xs text-slate-300 max-w-xl mx-auto">
-          Sign up today, choose your package, and deploy your custom-branded portfolio with live appointment bookings and verified testimonials.
+          Register today, choose your package, and deploy your custom-branded portfolio with live appointment bookings and verified testimonials.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-4">
           <Link

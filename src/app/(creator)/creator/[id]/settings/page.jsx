@@ -425,7 +425,7 @@ export default function CreatorSettingsPage() {
           <div>
             <h2 className="text-sm font-semibold text-slate-900">Two-Factor Authentication</h2>
             <p className="text-[11px] text-slate-500">
-              Require a secondary verification code when signing in.
+              Require a secondary verification code when logging in.
             </p>
           </div>
 
