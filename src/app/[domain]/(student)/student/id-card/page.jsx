@@ -63,7 +63,29 @@ export default function StudentIDCardPage() {
     if (!template) return null;
     let frontHtml = template.custom_html || template.html_content || '';
     let backHtml = template.custom_html_back || template.html_back_content || '';
-    const css = template.custom_css || template.css_content || '';
+    let css = (template.custom_css || template.css_content || '') + ' svg { width: 100% !important; height: 100% !important; max-width: 100% !important; max-height: 100% !important; display: block; }';
+
+    if (!backHtml || !backHtml.trim()) {
+      backHtml = `
+        <div style="width: 100%; height: 100%; box-sizing: border-box; background: #0f172a; color: #f8fafc; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align: center;">
+          <div style="background: #1e293b; padding: 5px 10px; border-radius: 6px; font-size: 8.5px; font-weight: 700; color: #38bdf8; letter-spacing: 0.8px;">
+            OFFICIAL STUDENT PASS TERMS
+          </div>
+          <div style="font-size: 8.5px; color: #94a3b8; line-height: 1.5; text-align: left; padding: 0 4px;">
+            <p style="margin: 0 0 3px;">• This card certifies enrollment at {{school_name}}.</p>
+            <p style="margin: 0 0 3px;">• Non-transferable; must be presented upon campus authority request.</p>
+            <p style="margin: 0;">• Report loss immediately to the Registrar's Office.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&data={{registration_no}}" alt="QR" style="width: 46px; height: 46px; background: white; padding: 2px; border-radius: 4px;" />
+            <span style="font-family: monospace; font-size: 8px; color: #38bdf8;">{{registration_no}}</span>
+          </div>
+          <div style="font-size: 7.5px; color: #64748b; border-top: 1px solid #1e293b; padding-top: 4px;">
+            Property of {{school_name}} • Hotline: {{emergency_contact}}
+          </div>
+        </div>
+      `;
+    }
 
     const replacements = {
       '{{student_name}}': student?.name || 'Student Name',
@@ -100,8 +122,9 @@ export default function StudentIDCardPage() {
   };
 
   const cardCompiled = compileCard();
-  const cardWidth = template ? `${template.dimension_width * 3.7795}px` : '240px';
-  const cardHeight = template ? `${template.dimension_height * 3.7795}px` : '380px';
+  const isLandscape = template ? parseFloat(template.dimension_width || 54) >= parseFloat(template.dimension_height || 86) : false;
+  const cardWidth = isLandscape ? '380px' : '240px';
+  const cardHeight = isLandscape ? '240px' : '380px';
 
   const handleDownloadJpeg = async () => {
     setIsExporting(true);

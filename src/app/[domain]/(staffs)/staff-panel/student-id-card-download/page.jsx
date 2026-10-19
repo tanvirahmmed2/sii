@@ -67,7 +67,7 @@ export default function StudentIdCardDownloadPage() {
         if (found) return found;
       }
     }
-    return activeTemplate;
+    return activeTemplate || systemTemplates[0] || null;
   }, [classAssignments, systemTemplates, activeTemplate]);
 
   // Fetch Issued Cards Archive from website_student_ids
@@ -186,7 +186,29 @@ export default function StudentIdCardDownloadPage() {
     if (!tpl) return null;
     let frontHtml = tpl.custom_html || tpl.html_content || '';
     let backHtml = tpl.custom_html_back || tpl.html_back_content || '';
-    const css = tpl.custom_css || tpl.css_content || '';
+    let css = (tpl.custom_css || tpl.css_content || '') + ' svg { width: 100% !important; height: 100% !important; max-width: 100% !important; max-height: 100% !important; display: block; }';
+
+    if (!backHtml || !backHtml.trim()) {
+      backHtml = `
+        <div style="width: 100%; height: 100%; box-sizing: border-box; background: #0f172a; color: #f8fafc; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align: center;">
+          <div style="background: #1e293b; padding: 5px 10px; border-radius: 6px; font-size: 8.5px; font-weight: 700; color: #38bdf8; letter-spacing: 0.8px;">
+            OFFICIAL STUDENT PASS TERMS
+          </div>
+          <div style="font-size: 8.5px; color: #94a3b8; line-height: 1.5; text-align: left; padding: 0 4px;">
+            <p style="margin: 0 0 3px;">• This card certifies enrollment at {{school_name}}.</p>
+            <p style="margin: 0 0 3px;">• Non-transferable; must be presented upon campus authority request.</p>
+            <p style="margin: 0;">• Report loss immediately to the Registrar's Office.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&data={{registration_no}}" alt="QR" style="width: 46px; height: 46px; background: white; padding: 2px; border-radius: 4px;" />
+            <span style="font-family: monospace; font-size: 8px; color: #38bdf8;">{{registration_no}}</span>
+          </div>
+          <div style="font-size: 7.5px; color: #64748b; border-top: 1px solid #1e293b; padding-top: 4px;">
+            Property of {{school_name}} • Hotline: {{emergency_contact}}
+          </div>
+        </div>
+      `;
+    }
 
     const replacements = {
       // Academic
@@ -733,14 +755,23 @@ export default function StudentIdCardDownloadPage() {
                 {selectedStudents.map((s) => {
                   const tpl = getTemplateForStudent(s);
                   const cardData = compileStudentCard(s);
-                  const cardWidth = tpl ? `${tpl.dimension_width * 3.7795}px` : '204px';
-                  const cardHeight = tpl ? `${tpl.dimension_height * 3.7795}px` : '325px';
+                  const isLand = tpl ? parseFloat(tpl.dimension_width || 54) >= parseFloat(tpl.dimension_height || 86) : false;
+                  const cardWidth = isLand ? '325px' : '204px';
+                  const cardHeight = isLand ? '204px' : '325px';
 
                   return (
                     <div
                       key={s.id}
-                      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 flex flex-col justify-between shadow-2xs gap-3 print:border-none print:shadow-none"
+                      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 flex flex-col justify-between shadow-2xs gap-2.5 print:border-none print:shadow-none"
                     >
+                      <div className="flex items-center justify-between text-[11px] pb-1 border-b border-slate-100 dark:border-slate-800 print:hidden">
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[140px]">
+                          {s.student_name || s.name}
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded truncate max-w-[150px]">
+                          {tpl?.name || 'Default Template'}
+                        </span>
+                      </div>
                       {/* Card Container for Export */}
                       <div className={`flex flex-wrap justify-center items-center gap-3 overflow-hidden bg-slate-50 dark:bg-slate-950 p-3 rounded ${cardSideView === 'both' ? 'sm:flex-row' : ''}`}>
                         {cardData ? (

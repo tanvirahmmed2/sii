@@ -68,7 +68,7 @@ export async function GET(request, context) {
                 COALESCE(wt.custom_css, st.css_content) AS css_content,
                 st.dimension_width, st.dimension_height, st.dimension_unit
          FROM website_student_tc_templates wt
-         LEFT JOIN developer_tc_templates st ON wt.system_template_id = st.id
+         LEFT JOIN system_student_tc_templates st ON wt.system_template_id = st.id
          WHERE wt.website_id = $1 AND wt.is_default = TRUE
          LIMIT 1`,
         [website.id]
@@ -81,7 +81,7 @@ export async function GET(request, context) {
         const sysTplRes = await queryDb(
           `SELECT id, name, html_content, css_content,
                   dimension_width, dimension_height, dimension_unit
-           FROM developer_tc_templates
+           FROM system_student_tc_templates
            WHERE is_active = TRUE
            ORDER BY is_system_default DESC, id ASC
            LIMIT 1`

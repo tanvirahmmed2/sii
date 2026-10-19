@@ -1,12 +1,98 @@
 'use client';
 
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import React, { createContext, useState, useEffect, useCallback } from "react";
 
 export const Context = createContext();
 
+const PLATFORM_RESERVED = new Set([
+  '',
+  'creator',
+  'developer',
+  'developer-auth',
+  'developers',
+  'api',
+  '_next',
+  'marketing',
+  'auth',
+  'admin',
+  'about',
+  'blogs',
+  'careers',
+  'contact',
+  'faqs',
+  'packages',
+  'policies',
+  'reviews',
+  'tutorials',
+  'updates',
+  'help',
+  'terms',
+  'privacy',
+  'login',
+  'register',
+]);
+
+const TENANT_DIRECT_PREFIXES = [
+  '/staff-panel',
+  '/student',
+  '/teacher',
+  '/officer',
+  '/student-verify',
+  '/officer-panel',
+  '/websites',
+  '/website',
+  '/webite',
+];
+
+export function isTenantScope(pathname = '') {
+  if (typeof window !== 'undefined') {
+    const rawHost = window.location.host.toLowerCase().split(':')[0];
+
+    // Subdomain of localhost (e.g. afit.localhost)
+    if (rawHost.endsWith('.localhost')) {
+      const sub = rawHost.replace('.localhost', '').trim();
+      if (sub && sub !== 'www') return true;
+    }
+
+    // Subdomain or custom domain when host is not raw localhost / 127.0.0.1
+    if (rawHost && rawHost !== 'localhost' && rawHost !== '127.0.0.1') {
+      const baseDomain = (process.env.NEXT_PUBLIC_BASE_DOMAIN || '').toLowerCase().trim();
+      if (baseDomain) {
+        if (rawHost !== baseDomain && rawHost !== `www.${baseDomain}`) {
+          return true;
+        }
+      } else {
+        const parts = rawHost.split('.');
+        if (parts.length > 2) return true;
+      }
+    }
+  }
+
+  // Path-based tenant check on localhost / base domain
+  const path = (pathname || '').toLowerCase();
+
+  for (const prefix of TENANT_DIRECT_PREFIXES) {
+    if (path === prefix || path.startsWith(`${prefix}/`)) {
+      return true;
+    }
+  }
+
+  // Preview path: /[domain]/...
+  const segments = path.split('/').filter(Boolean);
+  if (segments.length > 0) {
+    const firstSegment = segments[0];
+    if (!PLATFORM_RESERVED.has(firstSegment)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export const ContextProvider = ({ children }) => {
   const router = useRouter();
+  const pathname = usePathname();
 
   // Main SaaS marketing website sidebar (mobile nav toggle)
   const [sidebar, setSidebar] = useState(false);
@@ -67,6 +153,13 @@ export const ContextProvider = ({ children }) => {
   };
 
   const fetchCurrentUser = useCallback(async () => {
+    // If the visitor is on a tenant website or tenant panel, do not make marketing auth calls
+    if (isTenantScope(pathname)) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
     try {
       // Check developer/staff session
       const devRes = await fetch('/api/marketing/developer/me').catch(() => null);
@@ -84,8 +177,8 @@ export const ContextProvider = ({ children }) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'me' }),
-      });
-      if (creatorRes.ok) {
+      }).catch(() => null);
+      if (creatorRes && creatorRes.ok) {
         const creatorData = await creatorRes.json();
         if (creatorData.success && creatorData.creator) {
           setUser(creatorData.creator);
@@ -98,7 +191,7 @@ export const ContextProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pathname]);
 
   useEffect(() => {
     fetchCurrentUser();

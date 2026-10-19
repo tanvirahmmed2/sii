@@ -116,7 +116,7 @@ export async function GET(request, context) {
                   st.dimension_width, st.dimension_height, st.dimension_unit
            FROM website_classes c
            LEFT JOIN website_class_student_id_templates ct ON ct.class_id = c.id AND ct.website_id = c.website_id
-           LEFT JOIN developer_student_id_templates st ON st.id = ct.system_template_id
+           LEFT JOIN system_student_id_templates st ON st.id = ct.system_template_id
            WHERE c.website_id = $1
            ORDER BY c.numeric_value ASC, c.name ASC`,
           [website.id]
