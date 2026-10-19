@@ -112,8 +112,8 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
 
   // Color Theme Application directly from websites table (primary_color, secondary_color)
   const colorTheme = useMemo(() => {
-    const primaryShades = calculateColorShades(website?.primary_color, '#1e40af');
-    const secondaryShades = calculateColorShades(website?.secondary_color, '#0ea5e9');
+    const primaryShades = calculateColorShades(website?.primary_color, '#A2AB73');
+    const secondaryShades = calculateColorShades(website?.secondary_color, '#CC3A63');
     return {
       primary: primaryShades.base,
       primaryLight: primaryShades.light,

@@ -1,17 +1,18 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
-import { getStaffSession, isGeneralStaff } from 'src/lib/middleware/staff.js';
+import { getStaffSession } from 'src/lib/middleware/staff.js';
+import { ensureContactsTables, checkStaffContactsPermission } from 'src/lib/database/contactsDb.js';
 
-async function verifyContactsStaffAccess(request, context) {
+async function verifyContactsStaffAccess(request, context, action = 'view') {
   const website = await resolveWebsiteFromRequest(request, context);
   if (!website) {
-    return { error: 'Educational institution portal not found.', status: 404 };
+    return { error: 'Educational institution portal not found.', status: 404, allowed: false };
   }
 
   const staffSession = await getStaffSession(request);
   if (!staffSession) {
-    return { error: 'Unauthorized: Staff credentials required.', status: 401 };
+    return { error: 'Unauthorized: Staff credentials required.', status: 401, allowed: false };
   }
 
   const staffWebsiteId =
@@ -21,21 +22,67 @@ async function verifyContactsStaffAccess(request, context) {
     staffSession?.staff?.website_id;
 
   if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
-    return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
+    return { error: 'Forbidden: Cross-tenant access denied.', status: 403, allowed: false };
   }
 
-  return { website, staffSession, allowed: true };
+  await ensureContactsTables();
+
+  const canView = checkStaffContactsPermission(staffSession, 'view');
+  const canReply = checkStaffContactsPermission(staffSession, 'create') || checkStaffContactsPermission(staffSession, 'edit');
+  const canEdit = checkStaffContactsPermission(staffSession, 'edit');
+  const canDelete = checkStaffContactsPermission(staffSession, 'delete');
+
+  const permissions = {
+    canView,
+    canReply,
+    canEdit,
+    canDelete,
+  };
+
+  if (action === 'view' && !canView) {
+    return {
+      error: 'Forbidden: Insufficient privileges to view website contact inquiries.',
+      status: 403,
+      allowed: false,
+    };
+  }
+
+  if (action === 'create' && !canReply) {
+    return {
+      error: 'Forbidden: You do not have permission to create or log contact inquiries.',
+      status: 403,
+      allowed: false,
+    };
+  }
+
+  if (action === 'edit' && !canEdit) {
+    return {
+      error: 'Forbidden: You do not have permission to update contact status or attributes.',
+      status: 403,
+      allowed: false,
+    };
+  }
+
+  if (action === 'delete' && !canDelete) {
+    return {
+      error: 'Forbidden: You do not have permission to delete contact inquiries.',
+      status: 403,
+      allowed: false,
+    };
+  }
+
+  return { website, staffSession, allowed: true, permissions };
 }
 
-// GET: List contacts with filters and stats
+// GET: List contacts with filters, stats, and staff permissions
 export async function GET(request, context) {
   try {
-    const auth = await verifyContactsStaffAccess(request, context);
+    const auth = await verifyContactsStaffAccess(request, context, 'view');
     if (!auth.allowed) {
       return NextResponse.json({ success: false, message: auth.error }, { status: auth.status });
     }
 
-    const { website } = auth;
+    const { website, permissions } = auth;
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || 'all';
     const starredOnly = searchParams.get('starred') === 'true';
@@ -106,6 +153,7 @@ export async function GET(request, context) {
       success: true,
       contacts: result.rows,
       stats: statsRes.rows[0] || {},
+      permissions,
     });
   } catch (error) {
     console.error('Error fetching contacts:', error);
@@ -116,7 +164,7 @@ export async function GET(request, context) {
 // POST: Create a contact inquiry (manual entry or internal logging)
 export async function POST(request, context) {
   try {
-    const auth = await verifyContactsStaffAccess(request, context);
+    const auth = await verifyContactsStaffAccess(request, context, 'create');
     if (!auth.allowed) {
       return NextResponse.json({ success: false, message: auth.error }, { status: auth.status });
     }
@@ -155,7 +203,7 @@ export async function POST(request, context) {
 // PATCH: Update contact status or toggle star
 export async function PATCH(request, context) {
   try {
-    const auth = await verifyContactsStaffAccess(request, context);
+    const auth = await verifyContactsStaffAccess(request, context, 'edit');
     if (!auth.allowed) {
       return NextResponse.json({ success: false, message: auth.error }, { status: auth.status });
     }
@@ -216,7 +264,7 @@ export async function PATCH(request, context) {
 // DELETE: Delete contact inquiry
 export async function DELETE(request, context) {
   try {
-    const auth = await verifyContactsStaffAccess(request, context);
+    const auth = await verifyContactsStaffAccess(request, context, 'delete');
     if (!auth.allowed) {
       return NextResponse.json({ success: false, message: auth.error }, { status: auth.status });
     }

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useContext, useMemo } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { FiCalendar, FiArrowRight, FiStar, FiCheckCircle } from 'react-icons/fi';
 import EventCard from 'src/component/website/cards/EventCard';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
@@ -57,73 +58,84 @@ const Events = () => {
   }, [events, activeTab]);
 
   return (
-    <section className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 py-14 px-4 sm:px-6 lg:px-8 transition-colors">
-      <div className="w-full max-w-7xl mx-auto space-y-8">
+    <section className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 py-16 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
+      <div className="w-full max-w-6xl mx-auto space-y-8">
         {/* Header Block */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200/90 dark:border-slate-800 pb-5">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200/90 dark:border-slate-800 pb-5"
+        >
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 text-[11px] font-semibold uppercase tracking-wider">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-semibold uppercase tracking-wider">
               <FiCalendar className="text-xs" />
               <span>Campus Life &amp; Events</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white tracking-tight">
               Upcoming Campus Events
             </h2>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-2xl font-normal">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-2xl font-normal">
               Assemblies, cultural symposiums, sports leagues, and seminars. Students can explore details and mark their interest.
             </p>
           </div>
 
           <div className="flex items-center gap-3 self-start md:self-end">
-            <Link
-              href={tenantUrl('/events')}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-emerald-500/50 transition-all shadow-xs"
-            >
-              <span>Explore All Events</span>
-              {events.length > 0 && <span className="opacity-70 font-mono">({events.length})</span>}
-              <FiArrowRight className="text-xs" />
-            </Link>
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
+              <Link
+                href={tenantUrl('/events')}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:border-primary hover:text-primary transition-all shadow-xs"
+              >
+                <span>Explore All Events</span>
+                {events.length > 0 && <span className="opacity-70 font-mono">({events.length})</span>}
+                <FiArrowRight className="text-xs" />
+              </Link>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Filter Pills */}
         {events.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
-            <button
+            <motion.button
+              whileTap={{ scale: 0.95 }}
               type="button"
               onClick={() => setActiveTab('upcoming')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'upcoming'
-                  ? 'bg-slate-900 text-white dark:bg-emerald-600 dark:text-white shadow-xs'
+                  ? 'bg-primary text-white shadow-xs'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-700'
               }`}
             >
               Upcoming
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
               type="button"
               onClick={() => setActiveTab('popular')}
-              className={`flex items-center gap-1 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              className={`flex items-center gap-1 px-4 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'popular'
-                  ? 'bg-slate-900 text-white dark:bg-emerald-600 dark:text-white shadow-xs'
+                  ? 'bg-primary text-white shadow-xs'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-700'
               }`}
             >
-              <FiStar className="text-xs text-amber-400" />
+              <FiStar className="text-xs text-secondary" />
               <span>Most Interested</span>
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
               type="button"
               onClick={() => setActiveTab('rsvp')}
-              className={`flex items-center gap-1 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              className={`flex items-center gap-1 px-4 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'rsvp'
-                  ? 'bg-slate-900 text-white dark:bg-emerald-600 dark:text-white shadow-xs'
+                  ? 'bg-primary text-white shadow-xs'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-700'
               }`}
             >
-              <FiCheckCircle className="text-xs text-emerald-500" />
+              <FiCheckCircle className="text-xs text-primary" />
               <span>Open for RSVP</span>
-            </button>
+            </motion.button>
           </div>
         )}
 
@@ -158,12 +170,19 @@ const Events = () => {
         ) : (
           /* Events Grid */
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {filteredEvents.map((event) => (
-              <EventCard
+            {filteredEvents.map((event, index) => (
+              <motion.div
                 key={event.id}
-                event={event}
-                onInterestChange={handleInterestChange}
-              />
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.1 }}
+                transition={{ duration: 0.4, delay: Math.min(index * 0.1, 0.4) }}
+              >
+                <EventCard
+                  event={event}
+                  onInterestChange={handleInterestChange}
+                />
+              </motion.div>
             ))}
           </div>
         )}

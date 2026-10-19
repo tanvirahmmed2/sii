@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useContext } from 'react';
+import { motion } from 'framer-motion';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import ClubNewsCard from 'src/component/website/cards/ClubNewsCard';
 
@@ -59,33 +60,43 @@ const ClubNewsPage = () => {
   });
 
   return (
-    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
+      <div className="max-w-6xl mx-auto space-y-8">
         
         {/* Header */}
-        <div className="border-b border-slate-200 dark:border-slate-800 pb-5">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-medium tracking-wide uppercase px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="border-b border-slate-200/80 dark:border-slate-800 pb-6"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] uppercase font-bold text-primary tracking-widest block">
               Societies Desk
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
-            Club Announcements & Dispatches
+          <h1 className="text-3xl sm:text-4xl font-serif font-normal text-slate-900 dark:text-slate-100 tracking-tight">
+            Club Announcements &amp; Dispatches
           </h1>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-2 max-w-2xl leading-relaxed">
             Read project updates, competitions, meetings, and activity reports published by student society moderators.
           </p>
-        </div>
+        </motion.div>
 
         {/* Filter bar */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4"
+        >
           <div className="w-full sm:w-72">
             <input
               type="text"
               placeholder="Search club articles..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden"
+              className="input-style w-full py-2 text-xs"
             />
           </div>
 
@@ -93,7 +104,7 @@ const ClubNewsPage = () => {
             <select
               value={selectedClubId}
               onChange={(e) => setSelectedClubId(e.target.value)}
-              className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-hidden cursor-pointer"
+              className="input-style w-full py-2 text-xs cursor-pointer"
             >
               <option value="all">All Clubs ({clubNewsList.length})</option>
               {clubs.map((club) => {
@@ -109,25 +120,25 @@ const ClubNewsPage = () => {
               })}
             </select>
           </div>
-        </div>
+        </motion.div>
 
         <div>
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {[1, 2, 3, 4].map((n) => (
                 <div
                   key={n}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-3 animate-pulse"
+                  className="bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-3 animate-pulse"
                 >
-                  <div className="h-36 bg-slate-200 dark:bg-slate-800 rounded w-full" />
-                  <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-2/3" />
-                  <div className="h-3 bg-slate-100 dark:bg-slate-800/60 rounded w-full" />
+                  <div className="h-40 bg-slate-200 dark:bg-slate-800 rounded-xl w-full" />
+                  <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded-lg w-2/3" />
+                  <div className="h-3 bg-slate-100 dark:bg-slate-800/60 rounded-lg w-full" />
                 </div>
               ))}
             </div>
           ) : filteredNews.length === 0 ? (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 text-center max-w-md mx-auto space-y-1">
-              <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">No Club Dispatches Found</h3>
+            <div className="bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-12 text-center max-w-md mx-auto space-y-2">
+              <h3 className="font-serif text-base font-medium text-slate-800 dark:text-slate-200">No Club Dispatches Found</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {searchQuery || selectedClubId !== 'all'
                   ? 'No articles match the specified filters.'
@@ -135,7 +146,7 @@ const ClubNewsPage = () => {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {filteredNews.map((newsItem) => (
                 <ClubNewsCard key={newsItem.id} clubNews={newsItem} />
               ))}

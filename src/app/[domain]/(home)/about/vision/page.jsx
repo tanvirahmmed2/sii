@@ -59,33 +59,33 @@ const VisionPage = () => {
   const visionText = website?.vision || website?.vission || '';
 
   return (
-    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-4xl mx-auto space-y-6">
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-4xl mx-auto space-y-8">
         
         {/* Header */}
-        <div className="border-b border-slate-200 dark:border-slate-800 pb-5">
-          <div className="flex items-center gap-2 mb-1">
+        <div className="border-b border-slate-200/80 dark:border-slate-800 pb-6">
+          <div className="flex items-center gap-2 mb-2">
             <Link
               href={tenantUrl('/about')}
-              className="text-xs text-primary font-medium hover:underline"
+              className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1"
             >
               ← Back to About
             </Link>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+          <h1 className="font-serif text-3xl sm:text-4xl font-normal text-slate-900 dark:text-white tracking-tight">
             Institutional Vision & Core Values
           </h1>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 max-w-2xl leading-relaxed">
             Strategic direction and non-negotiable principles that shape the operations of {schoolName}.
           </p>
         </div>
 
         {/* Vision Statement */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 sm:p-6 shadow-xs space-y-2">
-          <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xs space-y-3 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300">
+          <span className="text-xs font-semibold text-primary uppercase tracking-wider block">
             Institutional Vision
           </span>
-          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+          <h2 className="font-serif text-base sm:text-lg font-semibold text-slate-900 dark:text-white">
             Aspiration for Long-Term Educational Excellence
           </h2>
           {visionText ? (
@@ -103,28 +103,28 @@ const VisionPage = () => {
         {/* Dynamic Visions from Database */}
         {!loading && visions.length > 0 && (
           <div className="space-y-4">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <FiCompass className="text-primary w-4 h-4" />
+            <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
+              <FiCompass className="text-primary w-5 h-5" />
               <span>Institutional Pillars of Vision</span>
             </h2>
 
-            <div className="grid grid-cols-1 gap-3.5">
+            <div className="grid grid-cols-1 gap-4">
               {visions.map((v, idx) => (
                 <div
                   key={v.id || idx}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-2"
+                  className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-3 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300"
                 >
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    <h3 className="font-serif text-base font-bold text-slate-900 dark:text-white">
                       {v.title}
                     </h3>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                    <span className="text-xs font-mono px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
                       Vision #{v.order_no ?? idx + 1}
                     </span>
                   </div>
                   {v.description && (
                     <div
-                      className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed prose dark:prose-invert max-w-none"
+                      className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed prose dark:prose-invert max-w-none"
                       dangerouslySetInnerHTML={{ __html: v.description }}
                     />
                   )}
@@ -135,23 +135,23 @@ const VisionPage = () => {
         )}
 
         {/* Core Values Grid */}
-        <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+        <div className="space-y-4">
+          <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 dark:text-white tracking-tight">
             Four Foundational Values
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {values.map((val, idx) => (
               <div 
                 key={idx} 
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded shadow-xs space-y-1.5"
+                className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 rounded-2xl shadow-xs space-y-2 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300"
               >
-                <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">
+                <span className="text-xs font-semibold text-primary uppercase tracking-wider block">
                   Value {idx + 1}
                 </span>
-                <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                <h3 className="font-serif text-base font-semibold text-slate-900 dark:text-white">
                   {val.title}
                 </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                   {val.desc}
                 </p>
               </div>
@@ -160,11 +160,11 @@ const VisionPage = () => {
         </div>
 
         {/* Assurance Note */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-xs space-y-1.5">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xs space-y-2">
+          <h3 className="font-serif text-base sm:text-lg font-semibold text-slate-900 dark:text-white">
             Commitment to Continuous Improvement
           </h3>
-          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
             The governing council and faculty annually review school performance data, student outcomes, and infrastructure quality to ensure adherence to our vision and national education guidelines.
           </p>
         </div>

@@ -118,7 +118,12 @@ async function sendViaMainBrevoMailer({ to, toName, subject, html, text, fallbac
     throw new Error(data.message || 'Failed to dispatch email via main Brevo SMTP API.');
   }
 
-  return data;
+  return {
+    ...data,
+    mailerType: 'main',
+    senderEmail: BREVO_SENDER_EMAIL || 'noreply@campus.edu',
+    senderName: fallbackSenderName || BREVO_SENDER_NAME || 'Campus Administration',
+  };
 }
 
 /**
@@ -132,7 +137,7 @@ async function sendViaMainBrevoMailer({ to, toName, subject, html, text, fallbac
  * @param {string} options.subject - Email subject
  * @param {string} options.html - HTML email body
  * @param {string} [options.text] - Plain text email body (optional)
- * @returns {Promise<Object>} Brevo API response { messageId }
+ * @returns {Promise<Object>} Brevo API response { messageId, mailerType, senderEmail }
  */
 export async function sendWebsiteEmail(websiteId, { to, toName, subject, html, text }) {
   const config = await getWebsiteBrevoConfig(websiteId);
@@ -183,7 +188,12 @@ export async function sendWebsiteEmail(websiteId, { to, toName, subject, html, t
         });
       }
 
-      return data;
+      return {
+        ...data,
+        mailerType: 'website',
+        senderEmail: config.senderEmail,
+        senderName: config.senderName,
+      };
     } catch (error) {
       console.warn(`[WebsiteBrevo] Exception in custom mailer for website ${websiteId}: ${error.message}. Falling back to main platform mailer...`);
       return await sendViaMainBrevoMailer({

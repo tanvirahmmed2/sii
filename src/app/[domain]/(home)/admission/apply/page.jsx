@@ -15,6 +15,7 @@ import {
   FiAlertCircle,
   FiExternalLink
 } from 'react-icons/fi';
+import { motion } from 'framer-motion';
 
 const ApplyFormContent = () => {
   const searchParams = useSearchParams();
@@ -162,135 +163,149 @@ const ApplyFormContent = () => {
     const pay = submissionSuccess.payment;
 
     return (
-      <div className="w-full max-w-2xl mx-auto bg-white dark:bg-slate-900 rounded-xl p-6 sm:p-8 text-center border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
-        <div>
-          <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
-            <FiCheckCircle />
-          </div>
-          <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1 rounded uppercase tracking-wider">
-            Application Transmitted
-          </span>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 mt-2 tracking-tight">
-            Application Received Successfully
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Official candidate record generated. An electronic confirmation has been sent to <strong>{app.email}</strong>.
-          </p>
-        </div>
-
-        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700 text-left space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
-            <div>
-              <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
-                Applicant Tracking Number
-              </span>
-              <span className="text-lg font-bold text-sky-600 dark:text-sky-400 font-mono block">
-                {app.application_no}
-              </span>
+      <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4 }}
+          className="w-full max-w-2xl mx-auto bg-white dark:bg-slate-900 rounded-2xl p-8 sm:p-10 text-center border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-6"
+        >
+          <div>
+            <div className="w-14 h-14 bg-primary/10 border border-primary/20 text-primary rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+              <FiCheckCircle />
             </div>
-            <button
-              onClick={copyApplicationNo}
-              className="px-3 py-1 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded border border-slate-200 dark:border-slate-700 text-xs font-semibold flex items-center gap-1 cursor-pointer"
-            >
-              <FiCopy /> Copy
-            </button>
-          </div>
-
-          <div className="text-xs text-slate-700 dark:text-slate-300 space-y-1">
-            <p><strong>Candidate Name:</strong> {app.applicant_name}</p>
-            <p><strong>Admission Fee:</strong> {parseFloat(app.fee_amount || 0).toFixed(2)} {app.currency || 'BDT'}</p>
-            <p>
-              <strong>Payment Status:</strong>{' '}
-              <span className={`font-bold ${app.payment_status === 'paid' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                {app.payment_status?.toUpperCase() || 'UNPAID'}
-              </span>
+            <span className="text-xs uppercase tracking-[0.25em] font-semibold text-primary bg-primary/10 border border-primary/20 px-3.5 py-1 rounded-full inline-block">
+              Application Transmitted
+            </span>
+            <h2 className="font-serif text-2xl sm:text-3xl font-normal text-slate-900 dark:text-white mt-3 tracking-tight">
+              Application Received Successfully
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+              Official candidate record generated. An electronic confirmation has been sent to <strong>{app.email}</strong>.
             </p>
           </div>
-        </div>
 
-        {/* Payment Action or Upload Redirection */}
-        {app.payment_status !== 'paid' ? (
-          <div className="p-4 bg-sky-50 dark:bg-sky-950/30 rounded-lg border border-sky-200 dark:border-sky-800 text-left space-y-3">
-            <div className="flex items-center gap-2 text-sky-800 dark:text-sky-300 font-semibold text-xs">
-              <FiCreditCard className="w-4 h-4" /> Admission Fee Payment Required
+          <div className="bg-slate-50 dark:bg-slate-850 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 text-left space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
+              <div>
+                <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                  Applicant Tracking Number
+                </span>
+                <span className="text-xl font-bold text-primary font-mono block mt-0.5">
+                  {app.application_no}
+                </span>
+              </div>
+              <button
+                onClick={copyApplicationNo}
+                className="px-3.5 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+              >
+                <FiCopy className="w-3.5 h-3.5" /> Copy
+              </button>
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-              To complete your admission application, please proceed to pay the application fee of <strong>৳{app.fee_amount || 500} {app.currency || 'BDT'}</strong> via our secure payment gateway.
-            </p>
+
+            <div className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 space-y-1.5">
+              <p><strong>Candidate Name:</strong> {app.applicant_name}</p>
+              <p><strong>Admission Fee:</strong> ৳{parseFloat(app.fee_amount || 0).toFixed(2)} {app.currency || 'BDT'}</p>
+              <p>
+                <strong>Payment Status:</strong>{' '}
+                <span className={`font-semibold ${app.payment_status === 'paid' ? 'text-primary' : 'text-secondary'}`}>
+                  {app.payment_status?.toUpperCase() || 'UNPAID'}
+                </span>
+              </p>
+            </div>
+          </div>
+
+          {/* Payment Action or Upload Redirection */}
+          {app.payment_status !== 'paid' ? (
+            <div className="p-6 bg-primary/5 rounded-2xl border border-primary/20 text-left space-y-3.5">
+              <div className="flex items-center gap-2 text-slate-900 dark:text-white font-semibold text-sm">
+                <FiCreditCard className="w-4 h-4 text-primary" /> Admission Fee Payment Required
+              </div>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                To complete your admission application, please proceed to pay the application fee of <strong>৳{app.fee_amount || 500} {app.currency || 'BDT'}</strong> via our secure payment gateway.
+              </p>
+              <Link
+                href={pay?.payment_url || `/pay/admission-fees/${app.id}`}
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary-dark text-white font-medium text-xs sm:text-sm rounded-xl shadow-xs hover:shadow-md hover:shadow-primary/20 hover:-translate-y-0.5 transition-all"
+              >
+                Pay Now via Payment Gateway <FiArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          ) : (
+            <div className="p-6 bg-primary/10 rounded-2xl border border-primary/30 text-left space-y-3.5">
+              <div className="flex items-center gap-2 text-slate-900 dark:text-white font-semibold text-sm">
+                <FiCheckCircle className="w-4 h-4 text-primary" /> Payment Cleared! Next: Candidate Media Upload
+              </div>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                Your application fee has been settled. Please upload your candidate portrait photo (300x300 pixels) and official signature (150x50 pixels) to finalize your admission application.
+              </p>
+              <Link
+                href={`/admission/upload/${app.id}`}
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary-dark text-white font-medium text-xs sm:text-sm rounded-xl shadow-xs hover:shadow-md hover:shadow-primary/20 hover:-translate-y-0.5 transition-all"
+              >
+                Upload Photo & Signature <FiArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          )}
+
+          <div className="pt-2">
             <Link
-              href={pay?.payment_url || `/pay/admission-fees/${app.id}`}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg shadow-sm transition"
+              href="/admission"
+              className="text-xs text-primary hover:underline font-medium inline-flex items-center gap-1"
             >
-              Pay Now via Payment Gateway <FiArrowRight />
+              ← Return to Admission Portal
             </Link>
           </div>
-        ) : (
-          <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg border border-emerald-200 dark:border-emerald-800 text-left space-y-3">
-            <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-semibold text-xs">
-              <FiCheckCircle className="w-4 h-4" /> Payment Cleared! Next: Candidate Media Upload
-            </div>
-            <p className="text-xs text-slate-600 dark:text-slate-300">
-              Your application fee has been settled. Please upload your candidate portrait photo (300x300 pixels) and official signature (150x50 pixels) to finalize your admission application.
-            </p>
-            <Link
-              href={`/admission/upload/${app.id}`}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg shadow-sm transition"
-            >
-              Upload Photo & Signature <FiArrowRight />
-            </Link>
-          </div>
-        )}
-
-        <div className="pt-2">
-          <Link
-            href="/admission"
-            className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 underline"
-          >
-            ← Return to Admission Portal
-          </Link>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6">
-      {selectedCircular && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 sm:p-6 shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
-            <div className="space-y-1">
-              <span className="text-[10px] font-semibold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40 px-2.5 py-0.5 rounded uppercase tracking-wider">
-                Intake Session: {selectedCircular.session_name || 'Academic'}
-              </span>
-              <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
-                {selectedCircular.title}
-              </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Class: <strong>{selectedCircular.class_name}</strong> | Seats: <strong>{selectedCircular.total_seats || 'Open'}</strong>
-              </p>
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <div className="w-full max-w-4xl mx-auto space-y-8">
+        {selectedCircular && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xs space-y-6"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-200/80 dark:border-slate-800 pb-5">
+              <div className="space-y-1.5">
+                <span className="text-xs uppercase tracking-[0.25em] font-semibold text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-full inline-block">
+                  Intake Session: {selectedCircular.session_name || 'Academic'}
+                </span>
+                <h1 className="font-serif text-2xl sm:text-3xl font-normal text-slate-900 dark:text-white">
+                  {selectedCircular.title}
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                  Class: <strong>{selectedCircular.class_name}</strong> | Seats: <strong>{selectedCircular.total_seats || 'Open'}</strong>
+                </p>
+              </div>
+
+              <div className="text-left sm:text-right">
+                <span className="text-[10px] uppercase font-semibold text-slate-400 block">Admission Fee</span>
+                <span className="text-2xl font-bold font-mono text-slate-900 dark:text-white">
+                  ৳{parseFloat(selectedCircular.fee_amount || selectedCircular.fees || 0).toFixed(2)}
+                </span>{' '}
+                <span className="text-xs font-semibold text-primary">
+                  {selectedCircular.fee_currency || selectedCircular.currency || 'BDT'}
+                </span>
+              </div>
             </div>
 
-            <div className="text-right sm:text-right">
-              <span className="text-[10px] uppercase font-semibold text-slate-400 block">Admission Fee</span>
-              <span className="text-xl font-bold font-mono text-slate-900 dark:text-white">
-                {parseFloat(selectedCircular.fee_amount || selectedCircular.fees || 0).toFixed(2)}
-              </span>{' '}
-              <span className="text-xs font-bold text-sky-600 dark:text-sky-400">
-                {selectedCircular.fee_currency || selectedCircular.currency || 'BDT'}
-              </span>
-            </div>
-          </div>
-
-          <AdmissionApplyForm
-            circulars={circulars}
-            selectedCircular={selectedCircular}
-            onCircularChange={handleCircularChange}
-            onSubmit={handleSubmit}
-            submitting={submitting}
-            admissionIdParam={admissionIdParam}
-          />
-        </div>
-      )}
+            <AdmissionApplyForm
+              circulars={circulars}
+              selectedCircular={selectedCircular}
+              onCircularChange={handleCircularChange}
+              onSubmit={handleSubmit}
+              submitting={submitting}
+              admissionIdParam={admissionIdParam}
+            />
+          </motion.div>
+        )}
+      </div>
     </div>
   );
 };

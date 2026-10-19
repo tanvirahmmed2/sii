@@ -52,7 +52,7 @@ const Navbar = () => {
 
 
   // Primary brand background color
-  const navBg = primaryColor || website?.primary_color || '#1e3a8a';
+  const navBg = primaryColor || website?.primary_color || '#A2AB73';
 
   // Close dropdowns on outside click
   useEffect(() => {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import Link from 'next/link';
+import { BiMenu } from 'react-icons/bi';
 
 const Navbar = ({ staffUser = null }) => {
   const router = useRouter();
@@ -63,14 +64,14 @@ const Navbar = ({ staffUser = null }) => {
           className="px-2 py-1 text-xs font-medium rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 md:hidden transition-colors cursor-pointer"
           aria-label="Toggle Navigation"
         >
-          Menu
+          <BiMenu />
         </button>
 
         {/* Brand / Title */}
         <div className="flex items-center gap-2">
           <Link href="/staff-panel" className="flex items-center gap-2">
             <span className="font-semibold text-slate-900 dark:text-white text-xs sm:text-sm">
-              {website?.name ? `${website.name} — Staff Portal` : 'Campus Staff Portal'}
+              {website?.name ? `${website.name} — Portal` : 'Portal'}
             </span>
           </Link>
         </div>

@@ -63,62 +63,62 @@ const MissionPage = () => {
   const visionText = website?.vision || website?.vission || '';
 
   return (
-    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-4xl mx-auto space-y-6">
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-4xl mx-auto space-y-8">
         
         {/* Header */}
-        <div className="border-b border-slate-200 dark:border-slate-800 pb-5">
-          <div className="flex items-center gap-2 mb-1">
+        <div className="border-b border-slate-200/80 dark:border-slate-800 pb-6">
+          <div className="flex items-center gap-2 mb-2">
             <Link
               href={tenantUrl('/about')}
-              className="text-xs text-primary font-medium hover:underline"
+              className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1"
             >
               ← Back to About
             </Link>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+          <h1 className="font-serif text-3xl sm:text-4xl font-normal text-slate-900 dark:text-white tracking-tight">
             Institutional Mission & Objectives
           </h1>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 max-w-2xl leading-relaxed">
             Defining the educational principles, community goals, and pedagogical vision of {schoolName}.
           </p>
         </div>
 
         {/* Dynamic Mission & Vision from Website Context */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-xs space-y-2">
-            <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xs space-y-3 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300">
+            <span className="text-xs font-semibold text-primary uppercase tracking-wider block">
               Official Mission
             </span>
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            <h2 className="font-serif text-base sm:text-lg font-semibold text-slate-900 dark:text-white">
               Our Core Educational Mission
             </h2>
             {missionText ? (
               <div 
-                className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed prose dark:prose-invert max-w-none"
+                className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed prose dark:prose-invert max-w-none"
                 dangerouslySetInnerHTML={{ __html: missionText }}
               />
             ) : (
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                 To educate and equip scholars through comprehensive intellectual inquiry, ethical leadership training, and practical skill development.
               </p>
             )}
           </div>
 
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-xs space-y-2">
-            <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xs space-y-3 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300">
+            <span className="text-xs font-semibold text-primary uppercase tracking-wider block">
               Official Vision
             </span>
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            <h2 className="font-serif text-base sm:text-lg font-semibold text-slate-900 dark:text-white">
               Future Educational Vision
             </h2>
             {visionText ? (
               <div 
-                className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed prose dark:prose-invert max-w-none"
+                className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed prose dark:prose-invert max-w-none"
                 dangerouslySetInnerHTML={{ __html: visionText }}
               />
             ) : (
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                 To stand as an exemplary center of academic achievement, producing self-reliant graduates who positively transform society.
               </p>
             )}
@@ -128,28 +128,28 @@ const MissionPage = () => {
         {/* Curated Institutional Missions from Database */}
         {!loading && missions.length > 0 && (
           <div className="space-y-4">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <FiCheckCircle className="text-primary w-4 h-4" />
+            <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
+              <FiCheckCircle className="text-primary w-5 h-5" />
               <span>Core Institutional Missions & Commitments</span>
             </h2>
 
-            <div className="grid grid-cols-1 gap-3.5">
+            <div className="grid grid-cols-1 gap-4">
               {missions.map((m, idx) => (
                 <div
                   key={m.id || idx}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-2"
+                  className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-3 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300"
                 >
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    <h3 className="font-serif text-base font-bold text-slate-900 dark:text-white">
                       {m.title}
                     </h3>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                    <span className="text-xs font-mono px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
                       Mission #{m.order_no ?? idx + 1}
                     </span>
                   </div>
                   {m.description && (
                     <div
-                      className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed prose dark:prose-invert max-w-none"
+                      className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed prose dark:prose-invert max-w-none"
                       dangerouslySetInnerHTML={{ __html: m.description }}
                     />
                   )}
@@ -160,23 +160,23 @@ const MissionPage = () => {
         )}
 
         {/* Strategic Pillars */}
-        <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+        <div className="space-y-4">
+          <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 dark:text-white tracking-tight">
             Implementation Framework
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {strategies.map((strat, idx) => (
               <div
                 key={idx}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded shadow-xs space-y-1.5"
+                className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 rounded-2xl shadow-xs space-y-2 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300"
               >
-                <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase">
+                <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
                   Pillar {idx + 1}
                 </span>
-                <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                <h3 className="font-serif text-base font-semibold text-slate-900 dark:text-white">
                   {strat.title}
                 </h3>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                   {strat.desc}
                 </p>
               </div>
@@ -185,17 +185,17 @@ const MissionPage = () => {
         </div>
 
         {/* Goals */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-xs space-y-3">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xs space-y-4">
+          <h2 className="font-serif text-base sm:text-lg font-semibold text-slate-900 dark:text-white">
             Institutional Growth Targets
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {goals.map((g, idx) => (
-              <div key={idx} className="p-3 rounded bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-0.5">
-                <span className="text-xs font-semibold text-primary block">
+              <div key={idx} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 space-y-1">
+                <span className="text-xs sm:text-sm font-semibold text-primary block">
                   {g.target}
                 </span>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                   {g.detail}
                 </p>
               </div>

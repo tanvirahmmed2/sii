@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useContext } from 'react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 export default function FaqsPage() {
@@ -77,108 +78,142 @@ export default function FaqsPage() {
   });
 
   return (
-    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
+      <div className="max-w-4xl mx-auto space-y-8">
         
         {/* Header */}
-        <div className="border-b border-slate-200 dark:border-slate-800 pb-5">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-medium tracking-wide uppercase px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="border-b border-slate-200/80 dark:border-slate-800 pb-6"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] uppercase font-bold text-primary tracking-widest block">
               Information Desk
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-serif font-normal text-slate-900 dark:text-slate-100 tracking-tight">
             Frequently Asked Questions
           </h1>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-2 max-w-2xl leading-relaxed">
             Common questions regarding admissions, fee schedules, examination transcripts, and campus life at {website?.name || 'our institution'}.
           </p>
-        </div>
+        </motion.div>
 
         {/* Search */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-xs">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search frequently asked questions..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-hidden"
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
-              >
-                Clear
-              </button>
-            )}
-          </div>
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search frequently asked questions..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="input-style w-full text-xs py-3 px-4"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 hover:text-primary transition-colors"
+            >
+              Clear
+            </button>
+          )}
         </div>
 
         {/* Accordion */}
         {loading ? (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 text-center flex items-center justify-center">
+          <div className="bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-12 text-center flex items-center justify-center">
             <div className="loader loader-md" />
           </div>
         ) : filteredFaqs.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-8 text-center space-y-2">
-            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">No Matching Questions Found</h3>
+          <div className="bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-8 text-center space-y-2">
+            <h3 className="font-serif text-base font-medium text-slate-800 dark:text-slate-200">No Matching Questions Found</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               No answers matched query &ldquo;{search}&rdquo;. You may submit an inquiry directly through our contact desk.
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-3.5">
             {filteredFaqs.map((faq, index) => {
               const isOpen = openIndex === index;
               return (
-                <div
+                <motion.div
                   key={faq.id || index}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-xs overflow-hidden"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.3) }}
+                  className={`bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border rounded-2xl shadow-xs transition-colors duration-200 overflow-hidden ${
+                    isOpen
+                      ? 'border-primary/40 shadow-md shadow-primary/5'
+                      : 'border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                  }`}
                 >
                   <button
                     type="button"
                     onClick={() => toggleAccordion(index)}
-                    className="w-full px-4 py-3.5 text-left flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors"
+                    className="w-full px-5 py-4 text-left flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors"
                   >
                     <span className="text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100 leading-snug">
                       {faq.question}
                     </span>
-                    <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">
-                      {isOpen ? '▴' : '▾'}
+                    <span
+                      className={`text-xs w-6 h-6 rounded-full flex items-center justify-center transition-transform shrink-0 ${
+                        isOpen
+                          ? 'bg-primary/10 text-primary rotate-180'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                      }`}
+                    >
+                      ▾
                     </span>
                   </button>
 
-                  {isOpen && (
-                    <div className="px-4 pb-4 pt-1 text-xs text-slate-600 dark:text-slate-400 leading-relaxed border-t border-slate-100 dark:border-slate-800 whitespace-pre-line">
-                      {faq.answer}
-                    </div>
-                  )}
-                </div>
+                  <AnimatePresence>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-5 pb-5 pt-1 text-xs text-slate-600 dark:text-slate-400 leading-relaxed border-t border-slate-100 dark:border-slate-800/80 whitespace-pre-line">
+                          {faq.answer}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
               );
             })}
           </div>
         )}
 
         {/* Contact fallback */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.4 }}
+          className="bg-linear-to-br from-white via-slate-50 to-primary/5 dark:from-slate-900 dark:via-slate-900 dark:to-primary/10 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs"
+        >
           <div>
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            <h3 className="font-serif text-base sm:text-lg font-medium text-slate-900 dark:text-slate-100">
               Have another academic or administrative query?
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Contact our office secretariat for custom inquiries.
             </p>
           </div>
-          <Link
-            href={tenantUrl('/contact')}
-            className="px-3.5 py-1.5 bg-primary text-white rounded text-xs font-medium hover:bg-primary-dark transition-colors shrink-0"
-          >
-            Submit Inquiry →
-          </Link>
-        </div>
+          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
+            <Link
+              href={tenantUrl('/contact')}
+              className="inline-block px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl text-xs font-semibold shadow-xs hover:shadow-primary/20 transition-all shrink-0"
+            >
+              Submit Inquiry &rarr;
+            </Link>
+          </motion.div>
+        </motion.div>
 
       </div>
     </div>

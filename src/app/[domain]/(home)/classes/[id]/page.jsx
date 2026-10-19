@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useContext } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import TeacherCard from 'src/component/website/cards/TeacherCard';
 import SubjectCard from 'src/component/website/cards/SubjectCard';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
@@ -91,65 +92,75 @@ const ClassDetailsPage = () => {
   }, [id, getApiEndpoint]);
 
   return (
-    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-6xl mx-auto space-y-6">
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <div className="w-full max-w-6xl mx-auto space-y-8">
 
         {/* Top bar */}
-        <div className="flex items-center justify-between">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-4"
+        >
           <button
             onClick={() => router.push(tenantUrl('/classes'))}
-            className="text-xs font-medium text-primary hover:underline cursor-pointer"
+            className="text-xs font-semibold text-primary hover:underline cursor-pointer inline-flex items-center gap-1"
           >
             ← Back to All Classes
           </button>
-          <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+          <span className="text-xs font-semibold uppercase tracking-wider text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-full">
             Class Curriculum
           </span>
-        </div>
+        </motion.div>
 
         {loading ? (
-          <div className="space-y-4">
-            <div className="w-full h-32 bg-slate-200 dark:bg-slate-800 rounded animate-pulse"></div>
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 space-y-2">
-              <div className="w-48 h-5 bg-slate-200 dark:bg-slate-800 rounded"></div>
-              <div className="w-full h-20 bg-slate-100 dark:bg-slate-800/60 rounded"></div>
+          <div className="space-y-6">
+            <div className="w-full h-36 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse"></div>
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-8 space-y-3 shadow-xs">
+              <div className="w-48 h-6 bg-slate-200 dark:bg-slate-800 rounded-lg"></div>
+              <div className="w-full h-24 bg-slate-100 dark:bg-slate-800/60 rounded-xl"></div>
             </div>
           </div>
         ) : selectedClass ? (
-          <div className="space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="space-y-8"
+          >
             
             {/* Header Banner */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-3">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xs space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                  <span className="text-xs font-mono font-semibold uppercase tracking-wider px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
                     Code: {selectedClass.code || selectedClass.id}
                   </span>
                 </div>
                 {selectedClass.expected_cost && parseFloat(selectedClass.expected_cost) > 0 && (
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
+                  <div className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold">
                     <span>Expected Commitment:</span>
-                    <span className="font-bold text-emerald-800 dark:text-emerald-200">
+                    <span className="font-bold">
                       ৳{parseFloat(selectedClass.expected_cost).toLocaleString()}
                     </span>
-                    <span className="text-[10px] font-normal text-emerald-600 dark:text-emerald-400">/ academic year</span>
+                    <span className="text-[10px] font-normal text-slate-500 dark:text-slate-400">/ academic year</span>
                   </div>
                 )}
               </div>
 
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                <h1 className="font-serif text-3xl sm:text-4xl font-normal text-slate-900 dark:text-white tracking-tight">
                   {selectedClass.name}
                 </h1>
                 {selectedClass.motto && (
-                  <p className="text-sm italic font-medium text-emerald-700 dark:text-emerald-400 mt-1">
+                  <p className="text-sm italic font-medium text-primary mt-1">
                     &ldquo;{selectedClass.motto}&rdquo;
                   </p>
                 )}
               </div>
 
               {selectedClass.summary && (
-                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
                   <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">
                     Overview Synopsis
                   </span>
@@ -159,27 +170,27 @@ const ClassDetailsPage = () => {
 
               {selectedClass.description && (
                 <div
-                  className="prose dark:prose-invert max-w-none text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed pt-3 border-t border-slate-100 dark:border-slate-800"
+                  className="prose dark:prose-invert max-w-none text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed pt-4 border-t border-slate-100 dark:border-slate-800/80"
                   dangerouslySetInnerHTML={{ __html: selectedClass.description }}
                 />
               )}
             </div>
 
             {/* Subjects Roster */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-                <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
+                <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 dark:text-white tracking-tight">
                   Configured Subjects ({classSubjects.length})
                 </h2>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Curriculum Syllabus</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Curriculum Syllabus</span>
               </div>
 
               {classSubjects.length === 0 ? (
-                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-8 text-center text-xs text-slate-500 dark:text-slate-400">
+                <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-10 text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 shadow-xs">
                   No academic subjects mapped to this class level yet.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {classSubjects.map((sub) => (
                     <SubjectCard key={sub.id} subject={sub} />
                   ))}
@@ -188,20 +199,20 @@ const ClassDetailsPage = () => {
             </div>
 
             {/* Teachers Assigned */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-                <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
+                <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 dark:text-white tracking-tight">
                   Instructional Faculty ({teachers.length})
                 </h2>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Assigned Teachers</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Assigned Teachers</span>
               </div>
 
               {teachers.length === 0 ? (
-                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-8 text-center text-xs text-slate-500 dark:text-slate-400">
+                <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-10 text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 shadow-xs">
                   No faculty members are explicitly linked to this class curriculum.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
                   {teachers.map((t) => (
                     <TeacherCard key={t.id} teacher={t} />
                   ))}
@@ -209,11 +220,11 @@ const ClassDetailsPage = () => {
               )}
             </div>
 
-          </div>
+          </motion.div>
         ) : (
-          <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 p-12 text-center max-w-md mx-auto space-y-2">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Class Record Not Found</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-12 text-center max-w-md mx-auto space-y-3 shadow-xs">
+            <h3 className="font-serif text-base font-semibold text-slate-900 dark:text-white">Class Record Not Found</h3>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
               The class identifier &ldquo;{id}&rdquo; does not match any active curriculum on {website?.name || 'our platform'}.
             </p>
           </div>

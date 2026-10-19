@@ -11,6 +11,7 @@
   --secondary-dark: #ce063e;
   --light: #ffffff;
   --dark:#000000;
+  --tertiary: rgba(255, 255, 255, 0.6);
 }
 
 @theme{
@@ -22,15 +23,79 @@
   --color-secondary-dark: var(--secondary-dark);
   --color-light: var(--light);
   --color-dark: var(--dark);
+  --color-tertiary: var(--tertiary);
 }
 
-.input-style{
-  padding: 10px 14px;
-  border: solid 1px var(--primary);
-  outline: none;
-  border-radius: 4px;
+.input-style {
   width: 100%;
+  padding: 0.75rem 1.125rem;
+  border-radius: 0.75rem;
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  border: 1px solid #e2e8f0;
+  outline: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
 }
+
+.dark .input-style {
+  background-color: rgba(30, 41, 59, 0.75);
+  color: #f8fafc;
+  border-color: #334155;
+}
+
+.input-style:focus,
+.input-style:focus-within {
+  border-color: var(--primary-light, #a1b34c);
+  box-shadow: 0 0 0 2px rgba(162, 171, 115, 0.25);
+}
+
+.input-style::placeholder {
+  color: #94a3b8;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+}
+
+.dark .glass {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes fade-up {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 15px 0 rgba(162, 171, 115, 0.2); }
+  50% { box-shadow: 0 0 30px 4px rgba(162, 171, 115, 0.35); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-up { animation: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-fade-in { animation: fade-in 0.6s ease both; }
+.animate-float { animation: float 4s ease-in-out infinite; }
+.animate-pulse-glow { animation: pulse-glow 2.5s ease-in-out infinite; }
+.animate-shimmer { animation: shimmer 3s linear infinite; }
 
 /* HTML: <div class="loader"></div> */
 .loader {

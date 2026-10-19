@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
 import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
 const RecognitionCard = ({ recognition, item, href, className = '' }) => {
@@ -26,30 +27,34 @@ const RecognitionCard = ({ recognition, item, href, className = '' }) => {
     : null;
 
   return (
-    <Link
-      href={targetHref}
-      className={`group bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-600 transition-colors flex flex-col justify-between overflow-hidden h-full ${className}`}
+    <motion.div
+      whileHover={{ y: -5, transition: { duration: 0.2 } }}
+      className="h-full"
     >
+      <Link
+        href={targetHref}
+        className={`group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-lg hover:shadow-primary/5 hover:border-primary/40 transition-colors duration-200 flex flex-col justify-between overflow-hidden h-full ${className}`}
+      >
       <div>
         {coverImage && (
-          <div className="w-full aspect-[4/3] bg-slate-100 dark:bg-slate-800 relative overflow-hidden flex items-center justify-center p-2">
+          <div className="w-full aspect-[4/3] bg-slate-100 dark:bg-slate-800 relative overflow-hidden flex items-center justify-center p-3">
             <Image
               src={coverImage}
               alt={cardTitle}
               width={400}
               height={300}
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
               unoptimized={coverImage.startsWith('http')}
             />
           </div>
         )}
 
-        <div className="p-3.5 space-y-1 text-center">
-          <span className="text-[9px] font-medium px-1.5 py-0.2 rounded border bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800 uppercase tracking-wider">
+        <div className="p-4 sm:p-5 space-y-1.5 text-center">
+          <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full border bg-primary/10 text-primary border-primary/20 uppercase tracking-wider">
             Official Award
           </span>
 
-          <h3 className="font-semibold text-slate-900 dark:text-white text-xs sm:text-sm group-hover:underline line-clamp-2 pt-1">
+          <h3 className="font-semibold text-slate-900 dark:text-white text-xs sm:text-sm group-hover:text-primary transition-colors line-clamp-2 pt-1">
             {cardTitle}
           </h3>
 
@@ -67,11 +72,12 @@ const RecognitionCard = ({ recognition, item, href, className = '' }) => {
         </div>
       </div>
 
-      <div className="px-3.5 pb-3.5 pt-1 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-medium text-slate-700 dark:text-slate-300">
+      <div className="px-4 pb-4 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-semibold text-primary">
         <span>Citation Details</span>
-        <span className="font-mono text-[10px] text-slate-400">&rarr;</span>
+        <span className="font-mono text-xs group-hover:translate-x-1 transition-transform duration-200">&rarr;</span>
       </div>
-    </Link>
+      </Link>
+    </motion.div>
   );
 };
 

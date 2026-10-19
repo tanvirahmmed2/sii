@@ -4,6 +4,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
 import AuthorityCard from 'src/component/website/cards/AuthorityCard';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
@@ -116,20 +117,20 @@ const About = () => {
   }, [getApiEndpoint]);
 
   const stats = [
-    { 
-      value: `${statsData.totalStudents.toLocaleString()}+`, 
-      label: 'Enrolled Students', 
-      desc: 'Active scholars pursuing academic curricula across primary, secondary, and college tracks.' 
+    {
+      value: `${statsData.totalStudents.toLocaleString()}+`,
+      label: 'Enrolled Students',
+      desc: 'Active scholars pursuing academic curricula across primary, secondary, and college tracks.'
     },
-    { 
-      value: `${statsData.totalTeachers.toLocaleString()}+`, 
-      label: 'Academic Faculty', 
-      desc: 'Certified educators, subject specialists, and dedicated student mentors.' 
+    {
+      value: `${statsData.totalTeachers.toLocaleString()}+`,
+      label: 'Academic Faculty',
+      desc: 'Certified educators, subject specialists, and dedicated student mentors.'
     },
-    { 
-      value: `${statsData.totalClubs.toLocaleString()}+`, 
-      label: 'Registered Clubs', 
-      desc: 'Extracurricular student associations fostering technological skills and leadership.' 
+    {
+      value: `${statsData.totalClubs.toLocaleString()}+`,
+      label: 'Registered Clubs',
+      desc: 'Extracurricular student associations fostering technological skills and leadership.'
     },
   ];
 
@@ -157,14 +158,19 @@ const About = () => {
   ];
 
   return (
-    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
       <div className="w-full max-w-6xl mx-auto space-y-8">
-        
+
         {/* Hero Banner */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 sm:p-10 rounded shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45 }}
+          className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 sm:p-10 rounded-2xl shadow-xs space-y-5"
+        >
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
             {logoSrc ? (
-              <div className="w-16 h-16 rounded border border-slate-200 dark:border-slate-800 relative overflow-hidden bg-slate-50 dark:bg-slate-800 shrink-0">
+              <div className="w-16 h-16 rounded-xl border border-slate-200/80 dark:border-slate-800 relative overflow-hidden bg-slate-50 dark:bg-slate-800 shrink-0">
                 <Image
                   src={logoSrc}
                   alt={`${schoolName} Emblem`}
@@ -174,55 +180,63 @@ const About = () => {
                 />
               </div>
             ) : (
-              <div className="w-16 h-16 rounded bg-primary text-white flex items-center justify-center font-semibold text-xl shrink-0">
+              <div className="w-16 h-16 rounded-xl bg-primary text-white flex items-center justify-center font-semibold text-xl shrink-0">
                 {schoolName.slice(0, 2).toUpperCase()}
               </div>
             )}
 
-            <div className="space-y-1">
-              <span className="text-[10px] font-medium tracking-wide uppercase px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+            <div className="space-y-1.5">
+              <span className="text-xs uppercase tracking-[0.25em] font-semibold text-primary px-3 py-1 rounded-full bg-primary/10 border border-primary/20 inline-block">
                 EIIN: {website?.eiin || 'Official Academic Center'}
               </span>
-              <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+              <h1 className="font-serif text-3xl sm:text-4xl font-normal text-slate-900 dark:text-white tracking-tight">
                 {schoolName}
               </h1>
               {website?.motto && (
-                <p className="text-xs text-primary font-medium">
+                <p className="text-xs sm:text-sm text-primary font-medium">
                   {website.motto}
                 </p>
               )}
             </div>
           </div>
 
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed pt-2 border-t border-slate-100 dark:border-slate-800">
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed pt-4 border-t border-slate-100 dark:border-slate-800/80">
             Dedicated to rigorous academic delivery, scientific enquiry, and comprehensive character building. We prepare future generations for leadership in technical industries, public administration, and global scholarship.
           </p>
-        </div>
+        </motion.div>
 
         {/* Metrics Strip */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {stats.map((stat, idx) => (
-            <div key={idx} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-1">
-              <span className="text-2xl font-semibold text-slate-900 dark:text-slate-100 block">
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: idx * 0.1 }}
+              whileHover={{ y: -4, transition: { duration: 0.2 } }}
+              className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-2 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-colors"
+            >
+              <span className="font-serif text-3xl font-semibold text-slate-900 dark:text-white block">
                 {loading ? '—' : stat.value}
               </span>
-              <span className="text-xs font-medium text-primary block">
+              <span className="text-xs uppercase tracking-wider font-semibold text-primary block">
                 {stat.label}
               </span>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                 {stat.desc}
               </p>
-            </div>
+            </motion.div>
           ))}
         </div>
 
         {/* History Preview */}
         {website?.history && (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 sm:p-6 shadow-xs space-y-3">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xs space-y-4">
+            <h2 className="font-serif text-lg font-semibold text-slate-900 dark:text-white">
               Institutional Heritage & Founding
             </h2>
-            <div 
+            <div
               className="prose dark:prose-invert max-w-none text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed"
               dangerouslySetInnerHTML={{ __html: website.history }}
             />
@@ -230,30 +244,30 @@ const About = () => {
         )}
 
         {/* Core Pillars Nav Grid */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div>
-            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 dark:text-white tracking-tight">
               Explore Academic Pillars
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
               In-depth documentation covering curriculum principles, campus infrastructure, and founding goals.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {sections.map((sec, idx) => (
               <Link
                 key={idx}
                 href={sec.href}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded shadow-xs hover:border-primary transition-colors block space-y-1.5"
+                className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 rounded-2xl shadow-xs hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300 block space-y-2"
               >
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                  <h3 className="font-serif text-base font-semibold text-slate-900 dark:text-white">
                     {sec.title}
                   </h3>
                   <span className="text-xs text-primary font-medium">Read →</span>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                   {sec.desc}
                 </p>
               </Link>
@@ -263,29 +277,29 @@ const About = () => {
 
         {/* Chairman & Governance */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+              <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 dark:text-white tracking-tight">
                 Institutional Governance & Board of Members
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
                 Board leadership, trustees, and executive guidance.
               </p>
             </div>
-            <Link 
-              href={tenantUrl('/about/board')} 
-              className="text-xs text-primary font-medium hover:underline"
+            <Link
+              href={tenantUrl('/about/board')}
+              className="text-xs sm:text-sm text-primary font-medium hover:underline inline-flex items-center gap-1"
             >
               All Board Members →
             </Link>
           </div>
 
           {boardMembers.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {boardMembers.slice(0, 6).map((member, idx) => (
                 <div
                   key={member.id || idx}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs flex items-center gap-3.5"
+                  className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex items-center gap-4 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300"
                 >
                   {member.image ? (
                     <img
@@ -294,15 +308,15 @@ const About = () => {
                       className="w-14 h-14 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0"
                     />
                   ) : (
-                    <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 shrink-0 font-bold text-xs">
+                    <div className="w-14 h-14 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0 font-bold text-xs">
                       {member.name?.slice(0, 2)?.toUpperCase() || 'BM'}
                     </div>
                   )}
                   <div className="min-w-0 flex-1 space-y-0.5">
-                    <span className="text-[10px] font-semibold text-primary block truncate">
+                    <span className="text-[11px] uppercase tracking-wider font-semibold text-primary block truncate">
                       {member.designation}
                     </span>
-                    <h3 className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                       {member.title ? `${member.title} ` : ''}
                       {member.name}
                     </h3>
@@ -317,21 +331,21 @@ const About = () => {
               </div>
             </div>
           ) : (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 text-center text-xs text-slate-500 dark:text-slate-400">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-8 text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400">
               Institutional leadership profiles are listed in the Authorities Directory.
             </div>
           )}
         </div>
 
         {/* Charter Note */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded space-y-1.5 shadow-xs">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 rounded-2xl space-y-2 shadow-xs">
+          <span className="text-xs uppercase tracking-[0.2em] font-semibold text-primary block">
             Quality Assurance Charter
           </span>
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <h3 className="font-serif text-base sm:text-lg font-semibold text-slate-900 dark:text-white">
             Adherence to Educational Rigor & Compliance
           </h3>
-          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
             {schoolName} maintains strict academic standards with periodic faculty peer reviews, syllabus modernization, continuous laboratory audits, and transparent examination recording.
           </p>
         </div>

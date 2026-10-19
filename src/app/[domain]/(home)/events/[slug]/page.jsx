@@ -6,6 +6,7 @@ import Image from 'next/image';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { FiCalendar, FiClock, FiMapPin, FiStar, FiUsers, FiCheckCircle, FiArrowLeft, FiUserCheck, FiUserPlus, FiUserMinus } from 'react-icons/fi';
+import { motion } from 'framer-motion';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 const EventDetailPage = ({ params: paramsPromise }) => {
@@ -130,17 +131,17 @@ const EventDetailPage = ({ params: paramsPromise }) => {
   if (!event) {
     return (
       <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-16 px-4">
-        <div className="max-w-md mx-auto bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-md text-center space-y-4">
-          <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 mx-auto">
+        <div className="max-w-md mx-auto bg-white/80 dark:bg-slate-900/80 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm text-center space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mx-auto">
             <FiCalendar className="text-xl" />
           </div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Event Not Found</h2>
+          <h2 className="font-serif text-lg font-medium text-slate-900 dark:text-slate-100">Event Not Found</h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             The requested campus event could not be found or has concluded.
           </p>
           <Link
             href={tenantUrl('/events')}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl text-xs font-semibold shadow-xs transition-colors"
           >
             <FiArrowLeft className="text-xs" />
             <span>Back to Campus Calendar</span>
@@ -166,21 +167,30 @@ const EventDetailPage = ({ params: paramsPromise }) => {
   });
 
   return (
-    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8">
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Navigation Breadcrumb */}
-        <div>
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3 }}
+        >
           <Link
             href={tenantUrl('/events')}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-primary transition-colors px-3.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm shadow-xs"
           >
             <FiArrowLeft className="text-xs" />
             <span>Back to Campus Calendar</span>
           </Link>
-        </div>
+        </motion.div>
 
         {/* Main Card */}
-        <article className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-md overflow-hidden">
+        <motion.article
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden"
+        >
           {/* Header Image */}
           {event.image ? (
             <div className="w-full h-64 sm:h-96 bg-slate-100 dark:bg-slate-800 relative">
@@ -194,10 +204,10 @@ const EventDetailPage = ({ params: paramsPromise }) => {
               />
             </div>
           ) : (
-            <div className="w-full h-44 bg-gradient-to-r from-emerald-600 to-teal-700 flex items-center justify-center text-white/90">
+            <div className="w-full h-44 bg-linear-to-r from-primary to-primary-dark flex items-center justify-center text-white/90">
               <div className="flex items-center gap-2">
-                <FiCalendar className="text-3xl text-emerald-200" />
-                <span className="font-bold text-lg">Campus Event</span>
+                <FiCalendar className="text-3xl text-primary-light" />
+                <span className="font-serif font-medium text-lg">Campus Event</span>
               </div>
             </div>
           )}
@@ -206,29 +216,29 @@ const EventDetailPage = ({ params: paramsPromise }) => {
             {/* Badges & Title */}
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200/60 dark:border-emerald-800">
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-primary-dark dark:text-primary-light uppercase tracking-wider px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
                   <FiCalendar className="text-xs" />
                   Campus Event
                 </span>
                 {event.is_applicable ? (
-                  <span className="text-[11px] font-bold text-teal-700 dark:text-teal-400 px-3 py-1 rounded-full bg-teal-50 dark:bg-teal-950/50 border border-teal-200/60 dark:border-teal-800">
+                  <span className="text-[11px] font-bold text-secondary-dark dark:text-secondary-light px-3 py-1 rounded-full bg-secondary/10 border border-secondary/20">
                     Registration Open
                   </span>
                 ) : (
-                  <span className="text-[11px] font-medium text-slate-500 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800">
+                  <span className="text-[11px] font-medium text-slate-500 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                     Informational Only
                   </span>
                 )}
               </div>
 
-              <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-snug">
+              <h1 className="text-3xl sm:text-4xl font-serif font-normal text-slate-900 dark:text-white tracking-tight leading-snug">
                 {event.title}
               </h1>
 
               {/* Schedule Details Strip */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 font-medium">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50/80 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 font-medium">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
                     <FiCalendar className="text-sm" />
                   </div>
                   <div>
@@ -238,7 +248,7 @@ const EventDetailPage = ({ params: paramsPromise }) => {
                 </div>
 
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
                     <FiClock className="text-sm" />
                   </div>
                   <div>
@@ -248,7 +258,7 @@ const EventDetailPage = ({ params: paramsPromise }) => {
                 </div>
 
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
                     <FiMapPin className="text-sm" />
                   </div>
                   <div className="truncate">
@@ -262,17 +272,17 @@ const EventDetailPage = ({ params: paramsPromise }) => {
             </div>
 
             {/* Interest Box */}
-            <div className="p-5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="p-5 rounded-2xl bg-secondary/5 dark:bg-secondary/10 border border-secondary/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-500 text-white text-xs">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-secondary text-white text-xs">
                     <FiStar className="fill-white" />
                   </span>
-                  <h3 className="text-sm font-bold text-amber-950 dark:text-amber-200">
+                  <h3 className="text-sm font-semibold text-secondary-dark dark:text-secondary-light">
                     {interestedCount} {interestedCount === 1 ? 'student is' : 'students are'} interested in this event!
                   </h3>
                 </div>
-                <p className="text-xs text-amber-900/70 dark:text-amber-300/70">
+                <p className="text-xs text-slate-600 dark:text-slate-300">
                   {isInterested
                     ? 'You have marked interest in this event. We will keep you notified of schedule updates.'
                     : 'Are you planning to attend or follow this event? Let the organizers know by clicking interested!'}
@@ -283,10 +293,10 @@ const EventDetailPage = ({ params: paramsPromise }) => {
                 type="button"
                 onClick={handleToggleInterest}
                 disabled={interestLoading}
-                className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0 ${
+                className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all shadow-xs cursor-pointer shrink-0 ${
                   isInterested
-                    ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                    : 'bg-white hover:bg-amber-100/60 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 dark:hover:bg-amber-900/60 border border-amber-300/80 dark:border-amber-700'
+                    ? 'bg-secondary hover:bg-secondary-dark text-white'
+                    : 'bg-white hover:bg-secondary/10 text-secondary dark:bg-slate-800 dark:text-secondary-light border border-secondary/30'
                 } disabled:opacity-50`}
               >
                 <FiStar className={isInterested ? 'fill-white' : ''} />
@@ -304,17 +314,17 @@ const EventDetailPage = ({ params: paramsPromise }) => {
 
             {/* Student RSVP Attendance Box */}
             {event.is_applicable && (
-              <div className="p-5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-900/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="p-5 rounded-2xl bg-primary/5 dark:bg-primary/10 border border-primary/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-600 text-white text-xs">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-white text-xs">
                       {isJoined ? <FiUserCheck /> : <FiUserPlus />}
                     </span>
-                    <h3 className="text-sm font-bold text-emerald-950 dark:text-emerald-200">
+                    <h3 className="text-sm font-semibold text-primary-dark dark:text-primary-light">
                       {isJoined ? 'Participant Status: Enrolled & Registered' : 'Student RSVP & Participation'}
                     </h3>
                   </div>
-                  <p className="text-xs text-emerald-900/70 dark:text-emerald-300/70">
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
                     {isJoined
                       ? 'Your attendance has been recorded in the institution registry.'
                       : 'Enroll and confirm your official attendance using your verified student account.'}
@@ -325,10 +335,10 @@ const EventDetailPage = ({ params: paramsPromise }) => {
                   <button
                     onClick={handleToggleParticipation}
                     disabled={actionLoading}
-                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0 ${
+                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all shadow-xs cursor-pointer shrink-0 ${
                       isJoined
-                        ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
-                        : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                        ? 'bg-secondary/10 hover:bg-secondary/20 text-secondary border border-secondary/30'
+                        : 'bg-primary hover:bg-primary-dark text-white'
                     } disabled:opacity-50`}
                   >
                     {actionLoading ? (
@@ -348,7 +358,7 @@ const EventDetailPage = ({ params: paramsPromise }) => {
                 ) : (
                   <Link
                     href={tenantUrl('/student/login')}
-                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-colors shrink-0"
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white text-xs font-semibold shadow-xs transition-colors shrink-0"
                   >
                     <span>Login to Register</span>
                   </Link>
@@ -356,7 +366,7 @@ const EventDetailPage = ({ params: paramsPromise }) => {
               </div>
             )}
           </div>
-        </article>
+        </motion.article>
       </div>
     </div>
   );

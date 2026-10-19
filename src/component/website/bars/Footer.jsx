@@ -40,7 +40,7 @@ const Footer = () => {
   ];
 
   // Secondary brand background color
-  const footerBg = secondaryColor || website?.secondary_color || '#0f172a';
+  const footerBg = secondaryColor || website?.secondary_color || '#CC3A63';
 
   const renderFooterMap = () => {
     if (!mapUrl) return null;

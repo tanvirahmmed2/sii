@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
 import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
 const AuthorityCard = ({ authority, className = '', isRole = false }) => {
@@ -25,57 +26,64 @@ const AuthorityCard = ({ authority, className = '', isRole = false }) => {
   if (isRoleCard) {
     const roleHref = tenantUrl(href || `/authorities/${authority.slug || ''}`);
     return (
-      <Link href={roleHref} className="block group">
-        <div
-          className={`bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-600 transition-colors p-3.5 flex items-center justify-between gap-3 ${className}`}
-        >
+      <motion.div whileHover={{ y: -3, transition: { duration: 0.2 } }}>
+        <Link href={roleHref} className="block group">
+          <div
+            className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-primary/40 transition-colors duration-200 p-4 flex items-center justify-between gap-3 ${className}`}
+          >
           <div className="flex flex-col min-w-0">
-            <h3 className="font-semibold text-slate-900 dark:text-white text-xs sm:text-sm group-hover:underline truncate">
+            <h3 className="font-semibold text-slate-900 dark:text-white text-xs sm:text-sm group-hover:text-primary transition-colors truncate">
               {title || name}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
               {displayDesignation}
             </p>
           </div>
-          <span className="font-mono text-[10px] text-slate-400 shrink-0">&rarr;</span>
+          <span className="font-mono text-xs text-primary group-hover:translate-x-1 transition-transform duration-200 shrink-0">&rarr;</span>
         </div>
       </Link>
+      </motion.div>
     );
   }
 
   const viewHref = tenantUrl(authority.slug ? `/authorities/${authority.slug}` : `/authorities/view?id=${authority.id}`);
 
   return (
-    <Link
-      href={viewHref}
-      className={`group bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-600 transition-colors flex flex-col overflow-hidden ${className}`}
+    <motion.div
+      whileHover={{ y: -5, transition: { duration: 0.2 } }}
+      className="h-full"
     >
-      <div className="w-full aspect-square bg-slate-100 dark:bg-slate-800 relative overflow-hidden flex items-center justify-center">
-        {image ? (
-          <Image
-            src={image}
-            alt={displayName}
-            width={400}
-            height={400}
-            className="w-full h-full object-cover"
-            unoptimized={image.startsWith('http')}
-          />
-        ) : (
-          <div className="w-12 h-12 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-semibold flex items-center justify-center">
-            {displayName.charAt(0)}
-          </div>
-        )}
-      </div>
+      <Link
+        href={viewHref}
+        className={`group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-lg hover:shadow-primary/5 hover:border-primary/40 transition-colors duration-200 flex flex-col overflow-hidden h-full ${className}`}
+      >
+        <div className="w-full aspect-square bg-slate-100 dark:bg-slate-800 relative overflow-hidden flex items-center justify-center">
+          {image ? (
+            <Image
+              src={image}
+              alt={displayName}
+              width={400}
+              height={400}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              unoptimized={image.startsWith('http')}
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-primary/10 text-primary border border-primary/20 text-base font-bold flex items-center justify-center">
+              {displayName.charAt(0)}
+            </div>
+          )}
+        </div>
 
-      <div className="p-3 flex flex-col gap-1 text-center items-center">
-        <h4 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white truncate w-full group-hover:underline">
-          {displayName}
-        </h4>
-        <span className="text-[10px] font-medium px-1.5 py-0.2 rounded border bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 uppercase tracking-wider truncate max-w-full">
-          {displayDesignation}
-        </span>
-      </div>
-    </Link>
+        <div className="p-3.5 flex flex-col gap-1.5 text-center items-center">
+          <h4 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white truncate w-full group-hover:text-primary transition-colors">
+            {displayName}
+          </h4>
+          <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full border bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 uppercase tracking-wider truncate max-w-full">
+            {displayDesignation}
+          </span>
+        </div>
+      </Link>
+    </motion.div>
   );
 };
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useContext } from 'react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
 export default function TenantPoliciesPage() {
@@ -88,120 +89,156 @@ export default function TenantPoliciesPage() {
   };
 
   return (
-    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
+      <div className="max-w-4xl mx-auto space-y-8">
         
         {/* Header */}
-        <div className="border-b border-slate-200 dark:border-slate-800 pb-5">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-medium tracking-wide uppercase px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="border-b border-slate-200/80 dark:border-slate-800 pb-6"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] uppercase font-bold text-primary tracking-widest block">
               Institutional Governance
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
-            Institutional Policies & Regulations
+          <h1 className="text-3xl sm:text-4xl font-serif font-normal text-slate-900 dark:text-slate-100 tracking-tight">
+            Institutional Policies &amp; Regulations
           </h1>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-2 max-w-2xl leading-relaxed">
             Official rules, compliance guidelines, and academic codes governing students, faculty, and campus life at {website?.name || 'our institution'}.
           </p>
-        </div>
+        </motion.div>
 
         {/* Search */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-xs">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search regulatory clauses and policies..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden"
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="relative"
+        >
+          <input
+            type="text"
+            placeholder="Search regulatory clauses and policies..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="input-style w-full py-3 px-4 text-xs"
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 hover:text-primary transition-colors cursor-pointer"
+            >
+              Clear
+            </button>
+          )}
+        </motion.div>
 
         {/* Content */}
         {loading ? (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 text-center flex items-center justify-center">
+          <div className="bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-12 text-center flex items-center justify-center">
             <div className="loader loader-md" />
           </div>
         ) : filteredPolicies.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-8 text-center space-y-2">
-            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">No Matching Policies Found</h3>
+          <div className="bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-8 text-center space-y-2">
+            <h3 className="font-serif text-base font-medium text-slate-800 dark:text-slate-200">No Matching Policies Found</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               No regulatory guidelines matched &ldquo;{searchTerm}&rdquo;.
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-3.5">
             {filteredPolicies.map((policy, index) => {
               const isOpen = openIndex === index;
               return (
-                <div
+                <motion.div
                   key={policy.id || index}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-xs overflow-hidden"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                  className={`bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border rounded-2xl shadow-xs transition-all duration-200 overflow-hidden ${
+                    isOpen
+                      ? 'border-primary/40 shadow-md shadow-primary/5'
+                      : 'border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                  }`}
                 >
                   <button
                     type="button"
                     onClick={() => toggleAccordion(index)}
-                    className="w-full px-4 py-3.5 text-left flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors"
+                    className="w-full px-5 py-4 text-left flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors"
                   >
                     <span className="text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100 leading-snug">
                       {policy.title}
                     </span>
-                    <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">
-                      {isOpen ? '▴' : '▾'}
+                    <span
+                      className={`text-xs w-6 h-6 rounded-full flex items-center justify-center transition-transform shrink-0 ${
+                        isOpen
+                          ? 'bg-primary/10 text-primary rotate-180'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                      }`}
+                    >
+                      ▾
                     </span>
                   </button>
 
-                  {isOpen && (
-                    <div className="px-4 pb-4 pt-1 space-y-3 border-t border-slate-100 dark:border-slate-800">
-                      <div className="flex justify-end pt-1">
-                        <button
-                          type="button"
-                          onClick={() => handleCopyText(policy)}
-                          className="px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-[11px] font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
-                        >
-                          {copiedId === policy.id ? 'Copied' : 'Copy'}
-                        </button>
-                      </div>
+                  <AnimatePresence>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="px-5 pb-5 pt-1 space-y-3 border-t border-slate-100 dark:border-slate-800/80 overflow-hidden"
+                      >
+                        <div className="flex justify-end pt-1">
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            type="button"
+                            onClick={() => handleCopyText(policy)}
+                            className="px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                          >
+                            {copiedId === policy.id ? 'Copied' : 'Copy'}
+                          </motion.button>
+                        </div>
 
-                      <div className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-line">
-                        {policy.description}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                        <div className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-line">
+                          {policy.description}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
               );
             })}
           </div>
         )}
 
         {/* Inquiries */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="bg-linear-to-br from-white via-slate-50 to-primary/5 dark:from-slate-900 dark:via-slate-900 dark:to-primary/10 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs"
+        >
           <div>
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            <h3 className="font-serif text-base sm:text-lg font-medium text-slate-900 dark:text-slate-100">
               Questions regarding disciplinary or academic policy?
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Contact the registrar office for guidance.
             </p>
           </div>
           <Link
             href={tenantUrl('/contact')}
-            className="px-3.5 py-1.5 bg-primary text-white rounded text-xs font-medium hover:bg-primary-dark transition-colors shrink-0"
+            className="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl text-xs font-semibold shadow-xs hover:shadow-primary/20 transition-all shrink-0"
           >
-            Contact Registrar Office →
+            Contact Registrar Office &rarr;
           </Link>
-        </div>
+        </motion.div>
 
       </div>
     </div>

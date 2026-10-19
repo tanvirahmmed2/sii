@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
 export default function CollaborationsPage() {
@@ -29,19 +30,24 @@ export default function CollaborationsPage() {
   }, [getApiEndpoint]);
 
   return (
-    <div className="w-full min-h-screen py-8 md:py-12 px-4 sm:px-6 lg:px-8 space-y-8">
+    <div className="w-full min-h-screen py-10 px-4 sm:px-6 lg:px-8 space-y-8 bg-slate-50 dark:bg-slate-950 transition-colors overflow-hidden">
       {/* Page Header */}
-      <div className="border-b border-slate-200 dark:border-slate-800 pb-6 max-w-4xl mx-auto text-center space-y-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block">
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="border-b border-slate-200/80 dark:border-slate-800 pb-6 max-w-4xl mx-auto text-center space-y-2"
+      >
+        <span className="text-[10px] uppercase font-bold text-primary tracking-widest block">
           Global Academic &amp; Industry Network
         </span>
-        <h1 className="text-2xl sm:text-4xl font-semibold text-slate-900 dark:text-white tracking-tight">
+        <h1 className="text-3xl sm:text-4xl font-serif font-normal text-slate-900 dark:text-white tracking-tight">
           Institutional Collaborations
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-xl mx-auto leading-relaxed">
+        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-xl mx-auto leading-relaxed mt-2">
           {website?.name || 'Our institution'} partners with accredited universities, educational foundations, research consortia, and industry organizations to foster academic excellence.
         </p>
-      </div>
+      </motion.div>
 
       {/* Partners Grid */}
       <div className="max-w-5xl mx-auto">
@@ -50,15 +56,19 @@ export default function CollaborationsPage() {
             <div className="loader loader-md" />
           </div>
         ) : partners.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {partners.map((partner) => (
-              <div
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {partners.map((partner, idx) => (
+              <motion.div
                 key={partner.id}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-5 sm:p-6 shadow-xs hover:border-primary/50 transition-colors flex flex-col justify-between"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: Math.min(idx * 0.06, 0.4) }}
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-colors flex flex-col justify-between space-y-4"
               >
                 <div className="flex gap-4 items-start">
                   {partner.logo ? (
-                    <div className="w-14 h-14 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2 flex items-center justify-center shrink-0">
+                    <div className="w-14 h-14 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 p-2.5 flex items-center justify-center shrink-0">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={partner.logo}
@@ -67,16 +77,16 @@ export default function CollaborationsPage() {
                       />
                     </div>
                   ) : (
-                    <div className="w-14 h-14 rounded bg-primary/10 text-primary border border-primary/20 flex items-center justify-center text-xs font-semibold shrink-0">
+                    <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center text-xs font-semibold shrink-0">
                       [Logo]
                     </div>
                   )}
 
                   <div className="space-y-1 flex-1">
-                    <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+                    <span className="text-[10px] font-semibold text-primary uppercase tracking-wider block">
                       Academic Partner
                     </span>
-                    <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                    <h2 className="text-base sm:text-lg font-serif font-medium text-slate-900 dark:text-white">
                       {partner.institution_name}
                     </h2>
                     {partner.description && (
@@ -88,19 +98,19 @@ export default function CollaborationsPage() {
                   </div>
                 </div>
 
-                <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 text-[11px] text-slate-400 flex items-center justify-between">
                   <span>Authorized Partnership</span>
-                  <span className="font-mono">Ref #{partner.id}</span>
+                  <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800">Ref #{partner.id}</span>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-8 shadow-xs max-w-md mx-auto space-y-2">
+          <div className="text-center py-16 bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-8 shadow-xs max-w-md mx-auto space-y-2">
             <span className="text-xs font-medium text-slate-400 uppercase tracking-wider block">
               [No Partners Registered]
             </span>
-            <h3 className="text-base font-semibold text-slate-800 dark:text-white">
+            <h3 className="font-serif text-base font-medium text-slate-800 dark:text-white">
               No Collaborations on Record
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -111,15 +121,15 @@ export default function CollaborationsPage() {
       </div>
 
       {/* External Relations Inquiry Callout */}
-      <div className="max-w-5xl mx-auto bg-slate-900 text-white rounded-md p-6 sm:p-8 border border-slate-800 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="max-w-5xl mx-auto bg-linear-to-br from-white via-slate-50 to-primary/5 dark:from-slate-900 dark:via-slate-900 dark:to-primary/10 rounded-3xl p-6 sm:p-8 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="space-y-1.5 text-center md:text-left">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-primary block">
             External Relations &amp; Linkages
           </span>
-          <h2 className="text-lg sm:text-xl font-semibold text-white tracking-tight">
+          <h2 className="text-lg sm:text-xl font-serif font-medium text-slate-900 dark:text-white tracking-tight">
             Interested in Partnering with {website?.name || 'Our Institution'}?
           </h2>
-          <p className="text-xs text-slate-300 max-w-xl leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-xl leading-relaxed">
             We welcome academic faculty exchange programs, student internships, curriculum co-development, and joint research initiatives.
           </p>
         </div>
@@ -127,9 +137,9 @@ export default function CollaborationsPage() {
         <div className="shrink-0">
           <Link
             href={tenantUrl('/contact?subject=Partnership+Inquiry')}
-            className="inline-block px-5 py-2.5 bg-white text-slate-900 hover:bg-slate-100 rounded text-xs font-semibold transition-colors text-center"
+            className="inline-block px-5 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-xs font-semibold shadow-xs hover:shadow-primary/20 transition-all text-center"
           >
-            Contact External Relations →
+            Contact External Relations &rarr;
           </Link>
         </div>
       </div>

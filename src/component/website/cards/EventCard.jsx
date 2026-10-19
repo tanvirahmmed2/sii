@@ -6,6 +6,7 @@ import Image from 'next/image';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { FiCalendar, FiMapPin, FiClock, FiStar, FiUsers, FiArrowRight } from 'react-icons/fi';
+import { motion } from 'framer-motion';
 import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
 const EventCard = ({ event, href, className = '', onInterestChange }) => {
@@ -76,11 +77,12 @@ const EventCard = ({ event, href, className = '', onInterestChange }) => {
   };
 
   return (
-    <div
-      className={`group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-xl hover:border-emerald-500/40 dark:hover:border-emerald-500/40 transition-all duration-300 flex flex-col overflow-hidden h-full ${className}`}
+    <motion.div
+      whileHover={{ y: -5, transition: { duration: 0.25 } }}
+      className={`group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-xl hover:shadow-primary/5 hover:border-primary/40 transition-colors duration-200 flex flex-col overflow-hidden h-full ${className}`}
     >
       {/* Poster Image or Banner */}
-      <Link href={targetHref} className="relative w-full aspect-[16/9] bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50/30 dark:from-slate-800 dark:via-slate-850 dark:to-slate-900 overflow-hidden block">
+      <Link href={targetHref} className="relative w-full aspect-[16/9] bg-gradient-to-br from-slate-100 via-slate-50 to-primary/5 dark:from-slate-800 dark:via-slate-850 dark:to-slate-900 overflow-hidden block">
         {image ? (
           <Image
             src={image}
@@ -92,7 +94,7 @@ const EventCard = ({ event, href, className = '', onInterestChange }) => {
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-100 dark:bg-slate-800/80">
-            <FiCalendar className="text-4xl text-emerald-500/50 mb-1" />
+            <FiCalendar className="text-4xl text-primary/40 mb-1" />
             <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Campus Event</span>
           </div>
         )}
@@ -100,15 +102,15 @@ const EventCard = ({ event, href, className = '', onInterestChange }) => {
         {/* Date badge in corner */}
         {dateObj && (
           <div className="absolute top-3 left-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-xl p-2 shadow-md border border-slate-200/60 dark:border-slate-700/60 flex flex-col items-center justify-center min-w-[50px] leading-tight">
-            <span className="text-[10px] font-bold tracking-wider text-emerald-600 dark:text-emerald-400">{month}</span>
-            <span className="text-lg font-extrabold text-slate-900 dark:text-white">{day}</span>
+            <span className="text-[10px] font-bold tracking-wider text-primary">{month}</span>
+            <span className="text-lg font-bold text-slate-900 dark:text-white">{day}</span>
           </div>
         )}
 
         {/* Status Pill */}
         <div className="absolute top-3 right-3 flex items-center gap-1.5">
           {is_applicable ? (
-            <span className="bg-emerald-600/90 backdrop-blur-xs text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-xs">
+            <span className="bg-primary/90 backdrop-blur-xs text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-xs">
               Open for RSVP
             </span>
           ) : (
@@ -126,20 +128,20 @@ const EventCard = ({ event, href, className = '', onInterestChange }) => {
           <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
             {time && (
               <span className="flex items-center gap-1">
-                <FiClock className="text-emerald-500 text-xs" />
+                <FiClock className="text-primary text-xs" />
                 <span>{time}</span>
               </span>
             )}
             {location && (
               <span className="flex items-center gap-1 truncate max-w-[180px]">
-                <FiMapPin className="text-emerald-500 text-xs shrink-0" />
+                <FiMapPin className="text-primary text-xs shrink-0" />
                 <span className="truncate">{location}</span>
               </span>
             )}
           </div>
 
           {/* Title */}
-          <Link href={targetHref} className="block group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+          <Link href={targetHref} className="block group-hover:text-primary transition-colors">
             <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-snug line-clamp-2">
               {title}
             </h3>
@@ -157,8 +159,8 @@ const EventCard = ({ event, href, className = '', onInterestChange }) => {
         <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 mt-auto">
           {/* Students Interested Count */}
           <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/10 text-amber-500 dark:text-amber-400 text-xs">
-              <FiStar className={isInterested ? 'fill-amber-400' : ''} />
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-secondary/10 text-secondary text-xs">
+              <FiStar className={isInterested ? 'fill-current' : ''} />
             </span>
             <span className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-slate-200">
               {interestedCount} <span className="font-normal text-slate-500 dark:text-slate-400">interested</span>
@@ -174,8 +176,8 @@ const EventCard = ({ event, href, className = '', onInterestChange }) => {
               title={isInterested ? 'Remove from interested' : 'Click to show student interest'}
               className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition-all duration-200 cursor-pointer ${
                 isInterested
-                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shadow-xs'
-                  : 'bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-400 text-slate-600 dark:text-slate-300 border border-transparent'
+                  ? 'bg-secondary/15 text-secondary border border-secondary/30 shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 hover:bg-primary/10 hover:text-primary text-slate-600 dark:text-slate-300 border border-transparent'
               } disabled:opacity-50`}
             >
               <FiStar className={`text-xs ${isInterested ? 'fill-current' : ''}`} />
@@ -185,7 +187,7 @@ const EventCard = ({ event, href, className = '', onInterestChange }) => {
             {/* View Details Link */}
             <Link
               href={targetHref}
-              className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 dark:hover:text-white text-slate-500 dark:text-slate-400 transition-colors"
+              className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white text-slate-500 dark:text-slate-400 transition-colors"
               title="View full event details"
             >
               <FiArrowRight className="text-xs" />
@@ -193,7 +195,7 @@ const EventCard = ({ event, href, className = '', onInterestChange }) => {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
