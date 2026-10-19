@@ -20,6 +20,11 @@ export const staffNavData = [
         "path": "/department-head"
       },
       {
+        "title": "Class Information",
+        "module": "routine",
+        "path": "/class-information"
+      },
+      {
         "title": "Academic Year",
         "module": "routine",
         "path": "/academic-year"
@@ -827,6 +832,11 @@ export const staffNavData = [
     ]
   },
   {
+    "title": "Events",
+    "module": "website-builder",
+    "path": "/events"
+  },
+  {
     "title": "Alumni",
     "module": "sis",
     "children": [
@@ -869,7 +879,12 @@ export const staffNavData = [
       {
         "title": "Board Members",
         "module": "website-builder",
-        "path": "/institutional-board-members"
+        "path": "/board-members"
+      },
+      {
+        "title": "Institutional Hub",
+        "module": "website-builder",
+        "path": "/institutional"
       }
     ]
   },

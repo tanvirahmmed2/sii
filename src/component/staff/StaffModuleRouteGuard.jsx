@@ -33,7 +33,7 @@ export default function StaffModuleRouteGuard({ children, allowedModules = null,
   const pathname = usePathname();
 
   const accessStatus = useMemo(() => {
-    if (isDevAdmin || !Array.isArray(allowedModules)) {
+    if (isDevAdmin || !Array.isArray(allowedModules) || allowedModules.length === 0) {
       return { allowed: true };
     }
 

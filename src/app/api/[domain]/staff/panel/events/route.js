@@ -3,6 +3,24 @@ import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest, hasTenantModuleAllowance } from 'src/lib/middleware/websiteResolver.js';
 import { getStaffSession, hasStaffModulePermission } from 'src/lib/middleware/staff.js';
 import { getOfficerSession } from 'src/lib/middleware/officer.js';
+import { uploadImage, deleteImage } from 'src/lib/database/cloudinary.js';
+
+async function parseEventRequest(request) {
+  const contentType = request.headers.get('content-type') || '';
+  if (contentType.includes('multipart/form-data')) {
+    const formData = await request.formData();
+    const data = {};
+    for (const [key, value] of formData.entries()) {
+      if (key === 'image' || key === 'file' || key === 'imageFile') {
+        data.imageFile = value;
+      } else {
+        data[key] = value;
+      }
+    }
+    return data;
+  }
+  return await request.json().catch(() => ({}));
+}
 
 // Verify access for either staff or officer
 async function verifyStaffOrOfficerAccess(request, context, action = 'view') {
@@ -212,7 +230,7 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
 
-    const body = await request.json().catch(() => ({}));
+    const body = await parseEventRequest(request);
     const {
       title,
       slug,
@@ -220,10 +238,8 @@ export async function POST(request, context) {
       location,
       event_date,
       end_date,
-      image,
-      image_id,
-      is_applicable = true,
-      is_active = true,
+      is_applicable,
+      is_active,
     } = body;
 
     if (!title || !String(title).trim()) {
@@ -243,6 +259,10 @@ export async function POST(request, context) {
       finalSlug = `${finalSlug}-${Date.now().toString().slice(-4)}`;
     }
 
+    const isApplicableVal = is_applicable !== undefined ? (is_applicable === 'true' || is_applicable === true) : true;
+    const isActiveVal = is_active !== undefined ? (is_active === 'true' || is_active === true) : true;
+
+    // 1. Create table row first
     const insertResult = await queryDb(
       `INSERT INTO website_events (
         website_id,
@@ -270,20 +290,49 @@ export async function POST(request, context) {
         location || '',
         event_date,
         end_date || null,
-        image || null,
-        image_id || null,
-        Boolean(is_applicable),
-        Boolean(is_active),
+        null, // image initially null
+        null, // image_id initially null
+        isApplicableVal,
+        isActiveVal,
         auth.userType,
         auth.userId,
         auth.userName,
       ]
     );
 
+    let createdEvent = insertResult.rows[0];
+
+    // 2. Upload image if provided, then update the created table row
+    const hasImageFile = body.imageFile && typeof body.imageFile === 'object' && body.imageFile.name;
+    if (hasImageFile) {
+      try {
+        const uploadRes = await uploadImage(body.imageFile, `school/${auth.website.id}/events`);
+        const imgUrl = uploadRes.url || uploadRes.secure_url;
+        const imgId = uploadRes.publicId;
+        const updateRes = await queryDb(
+          `UPDATE website_events SET image = $1, image_id = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *`,
+          [imgUrl, imgId, createdEvent.id]
+        );
+        if (updateRes.rowCount > 0) {
+          createdEvent = updateRes.rows[0];
+        }
+      } catch (uploadErr) {
+        console.error('Failed to upload event photo after record creation:', uploadErr);
+      }
+    } else if (body.image && typeof body.image === 'string' && body.image.trim()) {
+      const updateRes = await queryDb(
+        `UPDATE website_events SET image = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *`,
+        [body.image.trim(), createdEvent.id]
+      );
+      if (updateRes.rowCount > 0) {
+        createdEvent = updateRes.rows[0];
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Event created successfully.',
-      event: insertResult.rows[0],
+      event: createdEvent,
     });
   } catch (error) {
     console.error('Error in events POST API:', error);
@@ -299,7 +348,7 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
 
-    const body = await request.json().catch(() => ({}));
+    const body = await parseEventRequest(request);
     const {
       id,
       title,
@@ -308,10 +357,9 @@ export async function PUT(request, context) {
       location,
       event_date,
       end_date,
-      image,
-      image_id,
       is_applicable,
       is_active,
+      remove_image,
     } = body;
 
     if (!id) {
@@ -330,7 +378,11 @@ export async function PUT(request, context) {
     const current = existingRes.rows[0];
     let finalSlug = slug ? slugify(slug) : current.slug;
 
-    if (slug && finalSlug !== current.slug) {
+    if (title && String(title).trim() !== current.title && !slug) {
+      finalSlug = slugify(title);
+    }
+
+    if (finalSlug !== current.slug) {
       const slugCheck = await queryDb(
         `SELECT id FROM website_events WHERE website_id = $1 AND slug = $2 AND id != $3 LIMIT 1`,
         [auth.website.id, finalSlug, id]
@@ -340,6 +392,10 @@ export async function PUT(request, context) {
       }
     }
 
+    const isApplicableVal = is_applicable !== undefined ? (is_applicable === 'true' || is_applicable === true) : null;
+    const isActiveVal = is_active !== undefined ? (is_active === 'true' || is_active === true) : null;
+
+    // 1. Update website_events table first
     const updateRes = await queryDb(
       `UPDATE website_events
        SET title = COALESCE($1, title),
@@ -348,12 +404,10 @@ export async function PUT(request, context) {
            location = COALESCE($4, location),
            event_date = COALESCE($5, event_date),
            end_date = $6,
-           image = COALESCE($7, image),
-           image_id = COALESCE($8, image_id),
-           is_applicable = COALESCE($9, is_applicable),
-           is_active = COALESCE($10, is_active),
+           is_applicable = COALESCE($7, is_applicable),
+           is_active = COALESCE($8, is_active),
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $11 AND website_id = $12
+       WHERE id = $9 AND website_id = $10
        RETURNING *`,
       [
         title ? String(title).trim() : null,
@@ -361,20 +415,60 @@ export async function PUT(request, context) {
         description !== undefined ? description : null,
         location !== undefined ? location : null,
         event_date || null,
-        end_date !== undefined ? end_date : current.end_date,
-        image !== undefined ? image : null,
-        image_id !== undefined ? image_id : null,
-        is_applicable !== undefined ? Boolean(is_applicable) : null,
-        is_active !== undefined ? Boolean(is_active) : null,
+        end_date !== undefined ? (end_date || null) : current.end_date,
+        isApplicableVal,
+        isActiveVal,
         id,
         auth.website.id,
       ]
     );
 
+    let updatedEvent = updateRes.rows[0];
+
+    // 2. Handle image removal or replacement
+    const shouldRemoveImage = remove_image === 'true' || remove_image === true;
+    const hasNewImageFile = body.imageFile && typeof body.imageFile === 'object' && body.imageFile.name;
+
+    if (shouldRemoveImage) {
+      if (current.image_id) {
+        await deleteImage(current.image_id).catch(() => {});
+      }
+      const cleared = await queryDb(
+        `UPDATE website_events SET image = NULL, image_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *`,
+        [id]
+      );
+      if (cleared.rowCount > 0) updatedEvent = cleared.rows[0];
+    } else if (hasNewImageFile) {
+      try {
+        const uploadRes = await uploadImage(body.imageFile, `school/${auth.website.id}/events`);
+        const newUrl = uploadRes.url || uploadRes.secure_url;
+        const newPublicId = uploadRes.publicId;
+
+        const updated = await queryDb(
+          `UPDATE website_events SET image = $1, image_id = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *`,
+          [newUrl, newPublicId, id]
+        );
+        if (updated.rowCount > 0) updatedEvent = updated.rows[0];
+
+        // Delete old image from Cloudinary if existed
+        if (current.image_id && current.image_id !== newPublicId) {
+          await deleteImage(current.image_id).catch(() => {});
+        }
+      } catch (uploadErr) {
+        console.error('Failed to upload new event photo:', uploadErr);
+      }
+    } else if (body.image && typeof body.image === 'string' && body.image.trim()) {
+      const updated = await queryDb(
+        `UPDATE website_events SET image = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *`,
+        [body.image.trim(), id]
+      );
+      if (updated.rowCount > 0) updatedEvent = updated.rows[0];
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Event updated successfully.',
-      event: updateRes.rows[0],
+      event: updatedEvent,
     });
   } catch (error) {
     console.error('Error in events PUT API:', error);
@@ -400,12 +494,16 @@ export async function DELETE(request, context) {
     }
 
     const deleteRes = await queryDb(
-      `DELETE FROM website_events WHERE id = $1 AND website_id = $2 RETURNING id, title`,
+      `DELETE FROM website_events WHERE id = $1 AND website_id = $2 RETURNING id, title, image_id`,
       [id, auth.website.id]
     );
 
     if (deleteRes.rowCount === 0) {
       return NextResponse.json({ success: false, error: 'Event not found or already deleted.' }, { status: 404 });
+    }
+
+    if (deleteRes.rows[0]?.image_id) {
+      await deleteImage(deleteRes.rows[0].image_id).catch(() => {});
     }
 
     return NextResponse.json({
