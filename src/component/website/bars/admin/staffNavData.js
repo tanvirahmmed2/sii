@@ -762,11 +762,6 @@ export const staffNavData = [
         "path": "/club-members"
       },
       {
-        "title": "Images",
-        "module": "clubs",
-        "path": "/club-images"
-      },
-      {
         "title": "News",
         "module": "clubs",
         "path": "/club-news"
