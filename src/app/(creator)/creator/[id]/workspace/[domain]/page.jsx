@@ -990,7 +990,7 @@ export default function WebsiteManagePage() {
 
   if (loadError || !website) {
     return (
-      <div className="w-full py-12 text-center max-w-md mx-auto space-y-3">
+      <div className="w-full py-12 text-center space-y-3">
         <h2 className="text-sm font-semibold text-slate-900">Website Not Found</h2>
         <p className="text-xs text-slate-500">{loadError || 'The requested website could not be found.'}</p>
         <Link

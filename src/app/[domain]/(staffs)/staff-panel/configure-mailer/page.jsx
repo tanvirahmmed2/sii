@@ -173,7 +173,7 @@ export default function ConfigureMailerPage() {
   };
 
   return (
-    <div className="w-full space-y-6 max-w-7xl mx-auto pb-10">
+    <div className="w-full space-y-6 pb-10">
       {/* Notifications */}
       {statusMessage && (
         <div className="p-4 rounded-2xl text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between shadow-xs">

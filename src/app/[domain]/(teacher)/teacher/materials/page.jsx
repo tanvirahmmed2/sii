@@ -126,7 +126,7 @@ const MaterialsPageContent = () => {
   }
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-8">
+    <div className="flex flex-col gap-6 w-full pb-8">
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/70 shadow-2xs">
         <div>

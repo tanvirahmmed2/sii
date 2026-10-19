@@ -82,7 +82,7 @@ export default function PaymentEducationPaidPage() {
   };
 
   return (
-    <div className="w-full space-y-6 max-w-7xl mx-auto pb-10">
+    <div className="w-full space-y-6 pb-10">
       {/* Header Banner */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

@@ -335,8 +335,7 @@ export default function InstitutionalInfrastructurePage() {
   }, [facilities, statusFilter, facilityTypeFilter, searchTerm]);
 
   return (
-    <div className="w-full min-h-[calc(100vh-80px)] bg-slate-50 dark:bg-slate-950 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="w-full space-y-4">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
           <div>
@@ -907,6 +906,5 @@ export default function InstitutionalInfrastructurePage() {
           </div>
         )}
       </div>
-    </div>
   );
 }

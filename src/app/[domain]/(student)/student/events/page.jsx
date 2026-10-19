@@ -161,7 +161,7 @@ const StudentEventsPage = () => {
   }, [events, searchTerm, activeTab, interestedEventIds, joinedEventIds]);
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-8">
+    <div className="flex flex-col gap-6 w-full pb-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
         <div>

@@ -84,7 +84,7 @@ export default function AdminDatabaseModulesPage() {
 
   if (!isAdminUser) {
     return (
-      <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 text-center max-w-lg mx-auto shadow-xs">
+      <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 text-center shadow-xs">
         <h2 className="text-base font-medium text-slate-900 dark:text-white">Permission Required</h2>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
           The Database Modules &amp; Tables Inspector requires the <span className="font-mono font-normal">modules</span> permission.

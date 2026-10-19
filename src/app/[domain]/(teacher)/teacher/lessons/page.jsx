@@ -84,7 +84,7 @@ const LessonsPageContent = () => {
   }
 
   return (
-    <div className="flex flex-col gap-8 w-full mx-auto">
+    <div className="w-full space-y-4">
       {/* Title */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>

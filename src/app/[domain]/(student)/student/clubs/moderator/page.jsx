@@ -134,7 +134,7 @@ const StudentClubModeratorPage = () => {
 
   if (!isClubModerator || clubs.length === 0) {
     return (
-      <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-8">
+      <div className="flex flex-col gap-6 w-full pb-8">
         <div className="bg-white border border-slate-200/70 rounded-3xl p-12 text-center flex flex-col items-center justify-center shadow-xs">
           <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-400 mb-3">
             <FiAlertCircle className="text-3xl text-slate-400" />
@@ -147,7 +147,7 @@ const StudentClubModeratorPage = () => {
   }
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-8">
+    <div className="flex flex-col gap-4 w-full pb-8">
       {/* Header Banner */}
       <div className="bg-white border border-slate-200/70 rounded-3xl p-6 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>

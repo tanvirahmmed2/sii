@@ -37,7 +37,7 @@ const StudentMaterialsPageContent = () => {
   }
 
   return (
-    <div className="flex flex-col gap-4 w-full max-w-5xl mx-auto pb-8">
+    <div className="flex flex-col gap-4 w-full pb-8">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/70">
         <div>

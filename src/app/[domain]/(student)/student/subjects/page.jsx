@@ -48,7 +48,7 @@ const SubjectsPage = () => {
   }
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-12 animate-fade-up">
+    <div className="flex flex-col gap-6 w-full pb-12 animate-fade-up">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/70 shadow-xs">
         <div>

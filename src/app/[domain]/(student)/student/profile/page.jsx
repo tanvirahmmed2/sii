@@ -187,7 +187,7 @@ const StudentProfilePage = () => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full max-w-5xl mx-auto pb-10">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full pb-10">
       
       {/* Top Banner Header */}
       <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-2xs flex flex-col md:flex-row items-center gap-6">

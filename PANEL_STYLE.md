@@ -1,238 +1,169 @@
-# Creator Panel Design & Style Guide (`STYLE.md`)
+# Unified Panel Design & Style Guide (`PANEL_STYLE.md`)
 
-This document serves as the design system specification and architectural styling report for the Creator Studio and Management Panel of the SaaS platform. It details all visual tokens, layout rules, typography guidelines, component patterns, anti-patterns, and multi-currency formatting standards.
+This document serves as the design system specification and architectural styling standard for all administration, operations, and management panels across the platform:
+- **Staff Administration Panel** (`/staff-panel/*`)
+- **Faculty & Teacher Panel** (`/teacher/*`)
+- **Student Workstation Portal** (`/student/*`)
+- **Administrative Officer Panel** (`/officer/*`)
+- **Creator Studio & Management** (`/creator/*`)
+- **Developer Control Console** (`/developer/*`)
 
 ---
 
 ## 1. 🏛️ Core Design Philosophy
 
-The Creator Panel is designed as a **high-density, ultra-minimalist, professional workstation**. It eliminates decorative clutter, heavy animations, oversized radiuses, and redundant visual indicators in favor of clarity, performance, and immediate productivity.
+All panels are designed as **high-density, ultra-minimalist, high-productivity workstations**. They eliminate decorative clutter, heavy animations, oversized radiuses, and redundant visual indicators in favor of clarity, performance, and immediate productivity.
 
 ### Core Tenets
-1. **Zero Icons & Icon Containers**: No iconography (`react-icons`, SVGs, Lucide, Heroicons) or icon background container shapes (circles, square badges) are used. Actionable text, labels, and badges provide direct meaning without visual noise.
-2. **Strict Typography Hierarchy**: No bold (`font-bold`), extra-bold (`font-extrabold`), or black (`font-black`) weights. All interface text is strictly formatted using `font-normal`, `font-medium`, and `font-semibold`.
-3. **Subtle & Compact Radiuses**: No exaggerated border-radius styles (`rounded-xl`, `rounded-2xl`, `rounded-3xl`, `rounded-full`). All cards, inputs, and buttons use a subtle `rounded` (4px / 0.25rem) or `rounded-md` (6px).
-4. **Full-Width Outer Shell (`w-full`)**: The outermost container of every page and layout expands across the full viewport width (`w-full`) without artificial max-width constraints (`max-w-6xl`, `max-w-7xl`, `mx-auto`).
-5. **Absolute Currency Segregation**: Bangladeshi Taka (BDT, `৳`) and US Dollars (USD, `$`) are treated as independent fiscal units. They are never converted via formulas, added together, or represented under a single mixed figure.
+1. **No `max-w-*` on Main Pages (Edge-to-Edge `w-full`)**:
+   The outermost container of every page and layout must expand across the full viewport width (`w-full`) without artificial max-width constraints (`max-w-3xl`, `max-w-4xl`, `max-w-5xl`, `max-w-6xl`, `max-w-7xl`, `mx-auto`). Workstations must maximize available screen real estate on desktop and widescreen displays.
+2. **Strictly Restricted Iconography (Only 4 Permitted Icons)**:
+   Decorative icons are strictly prohibited. When an icon is required for an action or navigation, **only four icon types** are permitted across all panels:
+   - **Menu Icon** (`FiMenu`, `HiMenu`, `BiMenu`): For mobile sidebar / drawer toggling.
+   - **Edit Icon** (`FiEdit`, `FiEdit2`, `BiEdit`): For edit / rename / modify actions.
+   - **Delete Icon** (`FiTrash`, `FiTrash2`, `BiTrash`): For delete / remove / revoke actions.
+   - **Setting Icon** (`FiSettings`, `BiCog`, `HiOutlineCog`): For configuration / preferences.
+   - *All other actions* (Save, Back, Upload, Cancel, Date, Status, Categories, Badges) must use clear, descriptive text labels and typography rather than decorative icons.
+3. **Strict Typography Hierarchy**:
+   No `font-bold`, `font-extrabold`, or `font-black` in standard content, headers, or body text. All interface text is strictly formatted using `font-normal`, `font-medium`, and `font-semibold`.
+4. **Subtle & Compact Radiuses**:
+   No exaggerated border-radius styles (`rounded-2xl`, `rounded-3xl`, `rounded-full`). All cards, inputs, tables, and buttons use compact `rounded` (4px / 0.25rem), `rounded-md` (6px), or `rounded-lg` (8px).
+5. **Absolute Currency Segregation**:
+   Bangladeshi Taka (BDT, `৳`) and US Dollars (USD, `$`) are treated as independent fiscal units. They are never converted via formulas, added together, or represented under a single mixed figure.
 
 ---
 
-## 2. 🎨 Color Palette & Design Tokens
+## 2. 🎨 Color Theme & Design Tokens (`globals.css`)
 
-The color palette is deliberately restrained, pairing neutral slate tones with high-contrast text and purposeful semantic alerts.
+All panel styling strictly adheres to the official design tokens and CSS variables defined in `src/app/globals.css`:
 
-### 2.1 Neutral Gray / Slate Scale
+### 2.1 Brand Theme Tokens
+| CSS Variable | Tailwind Token | Hex Code | Purpose / Usage in Panels |
+| :--- | :--- | :--- | :--- |
+| `--primary` | `primary` / `bg-primary` / `text-primary` | `#A2AB73` | **Primary Brand Color**: Primary buttons, active tabs, main badges, active indicators |
+| `--primary-light` | `primary-light` / `bg-primary-light` | `#E0E7BE` | Soft backgrounds, active item hover states |
+| `--primary-dark` | `primary-dark` / `hover:bg-primary-dark` | `#A1B34C` | Hover state for primary buttons and interactive accents |
+| `--secondary` | `secondary` / `bg-secondary` / `text-secondary` | `#CC3A63` | **Secondary Accent Color**: Call-to-actions, alerts, highlight tags, secondary buttons |
+| `--secondary-light`| `secondary-light` / `bg-secondary-light`| `#E48EA6` | Soft secondary badge backgrounds, subtle warning accents |
+| `--secondary-dark` | `secondary-dark` / `hover:bg-secondary-dark`| `#CE063E` | Hover state for secondary action buttons |
+| `--light` | `light` / `bg-light` | `#FFFFFF` | Light surface base |
+| `--dark` | `dark` / `bg-dark` | `#000000` | Dark surface base |
+
+### 2.2 Neutral Gray / Slate Scale (High-Density Contrast)
 | Tailwind Token | Hex Code | Usage |
 | :--- | :--- | :--- |
-| `bg-slate-50` | `#F8FAFC` | Page background, subtle row hover, neutral badges |
-| `bg-white` | `#FFFFFF` | Card surface, table background, input background |
-| `border-slate-100` | `#F1F5F9` | Subtle internal card divider, nested list separator |
-| `border-slate-200` | `#E2E8F0` | Primary card border, table header separator, modal border |
-| `border-slate-300` | `#CBD5E1` | Input border, secondary button border |
-| `text-slate-400` | `#94A3B8` | Micro labels, mono subtitles, placeholder text |
-| `text-slate-500` | `#64748B` | Secondary descriptions, timestamps, table column headers |
-| `text-slate-600` | `#475569` | Explanatory copy, secondary button text |
-| `text-slate-700` | `#334155` | Table cell data, active navigation links |
-| `text-slate-800` | `#1E293B` | Base body text |
-| `text-slate-900` | `#0F172A` | Page headings, primary values, active stat numbers |
-| `bg-slate-900` | `#0F172A` | Primary action buttons, dark column auth accent |
-| `hover:bg-slate-800` | `#1E293B` | Primary action button hover state |
+| `bg-slate-50` / `dark:bg-slate-950` | `#F8FAFC` / `#020617` | Page background, table row hover, neutral badges |
+| `bg-white` / `dark:bg-slate-900` | `#FFFFFF` / `#0F172A` | Card surface, table background, input background |
+| `border-slate-100` / `dark:border-slate-850` | `#F1F5F9` / `#1E293B` | Subtle internal card divider, nested list separator |
+| `border-slate-200` / `dark:border-slate-800` | `#E2E8F0` / `#1E293B` | Primary card border, table header separator, modal border |
+| `border-slate-300` / `dark:border-slate-700` | `#CBD5E1` / `#334155` | Input border, secondary button border |
+| `text-slate-400` / `dark:text-slate-500` | `#94A3B8` / `#64748B` | Micro labels, mono subtitles, placeholder text |
+| `text-slate-500` / `dark:text-slate-400` | `#64748B` / `#94A3B8` | Secondary descriptions, timestamps, table column headers |
+| `text-slate-600` / `dark:text-slate-300` | `#475569` / `#CBD5E1` | Explanatory copy, secondary button text |
+| `text-slate-700` / `dark:text-slate-200` | `#334155` / `#E2E8F0` | Table cell data, active navigation links |
+| `text-slate-800` / `dark:text-slate-100` | `#1E293B` / `#F1F5F9` | Base body text |
+| `text-slate-900` / `dark:text-white` | `#0F172A` / `#FFFFFF` | Page headings, primary values, active stat numbers |
 
-### 2.2 Semantic Status Tokens
-All badges and alerts use soft pastel backgrounds with tinted 1px borders and high-contrast text:
-
-| Semantic State | Tailwind Classes | Example Contexts |
-| :--- | :--- | :--- |
-| **Active / Success** | `bg-emerald-50 text-emerald-700 border-emerald-200` | Paid invoice, verified account, active plan, live site |
-| **Pending / Attention** | `bg-amber-50 text-amber-700 border-amber-200` | Pending order, unpaid invoice, awaiting developer reply |
-| **Inactive / Terminated**| `bg-rose-50 text-rose-700 border-rose-200` | Expired package, cancelled subscription, validation error |
-| **Neutral / Default** | `bg-slate-100 text-slate-600 border-slate-200` | Inactive plan, draft site, general category tag |
+### 2.3 Semantic Status & Categorical Badges
+All badges use compact font (`text-[10px]` or `text-xs`), subtle tinted backgrounds, and 1px border:
+| State | Tailwind Tokens |
+| :--- | :--- |
+| **Brand Primary** | `bg-primary/10 text-primary border border-primary/20` |
+| **Brand Secondary / Accent** | `bg-secondary/10 text-secondary border border-secondary/20` |
+| **Active / Success** | `bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800` |
+| **Pending / Warning** | `bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800` |
+| **Inactive / Danger** | `bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800` |
+| **Neutral / Informational** | `bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700` |
 
 ---
 
-## 3. 📐 Layout Architecture & Spacing
+## 3. 📐 Layout Architecture & Full-Width Rules
 
-### 3.1 Outer Layout Shell
-The layout shell stretches from edge to edge to provide maximum workspace area for managing multi-tenant sites and billing ledgers.
+### 3.1 Outermost Container Rule
+Every panel view must use `w-full` with NO max-width restrictions on the main page wrapper:
 
 ```jsx
-// Shell Container
-<div className="min-h-screen w-full bg-slate-50 text-slate-800 flex">
-  {/* Fixed Sidebar */}
-  <CreatorSidebar />
+// CORRECT: Full-Width Panel Page Container
+<div className="w-full space-y-4">
+  {/* Content stretches edge-to-edge across the screen */}
+</div>
 
-  {/* Main Viewport Container */}
-  <div className="flex-1 flex flex-col min-w-0 w-full">
-    <CreatorNavbar />
-    
-    {/* Page Content: Full Width, No Max-Width Boundaries */}
-    <main className="flex-1 p-4 sm:p-5 w-full space-y-4">
-      {children}
-    </main>
+// INCORRECT (FORBIDDEN): Artificial max-width boundaries
+<div className="w-full max-w-5xl mx-auto space-y-6"> // FORBIDDEN
+<div className="max-w-7xl mx-auto">                   // FORBIDDEN
+```
+
+### 3.2 Spacing & Metrics
+- **Page Spacing**: `space-y-4` or `space-y-5`
+- **Card Padding**: `p-4` or `p-5`
+- **Card Borders**: `border border-slate-200 dark:border-slate-800 rounded-md bg-white dark:bg-slate-900`
+- **Form Input Sizes**: `w-full px-3 py-1.5 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary`
+- **Primary Buttons (Brand Theme)**: `px-3.5 py-1.5 rounded-md bg-primary hover:bg-primary-dark text-white text-xs font-medium cursor-pointer shadow-xs transition`
+- **Secondary Buttons (Accent Theme)**: `px-3.5 py-1.5 rounded-md bg-secondary hover:bg-secondary-dark text-white text-xs font-medium cursor-pointer shadow-xs transition`
+- **Secondary Neutral Buttons**: `px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium transition cursor-pointer`
+
+---
+
+## 4. 🎯 Icon Usage Rules
+
+To maintain high density and zero visual noise, **only 4 icons are permitted**:
+
+| Allowed Icon | Permitted React Icons | Exact Usage |
+| :--- | :--- | :--- |
+| **Menu** | `FiMenu`, `HiMenu`, `BiMenu` | Sidebar expand/collapse, mobile drawer toggle |
+| **Edit** | `FiEdit`, `FiEdit2`, `BiEdit` | Inline table edit, article edit, item modify |
+| **Delete** | `FiTrash2`, `FiTrash`, `BiTrash` | Delete article, delete row, remove item |
+| **Setting** | `FiSettings`, `BiCog`, `HiOutlineCog` | Gear settings menu, configure preferences |
+
+**Prohibited Icons in Panels**:
+- Do NOT use calendar icons (`FiCalendar`) on date pickers — use native `<input type="date" />` and clear labels.
+- Do NOT use tag icons (`FiTag`), star icons (`FiStar`), file icons (`FiFileText`), or upload icons (`FiUploadCloud`).
+- Do NOT use back-arrow icons (`FiArrowLeft`) — use clean text links: `← Back to Articles` or `Back to List`.
+- Do NOT use status icons (`FiCheckCircle`, `FiXCircle`) in alerts or cards — use clean typography and semantic border/background colors.
+
+---
+
+## 5. 🧩 Standard Page Structure & Component Patterns
+
+### 5.1 Page Header with Actions
+```jsx
+<div className="w-full flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+  <div>
+    <h1 className="text-base font-semibold text-slate-900 dark:text-white">Page Title</h1>
+    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Descriptive subtitle for this workstation view.</p>
+  </div>
+  <div className="flex items-center gap-2">
+    <button type="button" className="px-3 py-1.5 rounded bg-slate-900 text-white text-xs font-medium cursor-pointer">
+      Save Changes
+    </button>
+    <button type="button" className="p-1.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 cursor-pointer" title="Delete">
+      <FiTrash2 className="text-sm" />
+    </button>
   </div>
 </div>
 ```
 
-### 3.2 Spacing & Density Metrics
-- **Outer Page Padding**: `p-4 sm:p-5`
-- **Card Padding**: `p-3.5` to `p-4` (compact cards: `p-3`)
-- **Vertical Rhythm**: `space-y-4` between major blocks; `space-y-2` inside cards
-- **Grid Gaps**: `gap-3` on stat KPI rows, `gap-4` on multi-column split views
-- **Form Input Padding**: `px-3 py-1.5` (compact), `px-3 py-2` (standard form fields)
-- **Button Padding**: `px-3 py-1.5` (standard), `px-2 py-1` (inline table actions)
-
----
-
-## 4. 🔤 Typography Specifications
-
-The creator panel relies entirely on standard font weights with proportional scale:
-
-| Level | Tailwind Classes | Purpose |
-| :--- | :--- | :--- |
-| **Page Title** | `text-base font-semibold text-slate-900` | Main view header (e.g. "Purchased Package & Billing History") |
-| **Section Title** | `text-sm font-semibold text-slate-900` | Card header, modal header, table section title |
-| **Card Subtitle** | `text-xs text-slate-500 mt-0.5` | Context description below headings |
-| **Body / Table Cell** | `text-xs text-slate-800 font-normal` | Primary table content, settings descriptions |
-| **Mono Numerical** | `font-mono text-xs font-medium` | Invoice IDs, currency values, countdowns, timestamps |
-| **Micro Caption** | `text-[10px] uppercase font-semibold text-slate-400` | KPI card category tags, table column headers |
-| **Badge Text** | `text-[9px] font-medium px-1.5 py-0.2 rounded border` | Status pills, plan tier tags |
-
----
-
-## 5. 💳 Strict Multi-Currency Standards (USD vs BDT)
-
-To eliminate financial calculation errors and confusing user representations, the platform enforces strict currency isolation:
-
-1. **No Conversion Rate Formulas**: Currency values are never converted via an arbitrary rate (e.g. multiplying or dividing by `115`).
-2. **Dedicated Gateway Isolation**:
-   - **bKash** payments strictly debit `monthly_price_bdt` / `yearly_price_bdt` in BDT (`৳`).
-   - **Paddle** payments strictly charge `monthly_price_usd` / `yearly_price_usd` in USD (`$`).
-3. **Multi-Currency Totals Display**:
-   - When a creator has made payments in both USD and BDT, the "Total Spent" / "Total Settled" metrics display both values on distinct lines or separate badges.
-   - Example Display:
-     ```
-     Total Spent:
-     $29.00 USD
-     ৳3,500 BDT
-     ```
-   - Values are **never** combined into an invalid sum like `$3529.00`.
-4. **Table Ledger Representation**:
-   - Every invoice record explicitly outputs its currency symbol and 3-letter ISO code:
-     - `৳3,500 BDT`
-     - `$29.00 USD`
-
----
-
-## 6. 🧩 Component Design Specifications
-
-### 6.1 Action Buttons
+### 5.2 Full-Width Form Card
 ```jsx
-// Primary Action
-<button className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-colors cursor-pointer">
-  Renew Subscription
-</button>
-
-// Secondary / Neutral Action
-<button className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs transition-colors cursor-pointer">
-  Refresh
-</button>
-
-// Destructive Action
-<button className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 font-medium text-xs transition-colors cursor-pointer">
-  Revoke
-</button>
-```
-
-### 6.2 Form Inputs & Controls
-```jsx
-// Text / Email / Number Input
-<input
-  type="text"
-  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-/>
-
-// Select Dropdown
-<select className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800">
-  <option>Monthly Billing</option>
-  <option>Yearly Billing</option>
-</select>
-```
-
-### 6.3 Data Table Template
-```jsx
-<div className="bg-white border border-slate-200 rounded p-4 space-y-3">
-  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-    <h2 className="text-sm font-semibold text-slate-900">Record History</h2>
-  </div>
-  <div className="overflow-x-auto">
-    <table className="w-full text-left text-xs">
-      <thead>
-        <tr className="border-b border-slate-200 text-slate-500 text-[10px] uppercase font-semibold">
-          <th className="pb-2">Reference</th>
-          <th className="pb-2">Amount</th>
-          <th className="pb-2">Gateway</th>
-          <th className="pb-2">Status</th>
-          <th className="pb-2 text-right">Actions</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-slate-100 font-normal text-slate-700">
-        <tr className="hover:bg-slate-50">
-          <td className="py-2.5 font-mono text-slate-900 font-medium">INV-3</td>
-          <td className="py-2.5 font-mono text-slate-900 font-medium">৳3,500 BDT</td>
-          <td className="py-2.5 text-slate-600">BKASH</td>
-          <td className="py-2.5">
-            <span className="text-[9px] font-medium px-1.5 py-0.2 rounded border bg-emerald-50 text-emerald-700 border-emerald-200">
-              successful
-            </span>
-          </td>
-          <td className="py-2.5 text-right">
-            <Link href="..." className="text-slate-800 hover:underline font-medium">View Receipt</Link>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+<div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-4">
+  {/* Form fields spread across full width using responsive grid */}
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-1">
+      <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Field Label *</label>
+      <input type="text" className="w-full px-3 py-1.5 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden" />
+    </div>
   </div>
 </div>
 ```
 
 ---
 
-## 7. 📄 Page Inventory & Implementation Matrix
-
-| Route | Page Name | Primary Outermost Div | Features |
-| :--- | :--- | :--- | :--- |
-| `/creator/[id]` | Overview | `w-full space-y-4` | 4-stat KPI row with currency isolation, quick links grid, recent transactions |
-| `/creator/[id]/purchases` | Purchases & Billing | `w-full space-y-4` | Active plan countdown card, interactive payment renewal modal (bKash/Paddle), full purchases table |
-| `/creator/[id]/workspace` | Websites | `w-full space-y-4` | Deployed sites table, DNS domain indicator, site create/edit modal |
-| `/creator/[id]/subscription` | Subscription Tier | `w-full space-y-4` | Plan details, website limit usage, team permission matrix |
-| `/creator/[id]/payments` | Invoices List | `w-full space-y-4` | Total Settled KPI (isolated USD & BDT), search filter, invoices ledger |
-| `/creator/[id]/payments/[id]` | Invoice Receipt | `w-full space-y-4` | Printable receipt voucher, transaction metadata, payment verification |
-| `/creator/[id]/tickets` | Support Helpdesk | `w-full space-y-4` | Ticket status table, category filtering, new ticket submission form |
-| `/creator/[id]/tickets/[id]` | Ticket Thread | `w-full space-y-4` | Text message stream, reply composer, status badges |
-| `/creator/[id]/projects` | Custom Projects | `w-full space-y-4` | Feature requests list, quote statuses, new project request modal |
-| `/creator/[id]/projects/[id]` | Project Details | `w-full space-y-4` | Discussion stream with developer team, milestones |
-| `/creator/[id]/profile` | Creator Profile | `w-full space-y-4` | Organization, phone, email, country, and city settings form |
-| `/creator/[id]/settings` | Security & Sessions | `w-full space-y-4` | Active device logins table with remote revoke, password reset, 2FA toggle |
-| `/creator/[id]/reviews` | Testimonials | `w-full space-y-4` | Platform rating, review submission, edit/delete actions |
-| `/creator/[id]/updates` | Changelog | `w-full space-y-4` | Version release feed, technical change summaries |
-| `/creator/login` | Login | `w-full ...` | Text-only password visibility toggle, 2FA prompt, auto-redirect |
-| `/creator/register` | Registration | `w-full ...` | Simplified onboarding form, zero icon fields |
-| `/creator/recovery` | Password Recovery | `w-full ...` | 3-step recovery flow (email &rarr; OTP &rarr; reset) |
-| `/creator/verify` | Account Activation | `w-full ...` | URL auto-validation, 6-digit code entry, resend handler |
-| `/creator/checkout` | Order Checkout | `w-full space-y-4` | Package invoice generator, billing cycle selector |
-
----
-
-## 8. 🚫 Anti-Patterns & Strict Constraints
+## 6. 🚫 Anti-Patterns & Strict Constraints
 
 | Disallowed Pattern | Reason | Required Solution |
 | :--- | :--- | :--- |
-| `react-icons/*` or `<svg>` | Adds visual weight and breaks typography alignment | Use descriptive, clean text labels and status pills |
-| `font-bold` / `font-extrabold` | Causes heavy contrast imbalance in dense layouts | Use `font-normal`, `font-medium`, or `font-semibold` |
-| `rounded-2xl` / `rounded-3xl` / `rounded-full` | Looks oversized and informal for workstation interfaces | Use `rounded` (4px) or `rounded-md` (6px) |
-| `max-w-6xl mx-auto` on pages | Constrains workspace on widescreen monitors | Use `w-full` with responsive horizontal padding |
-| Summing BDT with USD (e.g. `29 + 3500 = $3529`) | Invalid fiscal math; misleads creator billing | Calculate `totalSpentUsd` and `totalSpentBdt` separately |
-| Hardcoded conversion formulas (e.g. `* 115`) | Flawed accounting; rate discrepancies | Direct pricing: bKash uses BDT price, Paddle uses USD price |
-
----
-*Maintained by the Antigravity Engineering Team.*
+| `max-w-* mx-auto` on page wrappers | Constrains workstation on wide screens | Always use `w-full` for the outer page container |
+| Random icons (`FiImage`, `FiCalendar`, `FiCheck`) | Adds visual clutter and misaligns text | Use text labels, semantic badges, native form controls |
+| `rounded-2xl` / `rounded-3xl` / `rounded-full` | Unprofessional, oversized for dense panels | Use `rounded` (4px) or `rounded-md` (6px) |
+| `font-bold` / `font-extrabold` in panel views | Creates aggressive contrast imbalances | Use `font-semibold` for headers, `font-medium` for buttons |
+| Hardcoded currency conversions | Flawed accounting | Isolate BDT (`৳`) and USD (`$`) completely |

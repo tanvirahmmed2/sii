@@ -364,7 +364,7 @@ export default function WebsiteDetailsPage({ params }) {
 
   if (error || !data?.website) {
     return (
-      <div className="space-y-4 max-w-2xl mx-auto py-12">
+      <div className="w-full space-y-4 py-12">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-8 text-center space-y-4">
           <div className="w-12 h-12 mx-auto rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 flex items-center justify-center text-xl">
             <FiAlertCircle />

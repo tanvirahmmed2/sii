@@ -57,7 +57,7 @@ export default function CreatorPaymentInvoicePage({ params }) {
 
   if (error || !payment) {
     return (
-      <div className="w-full max-w-2xl mx-auto py-12 text-center space-y-4 text-xs">
+      <div className="w-full py-12 text-center space-y-4 text-xs">
         <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 font-medium">
           {error || 'Subscription payment record not found.'}
         </div>
@@ -126,7 +126,7 @@ export default function CreatorPaymentInvoicePage({ params }) {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6 text-slate-800 text-xs pb-16">
+    <div className="w-full space-y-4 text-slate-800 text-xs pb-16">
       {/* Action Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
         <Link

@@ -31,7 +31,7 @@ const TeacherExamsPage = () => {
   const filteredExams = selectedStatus === 'all' ? exams : exams.filter((e) => e.status === selectedStatus);
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-5">
+    <div className="w-full space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200">
         <div>

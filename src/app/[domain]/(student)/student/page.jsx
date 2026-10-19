@@ -139,7 +139,7 @@ const StudentHomePage = () => {
   ];
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-12 animate-fade-up">
+    <div className="flex flex-col gap-6 w-full pb-12 animate-fade-up">
       {/* Welcome Banner */}
       <div className="relative overflow-hidden bg-gradient-to-r from-emerald-700 via-emerald-800 to-teal-900 text-white rounded-3xl p-6 sm:p-8 md:p-10 shadow-lg shadow-emerald-900/10">
         <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-white/5 rounded-full blur-2xl pointer-events-none" />

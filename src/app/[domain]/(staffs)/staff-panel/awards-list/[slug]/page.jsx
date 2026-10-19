@@ -6,27 +6,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import {
-  FiAward,
-  FiUploadCloud,
-  FiTrash2,
-  FiCheckCircle,
-  FiXCircle,
-  FiArrowLeft,
-  FiSave,
-  FiRefreshCw,
-  FiImage,
-  FiCalendar,
-  FiCompass,
-  FiCheck,
-  FiX
-} from 'react-icons/fi';
+import { FiTrash2 } from 'react-icons/fi';
 
 // Dynamically import TiptapEditor to avoid SSR hydration mismatch
 const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor.jsx'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-44 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-center text-xs text-slate-400">
+    <div className="w-full h-44 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-md flex items-center justify-center text-xs text-slate-400">
       Loading rich text editor...
     </div>
   ),
@@ -227,17 +213,15 @@ export default function UpdateAwardPage() {
   }
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-6">
+    <div className="w-full space-y-4">
       {/* Toast Alerts */}
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-xl text-sm animate-fade-in font-medium">
-          <FiCheckCircle className="text-lg shrink-0" />
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-md shadow-lg text-xs font-medium animate-fade-in">
           <span>{toastMessage}</span>
         </div>
       )}
       {toastError && (
-        <div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-rose-600 text-white px-4 py-3 rounded-xl shadow-xl text-sm animate-fade-in font-medium">
-          <FiXCircle className="text-lg shrink-0" />
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-rose-600 text-white px-4 py-2 rounded-md shadow-lg text-xs font-medium animate-fade-in">
           <span>{toastError}</span>
         </div>
       )}
@@ -246,16 +230,15 @@ export default function UpdateAwardPage() {
       <div className="flex items-center justify-between">
         <Link
           href={`/${domain}/staff-panel/awards-list`}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
         >
-          <FiArrowLeft className="text-sm" />
-          <span>Back to Awards List</span>
+          <span>← Back to Awards List</span>
         </Link>
 
         <button
           type="button"
           onClick={() => setDeleteConfirmOpen(true)}
-          className="px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 transition cursor-pointer flex items-center gap-1.5"
+          className="px-3 py-1.5 rounded-md text-xs font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 transition cursor-pointer flex items-center gap-1.5"
         >
           <FiTrash2 className="text-xs" />
           <span>Delete Award</span>
@@ -263,25 +246,22 @@ export default function UpdateAwardPage() {
       </div>
 
       {/* Main Update Card */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
-        {/* Header (Title: Update) */}
-        <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-          <h1 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-              <FiAward className="text-lg" />
-            </div>
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md shadow-xs overflow-hidden">
+        {/* Header */}
+        <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+          <h1 className="text-sm font-semibold text-slate-900 dark:text-white">
             Update Award
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Modify institutional award recognition, year, granting body, trophy photo, and full citation.
           </p>
         </div>
 
-        <form onSubmit={handleSave} className="p-6 space-y-6">
+        <form onSubmit={handleSave} className="p-4 space-y-4">
           {/* Main Info */}
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Award Title <span className="text-rose-500">*</span>
+            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+              Award Title <span className="text-secondary">*</span>
             </label>
             <input
               type="text"
@@ -289,15 +269,14 @@ export default function UpdateAwardPage() {
               placeholder="e.g. National Championship in Science Olympiad"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition"
+              className="w-full px-3 py-2 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary transition"
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <FiCalendar className="text-slate-400 text-xs" />
-                <span>Award Year</span>
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                Award Year
               </label>
               <input
                 type="number"
@@ -306,21 +285,20 @@ export default function UpdateAwardPage() {
                 placeholder="2026"
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white font-mono focus:outline-hidden focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition"
+                className="w-full px-3 py-2 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white font-mono focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary transition"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <FiCompass className="text-slate-400 text-xs" />
-                <span>Granting Body / Issuer</span>
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                Granting Body / Issuer
               </label>
               <input
                 type="text"
                 placeholder="e.g. Ministry of Education / STEM Council"
                 value={issuer}
                 onChange={(e) => setIssuer(e.target.value)}
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition"
+                className="w-full px-3 py-2 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary transition"
               />
             </div>
           </div>
@@ -328,10 +306,9 @@ export default function UpdateAwardPage() {
           {/* Trophy Photograph Section (Strictly Single Image) */}
           <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                <FiImage className="text-amber-500 text-sm" />
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
                 <span>Trophy / Certificate Photograph</span>
-                <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500">
+                <span className="text-[10px] font-normal px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">
                   Strictly single image
                 </span>
               </label>
@@ -348,16 +325,16 @@ export default function UpdateAwardPage() {
             </div>
 
             {!removeImage && image ? (
-              <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 flex flex-col sm:flex-row items-center gap-4">
-                <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0 bg-slate-900/10">
+              <div className="p-3 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 flex flex-col sm:flex-row items-center gap-3">
+                <div className="relative w-28 h-28 rounded overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0 bg-slate-900/10">
                   <img src={image.image_url} alt="Award photo" className="w-full h-full object-cover" />
                 </div>
                 <div className="space-y-2 flex-1 w-full">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                      <FiCheckCircle /> {selectedPhotoFile ? 'Selected for Upload' : 'Stored Photo'}
+                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                      {selectedPhotoFile ? 'Selected for Upload' : 'Stored Photo'}
                     </span>
-                    <label className="text-xs font-semibold text-secondary hover:underline cursor-pointer">
+                    <label className="text-xs font-medium text-primary hover:underline cursor-pointer">
                       <span>Replace Photo</span>
                       <input
                         type="file"
@@ -376,24 +353,21 @@ export default function UpdateAwardPage() {
                       placeholder="e.g. Trophy receiving ceremony on stage"
                       value={image.caption || ''}
                       onChange={(e) => setImage({ ...image, caption: e.target.value })}
-                      className="mt-1 w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                      className="mt-1 w-full px-3 py-1.5 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:border-primary"
                     />
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="relative border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-secondary rounded-2xl p-6 text-center transition-all bg-slate-50/50 dark:bg-slate-800/20">
+              <div className="relative border border-dashed border-slate-300 dark:border-slate-700 hover:border-primary rounded-md p-6 text-center transition-all bg-slate-50/50 dark:bg-slate-800/20">
                 <input
                   type="file"
                   accept="image/*"
                   onChange={handlePhotoSelect}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
-                <div className="flex flex-col items-center justify-center space-y-2 pointer-events-none">
-                  <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
-                    <FiUploadCloud className="text-2xl" />
-                  </div>
-                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                <div className="flex flex-col items-center justify-center space-y-1 pointer-events-none">
+                  <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
                     Click or drop photo here to select
                   </p>
                   <p className="text-[11px] text-slate-400">
@@ -407,10 +381,10 @@ export default function UpdateAwardPage() {
           {/* Tiptap Rich Text Editor for Description */}
           <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                 Award Citation & Full Description
               </label>
-              <span className="text-[11px] text-slate-400">Tiptap Rich Text</span>
+              <span className="text-[11px] text-slate-400">Rich Text</span>
             </div>
             <TiptapEditor
               value={description}
@@ -421,39 +395,36 @@ export default function UpdateAwardPage() {
           </div>
 
           {/* Active Status Toggle */}
-          <div className="flex items-center gap-3 pt-2">
+          <div className="flex items-center gap-2 pt-2">
             <input
               type="checkbox"
               id="isActive"
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
-              className="w-4 h-4 rounded text-secondary focus:ring-secondary cursor-pointer"
+              className="w-4 h-4 rounded text-primary focus:ring-primary cursor-pointer accent-primary"
             />
-            <label htmlFor="isActive" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+            <label htmlFor="isActive" className="text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
               Display on public awards showcase page (Active)
             </label>
           </div>
 
           {/* Save Action Bar */}
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
+          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
             <Link
               href={`/${domain}/staff-panel/awards-list`}
-              className="px-4 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
+              className="px-3.5 py-1.5 rounded-md text-xs font-medium border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
             >
               Cancel
             </Link>
             <button
               type="submit"
               disabled={saving}
-              className="px-5 py-2 rounded-xl text-xs font-semibold bg-secondary hover:bg-secondary-dark text-white shadow-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-2"
+              className="px-4 py-1.5 rounded-md text-xs font-medium bg-primary hover:bg-primary-dark text-white shadow-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
             >
               {saving ? (
                 <div className="loader loader-sm loader-white" />
               ) : (
-                <>
-                  <FiSave className="text-xs" />
-                  <span>Save Changes</span>
-                </>
+                <span>Save Changes</span>
               )}
             </button>
           </div>
@@ -463,21 +434,19 @@ export default function UpdateAwardPage() {
       {/* Delete Confirmation Modal */}
       {deleteConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4 animate-scale-up">
-            <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400">
-              <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/50">
-                <FiTrash2 className="text-xl" />
-              </div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Delete Award Entry</h3>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md w-full max-w-md shadow-2xl p-5 space-y-4 animate-scale-up">
+            <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+              <FiTrash2 className="text-lg" />
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Delete Award Entry</h3>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
               Are you sure you want to permanently delete this award? This action cannot be undone.
             </p>
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setDeleteConfirmOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer"
+                className="px-3 py-1.5 rounded-md text-xs font-medium border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer"
               >
                 Cancel
               </button>
@@ -485,7 +454,7 @@ export default function UpdateAwardPage() {
                 type="button"
                 disabled={deleting}
                 onClick={handleDelete}
-                className="px-5 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                className="px-3.5 py-1.5 rounded-md text-xs font-medium bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
               >
                 {deleting ? (
                   <div className="loader loader-sm loader-white" />

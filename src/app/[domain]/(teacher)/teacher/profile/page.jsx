@@ -272,7 +272,7 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-5 pb-12">
+    <div className="w-full space-y-5 pb-12">
 
       {/* Profile Card */}
       <div className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col sm:flex-row items-center gap-5">

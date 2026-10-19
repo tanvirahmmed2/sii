@@ -240,7 +240,7 @@ const FeesPage = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-10">
+    <div className="flex flex-col gap-6 w-full pb-10">
       {/* Feedback Toast */}
       {feedback && (
         <div

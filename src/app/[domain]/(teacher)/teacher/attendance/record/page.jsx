@@ -315,7 +315,7 @@ const AttendanceRecordPage = () => {
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-5">
+    <div className="w-full space-y-5">
 
       {/* Back Link & Header */}
       <div className="flex flex-col gap-2 pb-3 border-b border-slate-200">

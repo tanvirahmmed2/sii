@@ -66,7 +66,7 @@ const TeacherHomePage = () => {
   ];
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-5">
+    <div className="w-full space-y-5">
       {/* Welcome Banner */}
       <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>

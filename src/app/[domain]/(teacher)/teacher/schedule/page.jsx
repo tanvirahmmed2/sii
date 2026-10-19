@@ -33,7 +33,7 @@ const SchedulePage = () => {
   const dailyClasses = routine.filter((r) => r.day_of_week?.toLowerCase() === activeTab.toLowerCase());
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-5">
+    <div className="w-full space-y-5">
       {/* Header */}
       <div className="pb-3 border-b border-slate-200">
         <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
