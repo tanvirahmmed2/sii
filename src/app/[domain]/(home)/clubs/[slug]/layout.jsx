@@ -1,10 +1,8 @@
 import { SCHOOL_NAME } from 'src/lib/database/secret';
 
-const shortName = SCHOOL_NAME.split(" ").map((w) => w[0]).join('');
-
 export const metadata = {
-  title: `Clubs - Slug | ${shortName} Campus`,
-  description: `Explore Clubs - Slug page at ${SCHOOL_NAME} (${shortName}).`,
+  title: 'Clubs - Slug',
+  description: `Explore Clubs - Slug page at ${SCHOOL_NAME}.`,
 };
 
 export default function ClubsSlugLayout({ children }) {

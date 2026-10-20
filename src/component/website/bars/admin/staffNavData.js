@@ -192,6 +192,11 @@ export const staffNavData = [
         "path": "/admission-circulars"
       },
       {
+        "title": "Update Circular",
+        "module": "admissions",
+        "path": "/admission-circular-update"
+      },
+      {
         "title": "Applicants Review",
         "module": "admissions",
         "path": "/admission-applicants"
@@ -215,6 +220,11 @@ export const staffNavData = [
         "title": "Student Enrollment",
         "module": "admissions",
         "path": "/admission-enrollment"
+      },
+      {
+        "title": "Spams",
+        "module": "admissions",
+        "path": "/admission-spams"
       }
     ]
   },
@@ -492,47 +502,6 @@ export const staffNavData = [
             "path": "/exam-attendance-list"
           }
         ]
-      }
-    ]
-  },
-  {
-    "title": "Admission",
-    "module": "admissions",
-    "children": [
-      {
-        "title": "Circulars",
-        "module": "admissions",
-        "path": "/admission-circulars"
-      },
-      {
-        "title": "Update Circular",
-        "module": "admissions",
-        "path": "/admission-circular-update"
-      },
-      {
-        "title": "Applicants",
-        "module": "admissions",
-        "path": "/admission-applicants"
-      },
-      {
-        "title": "Exam Marks Upload",
-        "module": "admissions",
-        "path": "/admission-exam-marks-upload"
-      },
-      {
-        "title": "Exam Selection & Cutoff",
-        "module": "admissions",
-        "path": "/admission-exam-marks-process"
-      },
-      {
-        "title": "Result",
-        "module": "admissions",
-        "path": "/admission-result"
-      },
-      {
-        "title": "Spams",
-        "module": "admissions",
-        "path": "/admission-spams"
       }
     ]
   },

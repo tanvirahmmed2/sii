@@ -1,10 +1,8 @@
 import { SCHOOL_NAME } from 'src/lib/database/secret';
 
-const shortName = SCHOOL_NAME.split(" ").map((w) => w[0]).join('');
-
 export const metadata = {
-  title: `Facilities | ${shortName} Campus`,
-  description: `Explore classrooms, lab facilities, and hostel accommodations at ${SCHOOL_NAME} (${shortName}).`,
+  title: 'Facilities',
+  description: `Explore classrooms, lab facilities, and hostel accommodations at ${SCHOOL_NAME}.`,
 };
 
 export default function FacilitiesLayout({ children }) {

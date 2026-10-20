@@ -5,11 +5,9 @@ import Navbar from 'src/component/website/bars/teacher/Navbar';
 import Sidebar from 'src/component/website/bars/teacher/Sidebar';
 import { SCHOOL_NAME } from 'src/lib/database/secret';
 
-const shortName = SCHOOL_NAME.split(" ").map((w) => w[0]).join('');
-
 export const metadata = {
-  title: `Teacher Dashboard | ${shortName} Campus`,
-  description: `Teacher academic management portal for ${SCHOOL_NAME} (${shortName}).`,
+  title: 'Teacher Dashboard',
+  description: `Teacher academic management portal for ${SCHOOL_NAME}.`,
 };
 
 export const dynamic = 'force-dynamic';

@@ -70,22 +70,21 @@ const hasActiveChild = (item, pathname) => {
 // Sub-level collapsible group (for nested menus like Update, Migration, ID Card, etc.)
 const SubCollapsibleGroup = ({ group, pathname, onCloseMobile, forceOpenState = null }) => {
   const isInitiallyActive = useMemo(() => hasActiveChild(group, pathname), [group, pathname]);
-  const [isOpen, setIsOpen] = useState(isInitiallyActive);
+  const [userToggled, setUserToggled] = useState(null);
+  const [prevSync, setPrevSync] = useState({ isInitiallyActive, forceOpenState });
 
-  // Sync open state when navigation changes or when global forceOpenState changes
-  useEffect(() => {
-    if (forceOpenState !== null) {
-      setIsOpen(forceOpenState);
-    } else if (isInitiallyActive) {
-      setIsOpen(true);
-    }
-  }, [isInitiallyActive, forceOpenState]);
+  if (prevSync.isInitiallyActive !== isInitiallyActive || prevSync.forceOpenState !== forceOpenState) {
+    setPrevSync({ isInitiallyActive, forceOpenState });
+    setUserToggled(null);
+  }
+
+  const isOpen = userToggled !== null ? userToggled : (forceOpenState !== null ? forceOpenState : isInitiallyActive);
 
   return (
     <div className="flex flex-col space-y-0.5 my-0.5">
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setUserToggled(!isOpen)}
         className={`flex items-center justify-between w-full px-2 py-1 rounded text-[11px] font-medium transition-colors cursor-pointer ${
           isInitiallyActive
             ? 'text-primary dark:text-primary-light font-semibold bg-primary/5'
@@ -148,16 +147,15 @@ const SubCollapsibleGroup = ({ group, pathname, onCloseMobile, forceOpenState = 
 // Top-level accordion module
 const NavModuleAccordion = ({ module, pathname, onCloseMobile, forceOpenState = null }) => {
   const isInitiallyActive = useMemo(() => hasActiveChild(module, pathname), [module, pathname]);
-  const [isOpen, setIsOpen] = useState(isInitiallyActive);
+  const [userToggled, setUserToggled] = useState(null);
+  const [prevSync, setPrevSync] = useState({ isInitiallyActive, forceOpenState });
 
-  // Sync open state when navigation changes or when global forceOpenState changes
-  useEffect(() => {
-    if (forceOpenState !== null) {
-      setIsOpen(forceOpenState);
-    } else if (isInitiallyActive) {
-      setIsOpen(true);
-    }
-  }, [isInitiallyActive, forceOpenState]);
+  if (prevSync.isInitiallyActive !== isInitiallyActive || prevSync.forceOpenState !== forceOpenState) {
+    setPrevSync({ isInitiallyActive, forceOpenState });
+    setUserToggled(null);
+  }
+
+  const isOpen = userToggled !== null ? userToggled : (forceOpenState !== null ? forceOpenState : isInitiallyActive);
 
   // If module is a direct link without children
   if (module.path && (!module.children || module.children.length === 0)) {
@@ -183,7 +181,7 @@ const NavModuleAccordion = ({ module, pathname, onCloseMobile, forceOpenState = 
     <div className="flex flex-col space-y-0.5">
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setUserToggled(!isOpen)}
         className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded text-xs transition-colors cursor-pointer ${
           isInitiallyActive
             ? 'bg-slate-100/80 dark:bg-slate-800/70 text-slate-900 dark:text-white font-semibold'
@@ -410,7 +408,7 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
                   const isActive = checkIsActive(res.path, pathname);
                   return (
                     <Link
-                      key={res.path}
+                      key={`${res.path}-${res.fullTitle}`}
                       href={target}
                       onClick={() => {
                         closeMobile();

@@ -1,10 +1,8 @@
 import { SCHOOL_NAME } from 'src/lib/database/secret';
 
-const shortName = SCHOOL_NAME.split(" ").map((w) => w[0]).join('');
-
 export const metadata = {
-  title: `Teacher - Marks | ${shortName} Campus`,
-  description: `Explore Teacher - Marks page at ${SCHOOL_NAME} (${shortName}).`,
+  title: 'Teacher - Marks',
+  description: `Explore Teacher - Marks page at ${SCHOOL_NAME}.`,
 };
 
 export default function MarksLayout({ children }) {

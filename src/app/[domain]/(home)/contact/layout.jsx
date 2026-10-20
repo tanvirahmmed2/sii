@@ -1,10 +1,8 @@
 import { SCHOOL_NAME } from 'src/lib/database/secret';
 
-const shortName = SCHOOL_NAME.split(" ").map((w) => w[0]).join('');
-
 export const metadata = {
-  title: `Contact | ${shortName} Campus`,
-  description: `Get in touch with ${SCHOOL_NAME} (${shortName}) for support, inquiries, and admissions.`,
+  title: 'Contact',
+  description: `Get in touch with ${SCHOOL_NAME} for support, inquiries, and admissions.`,
 };
 
 export default function ContactLayout({ children }) {
