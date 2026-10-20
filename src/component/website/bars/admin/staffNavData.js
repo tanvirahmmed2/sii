@@ -852,6 +852,11 @@ export const staffNavData = [
     "module": "website-builder",
     "children": [
       {
+        "title": "About Sections",
+        "module": "website-builder",
+        "path": "/institutional-about"
+      },
+      {
         "title": "Missions",
         "module": "website-builder",
         "path": "/institutional-missions"
@@ -867,9 +872,24 @@ export const staffNavData = [
         "path": "/institutional-milestones"
       },
       {
+        "title": "Histories & Timeline",
+        "module": "website-builder",
+        "path": "/histories"
+      },
+      {
         "title": "Infrastructure",
         "module": "website-builder",
         "path": "/institutional-infrastructure"
+      },
+      {
+        "title": "Campus Geography",
+        "module": "website-builder",
+        "path": "/campus-data"
+      },
+      {
+        "title": "Facilities",
+        "module": "website-builder",
+        "path": "/facilities"
       },
       {
         "title": "Board Members",

@@ -1,1 +1,1 @@
-export { GET } from '../clubs/route.js';
+export { GET } from '../../clubs/route.js';

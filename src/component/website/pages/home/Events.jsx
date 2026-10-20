@@ -16,7 +16,7 @@ const Events = () => {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const res = await fetch(getApiEndpoint('home/events?home=true&limit=6'));
+        const res = await fetch(getApiEndpoint('events?home=true&limit=6'));
         if (res.ok) {
           const data = await res.json();
           setEvents(data.payload?.events || data.paylod?.events || data.events || []);

@@ -4,7 +4,7 @@ import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { getStaffSession } from 'src/lib/middleware/staff.js';
 import { uploadImage, deleteImage } from 'src/lib/database/cloudinary.js';
 
-async function verifyStaffAccess(request, context) {
+async function verifyStaffAccess(request, context, action = 'view') {
   const website = await resolveWebsiteFromRequest(request, context);
   if (!website) {
     return { error: 'Educational institution portal not found.', status: 404 };
@@ -22,6 +22,23 @@ async function verifyStaffAccess(request, context) {
 
   if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
     return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
+  }
+
+  // Validate module action permissions if granular permissions table exists
+  const permissions = staffSession.permissions || staffSession.staff?.permissions || {};
+  if (Object.keys(permissions).length > 0) {
+    const modPerm = permissions['board-members'] || permissions['institutional'] || permissions['website-profile'];
+    if (modPerm) {
+      if (action === 'create' && !modPerm.can_create) {
+        return { error: 'Forbidden: No create permission for board members.', status: 403 };
+      }
+      if ((action === 'edit' || action === 'update') && !modPerm.can_edit) {
+        return { error: 'Forbidden: No edit permission for board members.', status: 403 };
+      }
+      if (action === 'delete' && !modPerm.can_delete) {
+        return { error: 'Forbidden: No delete permission for board members.', status: 403 };
+      }
+    }
   }
 
   return { website, staffSession };
@@ -104,7 +121,7 @@ async function parseBoardMemberRequest(request) {
 // POST: Create a new board member
 export async function POST(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'create');
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const { body, imageFile } = await parseBoardMemberRequest(request);
@@ -183,7 +200,7 @@ export async function POST(request, context) {
 // PUT: Update an existing board member
 export async function PUT(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'edit');
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const { body, imageFile } = await parseBoardMemberRequest(request);
@@ -286,7 +303,7 @@ export async function PUT(request, context) {
 // DELETE: Delete a board member
 export async function DELETE(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'delete');
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const { searchParams } = new URL(request.url);

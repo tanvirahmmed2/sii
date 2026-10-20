@@ -13,7 +13,7 @@ const TeachersPage = () => {
   useEffect(() => {
     const fetchTeachers = async () => {
       try {
-        const res = await fetch(getApiEndpoint('home/teachers'));
+        const res = await fetch(getApiEndpoint('teachers'));
         if (res.ok) {
           const data = await res.json();
           setTeachers(data.payload?.teachers || data.paylod?.teachers || data.teachers || []);

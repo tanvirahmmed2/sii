@@ -13,17 +13,29 @@ export async function GET(request, context) {
     }
 
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type'); // 'missions' | 'visions' | 'milestones' | 'infrastructure' | 'board_members' | null (all)
+    const type = searchParams.get('type'); // 'abouts' | 'missions' | 'visions' | 'milestones' | 'infrastructure' | 'board_members' | null (all)
 
     const resultPayload = {
       success: true,
       website_id: website.id,
+      abouts: [],
       missions: [],
       visions: [],
       milestones: [],
       infrastructure: [],
       board_members: []
     };
+
+    if (!type || type === 'abouts' || type === 'about') {
+      const aboutsRes = await queryDb(
+        `SELECT id, title, subtitle, description, image, image_id, order_no, created_at, updated_at
+         FROM website_abouts
+         WHERE website_id = $1 AND is_active = true
+         ORDER BY order_no ASC, id ASC`,
+        [website.id]
+      );
+      resultPayload.abouts = aboutsRes.rows;
+    }
 
     if (!type || type === 'missions') {
       const missionsRes = await queryDb(

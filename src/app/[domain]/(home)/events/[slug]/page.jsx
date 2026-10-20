@@ -68,7 +68,7 @@ const EventDetailPage = ({ params: paramsPromise }) => {
     setInterestLoading(true);
 
     try {
-      const res = await axios.post(getApiEndpoint('home/events'), {
+      const res = await axios.post(getApiEndpoint('events'), {
         event_id: event.id,
         action: isInterested ? 'uninterest' : 'interest',
       });

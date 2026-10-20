@@ -19,7 +19,7 @@ const Contact = () => {
   const phone = website?.phone || '+880 1700-000000';
 
   const domain = params?.domain || website?.slug || website?.subdomain || '';
-  const apiEndpoint = domain ? `/api/${domain}/home/contact` : getApiEndpoint('home/contact');
+  const apiEndpoint = domain ? `/api/${domain}/contact` : getApiEndpoint('contact');
 
   const handleSubmit = async (e) => {
     e.preventDefault();

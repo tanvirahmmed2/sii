@@ -16,7 +16,7 @@ const EventsPage = () => {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const res = await fetch(getApiEndpoint('home/events'));
+        const res = await fetch(getApiEndpoint('events'));
         if (res.ok) {
           const data = await res.json();
           setEvents(data.payload?.events || data.paylod?.events || data.events || []);

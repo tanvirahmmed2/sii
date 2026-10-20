@@ -20,7 +20,7 @@ const NewsDetailPage = () => {
       try {
         const [singleRes, listRes] = await Promise.all([
           fetch(getApiEndpoint(`home/news/${slug}`)),
-          fetch(getApiEndpoint('home/news'))
+          fetch(getApiEndpoint('news'))
         ]);
 
         if (singleRes.ok) {

@@ -10,28 +10,41 @@ const CampusPage = () => {
   const { website, tenantUrl, getApiEndpoint } = useContext(TenantWebsiteContext);
   const schoolName = website?.name || 'Institution';
 
+  const [campusData, setCampusData] = useState([]);
   const [infrastructure, setInfrastructure] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let ignore = false;
-    const fetchInfrastructure = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch(getApiEndpoint('home/institutional?type=infrastructure'));
-        if (!ignore && res.ok) {
-          const data = await res.json();
-          if (data.success && Array.isArray(data.infrastructure)) {
-            setInfrastructure(data.infrastructure);
+        const campusPromise = fetch(getApiEndpoint('campus-data'))
+          .then((res) => (res.ok ? res.json() : {}))
+          .catch(() => ({}));
+
+        const infraPromise = fetch(getApiEndpoint('institutional?type=infrastructure'))
+          .then((res) => (res.ok ? res.json() : {}))
+          .catch(() => ({}));
+
+        const [cRes, iRes] = await Promise.all([campusPromise, infraPromise]);
+
+        if (!ignore) {
+          const cList = cRes?.campus_data || cRes?.payload?.campus_data || [];
+          if (Array.isArray(cList)) {
+            setCampusData(cList);
+          }
+          if (iRes?.success && Array.isArray(iRes.infrastructure)) {
+            setInfrastructure(iRes.infrastructure);
           }
         }
       } catch (err) {
-        console.error('Error fetching campus infrastructure:', err);
+        console.error('Error fetching campus data:', err);
       } finally {
         if (!ignore) setLoading(false);
       }
     };
 
-    fetchInfrastructure();
+    fetchData();
     return () => {
       ignore = true;
     };
@@ -86,12 +99,91 @@ const CampusPage = () => {
           </p>
         </div>
 
-        {/* Dynamic Infrastructure Facilities from Database */}
-        {!loading && infrastructure.length > 0 ? (
+        {/* Dynamic Campus Zones from website_campus_data */}
+        {!loading && campusData.length > 0 && (
           <div className="space-y-4">
             <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
               <FiLayers className="text-primary w-5 h-5" />
-              <span>Campus Facilities & Centers</span>
+              <span>Campus Zones & Infrastructure</span>
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {campusData.map((item, idx) => (
+                <div
+                  key={item.id || idx}
+                  className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300"
+                >
+                  {/* Photo Banner */}
+                  {item.image && (
+                    <div className="w-full h-48 bg-slate-100 dark:bg-slate-800 overflow-hidden relative group">
+                      <img
+                        src={item.image}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-103 transition duration-300"
+                      />
+                      <a
+                        href={item.image}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition text-white text-xs gap-1.5"
+                      >
+                        <FiExternalLink className="w-3.5 h-3.5" />
+                        <span>View Photo</span>
+                      </a>
+                    </div>
+                  )}
+
+                  <div className="p-6 space-y-2.5 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-semibold text-primary uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20">
+                        {item.subtitle || 'Campus Zone'}
+                      </span>
+                      {item.location && (
+                        <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                          {item.location}
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <h3 className="font-serif text-base sm:text-lg font-semibold text-slate-900 dark:text-white">
+                        {item.title}
+                      </h3>
+                    </div>
+
+                    {item.description && (
+                      <div
+                        className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed prose dark:prose-invert max-w-none pt-1"
+                        dangerouslySetInnerHTML={{ __html: item.description }}
+                      />
+                    )}
+
+                    {item.map_url && (
+                      <div className="pt-2">
+                        <a
+                          href={item.map_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs font-medium text-primary hover:underline inline-flex items-center gap-1"
+                        >
+                          <span>Open Location Map</span>
+                          <FiExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Dynamic Infrastructure Facilities from Database */}
+        {!loading && infrastructure.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
+              <FiLayers className="text-primary w-5 h-5" />
+              <span>Academic Facilities & Centers</span>
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -152,8 +244,10 @@ const CampusPage = () => {
               ))}
             </div>
           </div>
-        ) : (
-          /* Default Static Facilities fallback */
+        )}
+
+        {/* Default Static Facilities fallback if neither campusData nor infrastructure exist */}
+        {!loading && campusData.length === 0 && infrastructure.length === 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {defaultFacilities.map((fac, idx) => (
               <div

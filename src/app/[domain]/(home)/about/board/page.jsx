@@ -18,12 +18,14 @@ const BoardMembersPage = () => {
     let ignore = false;
     const fetchBoard = async () => {
       try {
-        const endpoint = getApiEndpoint('home/institutional?type=board_members');
+        const endpoint = getApiEndpoint('board-members');
         const res = await fetch(endpoint);
         if (!ignore && res.ok) {
           const data = await res.json();
           if (data.success && Array.isArray(data.board_members)) {
             setBoardMembers(data.board_members);
+          } else if (data.success && Array.isArray(data.payload?.board_members)) {
+            setBoardMembers(data.payload.board_members);
           }
         }
       } catch (err) {

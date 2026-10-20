@@ -5,22 +5,7 @@ import React, { useState, useEffect, useContext, useMemo, useCallback, useRef } 
 import dynamic from 'next/dynamic';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import {
-  FiUsers,
-  FiPlus,
-  FiEdit2,
-  FiTrash2,
-  FiX,
-  FiSearch,
-  FiRefreshCw,
-  FiUploadCloud,
-  FiCheckCircle,
-  FiAlertCircle,
-  FiImage,
-  FiHash,
-  FiExternalLink,
-  FiShield
-} from 'react-icons/fi';
+import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import Loader from 'src/component/common/Loader';
 
@@ -28,24 +13,11 @@ import Loader from 'src/component/common/Loader';
 const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor.jsx'), {
   ssr: false,
   loading: () => (
-    <div className="h-36 border border-slate-200 dark:border-slate-800 rounded-lg animate-pulse bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center text-xs text-slate-400">
-      Loading Rich Text Biography Editor...
+    <div className="h-32 border border-slate-200 dark:border-slate-800 rounded-md animate-pulse bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center text-xs text-slate-400">
+      Loading Editor...
     </div>
   ),
 });
-
-const COMMON_DESIGNATIONS = [
-  'Chairman of the Board',
-  'Vice Chairman',
-  'Founder Trustee',
-  'Managing Director',
-  'Board of Director',
-  'Governing Body Member',
-  'Honorary Secretary',
-  'Treasurer',
-  'Executive Committee Member',
-  'Academic Advisor'
-];
 
 export default function BoardMembersPage() {
   const { website, getApiEndpoint } = useContext(TenantWebsiteContext);
@@ -55,52 +27,52 @@ export default function BoardMembersPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // all, active, inactive
-  const [designationFilter, setDesignationFilter] = useState('all');
 
-  // Modal states
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit'
+  // In-Page Form State (NO POPUP MODAL)
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState('create'); // 'create' | 'edit'
   const [editingMember, setEditingMember] = useState(null);
 
-  // Delete modal state
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  // In-Page Delete Confirmation (NO POPUP MODAL)
   const [memberToDelete, setMemberToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Form states
   const [formName, setFormName] = useState('');
   const [formTitle, setFormTitle] = useState('');
   const [formDesignation, setFormDesignation] = useState('');
   const [formBio, setFormBio] = useState('');
-  const [formImageUrl, setFormImageUrl] = useState('');
-  const [formImageId, setFormImageId] = useState('');
   const [formOrderNo, setFormOrderNo] = useState(0);
   const [formIsActive, setFormIsActive] = useState(true);
-
-  const fileInputRef = useRef(null);
+  const [formImageUrl, setFormImageUrl] = useState('');
+  const [formImageId, setFormImageId] = useState('');
   const [selectedImageFile, setSelectedImageFile] = useState(null);
 
-  // API Endpoints
+  const fileInputRef = useRef(null);
+
+  // API Endpoint
   const apiEndpoint = useMemo(() => getApiEndpoint('staff/panel/board-members'), [getApiEndpoint]);
 
-  // Fetch Board Members
+  // Fetch members
   const fetchBoardMembers = useCallback(
-    async (silent = false) => {
-      if (!silent) setLoading(true);
-      else setRefreshing(true);
-
+    async (showToast = false) => {
+      if (!apiEndpoint) return;
       try {
+        if (showToast) setRefreshing(true);
         const res = await axios.get(apiEndpoint);
         if (res.data?.success) {
           setBoardMembers(res.data.board_members || []);
+          if (showToast) toast.success('Board members updated.');
+        } else {
+          toast.error(res.data?.error || 'Failed to load board members.');
         }
       } catch (err) {
         console.error('Error fetching board members:', err);
-        toast.error(err.response?.data?.error || 'Failed to load board members.');
+        toast.error(err.response?.data?.error || 'Failed to connect to server.');
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -111,103 +83,80 @@ export default function BoardMembersPage() {
 
   useEffect(() => {
     let ignore = false;
-    const load = async () => {
-      setLoading(true);
-      try {
-        const res = await axios.get(apiEndpoint);
-        if (!ignore && res.data?.success) {
-          setBoardMembers(res.data.board_members || []);
-        }
-      } catch (err) {
-        if (!ignore) {
-          console.error('Error loading board members:', err);
-          toast.error(err.response?.data?.error || 'Failed to load board members.');
-        }
-      } finally {
-        if (!ignore) setLoading(false);
-      }
-    };
-
-    load();
+    if (!ignore) {
+      fetchBoardMembers();
+    }
     return () => {
       ignore = true;
     };
-  }, [apiEndpoint]);
+  }, [fetchBoardMembers]);
 
-  // Open Create Modal
-  const openCreateModal = () => {
-    setModalMode('create');
+  // Open Create in-page form
+  const handleOpenCreate = () => {
+    setFormMode('create');
     setEditingMember(null);
-    setSelectedImageFile(null);
     setFormName('');
     setFormTitle('');
-    setFormDesignation('Governing Body Member');
+    setFormDesignation('');
     setFormBio('');
-    setFormImageUrl('');
-    setFormImageId('');
     setFormOrderNo(boardMembers.length > 0 ? boardMembers.length + 1 : 1);
     setFormIsActive(true);
-    setIsModalOpen(true);
+    setFormImageUrl('');
+    setFormImageId('');
+    setSelectedImageFile(null);
+    setMemberToDelete(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setIsFormOpen(true);
   };
 
-  // Open Edit Modal
-  const openEditModal = (member) => {
-    setModalMode('edit');
+  // Open Edit in-page form
+  const handleOpenEdit = (member) => {
+    setFormMode('edit');
     setEditingMember(member);
-    setSelectedImageFile(null);
     setFormName(member.name || '');
     setFormTitle(member.title || '');
     setFormDesignation(member.designation || '');
     setFormBio(member.bio || '');
-    setFormImageUrl(member.image || '');
-    setFormImageId(member.image_id || '');
     setFormOrderNo(member.order_no ?? 0);
     setFormIsActive(Boolean(member.is_active));
-    setIsModalOpen(true);
-  };
-
-  // Handle Local Photo Selection
-  const handleImageFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please choose a valid photo file (PNG, JPG, WEBP, etc.)');
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Image exceeds 10MB limit. Please upload a smaller image.');
-      return;
-    }
-
-    setSelectedImageFile(file);
-    const objectUrl = URL.createObjectURL(file);
-    setFormImageUrl(objectUrl);
-    toast.success('Photo selected! Click "Save Board Member" to apply.');
+    setFormImageUrl(member.image || '');
+    setFormImageId(member.image_id || '');
+    setSelectedImageFile(null);
+    setMemberToDelete(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
+    setIsFormOpen(true);
   };
 
-  // Remove current image
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+    setEditingMember(null);
+  };
+
+  // Handle Image Selection
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be less than 5MB.');
+        return;
+      }
+      setSelectedImageFile(file);
+      setFormImageUrl(URL.createObjectURL(file));
+    }
+  };
+
   const handleRemoveImage = () => {
     setSelectedImageFile(null);
     setFormImageUrl('');
     setFormImageId('');
     if (fileInputRef.current) fileInputRef.current.value = '';
-    toast.success('Photo unlinked.');
   };
 
-  // Submit (Create or Update)
-  const handleSubmit = async (e) => {
+  // Handle Form Submit
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
-
     if (!formName.trim()) {
       toast.error('Member name is required.');
-      return;
-    }
-
-    if (!formDesignation.trim()) {
-      toast.error('Designation is required.');
       return;
     }
 
@@ -218,694 +167,575 @@ export default function BoardMembersPage() {
       formData.append('title', formTitle.trim());
       formData.append('designation', formDesignation.trim());
       formData.append('bio', formBio);
-      formData.append('order_no', parseInt(formOrderNo, 10) || 0);
-      formData.append('is_active', Boolean(formIsActive));
-
-      if (modalMode === 'edit' && editingMember?.id) {
-        formData.append('id', editingMember.id);
-      }
+      formData.append('order_no', formOrderNo.toString());
+      formData.append('is_active', formIsActive ? 'true' : 'false');
 
       if (selectedImageFile) {
         formData.append('file', selectedImageFile);
       } else {
-        if (formImageUrl && !formImageUrl.startsWith('blob:')) {
-          formData.append('image', formImageUrl);
-        }
-        if (formImageId) {
-          formData.append('image_id', formImageId);
-        }
+        formData.append('image', formImageUrl);
+        formData.append('image_id', formImageId);
       }
 
       let res;
-      if (modalMode === 'create') {
-        res = await axios.post(apiEndpoint, formData);
+      if (formMode === 'create') {
+        res = await axios.post(apiEndpoint, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
       } else {
-        res = await axios.put(apiEndpoint, formData);
+        formData.append('id', editingMember.id.toString());
+        res = await axios.put(apiEndpoint, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
       }
 
       if (res.data?.success) {
         toast.success(
-          modalMode === 'create'
-            ? 'Board member added successfully!'
-            : 'Board member updated successfully!'
+          formMode === 'create' ? 'Board member created.' : 'Board member updated.'
         );
-        setSelectedImageFile(null);
-        setIsModalOpen(false);
-        fetchBoardMembers(true);
+        setIsFormOpen(false);
+        setEditingMember(null);
+        fetchBoardMembers();
       } else {
-        toast.error(res.data?.error || 'Failed to save board member.');
+        toast.error(res.data?.error || 'Operation failed.');
       }
     } catch (err) {
       console.error('Error saving board member:', err);
-      toast.error(err.response?.data?.error || 'An error occurred while saving.');
+      toast.error(err.response?.data?.error || 'Failed to save record.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Toggle active status directly
+  // Toggle Status
   const handleToggleStatus = async (member) => {
     try {
-      const res = await axios.put(apiEndpoint, {
-        id: member.id,
-        is_active: !member.is_active,
+      const formData = new FormData();
+      formData.append('id', member.id.toString());
+      formData.append('name', member.name);
+      formData.append('title', member.title || '');
+      formData.append('designation', member.designation || '');
+      formData.append('bio', member.bio || '');
+      formData.append('order_no', (member.order_no ?? 0).toString());
+      formData.append('is_active', (!member.is_active).toString());
+      formData.append('image', member.image || '');
+      formData.append('image_id', member.image_id || '');
+
+      const res = await axios.put(apiEndpoint, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       if (res.data?.success) {
-        toast.success(`Marked as ${!member.is_active ? 'Active' : 'Inactive'}`);
-        fetchBoardMembers(true);
+        toast.success(`Member ${!member.is_active ? 'activated' : 'deactivated'}.`);
+        setBoardMembers((prev) =>
+          prev.map((m) => (m.id === member.id ? { ...m, is_active: !member.is_active } : m))
+        );
       } else {
         toast.error(res.data?.error || 'Failed to update status.');
       }
     } catch (err) {
-      console.error('Error updating status:', err);
-      toast.error(err.response?.data?.error || 'Could not update status.');
+      console.error('Error toggling status:', err);
+      toast.error('Failed to change status.');
     }
   };
 
-  // Delete Board Member
+  // Delete Action (in-page confirmation)
   const handleConfirmDelete = async () => {
     if (!memberToDelete) return;
-
-    setSubmitting(true);
+    setDeleting(true);
     try {
       const res = await axios.delete(`${apiEndpoint}?id=${memberToDelete.id}`);
-
       if (res.data?.success) {
-        toast.success(res.data.message || 'Board member deleted successfully.');
-        setDeleteConfirmOpen(false);
+        toast.success('Board member deleted.');
+        setBoardMembers((prev) => prev.filter((m) => m.id !== memberToDelete.id));
         setMemberToDelete(null);
-        fetchBoardMembers(true);
       } else {
-        toast.error(res.data?.error || 'Failed to delete board member.');
+        toast.error(res.data?.error || 'Failed to delete member.');
       }
     } catch (err) {
-      console.error('Error deleting board member:', err);
-      toast.error(err.response?.data?.error || 'Could not delete board member.');
+      console.error('Error deleting member:', err);
+      toast.error('Failed to execute deletion.');
     } finally {
-      setSubmitting(false);
+      setDeleting(false);
     }
   };
 
   // Filtered List
   const filteredMembers = useMemo(() => {
     return boardMembers.filter((item) => {
-      // Status filter
-      if (statusFilter === 'active' && !item.is_active) return false;
-      if (statusFilter === 'inactive' && item.is_active) return false;
+      const matchesSearch =
+        !searchTerm.trim() ||
+        item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.designation?.toLowerCase().includes(searchTerm.toLowerCase());
 
-      // Designation filter
-      if (designationFilter !== 'all') {
-        if (!item.designation?.toLowerCase().includes(designationFilter.toLowerCase())) {
-          return false;
-        }
-      }
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'active' && item.is_active) ||
+        (statusFilter === 'inactive' && !item.is_active);
 
-      // Search term
-      if (searchTerm.trim()) {
-        const query = searchTerm.toLowerCase();
-        const nameMatch = item.name?.toLowerCase().includes(query);
-        const titleMatch = item.title?.toLowerCase().includes(query);
-        const desigMatch = item.designation?.toLowerCase().includes(query);
-        const bioMatch = item.bio?.toLowerCase().includes(query);
-        return nameMatch || titleMatch || desigMatch || bioMatch;
-      }
-
-      return true;
+      return matchesSearch && matchesStatus;
     });
-  }, [boardMembers, statusFilter, designationFilter, searchTerm]);
+  }, [boardMembers, searchTerm, statusFilter]);
+
+  // Metrics
+  const totalCount = boardMembers.length;
+  const activeCount = boardMembers.filter((m) => m.is_active).length;
+  const inactiveCount = boardMembers.filter((m) => !m.is_active).length;
 
   return (
     <div className="w-full space-y-4">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20">
-                Institutional Governance
-              </span>
-              <span className="text-xs text-slate-400 font-mono">
-                {website?.domain || 'Portal'}
-              </span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-1 tracking-tight">
-              Governing Body & Board Members
-            </h1>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
-              Manage trustees, directors, and governing committee members. Upload portraits
-              to Cloudinary and craft rich biographies with the Tiptap editor.
-            </p>
+      {/* Top Workstation Bar */}
+      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 gap-3">
+        <div>
+          <h1 className="text-base font-semibold text-slate-900 dark:text-white">
+            Governing Body & Board of Members
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Manage governing trustees, executive committee members, and leadership council records.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {!isFormOpen && (
+            <button
+              type="button"
+              onClick={handleOpenCreate}
+              className="px-3.5 py-1.5 text-xs font-medium text-white bg-primary hover:bg-primary-dark rounded-md transition shadow-xs cursor-pointer"
+            >
+              + New Board Member
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => fetchBoardMembers(true)}
+            disabled={refreshing}
+            className="px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 transition cursor-pointer disabled:opacity-50"
+          >
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
+      </div>
+
+      {/* KPI Metric Strip */}
+      <div className="w-full grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-md border border-slate-200 dark:border-slate-800">
+          <div className="text-[10px] font-semibold uppercase text-slate-400 tracking-wider">
+            Total Members
           </div>
-
-          <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => fetchBoardMembers(true)}
-              disabled={refreshing || loading}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/80 transition shadow-xs cursor-pointer disabled:opacity-50"
-              title="Refresh Members"
-            >
-              <FiRefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-primary hover:bg-primary-dark rounded-lg transition shadow-xs cursor-pointer active:scale-[0.98]"
-            >
-              <FiPlus className="w-4 h-4" />
-              <span>New Board Member</span>
-            </button>
+          <div className="text-xl font-semibold text-slate-900 dark:text-white font-mono mt-1">
+            {totalCount}
           </div>
         </div>
 
-        {/* Filter & Search Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
-          <div className="sm:col-span-6 relative">
-            <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search members by name, title, designation or biography..."
-              className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
-            />
-            {searchTerm && (
+        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-md border border-slate-200 dark:border-slate-800">
+          <div className="text-[10px] font-semibold uppercase text-slate-400 tracking-wider">
+            Active Members
+          </div>
+          <div className="text-xl font-semibold text-emerald-600 font-mono mt-1">
+            {activeCount}
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-md border border-slate-200 dark:border-slate-800">
+          <div className="text-[10px] font-semibold uppercase text-slate-400 tracking-wider">
+            Inactive Members
+          </div>
+          <div className="text-xl font-semibold text-rose-600 font-mono mt-1">
+            {inactiveCount}
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-3.5 rounded-md border border-slate-200 dark:border-slate-800">
+          <div className="text-[10px] font-semibold uppercase text-slate-400 tracking-wider">
+            Display Status
+          </div>
+          <div className="text-xs font-medium text-slate-800 dark:text-slate-200 mt-2">
+            Published at /about/board
+          </div>
+        </div>
+      </div>
+
+      {/* IN-PAGE DELETE CONFIRMATION BANNER (NO POPUP MODAL) */}
+      {memberToDelete && (
+        <div className="w-full bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-md p-4 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold text-rose-800 dark:text-rose-300">
+                Confirm Deletion: "{memberToDelete.name}"
+              </p>
+              <p className="text-[11px] text-rose-700 dark:text-rose-400 mt-0.5">
+                Are you sure you want to permanently delete this board member? This action cannot be reversed.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs cursor-pointer"
+                onClick={() => setMemberToDelete(null)}
+                disabled={deleting}
+                className="px-3 py-1.5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-medium hover:bg-slate-50 transition cursor-pointer"
               >
-                Clear
+                Cancel
               </button>
-            )}
-          </div>
-
-          <div className="sm:col-span-3">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
-            >
-              <option value="all">Status: All Records</option>
-              <option value="active">Status: Active Only</option>
-              <option value="inactive">Status: Inactive Only</option>
-            </select>
-          </div>
-
-          <div className="sm:col-span-3 flex items-center justify-end text-xs text-slate-500 dark:text-slate-400 px-2">
-            Showing {filteredMembers.length} of {boardMembers.length} members
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                className="px-3.5 py-1.5 rounded-md bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium cursor-pointer shadow-xs transition disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Delete Permanently'}
+              </button>
+            </div>
           </div>
         </div>
+      )}
 
-        {/* Content Table */}
-        {loading ? (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-16 flex flex-col items-center justify-center gap-3">
-            <Loader />
-            <span className="text-xs text-slate-500 dark:text-slate-400 animate-pulse">
-              Loading governing body members...
-            </span>
-          </div>
-        ) : filteredMembers.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-12 text-center space-y-3">
-            <div className="w-12 h-12 mx-auto rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
-              <FiUsers className="w-6 h-6" />
+      {/* IN-PAGE FORM SECTION (NO POPUP MODAL) */}
+      {isFormOpen && (
+        <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+                {formMode === 'create' ? 'Create Board Member' : `Edit Board Member: ${editingMember?.name}`}
+              </h2>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Fill in the details below. Photos are automatically uploaded to Cloudinary CDN.
+              </p>
             </div>
-            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-              No board members found
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-              {searchTerm || statusFilter !== 'all'
-                ? 'No items match your active search filters. Try clearing or relaxing the filters.'
-                : 'There are currently no governing board members registered. Click "New Board Member" to publish your first entry.'}
-            </p>
             <button
               type="button"
-              onClick={openCreateModal}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-primary hover:bg-primary-dark rounded-md transition shadow-xs cursor-pointer"
+              onClick={handleCloseForm}
+              className="text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white px-2 py-1 rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
             >
-              <FiPlus className="w-3.5 h-3.5" />
-              <span>Add First Board Member</span>
+              Close
             </button>
           </div>
-        ) : (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
-                <thead className="bg-slate-100/70 dark:bg-slate-800/60 uppercase text-[10px] text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 font-semibold tracking-wider">
-                  <tr>
-                    <th scope="col" className="px-4 py-3.5 w-12 text-center">
-                      #
-                    </th>
-                    <th scope="col" className="px-4 py-3.5 w-20">
-                      Photo
-                    </th>
-                    <th scope="col" className="px-4 py-3.5">
-                      Name & Governance Role
-                    </th>
-                    <th scope="col" className="px-4 py-3.5 w-44">
-                      Designation
-                    </th>
-                    <th scope="col" className="px-4 py-3.5 w-24 text-center">
-                      Order
-                    </th>
-                    <th scope="col" className="px-4 py-3.5 w-24 text-center">
-                      Status
-                    </th>
-                    <th scope="col" className="px-4 py-3.5 w-28 text-right">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {filteredMembers.map((item, idx) => (
-                    <tr
-                      key={item.id || idx}
-                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
-                    >
-                      {/* Order No / Index */}
-                      <td className="px-4 py-3.5 text-center font-mono text-[11px] text-slate-400">
-                        {item.order_no ?? idx + 1}
-                      </td>
 
-                      {/* Photo Thumbnail */}
-                      <td className="px-4 py-3.5">
-                        {item.image ? (
-                          <a
-                            href={item.image}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="block w-12 h-12 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 group relative"
-                            title="Click to view full Cloudinary photo"
-                          >
-                            <img
-                              src={item.image}
-                              alt={item.name}
-                              className="w-full h-full object-cover group-hover:scale-105 transition"
-                            />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition text-white">
-                              <FiExternalLink className="w-3 h-3" />
-                            </div>
-                          </a>
-                        ) : (
-                          <div className="w-12 h-12 rounded-full border border-dashed border-slate-300 dark:border-slate-800 flex items-center justify-center text-slate-300 dark:text-slate-600 bg-slate-50 dark:bg-slate-950/50">
-                            <FiImage className="w-4 h-4" />
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Name & Bio Preview */}
-                      <td className="px-4 py-3.5 space-y-1 max-w-md">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-slate-900 dark:text-white text-xs">
-                            {item.title ? `${item.title} ` : ''}
-                            {item.name}
-                          </span>
-                        </div>
-
-                        {/* Rich HTML preview from Tiptap */}
-                        {item.bio && (
-                          <div
-                            className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed prose prose-xs dark:prose-invert max-w-none"
-                            dangerouslySetInnerHTML={{ __html: item.bio }}
-                          />
-                        )}
-                      </td>
-
-                      {/* Designation */}
-                      <td className="px-4 py-3.5">
-                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20">
-                          {item.designation}
-                        </span>
-                      </td>
-
-                      {/* Order No */}
-                      <td className="px-4 py-3.5 text-center font-mono text-xs text-slate-500">
-                        {item.order_no ?? 0}
-                      </td>
-
-                      {/* Status Toggle */}
-                      <td className="px-4 py-3.5 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleStatus(item)}
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold transition cursor-pointer ${
-                            item.is_active
-                              ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900 hover:bg-emerald-100'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-200'
-                          }`}
-                          title="Click to toggle Active status"
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              item.is_active ? 'bg-emerald-500' : 'bg-slate-400'
-                            }`}
-                          />
-                          <span>{item.is_active ? 'Active' : 'Inactive'}</span>
-                        </button>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-4 py-3.5 text-right space-x-1.5 whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(item)}
-                          className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                          title="Edit"
-                        >
-                          <FiEdit2 className="w-3.5 h-3.5" />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMemberToDelete(item);
-                            setDeleteConfirmOpen(true);
-                          }}
-                          className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition cursor-pointer"
-                          title="Delete"
-                        >
-                          <FiTrash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Modal: Create / Edit Record */}
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl my-6">
-              {/* Modal Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
-                <div className="flex items-center gap-2">
-                  <span className="p-2 rounded-lg bg-primary/10 text-primary">
-                    <FiUsers className="w-4 h-4" />
-                  </span>
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                      {modalMode === 'create' ? 'Add New Board Member' : 'Edit Board Member'}
-                    </h3>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Provide member details, upload portrait to Cloudinary, and compose biography via Tiptap.
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                >
-                  <FiX className="w-5 h-5" />
-                </button>
+          <form onSubmit={handleFormSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Member Name *
+                </label>
+                <input
+                  type="text"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="e.g. Prof. Dr. A. K. Azad"
+                  required
+                  className="w-full px-3 py-1.5 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary"
+                />
               </div>
 
-              {/* Modal Form Body */}
-              <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
-                  <div className="sm:col-span-3">
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Title / Honorific
-                    </label>
-                    <input
-                      type="text"
-                      value={formTitle}
-                      onChange={(e) => setFormTitle(e.target.value)}
-                      placeholder="e.g. Dr., Prof., Engr."
-                      className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Designation / Role *
+                </label>
+                <input
+                  type="text"
+                  value={formDesignation}
+                  onChange={(e) => setFormDesignation(e.target.value)}
+                  placeholder="e.g. Chairman, Board of Trustees"
+                  required
+                  className="w-full px-3 py-1.5 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Title / Honorific Prefix
+                </label>
+                <input
+                  type="text"
+                  value={formTitle}
+                  onChange={(e) => setFormTitle(e.target.value)}
+                  placeholder="e.g. Founder Chairman, Trustee"
+                  className="w-full px-3 py-1.5 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Order Index (Sorting)
+                </label>
+                <input
+                  type="number"
+                  value={formOrderNo}
+                  onChange={(e) => setFormOrderNo(parseInt(e.target.value, 10) || 0)}
+                  placeholder="0"
+                  className="w-full px-3 py-1.5 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary"
+                />
+              </div>
+            </div>
+
+            {/* Biography & Profile Summary */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                Biography / Profile Summary
+              </label>
+              <TiptapEditor
+                value={formBio}
+                onChange={(html) => setFormBio(html)}
+                placeholder="Write member's credentials, experience, leadership background..."
+                minHeight="140px"
+              />
+            </div>
+
+            {/* Photo Upload Section */}
+            <div className="space-y-2 border-t border-slate-100 dark:border-slate-800 pt-3">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300 block">
+                Official Portrait Photo
+              </label>
+
+              <div className="flex items-center gap-4">
+                {formImageUrl ? (
+                  <div className="relative w-16 h-16 rounded border border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0">
+                    <img
+                      src={formImageUrl}
+                      alt="Portrait preview"
+                      className="w-full h-full object-cover"
                     />
                   </div>
-
-                  <div className="sm:col-span-9">
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Full Member Name <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formName}
-                      onChange={(e) => setFormName(e.target.value)}
-                      placeholder="e.g. Sarah Jenkins, M.Sc."
-                      required
-                      className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition font-medium"
-                    />
+                ) : (
+                  <div className="w-16 h-16 rounded border border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center text-[10px] text-slate-400 shrink-0">
+                    No Photo
                   </div>
-                </div>
+                )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Designation / Role <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      list="designationSuggestions"
-                      value={formDesignation}
-                      onChange={(e) => setFormDesignation(e.target.value)}
-                      placeholder="e.g. Chairman of the Board, Founder Trustee"
-                      required
-                      className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
-                    />
-                    <datalist id="designationSuggestions">
-                      {COMMON_DESIGNATIONS.map((d) => (
-                        <option key={d} value={d} />
-                      ))}
-                    </datalist>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Display Order Number
-                    </label>
-                    <div className="relative">
-                      <FiHash className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
-                      <input
-                        type="number"
-                        value={formOrderNo}
-                        onChange={(e) => setFormOrderNo(e.target.value)}
-                        min="0"
-                        className="w-full pl-8 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition font-mono"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Cloudinary Image Upload Section */}
-                <div className="space-y-2 border border-slate-200 dark:border-slate-800 rounded-xl p-4 bg-slate-50/50 dark:bg-slate-950/40">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                      <FiImage className="text-primary w-4 h-4" />
-                      <span>Member Portrait (Cloudinary Stored)</span>
-                    </label>
-                    {formImageUrl && (
-                      <button
-                        type="button"
-                        onClick={handleRemoveImage}
-                        className="text-[11px] text-rose-500 hover:text-rose-600 dark:hover:text-rose-400 font-medium cursor-pointer"
-                      >
-                        Remove Photo
-                      </button>
-                    )}
-                  </div>
-
-                  {formImageUrl ? (
-                    <div className="flex items-center gap-4 p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
-                      <img
-                        src={formImageUrl}
-                        alt="Member Preview"
-                        className="w-20 h-20 rounded-full object-cover border border-slate-200 dark:border-slate-700"
-                      />
-                      <div className="flex-1 space-y-1 min-w-0">
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                          <FiCheckCircle className="w-3.5 h-3.5" />
-                          <span>Uploaded to Cloudinary</span>
-                        </div>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">
-                          URL: {formImageUrl}
-                        </p>
-                        {formImageId && (
-                          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono truncate">
-                            Public ID: {formImageId}
-                          </p>
-                        )}
-                        <div className="pt-1">
-                          <button
-                            type="button"
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={uploadingImage}
-                            className="text-[11px] font-medium text-primary hover:underline cursor-pointer"
-                          >
-                            Replace Photo
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => !uploadingImage && fileInputRef.current?.click()}
-                      className={`border-2 border-dashed border-slate-300 dark:border-slate-800 rounded-xl p-6 text-center cursor-pointer transition hover:border-primary/60 hover:bg-slate-100/50 dark:hover:bg-slate-800/40 ${
-                        uploadingImage ? 'opacity-50 pointer-events-none' : ''
-                      }`}
-                    >
-                      {uploadingImage ? (
-                        <div className="space-y-2 flex flex-col items-center">
-                          <Loader />
-                          <p className="text-xs text-primary font-medium">
-                            Uploading photo to Cloudinary...
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-1">
-                          <FiUploadCloud className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                          <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
-                            Click to select an official photo to upload
-                          </p>
-                          <p className="text-[11px] text-slate-400">
-                            Uploads directly to Cloudinary (PNG, JPG, WEBP, up to 10MB)
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
+                <div className="space-y-1.5">
                   <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
-                    onChange={handleImageFileChange}
-                    className="hidden"
+                    onChange={handleFileChange}
+                    className="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-xs file:font-medium file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 dark:file:bg-slate-800 dark:file:text-slate-300 cursor-pointer"
                   />
-                </div>
-
-                {/* Tiptap Rich Text Biography */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Biography & Academic Background (Tiptap Rich Text Editor)
-                    </label>
-                    <span className="text-[10px] text-slate-400">
-                      Supports headings, bold, italic, lists, and links
-                    </span>
-                  </div>
-
-                  <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition">
-                    <TiptapEditor
-                      value={formBio}
-                      onChange={(val) => setFormBio(val)}
-                      placeholder="Compose member biography, career accomplishments, and education..."
-                      minHeight="180px"
-                    />
-                  </div>
-                </div>
-
-                {/* Active Checkbox */}
-                <div className="flex items-center gap-2 pt-1">
-                  <input
-                    type="checkbox"
-                    id="formIsActive"
-                    checked={formIsActive}
-                    onChange={(e) => setFormIsActive(e.target.checked)}
-                    className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 text-primary focus:ring-primary/20 cursor-pointer"
-                  />
-                  <label
-                    htmlFor="formIsActive"
-                    className="text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer select-none"
-                  >
-                    Publicly Active (Display on institutional website and governance directory)
-                  </label>
-                </div>
-
-                {/* Modal Footer */}
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    disabled={submitting || uploadingImage}
-                    className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    type="submit"
-                    disabled={submitting || uploadingImage}
-                    className="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-semibold text-white bg-primary hover:bg-primary-dark rounded-lg transition shadow-xs cursor-pointer disabled:opacity-50"
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader />
-                        <span>Saving...</span>
-                      </>
-                    ) : (
-                      <span>{modalMode === 'create' ? 'Add Board Member' : 'Save Changes'}</span>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Delete Confirmation Modal */}
-        {deleteConfirmOpen && memberToDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
-              <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center">
-                <FiTrash2 className="w-6 h-6" />
-              </div>
-
-              <div className="space-y-1">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Delete Board Member?
-                </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Are you sure you want to permanently delete{' '}
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">
-                    &quot;{memberToDelete.title ? `${memberToDelete.title} ` : ''}
-                    {memberToDelete.name}&quot;
-                  </span>
-                  ? This action cannot be reversed. If a Cloudinary photo was attached, it will also
-                  be cleaned up.
-                </p>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDeleteConfirmOpen(false);
-                    setMemberToDelete(null);
-                  }}
-                  disabled={submitting}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition cursor-pointer"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleConfirmDelete}
-                  disabled={submitting}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition shadow-xs cursor-pointer disabled:opacity-50"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader />
-                      <span>Deleting...</span>
-                    </>
-                  ) : (
-                    <span>Confirm Delete</span>
+                  {formImageUrl && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="text-[11px] text-rose-600 hover:underline cursor-pointer"
+                    >
+                      Remove Photo
+                    </button>
                   )}
-                </button>
+                  <p className="text-[10px] text-slate-400">
+                    Max size: 5MB. Formats: JPG, PNG, WEBP.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+
+            {/* Active Toggle */}
+            <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <input
+                type="checkbox"
+                id="formIsActiveBoard"
+                checked={formIsActive}
+                onChange={(e) => setFormIsActive(e.target.checked)}
+                className="w-4 h-4 rounded-sm border-slate-300 text-primary focus:ring-primary cursor-pointer"
+              />
+              <label
+                htmlFor="formIsActiveBoard"
+                className="text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer"
+              >
+                Publish as Active (Visible on public /about/board page)
+              </label>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={handleCloseForm}
+                className="px-3.5 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-4 py-1.5 rounded-md bg-primary hover:bg-primary-dark text-white text-xs font-medium cursor-pointer shadow-xs transition disabled:opacity-50"
+              >
+                {submitting ? 'Saving...' : formMode === 'create' ? 'Create Member' : 'Update Member'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Filter & Search Bar */}
+      <div className="w-full grid grid-cols-1 sm:grid-cols-12 gap-3 bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-md border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="sm:col-span-8">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search board members by name, title, or designation..."
+            className="w-full px-3 py-1.5 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary"
+          />
+        </div>
+
+        <div className="sm:col-span-4">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full px-3 py-1.5 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer"
+          >
+            <option value="all">Status: All Records</option>
+            <option value="active">Status: Active Only</option>
+            <option value="inactive">Status: Inactive Only</option>
+          </select>
+        </div>
       </div>
+
+      {/* Content Table */}
+      {loading ? (
+        <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-12 flex flex-col items-center justify-center gap-2">
+          <Loader />
+          <span className="text-xs text-slate-500 dark:text-slate-400">Loading board members...</span>
+        </div>
+      ) : filteredMembers.length === 0 ? (
+        <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-10 text-center space-y-2">
+          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+            No board members found
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+            {searchTerm || statusFilter !== 'all'
+              ? 'No items match your active search filters.'
+              : 'There are currently no board members published.'}
+          </p>
+          <button
+            type="button"
+            onClick={handleOpenCreate}
+            className="px-3 py-1.5 text-xs font-medium text-white bg-primary hover:bg-primary-dark rounded-md transition shadow-xs cursor-pointer mt-2"
+          >
+            + Create First Member
+          </button>
+        </div>
+      ) : (
+        <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md overflow-hidden shadow-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
+              <thead className="bg-slate-50 dark:bg-slate-800/60 uppercase text-[10px] text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 font-semibold tracking-wider">
+                <tr>
+                  <th scope="col" className="px-3 py-2.5 w-12 text-center">
+                    #
+                  </th>
+                  <th scope="col" className="px-3 py-2.5 w-48">
+                    Member Name &amp; Designation
+                  </th>
+                  <th scope="col" className="px-3 py-2.5">
+                    Bio &amp; Profile Summary
+                  </th>
+                  <th scope="col" className="px-3 py-2.5 w-16 text-center">
+                    Photo
+                  </th>
+                  <th scope="col" className="px-3 py-2.5 w-24 text-center">
+                    Status
+                  </th>
+                  <th scope="col" className="px-3 py-2.5 w-20 text-right">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {filteredMembers.map((item, idx) => (
+                  <tr
+                    key={item.id || idx}
+                    className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                  >
+                    <td className="px-3 py-2.5 text-center font-mono text-[11px] text-slate-400">
+                      {item.order_no ?? idx + 1}
+                    </td>
+
+                    <td className="px-3 py-2.5 space-y-0.5">
+                      <div className="font-semibold text-slate-900 dark:text-white text-xs">
+                        {item.name}
+                      </div>
+                      <div className="text-[11px] text-primary font-medium">
+                        {item.designation}
+                      </div>
+                      {item.title && (
+                        <div className="text-[10px] text-slate-400">
+                          {item.title}
+                        </div>
+                      )}
+                    </td>
+
+                    <td className="px-3 py-2.5 max-w-md">
+                      {item.bio ? (
+                        <div
+                          className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed"
+                          dangerouslySetInnerHTML={{ __html: item.bio }}
+                        />
+                      ) : (
+                        <span className="text-[10px] text-slate-400 italic">No bio provided</span>
+                      )}
+                    </td>
+
+                    <td className="px-3 py-2.5 text-center">
+                      {item.image ? (
+                        <a
+                          href={item.image}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-block w-8 h-8 rounded border border-slate-200 dark:border-slate-700 overflow-hidden"
+                        >
+                          <img
+                            src={item.image}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        </a>
+                      ) : (
+                        <span className="text-[10px] text-slate-400">—</span>
+                      )}
+                    </td>
+
+                    <td className="px-3 py-2.5 text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleStatus(item)}
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium transition cursor-pointer ${
+                          item.is_active
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
+                            : 'bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
+                        }`}
+                        title="Click to toggle status"
+                      >
+                        {item.is_active ? 'Active' : 'Inactive'}
+                      </button>
+                    </td>
+
+                    <td className="px-3 py-2.5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEdit(item)}
+                          className="p-1.5 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition cursor-pointer"
+                          title="Edit"
+                        >
+                          <FiEdit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setMemberToDelete(item)}
+                          className="p-1.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900/40 dark:hover:bg-rose-950/40 transition cursor-pointer"
+                          title="Delete"
+                        >
+                          <FiTrash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

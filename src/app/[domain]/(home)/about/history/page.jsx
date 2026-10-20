@@ -30,11 +30,11 @@ const HistoryPage = () => {
     const fetchData = async () => {
       try {
         // Fetch new institutional milestones from database
-        const milestonePromise = fetch(getApiEndpoint('home/institutional?type=milestones'))
+        const milestonePromise = fetch(getApiEndpoint('institutional?type=milestones'))
           .then((res) => (res.ok ? res.json() : { milestones: [] }))
           .catch(() => ({ milestones: [] }));
 
-        // Also fetch legacy histories if any
+        // Also fetch archival histories from database
         const historyPromise = fetch(getApiEndpoint('histories'))
           .then((res) => (res.ok ? res.json() : {}))
           .catch(() => ({}));
@@ -191,16 +191,44 @@ const HistoryPage = () => {
                       key={item.id || idx}
                       className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-3 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300"
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <h3 className="font-serif text-base font-semibold text-slate-900 dark:text-white">
-                          {item.title}
-                        </h3>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                        <div className="flex items-center gap-3">
+                          {item.year && (
+                            <span className="px-3 py-1 rounded-full bg-primary/10 text-primary font-mono text-xs font-bold border border-primary/20">
+                              {item.year}
+                            </span>
+                          )}
+                          <h3 className="font-serif text-base font-semibold text-slate-900 dark:text-white">
+                            {item.title}
+                          </h3>
+                        </div>
                         {item.date && (
-                          <span className="text-xs font-medium text-primary px-3 py-1 rounded-full bg-primary/10 border border-primary/20 w-fit">
+                          <span className="text-xs font-medium text-slate-500 dark:text-slate-400 font-mono w-fit">
                             {formatDate(item.date)}
                           </span>
                         )}
                       </div>
+
+                      {item.image && (
+                        <div className="overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-100 dark:bg-slate-800">
+                          <a
+                            href={item.image}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block relative group max-h-80 overflow-hidden"
+                          >
+                            <img
+                              src={item.image}
+                              alt={item.title}
+                              className="w-full h-auto max-h-80 object-cover group-hover:scale-102 transition duration-300"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition text-white text-xs gap-1.5">
+                              <FiExternalLink className="w-3.5 h-3.5" />
+                              <span>View Full Image</span>
+                            </div>
+                          </a>
+                        </div>
+                      )}
 
                       {item.description && (
                         <div

@@ -15,7 +15,7 @@ const ClassesPage = () => {
     let ignore = false;
     const fetchClasses = async () => {
       try {
-        const res = await fetch(getApiEndpoint('home/classes'));
+        const res = await fetch(getApiEndpoint('classes'));
         if (res.ok) {
           const data = await res.json();
           if (!ignore) {

@@ -67,7 +67,7 @@ export async function POST(request, context) {
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const body = await request.json().catch(() => ({}));
-    const { title, slug, drive_url, description, published_date, is_active = true } = body;
+    const { title, drive_url, description, published_date, is_active = true } = body;
 
     if (!title || !String(title).trim()) {
       return NextResponse.json({ success: false, error: 'Notice title is required.' }, { status: 400 });
@@ -77,7 +77,7 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Google Drive URL or document link is required.' }, { status: 400 });
     }
 
-    let finalSlug = slug ? slugify(slug) : slugify(title);
+    let finalSlug = slugify(title);
 
     // Verify unique slug for this website, append suffix if exists
     let slugExists = await queryDb(
@@ -123,7 +123,7 @@ export async function PUT(request, context) {
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const body = await request.json().catch(() => ({}));
-    const { id, title, slug, drive_url, description, published_date, is_active } = body;
+    const { id, title, drive_url, description, published_date, is_active } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Notice ID is required for update.' }, { status: 400 });
@@ -139,16 +139,18 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Notice not found or unauthorized.' }, { status: 404 });
     }
 
-    let finalSlug = slug ? slugify(slug) : existing.rows[0].slug;
-
-    // Check slug collision if slug changed
-    if (finalSlug !== existing.rows[0].slug) {
-      const slugCollision = await queryDb(
-        `SELECT id FROM website_notices WHERE website_id = $1 AND slug = $2 AND id != $3`,
-        [auth.website.id, finalSlug, id]
-      );
-      if (slugCollision.rowCount > 0) {
-        finalSlug = `${finalSlug}-${Date.now().toString().slice(-4)}`;
+    let finalSlug = existing.rows[0].slug;
+    if (title && String(title).trim()) {
+      const generatedSlug = slugify(title);
+      if (generatedSlug !== existing.rows[0].slug) {
+        finalSlug = generatedSlug;
+        const slugCollision = await queryDb(
+          `SELECT id FROM website_notices WHERE website_id = $1 AND slug = $2 AND id != $3`,
+          [auth.website.id, finalSlug, id]
+        );
+        if (slugCollision.rowCount > 0) {
+          finalSlug = `${finalSlug}-${Date.now().toString().slice(-4)}`;
+        }
       }
     }
 

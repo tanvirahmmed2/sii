@@ -15,7 +15,7 @@ const DepartmentsPage = () => {
     let ignore = false;
     const fetchDepartments = async () => {
       try {
-        const res = await fetch(getApiEndpoint('home/departments'));
+        const res = await fetch(getApiEndpoint('departments'));
         if (res.ok) {
           const data = await res.json();
           if (!ignore) {

@@ -17,7 +17,7 @@ const HostelFacilities = () => {
         const res = await fetch(getApiEndpoint('hostels'));
         if (res.ok) {
           const data = await res.json();
-          setHostels(data.payload?.hostels || data.paylod?.hostels || []);
+          setHostels(data.hostels || data.payload?.hostels || data.paylod?.hostels || []);
         }
       } catch (err) {
         console.error('Error fetching hostels:', err);

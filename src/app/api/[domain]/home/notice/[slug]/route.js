@@ -1,1 +1,1 @@
-export { GET } from '../../notices/[slug]/route.js';
+export { GET } from '../../../notices/[slug]/route.js';

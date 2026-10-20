@@ -16,7 +16,7 @@ const VisionPage = () => {
     let ignore = false;
     const fetchVisions = async () => {
       try {
-        const endpoint = getApiEndpoint('home/institutional?type=visions');
+        const endpoint = getApiEndpoint('institutional?type=visions');
         const res = await fetch(endpoint);
         if (!ignore && res.ok) {
           const data = await res.json();

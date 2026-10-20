@@ -27,10 +27,10 @@ const ClassDetailsPage = () => {
           classSubjectsRes,
           classSubjectTeachersRes
         ] = await Promise.all([
-          fetch(getApiEndpoint('home/classes')).catch(() => null),
-          fetch(getApiEndpoint('home/teachers')).catch(() => null),
-          fetch(getApiEndpoint('home/class-subjects')).catch(() => null),
-          fetch(getApiEndpoint('home/class-subject-teachers')).catch(() => null)
+          fetch(getApiEndpoint('classes')).catch(() => null),
+          fetch(getApiEndpoint('teachers')).catch(() => null),
+          fetch(getApiEndpoint('class-subjects')).catch(() => null),
+          fetch(getApiEndpoint('class-subject-teachers')).catch(() => null)
         ]);
 
         let resolvedClass = null;

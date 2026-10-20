@@ -17,7 +17,7 @@ export default function CollaborationsPage() {
         const res = await fetch(endpoint);
         if (res.ok) {
           const data = await res.json();
-          const list = data.payload?.collaborations || data.paylod?.collaborations || [];
+          const list = data.collaborations || data.payload?.collaborations || data.paylod?.collaborations || [];
           setPartners(Array.isArray(list) ? list : []);
         }
       } catch (err) {

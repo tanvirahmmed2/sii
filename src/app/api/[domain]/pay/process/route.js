@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server';
 import { queryDb, pool } from 'src/lib/database/db';
-import { resolveDomain } from 'src/lib/domain/tenant';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(request, { params }) {
+export async function POST(request, context) {
   const client = await pool.connect();
   try {
-    const { domain } = await params;
-    const website = await resolveDomain(domain);
+    const website = await resolveWebsiteFromRequest(request, context);
 
     if (!website) {
       return NextResponse.json(

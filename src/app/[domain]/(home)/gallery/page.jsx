@@ -26,7 +26,7 @@ const GalleryPage = () => {
         const newsRes = await fetch(getApiEndpoint('news'));
         if (newsRes.ok) {
           const newsData = await newsRes.json();
-          const list = newsData.payload?.news || newsData.paylod?.news || [];
+          const list = newsData.payload?.news || newsData.paylod?.news || newsData.news || [];
           list.forEach((item) => {
             const img = item.image_url || item.image;
             if (img) {
@@ -47,7 +47,7 @@ const GalleryPage = () => {
         const clubNewsRes = await fetch(getApiEndpoint('club-news'));
         if (clubNewsRes.ok) {
           const clubData = await clubNewsRes.json();
-          const list = clubData.payload?.clubNews || clubData.paylod?.clubNews || [];
+          const list = clubData.payload?.clubNews || clubData.paylod?.clubNews || clubData.clubNews || [];
           list.forEach((item) => {
             const img = item.image_url || item.image;
             if (img) {
@@ -69,7 +69,7 @@ const GalleryPage = () => {
         const eventsRes = await fetch(getApiEndpoint('events'));
         if (eventsRes.ok) {
           const eventsData = await eventsRes.json();
-          const list = eventsData.payload?.events || eventsData.paylod?.events || [];
+          const list = eventsData.payload?.events || eventsData.paylod?.events || eventsData.events || [];
           list.forEach((item) => {
             const img = item.image_url || item.image;
             if (img) {
@@ -91,7 +91,7 @@ const GalleryPage = () => {
         const recRes = await fetch(getApiEndpoint('recognitions'));
         if (recRes.ok) {
           const recData = await recRes.json();
-          const list = recData.payload?.recognitions || recData.paylod?.recognitions || [];
+          const list = recData.payload?.recognitions || recData.paylod?.recognitions || recData.recognitions || [];
           list.forEach((item) => {
             const img = item.image_url || item.image;
             if (img) {

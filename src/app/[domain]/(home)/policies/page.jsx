@@ -43,7 +43,7 @@ export default function TenantPoliciesPage() {
 
   useEffect(() => {
     let active = true;
-    fetch(getApiEndpoint('marketing/policies'))
+    fetch(getApiEndpoint('policies'))
       .then((res) => (res.ok ? res.json() : { success: false }))
       .then((data) => {
         if (!active) return;

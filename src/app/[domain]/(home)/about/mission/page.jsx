@@ -16,7 +16,7 @@ const MissionPage = () => {
     let ignore = false;
     const fetchMissions = async () => {
       try {
-        const endpoint = getApiEndpoint('home/institutional?type=missions');
+        const endpoint = getApiEndpoint('institutional?type=missions');
         const res = await fetch(endpoint);
         if (!ignore && res.ok) {
           const data = await res.json();

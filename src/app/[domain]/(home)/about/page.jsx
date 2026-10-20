@@ -17,6 +17,7 @@ const About = () => {
   });
   const [chairman, setChairman] = useState(null);
   const [boardMembers, setBoardMembers] = useState([]);
+  const [abouts, setAbouts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const schoolName = website?.name || 'Institution Academic Office';
@@ -30,12 +31,12 @@ const About = () => {
         let studentsCount = 0;
         let teachersCount = 0;
         try {
-          const statsRes = await fetch(getApiEndpoint('public/stats'));
+          const statsRes = await fetch(getApiEndpoint('stats'));
           if (statsRes.ok) {
             const stData = await statsRes.json();
-            const payload = stData.payload || stData.paylod || {};
-            studentsCount = payload.totalStudents || 0;
-            teachersCount = payload.totalTeachers || 0;
+            const payload = stData.payload || stData.paylod || stData || {};
+            studentsCount = payload.totalStudents || payload.students || 0;
+            teachersCount = payload.totalTeachers || payload.teachers || 0;
           }
         } catch {
           // ignore
@@ -47,7 +48,7 @@ const About = () => {
           if (clubsRes.ok) {
             const clData = await clubsRes.json();
             const payload = clData.payload || clData.paylod || {};
-            const clubsList = payload.clubs || [];
+            const clubsList = payload.clubs || clData.clubs || [];
             clubsCount = clubsList.length;
           }
         } catch {
@@ -64,40 +65,34 @@ const About = () => {
 
         // Fetch official board members
         try {
-          const boardRes = await fetch(getApiEndpoint('home/institutional?type=board_members'));
+          const boardRes = await fetch(getApiEndpoint('board-members'));
           if (boardRes.ok) {
             const bData = await boardRes.json();
-            if (!ignore && bData.success && Array.isArray(bData.board_members)) {
-              setBoardMembers(bData.board_members);
+            const members = bData.board_members || bData.payload?.board_members;
+            if (!ignore && bData.success && Array.isArray(members)) {
+              setBoardMembers(members);
+              const foundChairman = members.find((b) =>
+                b.designation?.toLowerCase().includes('chairman') ||
+                b.title?.toLowerCase().includes('chairman') ||
+                b.name?.toLowerCase().includes('chairman')
+              );
+              if (foundChairman) {
+                setChairman(foundChairman);
+              }
             }
           }
         } catch {
           // ignore
         }
 
+        // Fetch official about sections from database
         try {
-          const chairmanRes = await fetch(getApiEndpoint('authorities/role/chairman'));
-          if (chairmanRes.ok) {
-            const cData = await chairmanRes.json();
-            const payload = cData.payload || cData.paylod || {};
-            const authList = payload.authorities || [];
-            if (!ignore) {
-              if (authList.length > 0) {
-                setChairman(authList[0]);
-              } else {
-                const allAuthRes = await fetch(getApiEndpoint('authorities'));
-                if (allAuthRes.ok) {
-                  const allData = await allAuthRes.json();
-                  const allPayload = allData.payload || allData.paylod || {};
-                  const allAuths = allPayload.authorities || [];
-                  const foundChairman = allAuths.find((a) =>
-                    a.title?.toLowerCase().includes('chairman') ||
-                    a.designation?.toLowerCase().includes('chairman') ||
-                    a.designation_title?.toLowerCase().includes('chairman')
-                  );
-                  if (foundChairman) setChairman(foundChairman);
-                }
-              }
+          const aboutRes = await fetch(getApiEndpoint('abouts'));
+          if (aboutRes.ok) {
+            const aData = await aboutRes.json();
+            const list = aData.abouts || aData.payload?.abouts || [];
+            if (!ignore && Array.isArray(list)) {
+              setAbouts(list);
             }
           }
         } catch {
@@ -229,6 +224,44 @@ const About = () => {
             </motion.div>
           ))}
         </div>
+
+        {/* Dynamic Institutional About Sections */}
+        {abouts.length > 0 && (
+          <div className="space-y-6">
+            {abouts.map((ab, idx) => (
+              <motion.div
+                key={ab.id || idx}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4 }}
+                className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xs space-y-4 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all"
+              >
+                {ab.subtitle && (
+                  <span className="text-xs uppercase tracking-wider font-semibold text-primary block">
+                    {ab.subtitle}
+                  </span>
+                )}
+                <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 dark:text-white tracking-tight">
+                  {ab.title}
+                </h2>
+                {ab.image && (
+                  <div className="w-full max-h-80 overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-100 dark:bg-slate-800">
+                    <img
+                      src={ab.image}
+                      alt={ab.title}
+                      className="w-full h-auto max-h-80 object-cover"
+                    />
+                  </div>
+                )}
+                <div
+                  className="prose dark:prose-invert max-w-none text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: ab.description }}
+                />
+              </motion.div>
+            ))}
+          </div>
+        )}
 
         {/* History Preview */}
         {website?.history && (

@@ -47,7 +47,7 @@ const EventCard = ({ event, href, className = '', onInterestChange }) => {
     setInterestLoading(true);
 
     try {
-      const res = await axios.post(getApiEndpoint('home/events'), {
+      const res = await axios.post(getApiEndpoint('events'), {
         event_id: id,
         action: isInterested ? 'uninterest' : 'interest',
       });

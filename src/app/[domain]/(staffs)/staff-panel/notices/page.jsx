@@ -1,115 +1,109 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import {
-  FiFileText,
-  FiPlus,
-  FiEdit2,
-  FiTrash2,
-  FiExternalLink,
-  FiSearch,
-  FiCheckCircle,
-  FiXCircle,
-  FiCalendar,
-  FiRefreshCw,
-  FiLink,
-  FiCheck,
-  FiX
-} from 'react-icons/fi';
-import { FaGoogleDrive } from 'react-icons/fa';
+import axios from 'axios';
+import { toast } from 'react-hot-toast';
+import { FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
+import Loader from 'src/component/common/Loader';
 
-// Dynamically import TiptapEditor to prevent any SSR hydration mismatch
+// Dynamically import TiptapEditor to prevent SSR hydration mismatch
 const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor.jsx'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-40 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-center text-xs text-slate-400">
+    <div className="h-32 border border-slate-200 dark:border-slate-800 rounded-md animate-pulse bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center text-xs text-slate-400">
       Loading rich text editor...
     </div>
   ),
 });
 
-export default function NoticesPage() {
-  const params = useParams();
-  const domain = params?.domain || '';
+export default function NoticesStaffPage() {
+  const { website, getApiEndpoint } = useContext(TenantWebsiteContext);
 
+  // Data states
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingNotice, setEditingNotice] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [toastMessage, setToastMessage] = useState(null);
-  const [toastError, setToastError] = useState(null);
 
-  // Delete Confirmation Modal
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  // Search & Filter
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('all'); // 'all' | 'active' | 'inactive'
+
+  // In-Page Form State (NO POPUP MODAL)
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingNotice, setEditingNotice] = useState(null);
+
+  // In-Page Delete Confirmation (NO POPUP MODAL)
   const [noticeToDelete, setNoticeToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
   // Form Fields
   const [formTitle, setFormTitle] = useState('');
-  const [formSlug, setFormSlug] = useState('');
   const [formDriveUrl, setFormDriveUrl] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formPublishedDate, setFormPublishedDate] = useState('');
   const [formIsActive, setFormIsActive] = useState(true);
 
-  useEffect(() => {
-    fetchNotices();
-  }, [domain, selectedStatus]);
+  // API Endpoint
+  const apiEndpoint = useMemo(() => getApiEndpoint('staff/panel/notices'), [getApiEndpoint]);
 
-  const showToast = (msg, isErr = false) => {
-    if (isErr) {
-      setToastError(msg);
-      setTimeout(() => setToastError(null), 4000);
-    } else {
-      setToastMessage(msg);
-      setTimeout(() => setToastMessage(null), 4000);
-    }
-  };
+  // Fetch notices
+  const fetchNotices = useCallback(
+    async (showFeedback = false) => {
+      if (!apiEndpoint) return;
+      try {
+        if (showFeedback) setRefreshing(true);
+        const params = new URLSearchParams();
+        if (selectedStatus !== 'all') params.append('status', selectedStatus);
+        if (searchTerm.trim()) params.append('search', searchTerm.trim());
 
-  const fetchNotices = async () => {
-    setLoading(true);
-    try {
-      let url = `/api/${domain}/staff/panel/notices?`;
-      if (selectedStatus !== 'all') url += `status=${selectedStatus}&`;
-      if (searchTerm.trim()) url += `search=${encodeURIComponent(searchTerm.trim())}&`;
-
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.success) {
-        setNotices(data.notices || []);
-      } else {
-        showToast(data.error || 'Failed to load notices', true);
+        const queryUrl = `${apiEndpoint}${params.toString() ? `?${params.toString()}` : ''}`;
+        const res = await axios.get(queryUrl);
+        if (res.data?.success) {
+          setNotices(res.data.notices || []);
+          if (showFeedback) toast.success('Notices refreshed.');
+        } else {
+          toast.error(res.data?.error || 'Failed to load notices.');
+        }
+      } catch (err) {
+        console.error('Fetch notices error:', err);
+        toast.error(err.response?.data?.error || 'Failed to connect to notices server.');
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
       }
-    } catch (err) {
-      console.error('Fetch notices error:', err);
-      showToast('Network error while loading notices', true);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [apiEndpoint, selectedStatus, searchTerm]
+  );
 
-  const openCreateModal = () => {
+  useEffect(() => {
+    let ignore = false;
+    if (!ignore) {
+      fetchNotices();
+    }
+    return () => {
+      ignore = true;
+    };
+  }, [fetchNotices]);
+
+  // Handle open create form
+  const handleOpenCreate = () => {
     setEditingNotice(null);
     setFormTitle('');
-    setFormSlug('');
     setFormDriveUrl('');
     setFormDescription('');
     setFormPublishedDate(new Date().toISOString().split('T')[0]);
     setFormIsActive(true);
-    setIsModalOpen(true);
+    setNoticeToDelete(null);
+    setIsFormOpen(true);
   };
 
-  const openEditModal = (notice) => {
+  // Handle open edit form
+  const handleOpenEdit = (notice) => {
     setEditingNotice(notice);
     setFormTitle(notice.title || '');
-    setFormSlug(notice.slug || '');
     setFormDriveUrl(notice.drive_url || '');
     setFormDescription(notice.description || '');
     setFormPublishedDate(
@@ -118,113 +112,102 @@ export default function NoticesPage() {
         : new Date().toISOString().split('T')[0]
     );
     setFormIsActive(Boolean(notice.is_active));
-    setIsModalOpen(true);
+    setNoticeToDelete(null);
+    setIsFormOpen(true);
+  };
+
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+    setEditingNotice(null);
   };
 
   const handleTitleChange = (e) => {
-    const val = e.target.value;
-    setFormTitle(val);
-    if (!editingNotice) {
-      const autoSlug = val
-        .toLowerCase()
-        .trim()
-        .replace(/[^\w\s-]/g, '')
-        .replace(/[\s_-]+/g, '-')
-        .replace(/^-+|-+$/g, '');
-      setFormSlug(autoSlug);
-    }
+    setFormTitle(e.target.value);
   };
 
+  // Save notice (Create or Update)
   const handleSaveNotice = async (e) => {
     e.preventDefault();
     if (!formTitle.trim()) {
-      showToast('Notice title is required', true);
+      toast.error('Notice title is required.');
       return;
     }
     if (!formDriveUrl.trim()) {
-      showToast('Drive URL or document link is required', true);
+      toast.error('Document URL is required.');
       return;
     }
 
     setSubmitting(true);
     try {
-      const method = editingNotice ? 'PUT' : 'POST';
       const payload = {
         title: formTitle.trim(),
-        slug: formSlug.trim(),
         drive_url: formDriveUrl.trim(),
         description: formDescription,
         published_date: formPublishedDate,
         is_active: formIsActive,
       };
-      if (editingNotice) payload.id = editingNotice.id;
 
-      const res = await fetch(`/api/${domain}/staff/panel/notices`, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
+      let res;
+      if (editingNotice) {
+        payload.id = editingNotice.id;
+        res = await axios.put(apiEndpoint, payload);
+      } else {
+        res = await axios.post(apiEndpoint, payload);
+      }
 
-      if (data.success) {
-        showToast(editingNotice ? 'Notice updated successfully' : 'Notice created successfully');
-        setIsModalOpen(false);
+      if (res.data?.success) {
+        toast.success(editingNotice ? 'Notice updated successfully.' : 'Notice published successfully.');
+        setIsFormOpen(false);
+        setEditingNotice(null);
         fetchNotices();
       } else {
-        showToast(data.error || 'Failed to save notice', true);
+        toast.error(res.data?.error || 'Failed to save notice.');
       }
     } catch (err) {
       console.error('Save notice error:', err);
-      showToast('Network error while saving notice', true);
+      toast.error(err.response?.data?.error || 'Error saving notice to database.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDeleteNotice = async () => {
+  // Delete notice execution
+  const handleConfirmDelete = async () => {
     if (!noticeToDelete) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/${domain}/staff/panel/notices?id=${noticeToDelete.id}`, {
-        method: 'DELETE',
-      });
-      const data = await res.json();
-      if (data.success) {
-        showToast(`Notice "${noticeToDelete.title}" deleted`);
-        setDeleteModalOpen(false);
+      const res = await axios.delete(`${apiEndpoint}?id=${noticeToDelete.id}`);
+      if (res.data?.success) {
+        toast.success(`Notice "${noticeToDelete.title}" deleted.`);
         setNoticeToDelete(null);
         fetchNotices();
       } else {
-        showToast(data.error || 'Failed to delete notice', true);
+        toast.error(res.data?.error || 'Failed to delete notice.');
       }
     } catch (err) {
       console.error('Delete notice error:', err);
-      showToast('Network error deleting notice', true);
+      toast.error(err.response?.data?.error || 'Failed to delete notice record.');
     } finally {
       setDeleting(false);
     }
   };
 
-  const toggleNoticeStatus = async (notice) => {
+  // Toggle active status
+  const handleToggleStatus = async (notice) => {
     try {
-      const res = await fetch(`/api/${domain}/staff/panel/notices`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: notice.id,
-          is_active: !notice.is_active,
-        }),
+      const res = await axios.put(apiEndpoint, {
+        id: notice.id,
+        is_active: !notice.is_active,
       });
-      const data = await res.json();
-      if (data.success) {
-        showToast(`Notice status toggled to ${!notice.is_active ? 'Active' : 'Inactive'}`);
+      if (res.data?.success) {
+        toast.success(`Notice status changed to ${!notice.is_active ? 'Active' : 'Inactive'}.`);
         fetchNotices();
       } else {
-        showToast(data.error || 'Failed to toggle status', true);
+        toast.error(res.data?.error || 'Failed to update status.');
       }
     } catch (err) {
       console.error('Toggle status error:', err);
-      showToast('Network error updating status', true);
+      toast.error('Network error updating status.');
     }
   };
 
@@ -234,109 +217,272 @@ export default function NoticesPage() {
   const inactiveCount = notices.filter((n) => !n.is_active).length;
 
   return (
-    <div className="w-full space-y-6">
-      {/* Toast Alerts */}
-      {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-xl text-sm animate-fade-in font-medium">
-          <FiCheckCircle className="text-lg shrink-0" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
-      {toastError && (
-        <div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-rose-600 text-white px-4 py-3 rounded-xl shadow-xl text-sm animate-fade-in font-medium">
-          <FiXCircle className="text-lg shrink-0" />
-          <span>{toastError}</span>
-        </div>
-      )}
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">Total Notices</p>
-            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
-              <FiFileText className="text-base" />
-            </div>
-          </div>
-          <div className="flex items-baseline justify-between mt-2">
-            <span className="text-2xl font-bold text-slate-900 dark:text-white font-mono">{totalCount}</span>
-            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Registered records</span>
-          </div>
+    <div className="w-full space-y-4">
+      {/* Top Header & Overview Bar */}
+      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-3">
+        <div>
+          <h1 className="text-base font-semibold text-slate-900 dark:text-white">
+            Notices & Circulars
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Publish institutional notices, academic circulars, directives, and linked documents.
+          </p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">Active Published</p>
-            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
-              <FiCheckCircle className="text-base" />
-            </div>
-          </div>
-          <div className="flex items-baseline justify-between mt-2">
-            <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">{activeCount}</span>
-            <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">Live on website</span>
-          </div>
+        <div className="flex items-center gap-2">
+          {!isFormOpen && (
+            <button
+              type="button"
+              onClick={handleOpenCreate}
+              className="px-3.5 py-1.5 rounded-md bg-primary hover:bg-primary-dark text-white text-xs font-medium cursor-pointer shadow-xs transition"
+            >
+              + New Notice
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => fetchNotices(true)}
+            disabled={refreshing}
+            className="px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium transition cursor-pointer disabled:opacity-50"
+          >
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
         </div>
+      </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">Inactive / Archived</p>
-            <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
-              <FiXCircle className="text-base" />
-            </div>
-          </div>
-          <div className="flex items-baseline justify-between mt-2">
-            <span className="text-2xl font-bold text-slate-700 dark:text-slate-300 font-mono">{inactiveCount}</span>
-            <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400">Hidden from students</span>
+      {/* KPI Cards (High-Density Metric Bar) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-3.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            Total Notices
+          </span>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-xl font-semibold text-slate-900 dark:text-white font-mono">
+              {totalCount}
+            </span>
+            <span className="text-[10px] text-slate-400">All Records</span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">Cloud Storage</p>
-            <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
-              <FaGoogleDrive className="text-base" />
-            </div>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-3.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            Active / Live
+          </span>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-xl font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
+              {activeCount}
+            </span>
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400">Published</span>
           </div>
-          <div className="flex items-baseline justify-between mt-2">
-            <span className="text-sm font-semibold text-slate-900 dark:text-white">Google Drive</span>
-            <span className="text-[11px] font-medium text-blue-600 dark:text-blue-400">Direct Linked</span>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-3.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            Archived / Hidden
+          </span>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-xl font-semibold text-slate-600 dark:text-slate-400 font-mono">
+              {inactiveCount}
+            </span>
+            <span className="text-[10px] text-slate-400">Draft / Inactive</span>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-3.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            Storage Integration
+          </span>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-xs font-semibold text-slate-900 dark:text-white">
+              Google Drive
+            </span>
+            <span className="text-[10px] text-primary">Connected</span>
           </div>
         </div>
       </div>
 
-      {/* Main Workstation Container */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
-        {/* Header Toolbar */}
-        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <FiFileText className="text-secondary" />
-              Notices & Circulars
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Publish official circulars and notices with rich formatted briefings and Google Drive documents.
-            </p>
+      {/* IN-PAGE DELETE CONFIRMATION BANNER (NO POPUP MODAL) */}
+      {noticeToDelete && (
+        <div className="w-full bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-md p-4 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold text-rose-800 dark:text-rose-300">
+                Confirm Deletion: "{noticeToDelete.title}"
+              </p>
+              <p className="text-[11px] text-rose-700 dark:text-rose-400 mt-0.5">
+                Are you sure you want to permanently delete this notice? This action cannot be reversed.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setNoticeToDelete(null)}
+                disabled={deleting}
+                className="px-3 py-1.5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-medium hover:bg-slate-50 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                className="px-3.5 py-1.5 rounded-md bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium cursor-pointer shadow-xs transition disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Delete Permanently'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* IN-PAGE FORM SECTION (NO POPUP MODAL) */}
+      {isFormOpen && (
+        <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+                {editingNotice ? `Edit Notice: ${editingNotice.title}` : 'Create New Notice'}
+              </h2>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Fill in the notice details below. Rich briefings and external document URLs are supported.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleCloseForm}
+              className="text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white px-2 py-1 rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+            >
+              Close
+            </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Search Box */}
-            <div className="relative min-w-[220px]">
-              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs" />
+          <form onSubmit={handleSaveNotice} className="space-y-4">
+            {/* Notice Title */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                Notice Title *
+              </label>
               <input
                 type="text"
-                placeholder="Search notices..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && fetchNotices()}
-                className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition"
+                required
+                value={formTitle}
+                onChange={handleTitleChange}
+                placeholder="e.g. Mid-Term Examination Schedule & Practical Guidelines"
+                className="w-full px-3 py-1.5 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary"
               />
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Document URL */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Document / Google Drive Link *
+                </label>
+                <input
+                  type="url"
+                  required
+                  value={formDriveUrl}
+                  onChange={(e) => setFormDriveUrl(e.target.value)}
+                  placeholder="https://drive.google.com/file/d/..."
+                  className="w-full px-3 py-1.5 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary"
+                />
+              </div>
+
+              {/* Published Date */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Publish Date
+                </label>
+                <input
+                  type="date"
+                  value={formPublishedDate}
+                  onChange={(e) => setFormPublishedDate(e.target.value)}
+                  className="w-full px-3 py-1.5 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer"
+                />
+              </div>
+            </div>
+
+            {/* Description (Tiptap Editor) */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                <span>Notice Briefing & Full Description</span>
+                <span className="text-[10px] text-slate-400">Rich Text Formatted</span>
+              </label>
+              <TiptapEditor
+                value={formDescription}
+                onChange={(html) => setFormDescription(html)}
+                placeholder="Compose detailed circular briefing, schedule details, timing, and room directives..."
+                minHeight="160px"
+              />
+            </div>
+
+            {/* Status Checkbox */}
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="checkbox"
+                id="formIsActive"
+                checked={formIsActive}
+                onChange={(e) => setFormIsActive(e.target.checked)}
+                className="w-4 h-4 rounded-sm border-slate-300 text-primary focus:ring-primary cursor-pointer"
+              />
+              <label
+                htmlFor="formIsActive"
+                className="text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer"
+              >
+                Publish notice immediately as Active
+              </label>
+            </div>
+
+            {/* Form Action Buttons */}
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={handleCloseForm}
+                className="px-3.5 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-4 py-1.5 rounded-md bg-primary hover:bg-primary-dark text-white text-xs font-medium cursor-pointer shadow-xs transition disabled:opacity-50"
+              >
+                {submitting ? 'Saving...' : editingNotice ? 'Update Notice' : 'Save Notice'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Main Workstation Container (Table & Search Controls) */}
+      <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md shadow-xs overflow-hidden">
+        {/* Filter and Search Bar */}
+        <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-900 dark:text-white">
+              Notices List
+            </span>
+            <span className="px-2 py-0.5 rounded-sm text-[10px] font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+              {notices.length}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Search Input */}
+            <input
+              type="text"
+              placeholder="Search notices..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && fetchNotices()}
+              className="px-3 py-1.5 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary min-w-[200px]"
+            />
 
             {/* Status Filter */}
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer"
+              className="text-xs px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer"
             >
               <option value="all">All Status</option>
               <option value="active">Active Only</option>
@@ -344,49 +490,39 @@ export default function NoticesPage() {
             </select>
 
             <button
-              onClick={fetchNotices}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition cursor-pointer"
-              title="Refresh"
+              type="button"
+              onClick={() => fetchNotices()}
+              className="px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium transition cursor-pointer"
             >
-              <FiRefreshCw className={loading ? 'animate-spin' : ''} />
-            </button>
-
-            <button
-              onClick={openCreateModal}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-secondary hover:bg-secondary-dark text-white shadow-xs transition-all cursor-pointer"
-            >
-              <FiPlus className="text-sm" />
-              <span>New Notice</span>
+              Filter
             </button>
           </div>
         </div>
 
-        {/* Table View */}
+        {/* Notices Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/75 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
-                <th className="py-3 px-4 font-semibold uppercase text-[10px] tracking-wider">#</th>
-                <th className="py-3 px-4 font-semibold uppercase text-[10px] tracking-wider">Title & Slug</th>
-                <th className="py-3 px-4 font-semibold uppercase text-[10px] tracking-wider">Drive Document</th>
-                <th className="py-3 px-4 font-semibold uppercase text-[10px] tracking-wider">Publish Date</th>
-                <th className="py-3 px-4 font-semibold uppercase text-[10px] tracking-wider">Status</th>
-                <th className="py-3 px-4 font-semibold uppercase text-[10px] tracking-wider text-right">Actions</th>
+                <th className="py-2.5 px-3.5 font-semibold uppercase text-[10px] tracking-wider w-12">#</th>
+                <th className="py-2.5 px-3.5 font-semibold uppercase text-[10px] tracking-wider">Notice Title</th>
+                <th className="py-2.5 px-3.5 font-semibold uppercase text-[10px] tracking-wider">Document Attachment</th>
+                <th className="py-2.5 px-3.5 font-semibold uppercase text-[10px] tracking-wider">Published Date</th>
+                <th className="py-2.5 px-3.5 font-semibold uppercase text-[10px] tracking-wider text-center">Status</th>
+                <th className="py-2.5 px-3.5 font-semibold uppercase text-[10px] tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
                 <tr>
                   <td colSpan="6" className="py-12 text-center">
-                    <div className="flex justify-center items-center">
-                      <div className="loader loader-sm" />
-                    </div>
+                    <Loader />
                   </td>
                 </tr>
               ) : notices.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="py-12 text-center text-slate-400 dark:text-slate-500">
-                    No notices found matching your criteria. Click "New Notice" to publish your first notice.
+                  <td colSpan="6" className="py-12 text-center text-slate-400 dark:text-slate-500 text-xs">
+                    No notices registered yet. Click "+ New Notice" to publish your first record.
                   </td>
                 </tr>
               ) : (
@@ -395,73 +531,68 @@ export default function NoticesPage() {
                     key={notice.id}
                     className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
                   >
-                    <td className="py-3.5 px-4 font-mono text-slate-400">{idx + 1}</td>
-                    <td className="py-3.5 px-4 max-w-sm">
-                      <p className="font-semibold text-slate-900 dark:text-white line-clamp-1">
+                    <td className="py-3 px-3.5 font-mono text-slate-400 text-xs">{idx + 1}</td>
+                    <td className="py-3 px-3.5 max-w-sm space-y-0.5">
+                      <div className="font-semibold text-slate-900 dark:text-white line-clamp-1">
                         {notice.title}
-                      </p>
-                      <p className="text-[11px] font-mono text-slate-400 mt-0.5">
-                        /{notice.slug}
-                      </p>
+                      </div>
+                      {notice.description && (
+                        <div
+                          className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 leading-relaxed"
+                          dangerouslySetInnerHTML={{ __html: notice.description }}
+                        />
+                      )}
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-3.5 whitespace-nowrap">
                       {notice.drive_url ? (
                         <a
                           href={notice.drive_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-medium hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors text-[11px]"
-                          title={notice.drive_url}
+                          className="inline-flex items-center px-2 py-0.5 rounded-sm border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-primary hover:underline text-[11px] font-medium"
                         >
-                          <FaGoogleDrive className="text-xs text-blue-500 shrink-0" />
-                          <span className="truncate max-w-[140px]">View Attachment</span>
-                          <FiExternalLink className="text-[10px] shrink-0" />
+                          View Document ↗
                         </a>
                       ) : (
-                        <span className="text-slate-400 italic">No link</span>
+                        <span className="text-slate-400 italic text-[11px]">No link</span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap text-slate-600 dark:text-slate-300">
-                      <div className="flex items-center gap-1.5">
-                        <FiCalendar className="text-slate-400 text-xs" />
-                        <span>
-                          {notice.published_date
-                            ? new Date(notice.published_date).toLocaleDateString()
-                            : '—'}
-                        </span>
-                      </div>
+                    <td className="py-3 px-3.5 whitespace-nowrap font-mono text-slate-600 dark:text-slate-300 text-xs">
+                      {notice.published_date
+                        ? new Date(notice.published_date).toLocaleDateString()
+                        : '—'}
                     </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap">
+                    <td className="py-3 px-3.5 text-center whitespace-nowrap">
                       <button
-                        onClick={() => toggleNoticeStatus(notice)}
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold transition cursor-pointer ${
+                        type="button"
+                        onClick={() => handleToggleStatus(notice)}
+                        className={`inline-flex items-center px-2 py-0.5 rounded-sm text-[10px] font-semibold transition cursor-pointer ${
                           notice.is_active
-                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 hover:bg-emerald-100'
-                            : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
+                            : 'bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
                         }`}
+                        title="Click to toggle status"
                       >
-                        {notice.is_active ? <FiCheck className="text-xs" /> : <FiX className="text-xs" />}
-                        <span>{notice.is_active ? 'Active' : 'Inactive'}</span>
+                        {notice.is_active ? 'Active' : 'Inactive'}
                       </button>
                     </td>
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                    <td className="py-3 px-3.5 text-right whitespace-nowrap">
                       <div className="inline-flex items-center gap-1">
                         <button
-                          onClick={() => openEditModal(notice)}
-                          className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition cursor-pointer"
-                          title="Edit Notice"
+                          type="button"
+                          onClick={() => handleOpenEdit(notice)}
+                          className="p-1.5 rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition cursor-pointer"
+                          title="Edit"
                         >
-                          <FiEdit2 className="text-sm" />
+                          <FiEdit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => {
-                            setNoticeToDelete(notice);
-                            setDeleteModalOpen(true);
-                          }}
-                          className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 transition cursor-pointer"
-                          title="Delete Notice"
+                          type="button"
+                          onClick={() => setNoticeToDelete(notice)}
+                          className="p-1.5 rounded-md border border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900/40 dark:hover:bg-rose-950/40 transition cursor-pointer"
+                          title="Delete"
                         >
-                          <FiTrash2 className="text-sm" />
+                          <FiTrash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
@@ -472,185 +603,6 @@ export default function NoticesPage() {
           </table>
         </div>
       </div>
-
-      {/* Create / Edit Modal with Tiptap Editor */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden my-8 animate-scale-up">
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  {editingNotice ? 'Edit Notice' : 'Create New Notice'}
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Fill in the details below. Rich briefings and Google Drive document URLs are supported.
-                </p>
-              </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-              >
-                <FiX className="text-base" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveNotice} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Title */}
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    Notice Title <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Mid-Term Examination Schedule & Guidelines"
-                    value={formTitle}
-                    onChange={handleTitleChange}
-                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition"
-                  />
-                </div>
-
-                {/* Slug */}
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    URL Slug <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. mid-term-examination-schedule"
-                    value={formSlug}
-                    onChange={(e) => setFormSlug(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white font-mono focus:outline-hidden focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Drive URL */}
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <FaGoogleDrive className="text-blue-500 text-xs" />
-                    <span>Google Drive Document URL</span> <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="url"
-                    required
-                    placeholder="https://drive.google.com/file/d/..."
-                    value={formDriveUrl}
-                    onChange={(e) => setFormDriveUrl(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition"
-                  />
-                </div>
-
-                {/* Published Date */}
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    Publish Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formPublishedDate}
-                    onChange={(e) => setFormPublishedDate(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition cursor-pointer"
-                  />
-                </div>
-              </div>
-
-              {/* Tiptap Rich Text Editor for Description */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                  <span>Notice Briefing & Full Description</span>
-                  <span className="text-[11px] font-normal text-slate-400">Powered by Tiptap Editor</span>
-                </label>
-                <TiptapEditor
-                  value={formDescription}
-                  onChange={(html) => setFormDescription(html)}
-                  placeholder="Compose official notice briefing, instructions, timing and details..."
-                  minHeight="200px"
-                />
-              </div>
-
-              {/* Status Toggle */}
-              <div className="flex items-center gap-3 pt-2">
-                <input
-                  type="checkbox"
-                  id="formIsActive"
-                  checked={formIsActive}
-                  onChange={(e) => setFormIsActive(e.target.checked)}
-                  className="w-4 h-4 rounded text-secondary focus:ring-secondary cursor-pointer"
-                />
-                <label htmlFor="formIsActive" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
-                  Publish notice immediately as Active
-                </label>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-secondary hover:bg-secondary-dark text-white shadow-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-                >
-                  {submitting ? (
-                    <div className="loader loader-sm loader-white" />
-                  ) : (
-                    <span>{editingNotice ? 'Update Notice' : 'Save Notice'}</span>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {deleteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4 animate-scale-up">
-            <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400">
-              <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/50">
-                <FiTrash2 className="text-xl" />
-              </div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Delete Notice</h3>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              Are you sure you want to permanently delete the notice{' '}
-              <strong className="text-slate-900 dark:text-white">"{noticeToDelete?.title}"</strong>?
-              This action cannot be undone.
-            </p>
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setDeleteModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={deleting}
-                onClick={handleDeleteNotice}
-                className="px-5 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-              >
-                {deleting ? (
-                  <div className="loader loader-sm loader-white" />
-                ) : (
-                  <span>Delete Permanently</span>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
