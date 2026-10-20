@@ -1,4 +1,4 @@
-// Import and export environment variables to use across the project
+
 
 export const CLOUDINARY_NAME = process.env.CLOUDINARY_NAME;
 export const CLOUDINARY_API = process.env.CLOUDINARY_API;
@@ -22,18 +22,18 @@ export const BREVO_SENDER_EMAIL = cleanEnv(process.env.BREVO_SENDER_EMAIL);
 export const BREVO_SENDER_NAME = cleanEnv(process.env.BREVO_SENDER_NAME);
 export const BREVO_API_KEY = cleanEnv(process.env.BREVO_API_KEY);
 
-export const SCHOOL_NAME = 'Alpha Institute';
+export const SCHOOL_NAME = "website.name"
 export const LOGO_URL = '/icon.png';
 export const META_TITLE = "Sky International Institute - Academic Excellence & Growth";
 export const META_DESCRIPTION = 'Manage student enrollments, exam records, gradesheets, timetables, and billing files dynamically.';
 
 export const MONTHLY_FEE_DUE_DAY = parseInt('6', 10);
 
-export const SITE_NAME ='Hiesci';
-export const SITE_MAIL ='support@hiesci.io';
-export const SITE_CONTACT ='+1 (800) 555-0199';
-export const SITE_ADDRESS ='Tech Innovation District, 100 Enterprise Way, Suite 400';
-export const COMPANY_NAME ='EduCraft Technologies Inc.';
+export const SITE_NAME = 'Hiesci';
+export const SITE_MAIL = 'support@hiesci.io';
+export const SITE_CONTACT = '+1 (800) 555-0199';
+export const SITE_ADDRESS = 'Tech Innovation District, 100 Enterprise Way, Suite 400';
+export const COMPANY_NAME = 'EduCraft Technologies Inc.';
 export const COMPANY_URL = process.env.COMPANY_URL || 'https://educraft.io';
 
 export const getBaseUrl = (request) => {
@@ -53,7 +53,7 @@ export const getBaseUrl = (request) => {
     if (request.url) {
       return new URL(request.url).origin;
     }
-  } catch {}
+  } catch { }
   return '';
 };
 
@@ -72,13 +72,13 @@ export const extractBaseDomain = (url = '') => {
 
 export const BASE_DOMAIN = '';
 
-export const DEVELOPER_TOKEN='hiesci-dev'
-export const CREATOR_TOKEN='hiesci-creator'
-export const TEACHER_TOKEN='hiesci-teacher'
-export const STAFF_TOKEN='hiesci-staff'
-export const OFFICER_TOKEN='hiesci-officer'
-export const STUDENT_TOKEN='hiesci-student'
-export const LIVE_CHAT_TOKEN='hiesci-live'
+export const DEVELOPER_TOKEN = 'hiesci-dev'
+export const CREATOR_TOKEN = 'hiesci-creator'
+export const TEACHER_TOKEN = 'hiesci-teacher'
+export const STAFF_TOKEN = 'hiesci-staff'
+export const OFFICER_TOKEN = 'hiesci-officer'
+export const STUDENT_TOKEN = 'hiesci-student'
+export const LIVE_CHAT_TOKEN = 'hiesci-live'
 
 // Meta Graph API (Facebook Messenger, Instagram Direct & WhatsApp Cloud API)
 export const META_APP_ID = process.env.META_APP_ID || '';

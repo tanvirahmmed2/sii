@@ -19,97 +19,54 @@ const GalleryPage = () => {
   useEffect(() => {
     const fetchAllImages = async () => {
       setLoading(true);
-      const items = [];
-
       try {
-        // Fetch News
-        const newsRes = await fetch(getApiEndpoint('news'));
-        if (newsRes.ok) {
-          const newsData = await newsRes.json();
-          const list = newsData.payload?.news || newsData.paylod?.news || newsData.news || [];
-          list.forEach((item) => {
-            const img = item.image_url || item.image;
-            if (img) {
-              items.push({
-                id: `news-${item.id}`,
-                title: item.title,
-                image: img,
-                category: 'news',
-                categoryLabel: 'News',
-                date: item.created_at || item.date,
-                link: tenantUrl(`/news/${item.slug || item.id}`)
-              });
-            }
-          });
-        }
+        const res = await fetch(getApiEndpoint('home/gallery?limit=100'));
+        if (res.ok) {
+          const data = await res.json();
+          const list = data.payload?.items || data.items || [];
+          const items = list.map((item, index) => {
+            const table = item.tableName || item.table_name || 'events';
+            const cat =
+              table === 'awards'
+                ? 'awards'
+                : table === 'events'
+                ? 'events'
+                : table === 'club-news'
+                ? 'club-news'
+                : 'news';
 
-        // Fetch Club News
-        const clubNewsRes = await fetch(getApiEndpoint('club-news'));
-        if (clubNewsRes.ok) {
-          const clubData = await clubNewsRes.json();
-          const list = clubData.payload?.clubNews || clubData.paylod?.clubNews || clubData.clubNews || [];
-          list.forEach((item) => {
-            const img = item.image_url || item.image;
-            if (img) {
-              items.push({
-                id: `club-news-${item.id}`,
-                title: item.title,
-                subtitle: item.club_name,
-                image: img,
-                category: 'club-news',
-                categoryLabel: 'Club News',
-                date: item.created_at,
-                link: tenantUrl(`/club-news/${item.slug || item.id}`)
-              });
-            }
-          });
-        }
+            const catLabel =
+              table === 'awards'
+                ? 'Awards'
+                : table === 'events'
+                ? 'Events'
+                : table === 'club-news'
+                ? 'Club News'
+                : 'News';
 
-        // Fetch Events
-        const eventsRes = await fetch(getApiEndpoint('events'));
-        if (eventsRes.ok) {
-          const eventsData = await eventsRes.json();
-          const list = eventsData.payload?.events || eventsData.paylod?.events || eventsData.events || [];
-          list.forEach((item) => {
-            const img = item.image_url || item.image;
-            if (img) {
-              items.push({
-                id: `events-${item.id}`,
-                title: item.title,
-                subtitle: item.location,
-                image: img,
-                category: 'events',
-                categoryLabel: 'Events',
-                date: item.event_date || item.created_at,
-                link: tenantUrl(`/events/${item.slug || item.id}`)
-              });
-            }
-          });
-        }
+            const linkPath =
+              table === 'awards'
+                ? `/awards/${item.slug}`
+                : table === 'events'
+                ? `/events/${item.slug}`
+                : table === 'club-news'
+                ? `/club-news/${item.slug}`
+                : `/news/${item.slug}`;
 
-        // Fetch Recognitions
-        const recRes = await fetch(getApiEndpoint('recognitions'));
-        if (recRes.ok) {
-          const recData = await recRes.json();
-          const list = recData.payload?.recognitions || recData.paylod?.recognitions || recData.recognitions || [];
-          list.forEach((item) => {
-            const img = item.image_url || item.image;
-            if (img) {
-              items.push({
-                id: `recognitions-${item.id}`,
-                title: item.title,
-                image: img,
-                category: 'recognitions',
-                categoryLabel: 'Recognitions',
-                date: item.date || item.created_at,
-                link: tenantUrl(`/recognitions/${item.slug || item.id}`)
-              });
-            }
+            return {
+              id: `${table}-${item.slug || index}`,
+              title: item.title,
+              image: item.image,
+              category: cat,
+              categoryLabel: catLabel,
+              date: item.created_at,
+              link: tenantUrl(linkPath),
+            };
           });
-        }
 
-        items.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-        setGalleryItems(items);
+          items.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+          setGalleryItems(items);
+        }
       } catch (err) {
         console.error('Error fetching gallery images:', err);
       } finally {
@@ -125,7 +82,7 @@ const GalleryPage = () => {
     { key: 'events', label: 'Events' },
     { key: 'news', label: 'News' },
     { key: 'club-news', label: 'Club News' },
-    { key: 'recognitions', label: 'Recognitions' },
+    { key: 'awards', label: 'Awards' },
   ];
 
   const filteredItems = galleryItems.filter((item) => {

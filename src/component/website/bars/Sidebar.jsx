@@ -32,6 +32,7 @@ const linkGroups = [
       { label: 'Notices', path: '/notices' },
       { label: 'Events', path: '/events' },
       { label: 'News', path: '/news' },
+      { label: 'Awards', path: '/awards' },
       { label: 'Announcements', path: '/club-news' },
       { label: 'Gallery', path: '/gallery' },
     ],

@@ -5,7 +5,7 @@ import Hero from 'src/component/website/pages/home/Hero'
 import Life from 'src/component/website/pages/home/Life'
 import News from 'src/component/website/pages/home/News'
 import Notices from 'src/component/website/pages/home/Notices'
-import Recognition from 'src/component/website/pages/home/Recognition'
+import Awards from 'src/component/website/pages/home/Awards'
 import React from 'react'
 
 const Home = () => {
@@ -18,7 +18,7 @@ const Home = () => {
     <Notices/>
     <Events/>
     <News/>
-    <Recognition/>
+    <Awards/>
     </>
   )
 }
