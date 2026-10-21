@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import {
   verifyStaffPaymentAccess,
+  mergeCredentials,
   testGatewayAccountConnection
 } from 'src/lib/database/paymentGateways.js';
 
@@ -11,7 +12,7 @@ import {
  */
 export async function POST(request, context) {
   try {
-    const auth = await verifyStaffPaymentAccess(request, context);
+    const auth = await verifyStaffPaymentAccess(request, context, null, 'view');
     if (auth.error) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
@@ -24,7 +25,7 @@ export async function POST(request, context) {
     let targetCreds = credentials;
     let targetCurrency = currency || auth.website.currency || 'BDT';
 
-    // If an existing account ID is passed, retrieve stored credentials
+    // If an existing account ID is passed, retrieve stored credentials and merge
     if (id) {
       const accRes = await queryDb(`
         SELECT gateway_code, environment, credentials, account_name, currency
@@ -39,7 +40,7 @@ export async function POST(request, context) {
       const acc = accRes.rows[0];
       targetGatewayCode = acc.gateway_code;
       targetEnv = environment || acc.environment;
-      targetCreds = credentials && Object.keys(credentials).length > 0 ? credentials : acc.credentials;
+      targetCreds = credentials ? mergeCredentials(acc.credentials, credentials) : acc.credentials;
       targetCurrency = currency || acc.currency || auth.website.currency || 'BDT';
     }
 

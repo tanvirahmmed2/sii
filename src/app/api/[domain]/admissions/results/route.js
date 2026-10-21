@@ -25,7 +25,7 @@ export async function GET(request, context) {
       SELECT r.id, r.roll_no, r.applicant_name, r.merit_position, r.score,
              r.selection_status, r.selection_status AS status, r.merit_position AS merit_rank,
              r.remarks, r.published_at,
-             a.application_no, adm.title AS circular_title, c.name AS class_name
+             a.application_no, a.email, adm.title AS circular_title, c.name AS class_name
       FROM website_admission_results r
       JOIN website_admission_applicants a ON a.id = r.applicant_id
       JOIN website_admissions adm ON adm.id = r.admission_id

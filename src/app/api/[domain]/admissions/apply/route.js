@@ -128,55 +128,29 @@ export async function POST(request, context) {
 
     const cleanEmail = email.toLowerCase().trim();
 
-    // 0. Enforce backend email verification check
-    const verifiedCheck = await queryDb(`
-      SELECT id, is_verified, expires_at
-      FROM website_email_verifications
-      WHERE website_id = $1 AND LOWER(email) = $2 AND purpose = 'admission' AND is_verified = TRUE
-      ORDER BY id DESC
+    // 0. Enforce backend email verification check (or check if applicant already verified)
+    const existingAppCheck = await queryDb(`
+      SELECT id, application_no, status FROM website_admission_applicants
+      WHERE website_id = $1 AND admission_id = $2 AND LOWER(email) = $3
       LIMIT 1
-    `, [website.id, cleanEmail]);
+    `, [website.id, admId, cleanEmail]);
 
-    if (verifiedCheck.rows.length === 0) {
-      return NextResponse.json({
-        success: false,
-        error: 'Email verification required. Please verify your email with the one-time passcode before submitting.'
-      }, { status: 403 });
+    if (existingAppCheck.rows.length === 0) {
+      const verifiedCheck = await queryDb(`
+        SELECT id, is_verified, expires_at
+        FROM website_email_verifications
+        WHERE website_id = $1 AND LOWER(email) = $2 AND purpose = 'admission' AND is_verified = TRUE
+        ORDER BY id DESC
+        LIMIT 1
+      `, [website.id, cleanEmail]);
+
+      if (verifiedCheck.rows.length === 0) {
+        return NextResponse.json({
+          success: false,
+          error: 'Email verification required. Please verify your email with the one-time passcode before submitting.'
+        }, { status: 403 });
+      }
     }
-
-    const admId = parseInt(targetAdmId, 10);
-
-    // 1. Verify circular exists and is active
-    const admRes = await queryDb(`
-      SELECT a.*, af.amount AS fee_amount, af.currency AS fee_currency, af.late_fee
-      FROM website_admissions a
-      LEFT JOIN website_admission_fees af ON af.admission_id = a.id AND af.status = 'active'
-      WHERE a.id = $1 AND a.website_id = $2
-    `, [admId, website.id]);
-
-    if (admRes.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Selected admission circular is invalid or closed.' }, { status: 404 });
-    }
-
-    const circular = admRes.rows[0];
-
-    // Check circular dates
-    const today = new Date().toISOString().split('T')[0];
-    const startDate = new Date(circular.start_date).toISOString().split('T')[0];
-    const endDate = new Date(circular.end_date).toISOString().split('T')[0];
-
-    if (today < startDate) {
-      return NextResponse.json({ success: false, error: 'Application period has not opened yet for this circular.' }, { status: 400 });
-    }
-    if (today > endDate) {
-      return NextResponse.json({ success: false, error: 'Application period has concluded for this circular.' }, { status: 400 });
-    }
-
-    // Generate Application Number: APP-{year}-{random_seq}
-    const countRes = await queryDb(`SELECT COUNT(*)::int AS count FROM website_admission_applicants WHERE website_id = $1`, [website.id]);
-    const seq = (countRes.rows[0].count || 0) + 1001;
-    const year = new Date().getFullYear();
-    const appNumber = `APP-${year}-${seq}`;
 
     const resolvedLastClass = last_class ? last_class.trim() : (body.past_school_class || 'N/A');
     const resolvedLastGrade = last_class_grade !== undefined && last_class_grade !== '' && last_class_grade !== null
@@ -184,34 +158,74 @@ export async function POST(request, context) {
       : (previous_gpa ? parseFloat(previous_gpa) : null);
     const resolvedLastInst = last_institution ? last_institution.trim() : (previous_school || body.past_school_name || 'N/A');
 
-    // 2. Insert into website_admission_applicants (payment_status is NOT in this table)
-    const insertApp = await queryDb(`
-      INSERT INTO website_admission_applicants (
-        website_id, admission_id, application_no, applicant_name, email,
-        phone, gender, date_of_birth, status,
-        last_class, last_class_grade, last_institution
-      ) VALUES (
-        $1, $2, $3, $4, $5,
-        $6, $7, $8, 'pending',
-        $9, $10, $11
-      ) RETURNING *
-    `, [
-      website.id,
-      admId,
-      appNumber,
-      applicant_name.trim(),
-      email.toLowerCase().trim(),
-      phone.trim(),
-      gender,
-      date_of_birth || null,
-      resolvedLastClass,
-      resolvedLastGrade,
-      resolvedLastInst
-    ]);
+    let applicant;
+    let appNumber;
 
-    const applicant = insertApp.rows[0];
+    if (existingAppCheck.rows.length > 0) {
+      // Update existing applicant -> status becomes 'unpaid'
+      const existing = existingAppCheck.rows[0];
+      appNumber = existing.application_no;
+      const updateRes = await queryDb(`
+        UPDATE website_admission_applicants
+        SET applicant_name = $1,
+            email = $2,
+            phone = $3,
+            gender = $4,
+            date_of_birth = $5,
+            status = 'unpaid',
+            last_class = $6,
+            last_class_grade = $7,
+            last_institution = $8,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $9 AND website_id = $10
+        RETURNING *
+      `, [
+        applicant_name.trim(),
+        cleanEmail,
+        phone.trim(),
+        gender,
+        date_of_birth || null,
+        resolvedLastClass,
+        resolvedLastGrade,
+        resolvedLastInst,
+        existing.id,
+        website.id
+      ]);
+      applicant = updateRes.rows[0];
+    } else {
+      // Generate Application Number: APP-{year}-{random_seq}
+      const countRes = await queryDb(`SELECT COUNT(*)::int AS count FROM website_admission_applicants WHERE website_id = $1`, [website.id]);
+      const seq = (countRes.rows[0].count || 0) + 1001;
+      const year = new Date().getFullYear();
+      appNumber = `APP-${year}-${seq}`;
 
-    // 3. Insert into website_admission_applicant_info
+      const insertApp = await queryDb(`
+        INSERT INTO website_admission_applicants (
+          website_id, admission_id, application_no, applicant_name, email,
+          phone, gender, date_of_birth, status,
+          last_class, last_class_grade, last_institution
+        ) VALUES (
+          $1, $2, $3, $4, $5,
+          $6, $7, $8, 'unpaid',
+          $9, $10, $11
+        ) RETURNING *
+      `, [
+        website.id,
+        admId,
+        appNumber,
+        applicant_name.trim(),
+        cleanEmail,
+        phone.trim(),
+        gender,
+        date_of_birth || null,
+        resolvedLastClass,
+        resolvedLastGrade,
+        resolvedLastInst
+      ]);
+      applicant = insertApp.rows[0];
+    }
+
+    // 3. Upsert into website_admission_applicant_info
     await queryDb(`
       INSERT INTO website_admission_applicant_info (
         website_id, applicant_id, father_name, father_phone, father_occupation,
@@ -222,6 +236,21 @@ export async function POST(request, context) {
         $6, $7, $8, $9, $10,
         $11, $12, $13, $14, $15
       )
+      ON CONFLICT (applicant_id) DO UPDATE SET
+        father_name = EXCLUDED.father_name,
+        father_phone = EXCLUDED.father_phone,
+        father_occupation = EXCLUDED.father_occupation,
+        mother_name = EXCLUDED.mother_name,
+        mother_phone = EXCLUDED.mother_phone,
+        mother_occupation = EXCLUDED.mother_occupation,
+        guardian_name = EXCLUDED.guardian_name,
+        guardian_phone = EXCLUDED.guardian_phone,
+        guardian_relation = EXCLUDED.guardian_relation,
+        present_address = EXCLUDED.present_address,
+        permanent_address = EXCLUDED.permanent_address,
+        previous_school = EXCLUDED.previous_school,
+        previous_gpa = EXCLUDED.previous_gpa,
+        updated_at = CURRENT_TIMESTAMP
     `, [
       website.id,
       applicant.id,
@@ -240,31 +269,40 @@ export async function POST(request, context) {
       resolvedLastGrade
     ]);
 
-    // 4. Create pending payment record in website_admission_fee_payments
+    // 4. Upsert pending payment record in website_admission_fee_payments
     const feeAmount = parseFloat(circular.fee_amount) || 500.00;
     const feeCurrency = circular.fee_currency || 'BDT';
     const invoiceRef = `INV-ADM-${appNumber}`;
 
-    await queryDb(`
-      INSERT INTO website_admission_fee_payments (
-        website_id, applicant_id, admission_id,
-        gateway_code, amount, currency, transaction_id, payment_status, invoice_no
-      ) VALUES (
-        $1, $2, $3,
-        'online', $4, $5, NULL, 'pending', $6
-      )
-    `, [
-      website.id,
-      applicant.id,
-      admId,
-      feeAmount,
-      feeCurrency,
-      invoiceRef
-    ]);
+    const existingPayment = await queryDb(
+      `SELECT id, payment_status FROM website_admission_fee_payments WHERE applicant_id = $1 AND website_id = $2 LIMIT 1`,
+      [applicant.id, website.id]
+    );
+
+    if (existingPayment.rows.length === 0) {
+      await queryDb(`
+        INSERT INTO website_admission_fee_payments (
+          website_id, applicant_id, admission_id,
+          gateway_code, amount, currency, transaction_id, payment_status, invoice_no
+        ) VALUES (
+          $1, $2, $3,
+          'online', $4, $5, NULL, 'pending', $6
+        )
+      `, [
+        website.id,
+        applicant.id,
+        admId,
+        feeAmount,
+        feeCurrency,
+        invoiceRef
+      ]);
+    }
 
     // Consume verified token record to prevent replay attack
     try {
-      await queryDb(`DELETE FROM website_email_verifications WHERE id = $1`, [verifiedCheck.rows[0].id]);
+      if (typeof verifiedCheck !== 'undefined' && verifiedCheck?.rows?.length > 0) {
+        await queryDb(`DELETE FROM website_email_verifications WHERE id = $1`, [verifiedCheck.rows[0].id]);
+      }
     } catch (_) {}
 
     return NextResponse.json({

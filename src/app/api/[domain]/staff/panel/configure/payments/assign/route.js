@@ -11,7 +11,7 @@ import {
  */
 export async function GET(request, context) {
   try {
-    const auth = await verifyStaffPaymentAccess(request, context);
+    const auth = await verifyStaffPaymentAccess(request, context, null, 'view');
     if (auth.error) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
@@ -40,9 +40,17 @@ export async function GET(request, context) {
       ORDER BY name ASC
     `, [auth.website.id]);
 
+    const currenciesRes = await queryDb(`
+      SELECT id, code, name, symbol, is_base_currency, is_active
+      FROM website_currencies
+      WHERE website_id = $1 AND is_active = TRUE
+      ORDER BY is_base_currency DESC, code ASC
+    `, [auth.website.id]);
+
     return NextResponse.json({
       success: true,
       website_currency: auth.website.currency || 'BDT',
+      currencies: currenciesRes.rows,
       fee_purposes: FEE_PURPOSES,
       hostels: hostelsRes.rows,
       assignments: assignmentsRes.rows
@@ -67,7 +75,7 @@ export async function PUT(request, context) {
 
 export async function DELETE(request, context) {
   try {
-    const auth = await verifyStaffPaymentAccess(request, context);
+    const auth = await verifyStaffPaymentAccess(request, context, null, 'delete');
     if (auth.error) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
@@ -101,7 +109,7 @@ export async function DELETE(request, context) {
 
 async function handleAssignRoute(request, context) {
   try {
-    const auth = await verifyStaffPaymentAccess(request, context);
+    const auth = await verifyStaffPaymentAccess(request, context, null, 'edit');
     if (auth.error) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }

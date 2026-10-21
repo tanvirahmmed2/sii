@@ -70,7 +70,9 @@ export async function GET(request, context) {
 
     // 3. Fetch applicants for this circular with images and fee status
     const applicantsRes = await queryDb(`
-      SELECT a.id, a.application_no, a.roll_no, a.applicant_name, a.email, a.phone,
+      SELECT a.id, a.application_no, a.exam_roll,
+             COALESCE(a.exam_roll, a.roll_no, 'ROL-' || a.id) AS roll_no,
+             a.applicant_name, a.email, a.phone,
              a.status, a.score, a.merit_position, a.last_class, a.last_class_grade, a.last_institution,
              COALESCE(p.payment_status, 'unpaid') AS payment_status,
              COALESCE(img.photo_url, inf.photo_url) AS photo_url

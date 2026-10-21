@@ -42,29 +42,43 @@ export async function POST(request, context) {
     const classMaxSeats = circular.class_max_seats ? parseInt(circular.class_max_seats, 10) : circCapacity;
     const effectiveSeats = Math.min(circCapacity, classMaxSeats);
 
-    // 2. Compute each candidate's sum of exam marks and update applicant score
-    await queryDb(`
-      UPDATE website_admission_applicants a
-      SET score = COALESCE((
-        SELECT SUM(m.marks_obtained)
-        FROM website_admission_exam_marks m
-        WHERE m.applicant_id = a.id AND m.admission_id = $1
-      ), 0),
-      updated_at = CURRENT_TIMESTAMP
-      WHERE a.admission_id = $1 AND a.website_id = $2
-    `, [admId, auth.website.id]);
+    // 2. Determine ordering based on circular.selection_method ('exam' vs 'merit')
+    let applicantsRes;
+    if (circular.selection_method === 'merit') {
+      applicantsRes = await queryDb(`
+        SELECT a.id, a.application_no, a.roll_no, a.applicant_name,
+               COALESCE(a.last_class_grade, 0.00) AS score, a.last_class_grade
+        FROM website_admission_applicants a
+        WHERE a.admission_id = $1 AND a.website_id = $2
+          AND a.status IN ('completed', 'paid', 'pending', 'selected')
+        ORDER BY a.last_class_grade DESC NULLS LAST, a.created_at ASC
+      `, [admId, auth.website.id]);
+    } else {
+      // Exam-based: Compute each candidate's sum of exam marks and update applicant score
+      await queryDb(`
+        UPDATE website_admission_applicants a
+        SET score = COALESCE((
+          SELECT SUM(m.marks_obtained)
+          FROM website_admission_exam_marks m
+          WHERE m.applicant_id = a.id AND m.admission_id = $1
+        ), 0),
+        updated_at = CURRENT_TIMESTAMP
+        WHERE a.admission_id = $1 AND a.website_id = $2
+      `, [admId, auth.website.id]);
 
-    // 3. Fetch candidates ordered by highest score
-    const applicantsRes = await queryDb(`
-      SELECT a.id, a.application_no, a.roll_no, a.applicant_name, a.score
-      FROM website_admission_applicants a
-      WHERE a.admission_id = $1 AND a.website_id = $2
-      ORDER BY a.score DESC NULLS LAST, a.created_at ASC
-    `, [admId, auth.website.id]);
+      // Fetch candidates ordered by highest exam score
+      applicantsRes = await queryDb(`
+        SELECT a.id, a.application_no, a.roll_no, a.applicant_name, a.score
+        FROM website_admission_applicants a
+        WHERE a.admission_id = $1 AND a.website_id = $2
+          AND a.status IN ('completed', 'paid', 'pending', 'selected')
+        ORDER BY a.score DESC NULLS LAST, a.created_at ASC
+      `, [admId, auth.website.id]);
+    }
 
     const allApplicants = applicantsRes.rows;
     if (allApplicants.length === 0) {
-      return NextResponse.json({ success: false, error: 'No applicants found for this admission circular.' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'No completed/qualified applicants found for this admission circular.' }, { status: 400 });
     }
 
     const staffId = auth.user?.id || null;

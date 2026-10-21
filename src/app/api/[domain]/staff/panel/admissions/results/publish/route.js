@@ -1,6 +1,185 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyStaffPaymentAccess } from 'src/lib/database/paymentGateways.js';
+import { hashPassword } from 'src/lib/middleware/students.js';
+
+export const dynamic = 'force-dynamic';
+
+/**
+ * Registers a selected applicant into website_students and website_student_info
+ * and associated addresses, guardians, and media tables.
+ */
+export async function enrollSelectedApplicant({ websiteId, circular, applicant, meritPosition }) {
+  try {
+    const currentYear = new Date().getFullYear();
+    const cleanEmail = applicant.email ? applicant.email.toLowerCase().trim() : '';
+
+    // Check if student with this email already exists in website_students for this website
+    let studentId = applicant.enrolled_student_id;
+
+    if (!studentId && cleanEmail) {
+      const existingStudent = await queryDb(
+        `SELECT id FROM website_students WHERE website_id = $1 AND LOWER(email) = $2 LIMIT 1`,
+        [websiteId, cleanEmail]
+      );
+      if (existingStudent.rows.length > 0) {
+        studentId = existingStudent.rows[0].id;
+      }
+    }
+
+    if (!studentId) {
+      // Generate unique registration_no and student_unique_id
+      const regSeq = 1000 + parseInt(applicant.id, 10);
+      const regNo = `REG${currentYear}${regSeq}`;
+      const studentUniqueId = `STU${currentYear}${regSeq}`;
+      const rollNo = applicant.roll_no || applicant.exam_roll || String(meritPosition || regSeq);
+
+      const newStudentRes = await queryDb(
+        `INSERT INTO website_students (
+          website_id, department_id, class_id, session_id,
+          registration_no, roll_no, email, student_unique_id, is_active
+        ) VALUES (
+          $1, $2, $3, $4,
+          $5, $6, $7, $8, FALSE
+        )
+        ON CONFLICT (website_id, registration_no) DO UPDATE SET
+          roll_no = EXCLUDED.roll_no,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING id`,
+        [
+          websiteId,
+          circular.department_id || null,
+          circular.class_id || null,
+          circular.session_id || null,
+          regNo,
+          rollNo,
+          cleanEmail || null,
+          studentUniqueId
+        ]
+      );
+      studentId = newStudentRes.rows[0].id;
+
+      // Temporary hashed password for initial setup
+      const initialHashedPassword = await hashPassword(`Student@${applicant.id}!`);
+
+      // Insert website_student_info
+      await queryDb(
+        `INSERT INTO website_student_info (
+          website_id, student_id, name, email, number,
+          gender, date_of_birth, admission_date, password,
+          verification_status, is_registered, is_verified
+        ) VALUES (
+          $1, $2, $3, $4, $5,
+          $6, $7, CURRENT_DATE, $8,
+          'pending_setup', FALSE, FALSE
+        )
+        ON CONFLICT (student_id) DO UPDATE SET
+          name = EXCLUDED.name,
+          email = EXCLUDED.email,
+          number = EXCLUDED.number,
+          updated_at = CURRENT_TIMESTAMP`,
+        [
+          websiteId,
+          studentId,
+          applicant.applicant_name,
+          cleanEmail || null,
+          applicant.phone || null,
+          applicant.gender || 'Male',
+          applicant.date_of_birth || null,
+          initialHashedPassword
+        ]
+      );
+
+      // Insert website_student_addresses
+      await queryDb(
+        `INSERT INTO website_student_addresses (
+          website_id, student_id, present_address, permanent_address
+        ) VALUES ($1, $2, $3, $4)
+        ON CONFLICT (student_id) DO UPDATE SET
+          present_address = EXCLUDED.present_address,
+          permanent_address = EXCLUDED.permanent_address,
+          updated_at = CURRENT_TIMESTAMP`,
+        [
+          websiteId,
+          studentId,
+          applicant.present_address || null,
+          applicant.permanent_address || applicant.present_address || null
+        ]
+      );
+
+      // Insert website_student_guardians
+      await queryDb(
+        `INSERT INTO website_student_guardians (
+          website_id, student_id, father_name, father_phone, father_occupation,
+          mother_name, mother_phone, mother_occupation,
+          guardian_name, guardian_phone, guardian_relation
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ON CONFLICT (student_id) DO UPDATE SET
+          father_name = EXCLUDED.father_name,
+          father_phone = EXCLUDED.father_phone,
+          mother_name = EXCLUDED.mother_name,
+          mother_phone = EXCLUDED.mother_phone,
+          guardian_name = EXCLUDED.guardian_name,
+          guardian_phone = EXCLUDED.guardian_phone,
+          guardian_relation = EXCLUDED.guardian_relation,
+          updated_at = CURRENT_TIMESTAMP`,
+        [
+          websiteId,
+          studentId,
+          applicant.father_name || null,
+          applicant.father_phone || null,
+          applicant.father_occupation || null,
+          applicant.mother_name || null,
+          applicant.mother_phone || null,
+          applicant.mother_occupation || null,
+          applicant.guardian_name || applicant.father_name || null,
+          applicant.guardian_phone || applicant.father_phone || null,
+          applicant.guardian_relation || 'Father'
+        ]
+      );
+
+      // Insert picture if available
+      if (applicant.photo_url) {
+        await queryDb(
+          `INSERT INTO website_student_pictures (
+            website_id, student_id, image_url, image_id, is_primary
+          ) VALUES ($1, $2, $3, $4, TRUE)
+          ON CONFLICT DO NOTHING`,
+          [websiteId, studentId, applicant.photo_url, applicant.photo_id || null]
+        );
+      }
+
+      // Insert signature if available
+      if (applicant.signature_url) {
+        await queryDb(
+          `INSERT INTO website_student_signatures (
+            website_id, student_id, signature_url, signature_id
+          ) VALUES ($1, $2, $3, $4)
+          ON CONFLICT (student_id) DO UPDATE SET
+            signature_url = EXCLUDED.signature_url,
+            updated_at = CURRENT_TIMESTAMP`,
+          [websiteId, studentId, applicant.signature_url, applicant.signature_id || null]
+        );
+      }
+    }
+
+    // Update applicant with enrolled status and student reference
+    await queryDb(
+      `UPDATE website_admission_applicants
+       SET status = 'enrolled',
+           enrolled_student_id = $1,
+           enrolled_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2`,
+      [studentId, applicant.id]
+    );
+
+    return studentId;
+  } catch (err) {
+    console.error(`Error enrolling applicant ID ${applicant?.id}:`, err);
+    return null;
+  }
+}
 
 /**
  * Helper to auto-publish results for any circular whose result_date has arrived
@@ -8,21 +187,33 @@ import { verifyStaffPaymentAccess } from 'src/lib/database/paymentGateways.js';
 export async function autoPublishDueResults(websiteId) {
   try {
     const dueRes = await queryDb(`
-      SELECT a.id, a.title 
+      SELECT a.id, a.title, a.department_id, a.class_id, a.session_id
       FROM website_admissions a
       WHERE a.website_id = $1 
         AND a.result_date IS NOT NULL 
         AND a.result_date <= CURRENT_DATE
-        AND a.id NOT IN (SELECT DISTINCT admission_id FROM website_admission_results WHERE website_id = $1)
+        AND a.is_result_published = FALSE
     `, [websiteId]);
 
     for (const circ of dueRes.rows) {
       // 1. Fetch candidates with status = 'selected' or 'accepted'
       const selRes = await queryDb(`
-        SELECT id, application_no, roll_no, applicant_name, score, selection_notes
-        FROM website_admission_applicants
-        WHERE website_id = $1 AND admission_id = $2 AND status IN ('selected', 'accepted')
-        ORDER BY score DESC NULLS LAST, created_at ASC
+        SELECT a.id, a.application_no, a.exam_roll, a.roll_no, a.applicant_name, a.score,
+               a.selection_notes, a.email, a.phone, a.gender, a.date_of_birth,
+               a.enrolled_student_id,
+               COALESCE(img.photo_url, inf.photo_url) AS photo_url,
+               COALESCE(img.photo_public_id, inf.photo_id) AS photo_id,
+               COALESCE(img.signature_url, inf.signature_url) AS signature_url,
+               COALESCE(img.signature_public_id, inf.signature_id) AS signature_id,
+               inf.father_name, inf.father_phone, inf.father_occupation,
+               inf.mother_name, inf.mother_phone, inf.mother_occupation,
+               inf.guardian_name, inf.guardian_phone, inf.guardian_relation,
+               inf.present_address, inf.permanent_address
+        FROM website_admission_applicants a
+        LEFT JOIN website_admission_applicant_info inf ON inf.applicant_id = a.id
+        LEFT JOIN website_admission_applicant_images img ON img.applicant_id = a.id
+        WHERE a.website_id = $1 AND a.admission_id = $2 AND a.status IN ('selected', 'accepted', 'enrolled')
+        ORDER BY a.score DESC NULLS LAST, a.created_at ASC
       `, [websiteId, circ.id]);
 
       let merit = 1;
@@ -35,24 +226,43 @@ export async function autoPublishDueResults(websiteId) {
             $1, $2, $3, $4, $5,
             $6, $7, 'selected', $8, true, CURRENT_TIMESTAMP
           )
-          ON CONFLICT (admission_id, applicant_id) DO NOTHING
+          ON CONFLICT (admission_id, applicant_id) DO UPDATE SET
+            roll_no = EXCLUDED.roll_no,
+            applicant_name = EXCLUDED.applicant_name,
+            score = EXCLUDED.score,
+            merit_position = EXCLUDED.merit_position,
+            is_published = true,
+            updated_at = CURRENT_TIMESTAMP
         `, [
           websiteId,
           circ.id,
           cand.id,
-          cand.roll_no || `ROL-${cand.id}`,
+          cand.roll_no || cand.exam_roll || `ROL-${cand.id}`,
           cand.applicant_name,
-          merit++,
+          merit,
           cand.score || 0.00,
           cand.selection_notes || 'Selected in Official Merit Intake'
         ]);
+
+        // Auto-enroll into website_students & website_student_info
+        await enrollSelectedApplicant({
+          websiteId,
+          circular: circ,
+          applicant: cand,
+          meritPosition: merit
+        });
+
+        merit++;
       }
 
-      // 2. Delete rejected students per specification
+      // Mark circular results as published
       await queryDb(`
-        DELETE FROM website_admission_applicants
-        WHERE website_id = $1 AND admission_id = $2 AND status = 'rejected'
-      `, [websiteId, circ.id]);
+        UPDATE website_admissions
+        SET is_result_published = TRUE,
+            result_published_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1 AND website_id = $2
+      `, [circ.id, websiteId]);
     }
   } catch (err) {
     console.error('Error auto-publishing due results:', err);
@@ -61,7 +271,9 @@ export async function autoPublishDueResults(websiteId) {
 
 /**
  * POST /api/[domain]/staff/panel/admissions/results/publish
- * Publishes admission results for accepted/selected students and deletes rejected students.
+ * Publishes admission results for accepted/selected students,
+ * registers candidates into website_students and website_student_info,
+ * and updates circular is_result_published to TRUE.
  */
 export async function POST(request, context) {
   try {
@@ -82,7 +294,8 @@ export async function POST(request, context) {
 
     // Verify circular belongs to this website
     const admCheck = await queryDb(`
-      SELECT id, title FROM website_admissions
+      SELECT id, title, department_id, class_id, session_id
+      FROM website_admissions
       WHERE id = $1 AND website_id = $2
     `, [admId, auth.website.id]);
 
@@ -90,31 +303,45 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Admission circular not found.' }, { status: 404 });
     }
 
+    const circular = admCheck.rows[0];
     const staffId = auth.user?.id || null;
 
-    // 1. Fetch only candidates with status = 'selected' or 'accepted'
+    // 1. Fetch only candidates with status = 'selected', 'accepted', or already 'enrolled'
     const selectedRes = await queryDb(`
-      SELECT id, application_no, roll_no, applicant_name, score, selection_notes
-      FROM website_admission_applicants
-      WHERE website_id = $1 AND admission_id = $2 AND status IN ('selected', 'accepted', 'enrolled')
-      ORDER BY score DESC NULLS LAST, created_at ASC
+      SELECT a.id, a.application_no, a.exam_roll, a.roll_no, a.applicant_name, a.score,
+             a.selection_notes, a.email, a.phone, a.gender, a.date_of_birth,
+             a.enrolled_student_id,
+             COALESCE(img.photo_url, inf.photo_url) AS photo_url,
+             COALESCE(img.photo_public_id, inf.photo_id) AS photo_id,
+             COALESCE(img.signature_url, inf.signature_url) AS signature_url,
+             COALESCE(img.signature_public_id, inf.signature_id) AS signature_id,
+             inf.father_name, inf.father_phone, inf.father_occupation,
+             inf.mother_name, inf.mother_phone, inf.mother_occupation,
+             inf.guardian_name, inf.guardian_phone, inf.guardian_relation,
+             inf.present_address, inf.permanent_address
+      FROM website_admission_applicants a
+      LEFT JOIN website_admission_applicant_info inf ON inf.applicant_id = a.id
+      LEFT JOIN website_admission_applicant_images img ON img.applicant_id = a.id
+      WHERE a.website_id = $1 AND a.admission_id = $2 AND a.status IN ('selected', 'accepted', 'enrolled')
+      ORDER BY a.score DESC NULLS LAST, a.created_at ASC
     `, [auth.website.id, admId]);
 
     if (selectedRes.rows.length === 0) {
       return NextResponse.json({
         success: false,
-        error: 'No accepted candidates found for this circular. Please accept or select candidates before publishing results.'
+        error: 'No accepted/selected candidates found for this circular. Please select candidates before publishing results.'
       }, { status: 400 });
     }
 
-    // 2. Clear old unpublished/stale results for this circular
+    // 2. Clear stale results for this circular
     await queryDb(`
       DELETE FROM website_admission_results
       WHERE website_id = $1 AND admission_id = $2
     `, [auth.website.id, admId]);
 
-    // 3. Insert each selected/accepted candidate into website_admission_results with merit ranking
+    // 3. Insert each selected candidate into website_admission_results & auto-enroll into website_students
     let merit = 1;
+    let enrolledCount = 0;
     for (const cand of selectedRes.rows) {
       await queryDb(`
         INSERT INTO website_admission_results (
@@ -130,28 +357,44 @@ export async function POST(request, context) {
         auth.website.id,
         admId,
         cand.id,
-        cand.roll_no || `ROL-${cand.id}`,
+        cand.roll_no || cand.exam_roll || `ROL-${cand.id}`,
         cand.applicant_name,
-        merit++,
+        merit,
         cand.score || 0.00,
         cand.selection_notes || remarks_template,
         staffId
       ]);
+
+      // Auto-register candidate into database as students in website_students & website_student_info
+      const enrolledStudentId = await enrollSelectedApplicant({
+        websiteId: auth.website.id,
+        circular,
+        applicant: cand,
+        meritPosition: merit
+      });
+
+      if (enrolledStudentId) {
+        enrolledCount++;
+      }
+
+      merit++;
     }
 
-    // 4. Delete the rejected students as instructed
-    const delRes = await queryDb(`
-      DELETE FROM website_admission_applicants
-      WHERE website_id = $1 AND admission_id = $2 AND status = 'rejected'
-      RETURNING id
-    `, [auth.website.id, admId]);
+    // 4. Mark circular as results published
+    await queryDb(`
+      UPDATE website_admissions
+      SET is_result_published = TRUE,
+          result_published_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1 AND website_id = $2
+    `, [admId, auth.website.id]);
 
     return NextResponse.json({
       success: true,
-      message: `Results published for ${selectedRes.rows.length} accepted students. ${delRes.rowCount} rejected applicants were removed.`,
+      message: `Results published for ${selectedRes.rows.length} candidates. Registered ${enrolledCount} students into website_students.`,
       published_count: selectedRes.rows.length,
-      deleted_rejected_count: delRes.rowCount,
-      circular: admCheck.rows[0]
+      enrolled_count: enrolledCount,
+      circular: circular
     });
   } catch (error) {
     console.error('Error in POST /staff/panel/admissions/results/publish:', error);
@@ -173,10 +416,12 @@ export async function GET(request, context) {
     await autoPublishDueResults(auth.website.id);
 
     const { searchParams } = new URL(request.url);
-    const admissionId = searchParams.get('admission_id');
+    const admissionId = searchParams.get('admission_id') || searchParams.get('circular_id');
 
     let sql = `
-      SELECT r.*, a.email, a.phone, a.application_no, adm.title AS circular_title
+      SELECT r.*, a.email, a.phone, a.application_no, a.exam_roll,
+             a.status AS applicant_status, a.enrolled_student_id,
+             adm.title AS circular_title, adm.is_result_published, adm.result_published_at
       FROM website_admission_results r
       JOIN website_admission_applicants a ON a.id = r.applicant_id
       JOIN website_admissions adm ON adm.id = r.admission_id

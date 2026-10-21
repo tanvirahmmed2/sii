@@ -18,6 +18,10 @@ const TASK_ROUTE_MAP = {
   certificate: '/developer/templates/certificate/builder',
   payment_receipt: '/developer/templates/payment-receipt/builder',
   poster: '/developer/templates/poster/builder',
+  admit_card: '/developer/templates/admit-card/builder',
+  'admit-card': '/developer/templates/admit-card/builder',
+  admit_card_templetes: '/developer/templates/admit-card/builder',
+  admit_card_templates: '/developer/templates/admit-card/builder',
 };
 
 export default function GenericBuilderDispatcherPage() {

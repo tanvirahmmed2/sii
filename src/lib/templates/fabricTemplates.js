@@ -234,6 +234,42 @@ export const TASK_CONFIGS = {
       { tag: '{{contact_info}}', label: 'Contact Phone', sample: '+880 1800-998877' },
       { tag: '{{institution_name}}', label: 'Institute Name', sample: 'Alpha International Academy' },
     ]
+  },
+  admit_card: {
+    key: 'admit_card',
+    name: 'Admit Card / Hall Ticket',
+    slug: 'admit-card',
+    systemTable: 'system_admit_card_templates',
+    websiteTable: 'website_admit_card_templates',
+    width: 600,
+    height: 848,
+    dimension_width: 210.00,
+    dimension_height: 297.00,
+    dimension_unit: 'mm',
+    hasBackSide: false,
+    mergeTags: [
+      { tag: '{{applicant_name}}', label: 'Applicant Name', sample: 'Tanvir Hossain' },
+      { tag: '{{application_no}}', label: 'Application Number', sample: 'APP-2026-9081' },
+      { tag: '{{exam_roll}}', label: 'Exam Roll Number', sample: 'EXAM-10492' },
+      { tag: '{{roll_no}}', label: 'Roll Number (Alt)', sample: 'EXAM-10492' },
+      { tag: '{{father_name}}', label: 'Father Name', sample: 'Muhammad Ali Hossain' },
+      { tag: '{{mother_name}}', label: 'Mother Name', sample: 'Fatema Begum' },
+      { tag: '{{date_of_birth}}', label: 'Date of Birth', sample: '15 Aug 2008' },
+      { tag: '{{gender}}', label: 'Gender', sample: 'Male' },
+      { tag: '{{phone}}', label: 'Phone Number', sample: '+880 1700-112233' },
+      { tag: '{{email}}', label: 'Email Address', sample: 'applicant@example.com' },
+      { tag: '{{class_name}}', label: 'Class / Program', sample: 'Class 11 (Science)' },
+      { tag: '{{session_name}}', label: 'Academic Session', sample: '2026-2027' },
+      { tag: '{{circular_title}}', label: 'Circular Title', sample: 'Higher Secondary Admission 2026' },
+      { tag: '{{exam_date}}', label: 'Exam Date', sample: 'Saturday, 15 Nov 2026' },
+      { tag: '{{exam_time}}', label: 'Exam Time', sample: '10:00 AM - 12:00 PM' },
+      { tag: '{{exam_venue}}', label: 'Exam Venue / Hall', sample: 'Main Academic Building, Room 402' },
+      { tag: '{{exam_instructions}}', label: 'Exam Instructions', sample: '1. Arrive 30 minutes early.\n2. Bring printed admit card.\n3. Electronic devices prohibited.' },
+      { tag: '{{institution_name}}', label: 'Institute Name', sample: 'Alpha International Academy' },
+      { tag: '{{candidate_photo}}', label: 'Candidate Photo URL', sample: '/default-avatar.png' },
+      { tag: '{{candidate_signature}}', label: 'Candidate Signature URL', sample: '' },
+      { tag: '{{qr_code}}', label: 'QR / Barcode Serial', sample: 'APP-2026-9081' },
+    ]
   }
 };
 
@@ -1125,6 +1161,478 @@ export function generateStarterFabricJSON(taskKey) {
           fontWeight: '500',
           fill: '#64748b',
           name: 'Sig Label'
+        }
+      ]
+    };
+  }
+
+  if (taskKey === 'admit_card' || taskKey === 'admission_admit_card' || taskKey === 'admit-card') {
+    return {
+      version: '5.3.0',
+      background: '#ffffff',
+      objects: [
+        {
+          type: 'rect',
+          left: 15,
+          top: 15,
+          width: w - 30,
+          height: h - 30,
+          fill: 'transparent',
+          stroke: '#1e3a8a',
+          strokeWidth: 2,
+          rx: 4,
+          ry: 4,
+          name: 'Outer Border'
+        },
+        {
+          type: 'rect',
+          left: 17,
+          top: 17,
+          width: w - 34,
+          height: 85,
+          fill: '#1e3a8a',
+          name: 'Header Banner'
+        },
+        {
+          type: 'i-text',
+          left: w / 2,
+          top: 30,
+          originX: 'center',
+          text: '{{institution_name}}',
+          fontSize: 20,
+          fontFamily: 'Outfit',
+          fontWeight: 'bold',
+          fill: '#ffffff',
+          name: 'Institute Name'
+        },
+        {
+          type: 'i-text',
+          left: w / 2,
+          top: 56,
+          originX: 'center',
+          text: 'ADMISSION TEST ADMIT CARD / HALL TICKET',
+          fontSize: 12,
+          fontFamily: 'Inter',
+          fontWeight: '600',
+          fill: '#93c5fd',
+          name: 'Card Subtitle'
+        },
+        {
+          type: 'i-text',
+          left: w / 2,
+          top: 76,
+          originX: 'center',
+          text: 'Session: {{session_name}} • Program: {{class_name}}',
+          fontSize: 10,
+          fontFamily: 'Inter',
+          fontWeight: '500',
+          fill: '#e0e7ff',
+          name: 'Session Subtitle'
+        },
+        {
+          type: 'rect',
+          left: 35,
+          top: 115,
+          width: 390,
+          height: 48,
+          fill: '#f0fdf4',
+          stroke: '#86efac',
+          strokeWidth: 1,
+          rx: 4,
+          ry: 4,
+          name: 'Roll Box'
+        },
+        {
+          type: 'i-text',
+          left: 50,
+          top: 124,
+          text: 'EXAM ROLL NO:',
+          fontSize: 10,
+          fontFamily: 'Inter',
+          fontWeight: 'bold',
+          fill: '#15803d',
+          name: 'Roll Label'
+        },
+        {
+          type: 'i-text',
+          left: 50,
+          top: 138,
+          text: '{{exam_roll}}',
+          fontSize: 18,
+          fontFamily: 'Outfit',
+          fontWeight: 'bold',
+          fill: '#14532d',
+          name: 'Roll Value'
+        },
+        {
+          type: 'i-text',
+          left: 240,
+          top: 124,
+          text: 'APPLICATION NO:',
+          fontSize: 10,
+          fontFamily: 'Inter',
+          fontWeight: 'bold',
+          fill: '#15803d',
+          name: 'App Label'
+        },
+        {
+          type: 'i-text',
+          left: 240,
+          top: 140,
+          text: '{{application_no}}',
+          fontSize: 14,
+          fontFamily: 'Outfit',
+          fontWeight: '600',
+          fill: '#14532d',
+          name: 'App Value'
+        },
+        {
+          type: 'rect',
+          left: 445,
+          top: 115,
+          width: 120,
+          height: 140,
+          fill: '#f8fafc',
+          stroke: '#94a3b8',
+          strokeWidth: 1.5,
+          rx: 4,
+          ry: 4,
+          name: 'Photo Frame'
+        },
+        {
+          type: 'i-text',
+          left: 505,
+          top: 175,
+          originX: 'center',
+          text: 'PASSPORT\nPHOTO',
+          textAlign: 'center',
+          fontSize: 11,
+          fontFamily: 'Inter',
+          fontWeight: 'bold',
+          fill: '#94a3b8',
+          name: 'Photo Placeholder'
+        },
+        {
+          type: 'rect',
+          left: 35,
+          top: 175,
+          width: 390,
+          height: 24,
+          fill: '#f1f5f9',
+          stroke: '#e2e8f0',
+          strokeWidth: 1,
+          name: 'Section Header 1'
+        },
+        {
+          type: 'i-text',
+          left: 45,
+          top: 181,
+          text: 'CANDIDATE PARTICULARS',
+          fontSize: 10,
+          fontFamily: 'Inter',
+          fontWeight: 'bold',
+          fill: '#1e3a8a',
+          name: 'Particulars Title'
+        },
+        {
+          type: 'i-text',
+          left: 45,
+          top: 208,
+          text: "Candidate's Name:",
+          fontSize: 11,
+          fontFamily: 'Inter',
+          fontWeight: '600',
+          fill: '#475569',
+          name: 'Lbl Name'
+        },
+        {
+          type: 'i-text',
+          left: 170,
+          top: 207,
+          text: '{{applicant_name}}',
+          fontSize: 12,
+          fontFamily: 'Outfit',
+          fontWeight: 'bold',
+          fill: '#0f172a',
+          name: 'Val Name'
+        },
+        {
+          type: 'i-text',
+          left: 45,
+          top: 228,
+          text: "Father's Name:",
+          fontSize: 11,
+          fontFamily: 'Inter',
+          fontWeight: '500',
+          fill: '#475569',
+          name: 'Lbl Father'
+        },
+        {
+          type: 'i-text',
+          left: 170,
+          top: 228,
+          text: '{{father_name}}',
+          fontSize: 11,
+          fontFamily: 'Inter',
+          fontWeight: '500',
+          fill: '#0f172a',
+          name: 'Val Father'
+        },
+        {
+          type: 'i-text',
+          left: 45,
+          top: 248,
+          text: "Mother's Name:",
+          fontSize: 11,
+          fontFamily: 'Inter',
+          fontWeight: '500',
+          fill: '#475569',
+          name: 'Lbl Mother'
+        },
+        {
+          type: 'i-text',
+          left: 170,
+          top: 248,
+          text: '{{mother_name}}',
+          fontSize: 11,
+          fontFamily: 'Inter',
+          fontWeight: '500',
+          fill: '#0f172a',
+          name: 'Val Mother'
+        },
+        {
+          type: 'i-text',
+          left: 45,
+          top: 268,
+          text: 'Date of Birth / Gender:',
+          fontSize: 11,
+          fontFamily: 'Inter',
+          fontWeight: '500',
+          fill: '#475569',
+          name: 'Lbl Dob'
+        },
+        {
+          type: 'i-text',
+          left: 170,
+          top: 268,
+          text: '{{date_of_birth}} ({{gender}})',
+          fontSize: 11,
+          fontFamily: 'Inter',
+          fontWeight: '500',
+          fill: '#0f172a',
+          name: 'Val Dob'
+        },
+        {
+          type: 'i-text',
+          left: 45,
+          top: 288,
+          text: 'Mobile & Email:',
+          fontSize: 11,
+          fontFamily: 'Inter',
+          fontWeight: '500',
+          fill: '#475569',
+          name: 'Lbl Contact'
+        },
+        {
+          type: 'i-text',
+          left: 170,
+          top: 288,
+          text: '{{phone}} | {{email}}',
+          fontSize: 10,
+          fontFamily: 'Inter',
+          fontWeight: 'normal',
+          fill: '#334155',
+          name: 'Val Contact'
+        },
+        {
+          type: 'rect',
+          left: 35,
+          top: 320,
+          width: 530,
+          height: 24,
+          fill: '#1e3a8a',
+          name: 'Section Header 2'
+        },
+        {
+          type: 'i-text',
+          left: 45,
+          top: 326,
+          text: 'EXAMINATION SCHEDULE & TEST CENTER',
+          fontSize: 10,
+          fontFamily: 'Inter',
+          fontWeight: 'bold',
+          fill: '#ffffff',
+          name: 'Schedule Title'
+        },
+        {
+          type: 'rect',
+          left: 35,
+          top: 344,
+          width: 530,
+          height: 95,
+          fill: '#f8fafc',
+          stroke: '#cbd5e1',
+          strokeWidth: 1,
+          name: 'Schedule Box'
+        },
+        {
+          type: 'i-text',
+          left: 50,
+          top: 355,
+          text: 'Examination Date:',
+          fontSize: 11,
+          fontFamily: 'Inter',
+          fontWeight: '600',
+          fill: '#475569',
+          name: 'Lbl Exam Date'
+        },
+        {
+          type: 'i-text',
+          left: 180,
+          top: 354,
+          text: '{{exam_date}}',
+          fontSize: 12,
+          fontFamily: 'Outfit',
+          fontWeight: 'bold',
+          fill: '#1e3a8a',
+          name: 'Val Exam Date'
+        },
+        {
+          type: 'i-text',
+          left: 50,
+          top: 377,
+          text: 'Exam Timing:',
+          fontSize: 11,
+          fontFamily: 'Inter',
+          fontWeight: '600',
+          fill: '#475569',
+          name: 'Lbl Exam Time'
+        },
+        {
+          type: 'i-text',
+          left: 180,
+          top: 376,
+          text: '{{exam_time}} (Reporting: 30 mins prior)',
+          fontSize: 11,
+          fontFamily: 'Inter',
+          fontWeight: 'bold',
+          fill: '#b45309',
+          name: 'Val Exam Time'
+        },
+        {
+          type: 'i-text',
+          left: 50,
+          top: 400,
+          text: 'Assigned Venue / Hall:',
+          fontSize: 11,
+          fontFamily: 'Inter',
+          fontWeight: '600',
+          fill: '#475569',
+          name: 'Lbl Exam Venue'
+        },
+        {
+          type: 'i-text',
+          left: 180,
+          top: 400,
+          text: '{{exam_venue}}',
+          fontSize: 11,
+          fontFamily: 'Inter',
+          fontWeight: 'bold',
+          fill: '#0f172a',
+          name: 'Val Exam Venue'
+        },
+        {
+          type: 'rect',
+          left: 35,
+          top: 455,
+          width: 530,
+          height: 24,
+          fill: '#0f172a',
+          name: 'Section Header 3'
+        },
+        {
+          type: 'i-text',
+          left: 45,
+          top: 461,
+          text: 'ESSENTIAL RULES & INSTRUCTIONS TO CANDIDATES',
+          fontSize: 10,
+          fontFamily: 'Inter',
+          fontWeight: 'bold',
+          fill: '#ffffff',
+          name: 'Instructions Title'
+        },
+        {
+          type: 'rect',
+          left: 35,
+          top: 479,
+          width: 530,
+          height: 190,
+          fill: '#ffffff',
+          stroke: '#cbd5e1',
+          strokeWidth: 1,
+          name: 'Instructions Body Box'
+        },
+        {
+          type: 'i-text',
+          left: 48,
+          top: 490,
+          text: '1. CANDIDATE VERIFICATION: Candidate must present this Admit Card along with valid photo ID at the entrance.\n2. REPORTING TIME: Candidates must report to the examination center at least 30 minutes prior to scheduled start.\n3. PROHIBITED ITEMS: Mobile phones, smart watches, calculators, bags, and electronic equipment are strictly forbidden.\n4. STATIONERY: Bring your own black/blue ballpoint pens. Sharing of stationery inside examination hall is disallowed.\n5. SEAT ALLOCATION: Occupy only the desk matching your Examination Roll Number listed on the room seating chart.\n6. ATTENDANCE: Ensure your signature matches your application signature on both this admit card and exam roster.\n7. DISCIPLINE: Any unfair means or impersonation will result in immediate disqualification and legal proceedings.\n8. RETENTION: Keep this Admit Card safely until the final admission counseling and enrollment process concludes.',
+          fontSize: 9.5,
+          fontFamily: 'Inter',
+          fill: '#334155',
+          lineHeight: 1.5,
+          name: 'Rules Text'
+        },
+        {
+          type: 'line',
+          left: 55,
+          top: 755,
+          width: 170,
+          stroke: '#94a3b8',
+          strokeWidth: 1,
+          name: 'Candidate Sig Line'
+        },
+        {
+          type: 'i-text',
+          left: 65,
+          top: 762,
+          text: "Candidate's Signature",
+          fontSize: 10,
+          fontFamily: 'Inter',
+          fontWeight: '600',
+          fill: '#475569',
+          name: 'Candidate Sig Label'
+        },
+        {
+          type: 'line',
+          left: 375,
+          top: 755,
+          width: 170,
+          stroke: '#94a3b8',
+          strokeWidth: 1,
+          name: 'Controller Sig Line'
+        },
+        {
+          type: 'i-text',
+          left: 385,
+          top: 762,
+          text: 'Controller of Examinations',
+          fontSize: 10,
+          fontFamily: 'Inter',
+          fontWeight: '600',
+          fill: '#1e3a8a',
+          name: 'Controller Sig Label'
+        },
+        {
+          type: 'i-text',
+          left: w / 2,
+          top: 810,
+          originX: 'center',
+          text: 'Computer Generated Official Document • Verification Code: {{application_no}}',
+          fontSize: 8,
+          fontFamily: 'Inter',
+          fill: '#94a3b8',
+          name: 'Footer Verification'
         }
       ]
     };

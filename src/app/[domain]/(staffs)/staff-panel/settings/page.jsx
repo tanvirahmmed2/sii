@@ -1,10 +1,10 @@
 'use client';
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import TenantLoader from 'src/component/tenant/TenantLoader';
 import Link from 'next/link';
 import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 import { toast } from 'react-hot-toast';
+import { FiSettings } from 'react-icons/fi';
 
 const CURRENCIES = [
   { code: 'BDT', symbol: '৳', label: 'BDT (৳) - Bangladeshi Taka' },
@@ -20,6 +20,19 @@ const CURRENCIES = [
   { code: 'SGD', symbol: 'S$', label: 'SGD ($) - Singapore Dollar' },
 ];
 
+const KNOWN_GATEWAYS = [
+  { code: 'bkash', name: 'bKash Tokenized Checkout', category: 'mobile_banking', supported_currencies: ['BDT'] },
+  { code: 'nagad', name: 'Nagad Direct Gateway', category: 'mobile_banking', supported_currencies: ['BDT'] },
+  { code: 'stripe', name: 'Stripe Payments', category: 'card_international', supported_currencies: ['USD', 'EUR', 'BDT', 'GBP', 'CAD', 'AUD', 'SGD'] },
+  { code: 'paypal', name: 'PayPal', category: 'card_international', supported_currencies: ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'SGD'] },
+  { code: 'sslcommerz', name: 'SSLCommerz Payment Gateway', category: 'aggregator', supported_currencies: ['BDT', 'USD', 'EUR', 'GBP'] },
+  { code: 'paddle', name: 'Paddle Billing', category: 'card_international', supported_currencies: ['USD', 'EUR', 'GBP'] },
+  { code: 'sonali_gateway', name: 'Sonali Bank e-Payment Gateway', category: 'banking_portal', supported_currencies: ['BDT'] },
+  { code: 'eps', name: 'Easy Payment System (EPS)', category: 'banking_portal', supported_currencies: ['BDT'] },
+  { code: 'surjopay', 'name': 'Shurjopay (SurjoPay)', category: 'aggregator', supported_currencies: ['BDT'] },
+  { code: 'razorpay', name: 'Razorpay', category: 'card_international', supported_currencies: ['INR', 'USD', 'EUR', 'GBP', 'BDT', 'AED', 'SGD'] },
+];
+
 export default function WebsiteSettingsPage() {
   const { website, getApiEndpoint, fetchWebsiteSettings } = useTenantWebsite();
   const [loading, setLoading] = useState(true);
@@ -31,6 +44,25 @@ export default function WebsiteSettingsPage() {
   const [institutionType, setInstitutionType] = useState('School');
   const [eiinNumber, setEiinNumber] = useState('');
   const [currency, setCurrency] = useState('BDT');
+  const [allGatewaysList, setAllGatewaysList] = useState(KNOWN_GATEWAYS);
+
+  const selectedCleanCurrency = useMemo(() => {
+    return String(currency || 'BDT').toUpperCase().trim();
+  }, [currency]);
+
+  const compatibleGateways = useMemo(() => {
+    return allGatewaysList.filter((g) => {
+      const supported = Array.isArray(g.supported_currencies) ? g.supported_currencies : ['BDT'];
+      return supported.includes(selectedCleanCurrency);
+    });
+  }, [allGatewaysList, selectedCleanCurrency]);
+
+  const incompatibleGateways = useMemo(() => {
+    return allGatewaysList.filter((g) => {
+      const supported = Array.isArray(g.supported_currencies) ? g.supported_currencies : ['BDT'];
+      return !supported.includes(selectedCleanCurrency);
+    });
+  }, [allGatewaysList, selectedCleanCurrency]);
 
   // Cloudinary Logo & Favicon states
   const [logoPreview, setLogoPreview] = useState('');
@@ -86,6 +118,9 @@ export default function WebsiteSettingsPage() {
       setInstitutionType(s.institution_type || website?.institution_type || 'School');
       setEiinNumber(s.eiin_number || website?.eiin_number || '');
       setCurrency(s.currency || website?.currency || 'BDT');
+      if (data.all_gateways && Array.isArray(data.all_gateways) && data.all_gateways.length > 0) {
+        setAllGatewaysList(data.all_gateways);
+      }
 
       setLogoPreview(s.logo || website?.logo || '');
       setLogoDataUri('');
@@ -143,6 +178,9 @@ export default function WebsiteSettingsPage() {
         setInstitutionType(s.institution_type || website?.institution_type || 'School');
         setEiinNumber(s.eiin_number || website?.eiin_number || '');
         setCurrency(s.currency || website?.currency || 'BDT');
+        if (data.all_gateways && Array.isArray(data.all_gateways) && data.all_gateways.length > 0) {
+          setAllGatewaysList(data.all_gateways);
+        }
 
         setLogoPreview(s.logo || website?.logo || '');
         setLogoDataUri('');
@@ -469,6 +507,65 @@ export default function WebsiteSettingsPage() {
                 <p className="text-[10px] text-slate-500 mt-1">
                   This currency is automatically used across student admission fees, monthly tuition invoices, fee receipts, payroll scales, and accounting statements.
                 </p>
+              </div>
+
+              {/* CURRENCY & PAYMENT GATEWAYS COMPATIBILITY PANEL */}
+              <div className="md:col-span-2 p-4 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">
+                        Compatible Online Payment Gateways for {selectedCleanCurrency}
+                      </span>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        {compatibleGateways.length} of {allGatewaysList.length} Supported
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Online payment accounts configured for this institution will only accept transactions if the gateway provider natively supports {selectedCleanCurrency}.
+                    </p>
+                  </div>
+                  <Link
+                    href="configure-payments"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary text-white text-xs font-medium hover:bg-primary/90 transition shadow-2xs shrink-0 self-start sm:self-auto cursor-pointer"
+                  >
+                    <FiSettings className="w-3.5 h-3.5" />
+                    <span>Configure Gateways</span>
+                  </Link>
+                </div>
+
+                {/* Grid of Compatible Gateways */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 pt-1">
+                  {compatibleGateways.map((gw) => (
+                    <div
+                      key={gw.code}
+                      className="p-2.5 rounded border border-emerald-200 dark:border-emerald-950/60 bg-emerald-50/40 dark:bg-emerald-950/20 flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                          {gw.name}
+                        </div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-0.5">
+                          {gw.category ? String(gw.category).replace(/_/g, ' ') : 'Gateway'}
+                        </div>
+                      </div>
+                      <div className="mt-2 flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                        <span>✓</span>
+                        <span>Supports {selectedCleanCurrency}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Incompatible Gateways Notice */}
+                {incompatibleGateways.length > 0 && (
+                  <div className="pt-2 text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 flex items-start gap-1.5">
+                    <span className="font-semibold text-amber-600 dark:text-amber-400 shrink-0">Incompatible Gateways:</span>
+                    <span>
+                      {incompatibleGateways.map((g) => g.name).join(', ')} do not support {selectedCleanCurrency}. If you intend to collect fees using these providers, consider choosing a supported operating currency or secondary multi-currency routing.
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

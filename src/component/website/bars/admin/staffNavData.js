@@ -192,6 +192,11 @@ export const staffNavData = [
         "path": "/admission-circulars"
       },
       {
+        "title": "Admit Card Templates",
+        "module": "admissions",
+        "path": "/admission-admit-card-templates"
+      },
+      {
         "title": "Update Circular",
         "module": "admissions",
         "path": "/admission-circular-update"

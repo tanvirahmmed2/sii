@@ -24,15 +24,23 @@ const FeesPage = () => {
   const [data, setData] = useState({ fees: [], fines: [], student: {} });
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState(null);
+  const [assignedGateways, setAssignedGateways] = useState([]);
+  const [institutionCurrency, setInstitutionCurrency] = useState('BDT');
 
   // Pay Modal State
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [selectedFee, setSelectedFee] = useState(null);
+  const [selectedGatewayAccount, setSelectedGatewayAccount] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('bkash');
   const [accountNumber, setAccountNumber] = useState('');
   const [transactionId, setTransactionId] = useState('');
   const [processing, setProcessing] = useState(false);
   const [paySuccessData, setPaySuccessData] = useState(null);
+
+  const showFeedback = (type, message) => {
+    setFeedback({ type, message });
+    setTimeout(() => setFeedback(null), 5000);
+  };
 
   const fetchFees = async () => {
     if (!domain) return;
@@ -41,6 +49,12 @@ const FeesPage = () => {
       if (res.ok) {
         const resData = await res.json();
         setData(resData.paylod || { fees: [], fines: [], student: {} });
+        if (resData.assigned_gateways || resData.paylod?.assigned_gateways) {
+          setAssignedGateways(resData.assigned_gateways || resData.paylod?.assigned_gateways || []);
+        }
+        if (resData.currency || resData.paylod?.currency) {
+          setInstitutionCurrency(resData.currency || resData.paylod?.currency || 'BDT');
+        }
       }
     } catch (error) {
       console.error('Error fetching fees:', error);
@@ -51,19 +65,43 @@ const FeesPage = () => {
   };
 
   useEffect(() => {
-    if (domain) {
-      fetchFees();
+    let active = true;
+    async function loadInitialFees() {
+      try {
+        const res = await fetch(`/api/${domain}/student/fees`);
+        if (res.ok) {
+          const resData = await res.json();
+          if (active) {
+            setData(resData.paylod || { fees: [], fines: [], student: {} });
+            if (resData.assigned_gateways || resData.paylod?.assigned_gateways) {
+              setAssignedGateways(resData.assigned_gateways || resData.paylod?.assigned_gateways || []);
+            }
+            if (resData.currency || resData.paylod?.currency) {
+              setInstitutionCurrency(resData.currency || resData.paylod?.currency || 'BDT');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching fees:', error);
+        if (active) showFeedback('error', 'Network error fetching fees.');
+      } finally {
+        if (active) setLoading(false);
+      }
     }
-  }, [domain]);
 
-  const showFeedback = (type, message) => {
-    setFeedback({ type, message });
-    setTimeout(() => setFeedback(null), 5000);
-  };
+    if (domain) {
+      loadInitialFees();
+    }
+    return () => {
+      active = false;
+    };
+  }, [domain]);
 
   const handleOpenPayModal = (fee) => {
     setSelectedFee(fee);
-    setPaymentMethod('bkash');
+    const initialGw = assignedGateways.length > 0 ? assignedGateways[0] : null;
+    setSelectedGatewayAccount(initialGw);
+    setPaymentMethod(initialGw?.gateway_code || 'bkash');
     setAccountNumber('');
     setTransactionId('');
     setPaySuccessData(null);
@@ -89,6 +127,7 @@ const FeesPage = () => {
           payment_id: selectedFee.payment_id || selectedFee.id,
           fee_type: selectedFee.type || 'Education Fee',
           payment_method: paymentMethod,
+          gateway_account_id: selectedGatewayAccount?.id || selectedGatewayAccount?.gateway_account_id || null,
           account_number: accountNumber,
           transaction_id: transactionId,
         }),
@@ -466,32 +505,77 @@ const FeesPage = () => {
 
                 {/* Payment Channel Selection */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                    Select Payment Gateway
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { id: 'bkash', name: 'bKash', color: 'border-pink-500 text-pink-700 bg-pink-50/50' },
-                      { id: 'nagad', name: 'Nagad', color: 'border-orange-500 text-orange-700 bg-orange-50/50' },
-                      { id: 'rocket', name: 'Rocket', color: 'border-purple-500 text-purple-700 bg-purple-50/50' },
-                      { id: 'card', name: 'Card / Visa', color: 'border-blue-500 text-blue-700 bg-blue-50/50' },
-                      { id: 'bank', name: 'Bank Net', color: 'border-emerald-500 text-emerald-700 bg-emerald-50/50' },
-                      { id: 'online', name: 'Gateway', color: 'border-slate-500 text-slate-700 bg-slate-50' },
-                    ].map((ch) => (
-                      <button
-                        key={ch.id}
-                        type="button"
-                        onClick={() => setPaymentMethod(ch.id)}
-                        className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center cursor-pointer ${
-                          paymentMethod === ch.id
-                            ? `${ch.color} ring-2 ring-indigo-500/30`
-                            : 'border-slate-200 text-slate-600 hover:border-slate-300'
-                        }`}
-                      >
-                        {ch.name}
-                      </button>
-                    ))}
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Select Payment Gateway
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      Currency: {institutionCurrency}
+                    </span>
                   </div>
+                  {assignedGateways.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {assignedGateways.map((gw) => {
+                        const isSelected = (selectedGatewayAccount?.id && selectedGatewayAccount.id === gw.id) || paymentMethod === gw.gateway_code;
+                        return (
+                          <button
+                            key={gw.id || gw.gateway_code}
+                            type="button"
+                            onClick={() => {
+                              setSelectedGatewayAccount(gw);
+                              setPaymentMethod(gw.gateway_code);
+                            }}
+                            className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-left cursor-pointer flex flex-col justify-between gap-1 ${
+                              isSelected
+                                ? 'border-indigo-600 bg-indigo-50/70 text-indigo-950 ring-2 ring-indigo-500/30'
+                                : 'border-slate-200 text-slate-700 bg-white hover:border-slate-300'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="truncate">{gw.name || gw.gateway_name}</span>
+                              <span className={`text-[9px] px-1 py-0.2 rounded font-mono font-medium ${
+                                gw.environment === 'live' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                              }`}>
+                                {gw.environment === 'live' ? 'LIVE' : 'TEST'}
+                              </span>
+                            </div>
+                            {gw.account_name && (
+                              <span className="text-[10px] text-slate-500 truncate block font-normal">
+                                {gw.account_name}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: 'bkash', name: 'bKash', color: 'border-pink-500 text-pink-700 bg-pink-50/50' },
+                        { id: 'nagad', name: 'Nagad', color: 'border-orange-500 text-orange-700 bg-orange-50/50' },
+                        { id: 'rocket', name: 'Rocket', color: 'border-purple-500 text-purple-700 bg-purple-50/50' },
+                        { id: 'card', name: 'Card / Visa', color: 'border-blue-500 text-blue-700 bg-blue-50/50' },
+                        { id: 'bank', name: 'Bank Net', color: 'border-emerald-500 text-emerald-700 bg-emerald-50/50' },
+                        { id: 'online', name: 'Gateway', color: 'border-slate-500 text-slate-700 bg-slate-50' },
+                      ].map((ch) => (
+                        <button
+                          key={ch.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedGatewayAccount(null);
+                            setPaymentMethod(ch.id);
+                          }}
+                          className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center cursor-pointer ${
+                            paymentMethod === ch.id
+                              ? `${ch.color} ring-2 ring-indigo-500/30`
+                              : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                          }`}
+                        >
+                          {ch.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Account / Mobile Number Input */}

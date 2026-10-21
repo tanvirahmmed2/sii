@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { getStudentSession } from 'src/lib/middleware/students.js';
+import { fetchAssignedGatewaysForPurpose } from 'src/lib/database/paymentGateways.js';
 
 export async function GET(request, context) {
   try {
@@ -156,11 +157,22 @@ export async function GET(request, context) {
       paidCount: allFees.filter(f => f.status === 'paid').length,
     };
 
+    let assignedGateways = [];
+    try {
+      assignedGateways = await fetchAssignedGatewaysForPurpose(website.id, 'education_fees', { isStudentPortal: true });
+    } catch (gwErr) {
+      console.warn('Error resolving assigned gateways for student fees:', gwErr?.message);
+    }
+
     return NextResponse.json({
       success: true,
+      currency: website.currency || 'BDT',
+      assigned_gateways: assignedGateways,
       paylod: {
         fees: allFees,
         fines: [],
+        currency: website.currency || 'BDT',
+        assigned_gateways: assignedGateways,
         student: {
           id: student.id,
           name: student.name,

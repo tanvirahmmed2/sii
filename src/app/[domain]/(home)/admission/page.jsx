@@ -99,21 +99,29 @@ export default function AdmissionPortalPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
+            <Link
+              href={tenantUrl('/admission/admit-card')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-purple-200 dark:border-purple-800/60 bg-purple-50/50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/40 text-xs font-semibold transition-all shadow-xs"
+            >
+              <FiFileText className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" /> Download Admit Card
+            </Link>
+          </motion.div>
           <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
             <Link
               href={tenantUrl('/admission/results')}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 hover:border-primary/50 hover:text-primary text-xs font-semibold transition-all shadow-xs"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 hover:border-primary/50 hover:text-primary text-xs font-semibold transition-all shadow-xs"
             >
-              <FiAward className="w-4 h-4 text-primary" /> Check Merit Results
+              <FiAward className="w-3.5 h-3.5 text-primary" /> Check Merit Results
             </Link>
           </motion.div>
           <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
             <Link
               href={tenantUrl('/admission/apply')}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-all shadow-xs hover:shadow-md hover:shadow-primary/20"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-all shadow-xs hover:shadow-md hover:shadow-primary/20"
             >
-              <FiPlus className="w-4 h-4" /> Apply for Admission
+              <FiPlus className="w-3.5 h-3.5" /> Apply for Admission
             </Link>
           </motion.div>
         </div>

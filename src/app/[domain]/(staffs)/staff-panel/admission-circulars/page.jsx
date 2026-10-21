@@ -15,6 +15,43 @@ const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor
   )
 });
 
+function getInitialFormState() {
+  const now = new Date();
+  const d30 = new Date(now.getTime() + 30 * 86400000).toISOString().split('T')[0];
+  const d35 = new Date(now.getTime() + 35 * 86400000).toISOString().split('T')[0];
+  const d32 = new Date(now.getTime() + 32 * 86400000).toISOString().split('T')[0];
+  const d25 = new Date(now.getTime() + 25 * 86400000).toISOString().split('T')[0];
+  return {
+    title: '',
+    department_id: '',
+    session_id: '',
+    class_id: '',
+    start_date: now.toISOString().split('T')[0],
+    end_date: d30,
+    result_date: d35,
+    min_age: '10',
+    max_age: '16',
+    capacity: '100',
+    status: 'open',
+    is_published: true,
+    fee_amount: '500',
+    currency: 'BDT',
+    description: '',
+    selection_method: 'manual',
+    last_class: 'N/A',
+    last_class_grade: '',
+    last_institution: 'N/A',
+    exam_date: d32,
+    admit_publish_date: d25,
+    exam_venue: '',
+    exam_instructions: '',
+    exam_subjects: [
+      { title: 'Mathematics', mark: 100, time: '1 hour' },
+      { title: 'English', mark: 100, time: '1 hour' }
+    ]
+  };
+}
+
 export default function AdmissionCircularsPage() {
   const params = useParams();
   const domain = params?.domain || '';
@@ -38,43 +75,9 @@ export default function AdmissionCircularsPage() {
   const formSectionRef = useRef(null);
 
   // Form State
-  const [form, setForm] = useState({
-    title: '',
-    department_id: '',
-    session_id: '',
-    class_id: '',
-    start_date: new Date().toISOString().split('T')[0],
-    end_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-    result_date: new Date(Date.now() + 35 * 86400000).toISOString().split('T')[0],
-    min_age: '10',
-    max_age: '16',
-    capacity: '100',
-    status: 'open',
-    is_published: true,
-    fee_amount: '500',
-    currency: 'BDT',
-    description: '',
-    selection_method: 'manual',
-    // 'exam' | 'merit' | 'manual'
-    last_class: 'N/A',
-    last_class_grade: '',
-    last_institution: 'N/A',
-    exam_date: new Date(Date.now() + 32 * 86400000).toISOString().split('T')[0],
-    admit_publish_date: new Date(Date.now() + 25 * 86400000).toISOString().split('T')[0],
-    exam_venue: '',
-    exam_instructions: '',
-    exam_subjects: [{
-      title: 'Mathematics',
-      mark: 100,
-      time: '1 hour'
-    }, {
-      title: 'English',
-      mark: 100,
-      time: '1 hour'
-    }]
-  });
-  const fetchCirculars = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
+  const [form, setForm] = useState(getInitialFormState);
+  const fetchCirculars = useCallback(async (showLoader = false) => {
+    if (showLoader) setLoading(true);
     try {
       const res = await fetch(`${apiBase}/staff/panel/admissions`);
       if (!res.ok) {
@@ -96,9 +99,30 @@ export default function AdmissionCircularsPage() {
       setLoading(false);
     }
   }, [apiBase]);
+
   useEffect(() => {
-    fetchCirculars();
-  }, [fetchCirculars]);
+    let isMounted = true;
+    (async () => {
+      try {
+        const res = await fetch(`${apiBase}/staff/panel/admissions`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (isMounted && data.success) {
+          setCirculars(data.circulars || []);
+          setDepartments(data.departments || []);
+          setSessions(data.sessions || []);
+          setClasses(data.classes || []);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, [apiBase]);
 
   // Filter classes based on selected department in form
   const availableClassesForForm = useMemo(() => {
@@ -120,44 +144,17 @@ export default function AdmissionCircularsPage() {
     const cap = parseInt(form.capacity, 10) || 0;
     return cap > max;
   }, [selectedClass, form.capacity]);
+
   const openNewForm = () => {
     setEditingCircular(null);
     const activeSession = sessions.find(s => s.is_current) || sessions[0];
     const firstDept = departments[0];
-    const defaultCapacity = '50';
+    const initial = getInitialFormState();
     setForm({
-      title: '',
+      ...initial,
       department_id: firstDept ? String(firstDept.id) : '',
       session_id: activeSession ? String(activeSession.id) : '',
-      class_id: '',
-      start_date: new Date().toISOString().split('T')[0],
-      end_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-      result_date: new Date(Date.now() + 35 * 86400000).toISOString().split('T')[0],
-      min_age: '10',
-      max_age: '16',
-      capacity: defaultCapacity,
-      status: 'open',
-      is_published: true,
-      fee_amount: '500',
-      currency: 'BDT',
-      description: '',
-      selection_method: 'manual',
-      last_class: 'N/A',
-      last_class_grade: '',
-      last_institution: 'N/A',
-      exam_date: new Date(Date.now() + 32 * 86400000).toISOString().split('T')[0],
-      admit_publish_date: new Date(Date.now() + 25 * 86400000).toISOString().split('T')[0],
-      exam_venue: '',
-      exam_instructions: '',
-      exam_subjects: [{
-        title: 'Mathematics',
-        mark: 100,
-        time: '1 hour'
-      }, {
-        title: 'English',
-        mark: 100,
-        time: '1 hour'
-      }]
+      capacity: '50'
     });
     setIsFormOpen(true);
     setDeleteConfirmId(null);
@@ -274,6 +271,12 @@ export default function AdmissionCircularsPage() {
       toast.error(`Capacity (${form.capacity}) exceeds class maximum seats (${selectedClass?.max_seats}).`);
       return;
     }
+    if (form.selection_method === 'merit') {
+      if (!form.last_class || form.last_class === 'N/A' || !form.last_class.trim()) {
+        toast.error('Previous Class prerequisite is required for Merit-based admission.');
+        return;
+      }
+    }
     if (form.selection_method === 'exam') {
       if (!form.exam_date) {
         toast.error('Exam Date is required for Exam-based admission.');
@@ -297,7 +300,13 @@ export default function AdmissionCircularsPage() {
         max_age: form.max_age ? parseInt(form.max_age, 10) : null,
         capacity: form.capacity ? parseInt(form.capacity, 10) : 100,
         fee_amount: form.fee_amount ? parseFloat(form.fee_amount) : 0,
-        last_class_grade: form.last_class_grade !== '' ? parseFloat(form.last_class_grade) : null,
+        last_class: form.selection_method === 'merit' ? form.last_class.trim() : 'N/A',
+        last_class_grade: form.selection_method === 'merit' && form.last_class_grade !== '' ? parseFloat(form.last_class_grade) : null,
+        last_institution: form.selection_method === 'merit' ? form.last_institution.trim() : 'N/A',
+        exam_date: form.selection_method === 'exam' ? form.exam_date : null,
+        admit_publish_date: form.selection_method === 'exam' ? form.admit_publish_date : null,
+        exam_venue: form.selection_method === 'exam' ? form.exam_venue : null,
+        exam_instructions: form.selection_method === 'exam' ? form.exam_instructions : null,
         exam_subjects: form.selection_method === 'exam' ? form.exam_subjects.filter(s => s.title && s.title.trim()) : []
       };
       const method = editingCircular ? 'PUT' : 'POST';
@@ -572,44 +581,68 @@ export default function AdmissionCircularsPage() {
               </div>
             </div>
 
-            {/* Section D: Background Prerequisites (Can be N/A) */}
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 rounded-md space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                  Applicant Past Academic Requirements (Candidates can specify N/A if not applicable)
-                </span>
-                <span className="text-[10px] text-slate-400">Prerequisite references</span>
+            {/* Section D: Background Prerequisites (Conditional: only for Merit-based admissions) */}
+            {form.selection_method === 'merit' && (
+              <div className="p-3 bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 rounded-md space-y-2 animate-fade-in">
+                <div className="flex items-center justify-between border-b border-amber-100 dark:border-amber-900/40 pb-1.5">
+                  <span className="text-[11px] font-semibold text-amber-900 dark:text-amber-200 uppercase tracking-wider">
+                    Applicant Past Academic Requirements (Required for Merit Evaluation)
+                  </span>
+                  <span className="text-[10px] text-amber-600 dark:text-amber-300 font-mono">
+                    Merit Selection Mode
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Previous Class Required <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Class 5, SSC, or Grade 8"
+                      value={form.last_class}
+                      onChange={e => setForm({ ...form, last_class: e.target.value })}
+                      required={form.selection_method === 'merit'}
+                      className="w-full text-xs px-2.5 py-1.5 rounded border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Minimum GPA / Grade Required
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="e.g. 3.50 (optional)"
+                      value={form.last_class_grade}
+                      onChange={e => setForm({ ...form, last_class_grade: e.target.value })}
+                      className="w-full text-xs px-2.5 py-1.5 rounded border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Previous Institution (or N/A)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Recognized School or Board"
+                      value={form.last_institution}
+                      onChange={e => setForm({ ...form, last_institution: e.target.value })}
+                      className="w-full text-xs px-2.5 py-1.5 rounded border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                    Previous Class (or N/A)
-                  </label>
-                  <input type="text" placeholder="e.g. Class 5, SSC, or N/A" value={form.last_class} onChange={e => setForm({
-                ...form,
-                last_class: e.target.value
-              })} className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                    Min Grade / GPA (or leave blank)
-                  </label>
-                  <input type="number" step="0.01" placeholder="e.g. 3.50 (optional)" value={form.last_class_grade} onChange={e => setForm({
-                ...form,
-                last_class_grade: e.target.value
-              })} className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                    Previous Institution (or N/A)
-                  </label>
-                  <input type="text" placeholder="e.g. Recognized School or N/A" value={form.last_institution} onChange={e => setForm({
-                ...form,
-                last_institution: e.target.value
-              })} className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white" />
-                </div>
+            )}
+
+            {/* Manual Selection Notice (Neither past class info nor exam subjects needed) */}
+            {form.selection_method === 'manual' && (
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 rounded-md">
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">Manual Selection Mode:</span> No entrance exam or prior academic grade minimums required. Staff will manually review and select applicants from the applicant workstation.
+                </p>
               </div>
-            </div>
+            )}
 
             {/* Section E: Exam Configuration (Conditional if selection_method === 'exam') */}
             {form.selection_method === 'exam' && <div className="p-4 bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800/50 rounded-lg space-y-3 animate-fade-in">

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb, pool } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { resolveGatewayRouteForTask } from 'src/lib/database/paymentGateways';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,6 +85,30 @@ export async function POST(request, context) {
       }
     }
 
+    // Verify tenant ownership and activity of gateway_account_id
+    let verifiedAccountId = null;
+    if (gateway_account_id) {
+      const accCheck = await client.query(`
+        SELECT id, gateway_code, environment, currency, is_active
+        FROM website_payment_gateway_accounts
+        WHERE id = $1 AND website_id = $2 AND is_active = TRUE
+      `, [gateway_account_id, website.id]);
+
+      if (accCheck.rows.length === 0) {
+        return NextResponse.json(
+          { success: false, error: 'The selected payment gateway account is invalid or not active for this institution.' },
+          { status: 400 }
+        );
+      }
+      verifiedAccountId = accCheck.rows[0].id;
+    } else {
+      // Resolve default or assigned account for purpose
+      const resolved = await resolveGatewayRouteForTask(website.id, purpose, { isPublicCheckout: true });
+      if (resolved?.account_id) {
+        verifiedAccountId = resolved.account_id;
+      }
+    }
+
     await client.query('BEGIN');
 
     const txnId = `TXN-${gw.toUpperCase()}-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
@@ -140,7 +165,7 @@ export async function POST(request, context) {
           $11, 'completed', $12, $13, $14
         )
       `, [
-        website.id, gateway_account_id || null, gw, purpose, inv.invoice_no,
+        website.id, verifiedAccountId || null, gw, purpose, inv.invoice_no,
         inv.student_id, inv.full_name, inv.email, payerPhone || inv.mobile_number, dueAmount,
         inv.currency || 'BDT', txnId, `ONLINE-GATEWAY-${gw.toUpperCase()}`, `Paid tuition for ${inv.title || inv.month_name}`
       ]);
@@ -216,7 +241,7 @@ export async function POST(request, context) {
           $11, 'completed', $12, $13, $14
         )
       `, [
-        website.id, gateway_account_id || null, gw, purpose, inv.invoice_no,
+        website.id, verifiedAccountId || null, gw, purpose, inv.invoice_no,
         inv.student_id, inv.full_name, inv.email, payerPhone || inv.mobile_number, dueAmount,
         inv.currency || 'BDT', txnId, `ONLINE-GATEWAY-${gw.toUpperCase()}`, `Paid examination fee for ${inv.title}`
       ]);
@@ -290,7 +315,7 @@ export async function POST(request, context) {
           $10, 'completed', $11, $12, $13
         )
       `, [
-        website.id, gateway_account_id || null, gw, purpose, inv.invoice_no,
+        website.id, verifiedAccountId || null, gw, purpose, inv.invoice_no,
         inv.applicant_name, inv.email, payerPhone || inv.phone, dueAmount,
         inv.currency || 'BDT', txnId, `ONLINE-GATEWAY-${gw.toUpperCase()}`, `Admission Fee for ${inv.application_no} (${inv.circular_title})`
       ]);
@@ -421,7 +446,7 @@ export async function POST(request, context) {
           $11, 'completed', $12, $13, $14
         )
       `, [
-        website.id, gateway_account_id || null, gw, purpose, inv.invoice_no,
+        website.id, verifiedAccountId || null, gw, purpose, inv.invoice_no,
         inv.student_id, inv.full_name, inv.email, payerPhone || inv.mobile_number, dueAmount,
         inv.currency || 'BDT', txnId, `ONLINE-GATEWAY-${gw.toUpperCase()}`, `Paid hall fee for ${inv.hall_name || 'Hostel'} Seat`
       ]);

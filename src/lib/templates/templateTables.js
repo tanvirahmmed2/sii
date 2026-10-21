@@ -78,6 +78,16 @@ export const ALL_TASKS = [
     title: 'Campus Poster & Event Flyer Templates',
     defaultWidth: 210.00,
     defaultHeight: 297.00
+  },
+  {
+    key: 'admit_card',
+    aliases: ['admit_card', 'admit-card', 'admission_admit_card', 'admission-admit-card', 'exam_admit_card', 'admit_card_templetes', 'admit_card_templates'],
+    category: 'admit_card',
+    systemTable: 'system_admit_card_templates',
+    websiteTable: 'website_admit_card_templates',
+    title: 'Admission & Exam Admit Card Templates',
+    defaultWidth: 210.00,
+    defaultHeight: 297.00
   }
 ];
 

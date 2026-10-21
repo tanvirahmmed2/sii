@@ -45,28 +45,48 @@ export default function UniversalGatewayCheckout({
   const [completedReceipt, setCompletedReceipt] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Default to first active gateway if provided
-  useEffect(() => {
+  // Sync with available gateways during render (React recommended pattern)
+  const [prevAvailableGateways, setPrevAvailableGateways] = useState(availableGateways);
+  const [prevSelectedGateway, setPrevSelectedGateway] = useState(selectedGateway);
+
+  if (availableGateways !== prevAvailableGateways) {
+    setPrevAvailableGateways(availableGateways);
     if (availableGateways && availableGateways.length > 0) {
       const match = availableGateways.find((g) => g.code === selectedGateway);
       if (!match) {
         setSelectedGateway(availableGateways[0].code);
+        setPrevSelectedGateway(availableGateways[0].code);
+        setStep(1);
+        setOtp('');
+        setPin('');
+        setErrorMessage('');
       }
     }
-  }, [availableGateways, selectedGateway]);
+  }
 
-  // Reset steps on gateway change
-  useEffect(() => {
+  if (selectedGateway !== prevSelectedGateway) {
+    setPrevSelectedGateway(selectedGateway);
     setStep(1);
     setOtp('');
     setPin('');
     setErrorMessage('');
-  }, [selectedGateway]);
+  }
+
+  const handleSelectGateway = (code) => {
+    setSelectedGateway(code);
+    setStep(1);
+    setOtp('');
+    setPin('');
+    setErrorMessage('');
+  };
 
   if (!isOpen || !invoice) return null;
 
   const dueAmount = parseFloat(invoice.net_due || invoice.amount || 0);
   const currency = invoice.currency || 'BDT';
+  const currencySymbol =
+    { BDT: '৳', USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'CA$', AUD: 'AU$', AED: 'د.إ', SAR: '﷼', MYR: 'RM', SGD: 'S$' }[currency] ||
+    (currency === 'BDT' ? '৳' : currency);
 
   // Format Card Number (4-4-4-4)
   const handleCardNumberChange = (e) => {
@@ -177,7 +197,9 @@ export default function UniversalGatewayCheckout({
       { code: 'rocket', label: 'Rocket' },
       { code: 'sonali_gateway', label: 'Sonali Gateway' },
       { code: 'sslcommerz', label: 'SSLCommerz' },
-      { code: 'stripe', label: 'Stripe (Cards)' }
+      { code: 'stripe', label: 'Stripe (Cards)' },
+      { code: 'paypal', label: 'PayPal' },
+      { code: 'razorpay', label: 'Razorpay' }
     ];
 
     return (
@@ -189,7 +211,7 @@ export default function UniversalGatewayCheckout({
             <button
               key={uniqueKey}
               type="button"
-              onClick={() => setSelectedGateway(gw.code)}
+              onClick={() => handleSelectGateway(gw.code)}
               className={`flex-shrink-0 px-2.5 py-1 rounded text-xs font-medium transition-colors border cursor-pointer ${
                 isSelected
                   ? 'border-primary bg-primary/10 text-primary-dark font-semibold'
@@ -1039,7 +1061,7 @@ export default function UniversalGatewayCheckout({
             <div className="flex justify-between pt-1 border-t border-slate-200 dark:border-slate-700">
               <span className="font-medium text-slate-800 dark:text-slate-200">Amount Paid:</span>
               <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                ৳{parseFloat(completedReceipt.amount).toFixed(2)} {completedReceipt.currency || 'BDT'}
+                {currencySymbol}{parseFloat(completedReceipt.amount).toFixed(2)} {completedReceipt.currency || currency}
               </span>
             </div>
           </div>
@@ -1086,7 +1108,7 @@ export default function UniversalGatewayCheckout({
               Online Fee Settlement
             </h3>
             <p className="text-xs text-slate-500">
-              Invoice #{invoice.invoice_no} • <span className="font-mono font-medium text-slate-800 dark:text-slate-200">৳{dueAmount.toFixed(2)} {currency}</span>
+              Invoice #{invoice.invoice_no} • <span className="font-mono font-medium text-slate-800 dark:text-slate-200">{currencySymbol}{dueAmount.toFixed(2)} {currency}</span>
             </p>
           </div>
           <button

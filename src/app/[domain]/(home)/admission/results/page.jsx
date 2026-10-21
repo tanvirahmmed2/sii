@@ -31,8 +31,46 @@ function PublicResultsContent() {
   const [loading, setLoading] = useState(true);
   const [hasSearched, setHasSearched] = useState(false);
 
+  const fetchResults = useCallback(
+    async (searchParam = '', showLoader = false) => {
+      if (showLoader) setLoading(true);
+      try {
+        let url = getApiEndpoint ? getApiEndpoint('admissions/results') : `${apiBase}/admissions/results`;
+        const queryParams = new URLSearchParams();
+        if (searchParam.trim()) queryParams.append('query', searchParam.trim());
+        if (selectedCircularId) queryParams.append('circular_id', selectedCircularId);
+
+        const qs = queryParams.toString();
+        if (qs) url += `?${qs}`;
+
+        const res = await fetch(url);
+        if (!res.ok) {
+          throw new Error(`Server returned ${res.status}`);
+        }
+        const data = await res.json();
+        if (data.success) {
+          setResults(data.results || []);
+          if (searchParam.trim() && data.results?.length > 0) {
+            setSearchedCandidate(data.results[0]);
+          } else if (searchParam.trim()) {
+            setSearchedCandidate(null);
+          }
+        } else {
+          toast.error(data.error || 'Failed to fetch published results.');
+        }
+      } catch (err) {
+        console.error(err);
+        toast.error('Network error loading results.');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [getApiEndpoint, apiBase, selectedCircularId]
+  );
+
   // Load circulars & initial merit list
   useEffect(() => {
+    let isMounted = true;
     const applyUrl = getApiEndpoint ? getApiEndpoint('admissions/apply') : `${apiBase}/admissions/apply`;
     fetch(applyUrl)
       .then(async (res) => {
@@ -40,48 +78,32 @@ function PublicResultsContent() {
         return res.json();
       })
       .then((data) => {
-        if (data?.success && data?.circulars) {
+        if (isMounted && data?.success && data?.circulars) {
           setCirculars(data.circulars);
         }
       })
       .catch((err) => console.error(err));
 
-    fetchResults();
-  }, [apiBase]);
-
-  const fetchResults = async (searchParam = '') => {
-    setLoading(true);
-    try {
-      let url = getApiEndpoint ? getApiEndpoint('admissions/results') : `${apiBase}/admissions/results`;
-      const queryParams = new URLSearchParams();
-      if (searchParam.trim()) queryParams.append('query', searchParam.trim());
-      if (selectedCircularId) queryParams.append('circular_id', selectedCircularId);
-
-      const qs = queryParams.toString();
-      if (qs) url += `?${qs}`;
-
-      const res = await fetch(url);
-      if (!res.ok) {
-        throw new Error(`Server returned ${res.status}`);
-      }
-      const data = await res.json();
-      if (data.success) {
-        setResults(data.results || []);
-        if (searchParam.trim() && data.results?.length > 0) {
-          setSearchedCandidate(data.results[0]);
-        } else if (searchParam.trim()) {
-          setSearchedCandidate(null);
+    (async () => {
+      try {
+        let url = getApiEndpoint ? getApiEndpoint('admissions/results') : `${apiBase}/admissions/results`;
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (isMounted && data.success) {
+          setResults(data.results || []);
         }
-      } else {
-        toast.error(data.error || 'Failed to fetch published results.');
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (isMounted) setLoading(false);
       }
-    } catch (err) {
-      console.error(err);
-      toast.error('Network error loading results.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [apiBase, getApiEndpoint]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -197,8 +219,20 @@ function PublicResultsContent() {
                   </div>
                 </div>
 
-                <div className="p-4 bg-slate-50 dark:bg-slate-850 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                  <strong>Next Step:</strong> Institution staff will complete your student portal enrollment. Once enrolled, you will receive an invitation to initialize your student account with your verified email.
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-emerald-900 dark:text-emerald-200 leading-relaxed">
+                  <div>
+                    <strong>Ready for Student Setup!</strong>
+                    <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80 mt-0.5">
+                      Your admission has been confirmed and student record registered. You can now verify your email and setup your student account password to access the portal.
+                    </p>
+                  </div>
+                  <Link
+                    href={`/auth/student/setup?email=${encodeURIComponent(searchedCandidate.email || '')}`}
+                    className="shrink-0 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition flex items-center gap-1.5 self-start sm:self-center"
+                  >
+                    <span>Setup Student Account</span>
+                    <FiArrowRight className="w-3.5 h-3.5" />
+                  </Link>
                 </div>
               </div>
             ) : (

@@ -100,6 +100,9 @@ export async function GET(request, context) {
     const statsRes = await queryDb(`
       SELECT
         COUNT(*)::int AS total,
+        COUNT(CASE WHEN status = 'incomplete' THEN 1 END)::int AS incomplete,
+        COUNT(CASE WHEN status = 'unpaid' THEN 1 END)::int AS unpaid,
+        COUNT(CASE WHEN status = 'paid' THEN 1 END)::int AS paid,
         COUNT(CASE WHEN status = 'pending' THEN 1 END)::int AS pending,
         COUNT(CASE WHEN status = 'completed' THEN 1 END)::int AS completed,
         COUNT(CASE WHEN status IN ('selected', 'accepted') THEN 1 END)::int AS selected,
@@ -109,13 +112,27 @@ export async function GET(request, context) {
       WHERE website_id = $1 ${admissionId ? 'AND admission_id = $2' : ''}
     `, admissionId ? [auth.website.id, parseInt(admissionId, 10)] : [auth.website.id]);
 
-    const stats = statsRes.rows[0] || { total: 0, pending: 0, completed: 0, selected: 0, rejected: 0, enrolled: 0 };
+    const stats = statsRes.rows[0] || {
+      total: 0,
+      incomplete: 0,
+      unpaid: 0,
+      paid: 0,
+      pending: 0,
+      completed: 0,
+      selected: 0,
+      rejected: 0,
+      enrolled: 0
+    };
+
     return NextResponse.json({
       success: true,
       applicants: res.rows,
       counts: stats,
       status_counts: {
         all: stats.total || 0,
+        incomplete: stats.incomplete || 0,
+        unpaid: stats.unpaid || 0,
+        paid: stats.paid || 0,
         pending: stats.pending || 0,
         completed: stats.completed || 0,
         selected: stats.selected || 0,
@@ -132,7 +149,7 @@ export async function GET(request, context) {
 
 /**
  * PUT /api/[domain]/staff/panel/admissions/applicants
- * Allows staff to Select, Reject, or update an applicant's evaluation score/notes
+ * Allows staff to Select, Reject, issue admit cards, or update evaluation score/notes
  */
 export async function PUT(request, context) {
   try {
@@ -143,13 +160,56 @@ export async function PUT(request, context) {
 
     const body = await request.json().catch(() => ({}));
     const {
+      action,
+      admission_id,
       id,
-      status, // 'selected' | 'rejected' | 'pending' | 'completed'
+      status, // 'selected' | 'rejected' | 'pending' | 'completed' | 'paid' | 'unpaid'
       selection_notes,
       score,
       roll_no,
       merit_position
     } = body;
+
+    // Handle bulk or single Admit Card Issuance
+    if (action === 'issue_admit_cards' || body.issue_admit_cards) {
+      const targetAdmId = admission_id || body.circular_id;
+      if (!targetAdmId) {
+        return NextResponse.json({ success: false, error: 'Admission circular ID is required to issue admit cards.' }, { status: 400 });
+      }
+
+      const issueRes = await queryDb(`
+        UPDATE website_admission_applicants
+        SET is_admit_card_issued = TRUE,
+            admit_card_issued_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE website_id = $1 AND admission_id = $2 AND status IN ('completed', 'selected', 'enrolled')
+        RETURNING id
+      `, [auth.website.id, parseInt(targetAdmId, 10)]);
+
+      return NextResponse.json({
+        success: true,
+        message: `Admit cards successfully issued to ${issueRes.rowCount} completed applicants.`,
+        issued_count: issueRes.rowCount
+      });
+    }
+
+    if (action === 'issue_single_admit_card') {
+      if (!id) {
+        return NextResponse.json({ success: false, error: 'Applicant ID is required.' }, { status: 400 });
+      }
+      await queryDb(`
+        UPDATE website_admission_applicants
+        SET is_admit_card_issued = TRUE,
+            admit_card_issued_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1 AND website_id = $2
+      `, [parseInt(id, 10), auth.website.id]);
+
+      return NextResponse.json({
+        success: true,
+        message: 'Admit card issued to applicant.'
+      });
+    }
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Applicant ID is required.' }, { status: 400 });

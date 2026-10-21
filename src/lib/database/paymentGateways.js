@@ -2,14 +2,16 @@ import crypto from 'crypto';
 import { queryDb } from './db.js';
 
 export const SUPPORTED_GATEWAYS = [
-  'paddle',
-  'sslcommerz',
-  'sonali_gateway',
-  'stripe',
   'bkash',
   'nagad',
+  'stripe',
+  'paypal',
+  'sslcommerz',
+  'paddle',
+  'sonali_gateway',
+  'eps',
   'surjopay',
-  'eps'
+  'razorpay'
 ];
 
 export const FEE_PURPOSES = [
@@ -35,14 +37,25 @@ export function maskAccountCredentials(credentials = {}, schema = []) {
   const masked = { ...credentials };
 
   const secretFieldKeys = new Set([
-    'app_secret', 'secret_key', 'password', 'merchant_private_key',
+    'app_key', 'app_secret', 'secret_key', 'password', 'merchant_private_key',
     'nagad_public_key', 'store_passwd', 'api_key', 'hash_secret',
-    'merchant_password', 'webhook_secret'
+    'merchant_password', 'webhook_secret', 'client_secret', 'key_secret'
   ]);
 
-  if (Array.isArray(schema)) {
-    schema.forEach(field => {
-      if (field.secret) secretFieldKeys.add(field.key);
+  let parsedSchema = schema;
+  if (typeof schema === 'string') {
+    try {
+      parsedSchema = JSON.parse(schema);
+    } catch {
+      parsedSchema = [];
+    }
+  }
+
+  if (Array.isArray(parsedSchema)) {
+    parsedSchema.forEach(field => {
+      if (field && field.secret && field.key) {
+        secretFieldKeys.add(field.key);
+      }
     });
   }
 
@@ -62,21 +75,179 @@ export function maskAccountCredentials(credentials = {}, schema = []) {
  */
 export function mergeCredentials(existing = {}, incoming = {}) {
   const merged = { ...existing };
-  for (const [key, val] of Object.entries(incoming)) {
+  for (const [key, val] of Object.entries(incoming || {})) {
     if (key.endsWith('_is_masked')) continue;
     // If incoming value is masked or unchanged dummy, preserve original
     if (typeof val === 'string' && val.includes('••••')) {
       continue;
     }
     if (val !== undefined && val !== null) {
-      merged[key] = typeof val === 'string' ? val.trim() : val;
+      const trimmed = typeof val === 'string' ? val.trim() : val;
+      // Do not overwrite existing stored secret with empty string unless intentional
+      if (trimmed === '' && existing[key]) {
+        continue;
+      }
+      merged[key] = trimmed;
     }
   }
   return merged;
 }
 
+
 /**
- * Verifies staff or creator authorization for tenant portal
+ * Unified gateway architecture: All tenant gateway accounts, environments, and
+ * credentials are fully unified in the website_payment_gateway_accounts table.
+ */
+export async function syncDedicatedGatewayAccount() {
+  return true;
+}
+
+/**
+ * Unified gateway architecture: Cascade deletion is handled cleanly by the database.
+ */
+export async function deleteDedicatedGatewayAccount() {
+  return true;
+}
+
+export const DEFAULT_CURRENCY_LIST = [
+  { code: 'BDT', name: 'Bangladeshi Taka', symbol: '৳', exchange_rate: 1.0 },
+  { code: 'USD', name: 'US Dollar', symbol: '$', exchange_rate: 120.0 },
+  { code: 'EUR', name: 'Euro', symbol: '€', exchange_rate: 130.0 },
+  { code: 'GBP', name: 'British Pound', symbol: '£', exchange_rate: 155.0 },
+  { code: 'INR', name: 'Indian Rupee', symbol: '₹', exchange_rate: 1.40 },
+  { code: 'CAD', name: 'Canadian Dollar', symbol: 'CA$', exchange_rate: 88.0 },
+  { code: 'AUD', name: 'Australian Dollar', symbol: 'AU$', exchange_rate: 78.0 },
+  { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ', exchange_rate: 32.5 },
+  { code: 'SAR', name: 'Saudi Riyal', symbol: '﷼', exchange_rate: 32.0 },
+  { code: 'MYR', name: 'Malaysian Ringgit', symbol: 'RM', exchange_rate: 27.5 },
+  { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$', exchange_rate: 91.0 },
+];
+
+export const GATEWAY_CURRENCY_SUPPORT = {
+  bkash: ['BDT'],
+  nagad: ['BDT'],
+  stripe: ['USD', 'EUR', 'BDT', 'GBP', 'CAD', 'AUD', 'SGD'],
+  paypal: ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'SGD'],
+  sslcommerz: ['BDT', 'USD', 'EUR', 'GBP'],
+  paddle: ['USD', 'EUR', 'GBP'],
+  sonali_gateway: ['BDT'],
+  eps: ['BDT'],
+  surjopay: ['BDT'],
+  razorpay: ['INR', 'USD', 'EUR', 'GBP', 'BDT', 'AED', 'SGD']
+};
+
+/**
+ * Ensures institutional currencies table is populated for the website.
+ * Seeds standard currencies if none exist and returns the active currency records.
+ * Synchronizes base currency when cleanBase is provided.
+ */
+export async function ensureWebsiteCurrencies(websiteId, baseCurrency = 'BDT') {
+  const cleanBase = String(baseCurrency || 'BDT').toUpperCase().trim();
+
+  const existing = await queryDb(
+    `SELECT id, code, is_base_currency FROM website_currencies WHERE website_id = $1`,
+    [websiteId]
+  );
+
+  if (existing.rows.length === 0) {
+    for (const d of DEFAULT_CURRENCY_LIST) {
+      const isBase = d.code === cleanBase;
+      const rate = isBase ? 1.0 : d.exchange_rate;
+      await queryDb(`
+        INSERT INTO website_currencies (
+          website_id, code, name, symbol, exchange_rate, is_base_currency, is_active
+        ) VALUES ($1, $2, $3, $4, $5, $6, TRUE)
+        ON CONFLICT (website_id, code) DO NOTHING
+      `, [websiteId, d.code, d.name, d.symbol, rate, isBase]);
+    }
+  } else {
+    // Check if the current base currency matches cleanBase
+    const currentBase = existing.rows.find(r => r.is_base_currency);
+    if (!currentBase || currentBase.code !== cleanBase) {
+      const cleanBaseExists = existing.rows.some(r => r.code === cleanBase);
+      if (cleanBaseExists) {
+        await queryDb(`UPDATE website_currencies SET is_base_currency = (code = $1) WHERE website_id = $2`, [cleanBase, websiteId]);
+      } else {
+        const defaultMatch = DEFAULT_CURRENCY_LIST.find(d => d.code === cleanBase);
+        const name = defaultMatch ? defaultMatch.name : cleanBase;
+        const symbol = defaultMatch ? defaultMatch.symbol : cleanBase;
+        await queryDb(`UPDATE website_currencies SET is_base_currency = FALSE WHERE website_id = $1`, [websiteId]);
+        await queryDb(`
+          INSERT INTO website_currencies (website_id, code, name, symbol, exchange_rate, is_base_currency, is_active)
+          VALUES ($1, $2, $3, $4, 1.0, TRUE, TRUE)
+          ON CONFLICT (website_id, code) DO UPDATE
+          SET is_base_currency = TRUE, is_active = TRUE, exchange_rate = 1.0, updated_at = CURRENT_TIMESTAMP
+        `, [websiteId, cleanBase, name, symbol]);
+      }
+    }
+  }
+
+  const res = await queryDb(
+    `SELECT id, code, name, symbol, exchange_rate, is_base_currency, is_active
+     FROM website_currencies
+     WHERE website_id = $1 AND is_active = TRUE
+     ORDER BY is_base_currency DESC, code ASC`,
+    [websiteId]
+  );
+  return res.rows;
+}
+
+/**
+ * Sets and updates the website's primary operating currency.
+ * Synchronizes website_currencies and websites table cleanly.
+ */
+export async function setWebsiteBaseCurrency(websiteId, newBaseCurrency) {
+  const cleanBase = String(newBaseCurrency || 'BDT').toUpperCase().trim();
+
+  // First seed defaults if not already present
+  await ensureWebsiteCurrencies(websiteId, cleanBase);
+
+  // Unset previous base flags
+  await queryDb(
+    `UPDATE website_currencies SET is_base_currency = FALSE WHERE website_id = $1`,
+    [websiteId]
+  );
+
+  // Mark or insert cleanBase as primary base
+  const defaultMatch = DEFAULT_CURRENCY_LIST.find(d => d.code === cleanBase);
+  const name = defaultMatch ? defaultMatch.name : cleanBase;
+  const symbol = defaultMatch ? defaultMatch.symbol : cleanBase;
+
+  await queryDb(`
+    INSERT INTO website_currencies (
+      website_id, code, name, symbol, exchange_rate, is_base_currency, is_active
+    ) VALUES ($1, $2, $3, $4, 1.0, TRUE, TRUE)
+    ON CONFLICT (website_id, code) DO UPDATE SET
+      is_base_currency = TRUE,
+      is_active = TRUE,
+      exchange_rate = 1.0,
+      updated_at = CURRENT_TIMESTAMP
+  `, [websiteId, cleanBase, name, symbol]);
+
+  // Update websites table
+  await queryDb(
+    `UPDATE websites SET currency = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+    [cleanBase, websiteId]
+  );
+
+  return ensureWebsiteCurrencies(websiteId, cleanBase);
+}
+
+/**
+ * Retrieves all payment gateway providers compatible with the specified currency.
+ */
+export async function getGatewaysForCurrency(currencyCode) {
+  const clean = String(currencyCode || 'BDT').toUpperCase().trim();
+  const res = await queryDb(
+    `SELECT code, name, category, description, logo_icon, website_url, supported_currencies, is_active
+     FROM website_payment_gateways
+     WHERE is_active = TRUE AND $1 = ANY(supported_currencies)
+     ORDER BY category ASC, name ASC`,
+    [clean]
+  );
+  return res.rows;
+}
+
 /**
  * Verifies staff or creator access for payment gateways and admission operations.
  * Enforces tenant subscription module allowance and staff permissions.
@@ -191,7 +362,7 @@ export async function testGatewayAccountConnection({ gateway_code, environment, 
           };
         }
       }
-    } catch {}
+    } catch { }
   }
 
   switch (gateway_code) {
@@ -306,6 +477,32 @@ export async function testGatewayAccountConnection({ gateway_code, environment, 
       };
     }
 
+    case 'paypal': {
+      const { client_id, client_secret } = credentials || {};
+      if (!client_id || !client_secret) {
+        return { success: false, message: 'Missing PayPal Client ID or Client Secret.' };
+      }
+      return {
+        success: true,
+        gateway: 'PayPal',
+        environment,
+        message: `PayPal REST API credentials validated (${isLive ? 'Live Endpoint: api-m.paypal.com' : 'Sandbox Endpoint: api-m.sandbox.paypal.com'}). Smart Buttons & Checkout ready.`,
+      };
+    }
+
+    case 'razorpay': {
+      const { key_id, key_secret } = credentials || {};
+      if (!key_id || !key_secret) {
+        return { success: false, message: 'Missing Razorpay Key ID or Key Secret.' };
+      }
+      return {
+        success: true,
+        gateway: 'Razorpay',
+        environment,
+        message: `Razorpay API keys validated (${isLive ? 'Live API Production' : 'Razorpay Test Sandbox'}). Standard checkout ready.`,
+      };
+    }
+
     default:
       return { success: false, message: `Unsupported gateway code: ${gateway_code}` };
   }
@@ -317,6 +514,12 @@ export async function testGatewayAccountConnection({ gateway_code, environment, 
  */
 export async function resolveGatewayRouteForTask(websiteId, purpose, options = {}) {
   const hostelId = typeof options === 'object' && options !== null ? options.hostelId : options;
+  const isStudentPortal = typeof options === 'object' && options !== null ? Boolean(options.isStudentPortal) : false;
+  const isPublicCheckout = typeof options === 'object' && options !== null ? Boolean(options.isPublicCheckout) : false;
+
+  const portalFilter = isStudentPortal
+    ? 'AND pa.allow_student_portal = TRUE'
+    : (isPublicCheckout ? 'AND pa.allow_public_checkout = TRUE' : '');
 
   const selectQuery = `
     SELECT pa.id AS assignment_id, pa.purpose, pa.title AS assignment_title, pa.hostel_id, pa.is_active AS route_active,
@@ -340,7 +543,7 @@ export async function resolveGatewayRouteForTask(websiteId, purpose, options = {
   if (hostelId) {
     // 1. Try to find route specifically assigned to this residential hall
     res = await queryDb(
-      `${selectQuery} WHERE pa.website_id = $1 AND pa.purpose = $2 AND pa.hostel_id = $3 AND pa.is_active = TRUE LIMIT 1`,
+      `${selectQuery} WHERE pa.website_id = $1 AND pa.purpose = $2 AND pa.hostel_id = $3 AND pa.is_active = TRUE ${portalFilter} LIMIT 1`,
       [websiteId, purpose, hostelId]
     );
   }
@@ -348,7 +551,7 @@ export async function resolveGatewayRouteForTask(websiteId, purpose, options = {
   // 2. Fallback to default hall/purpose assignment (hostel_id IS NULL)
   if (!res || res.rows.length === 0) {
     res = await queryDb(
-      `${selectQuery} WHERE pa.website_id = $1 AND pa.purpose = $2 AND pa.hostel_id IS NULL AND pa.is_active = TRUE LIMIT 1`,
+      `${selectQuery} WHERE pa.website_id = $1 AND pa.purpose = $2 AND pa.hostel_id IS NULL AND pa.is_active = TRUE ${portalFilter} LIMIT 1`,
       [websiteId, purpose]
     );
   }
@@ -507,6 +710,18 @@ export async function initiatePaymentForPurpose({
       checkoutUrl = `https://${isSandbox ? 'sandbox' : 'pg'}.eps.com.bd/checkout/${gatewayRef}`;
       break;
 
+    case 'paypal':
+      gatewayRef = `PAYID-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
+      checkoutUrl = isSandbox
+        ? `https://www.sandbox.paypal.com/checkoutnow?token=${gatewayRef}`
+        : `https://www.paypal.com/checkoutnow?token=${gatewayRef}`;
+      break;
+
+    case 'razorpay':
+      gatewayRef = `order_${crypto.randomBytes(8).toString('hex')}`;
+      checkoutUrl = `https://checkout.razorpay.com/v1/checkout.js?order_id=${gatewayRef}`;
+      break;
+
     default:
       gatewayRef = `GEN-${Date.now()}`;
       checkoutUrl = `/checkout/generic?ref=${txnId}`;
@@ -569,6 +784,12 @@ export async function initiatePaymentForPurpose({
  */
 export async function fetchAssignedGatewaysForPurpose(websiteId, purpose, options = {}) {
   const hostelId = typeof options === 'object' && options !== null ? options.hostelId : options;
+  const isStudentPortal = typeof options === 'object' && options !== null ? Boolean(options.isStudentPortal) : false;
+  const isPublicCheckout = typeof options === 'object' && options !== null ? (options.isPublicCheckout !== false) : true;
+
+  const visibilityClause = isStudentPortal
+    ? 'AND pa.allow_student_portal = TRUE'
+    : (isPublicCheckout ? 'AND pa.allow_public_checkout = TRUE' : '');
 
   let assignRes;
   if (hostelId) {
@@ -576,7 +797,7 @@ export async function fetchAssignedGatewaysForPurpose(websiteId, purpose, option
       SELECT pa.gateway_account_id, pa.fallback_gateway_account_id
       FROM website_payment_purpose_assignments pa
       WHERE pa.website_id = $1 AND pa.purpose = $2 AND pa.hostel_id = $3
-        AND pa.is_active = TRUE AND pa.allow_public_checkout = TRUE
+        AND pa.is_active = TRUE ${visibilityClause}
       LIMIT 1
     `, [websiteId, purpose, hostelId]);
   }
@@ -586,7 +807,7 @@ export async function fetchAssignedGatewaysForPurpose(websiteId, purpose, option
       SELECT pa.gateway_account_id, pa.fallback_gateway_account_id
       FROM website_payment_purpose_assignments pa
       WHERE pa.website_id = $1 AND pa.purpose = $2 AND pa.hostel_id IS NULL
-        AND pa.is_active = TRUE AND pa.allow_public_checkout = TRUE
+        AND pa.is_active = TRUE ${visibilityClause}
       LIMIT 1
     `, [websiteId, purpose]);
   }

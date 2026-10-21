@@ -4,16 +4,17 @@ import {
   verifyStaffPaymentAccess,
   maskAccountCredentials,
   mergeCredentials,
+  ensureWebsiteCurrencies,
   FEE_PURPOSES
 } from 'src/lib/database/paymentGateways.js';
 
 /**
  * GET /api/[domain]/staff/panel/configure/payments
- * Fetches configured gateway accounts, available gateway providers, active routing assignments, and metrics.
+ * Fetches configured gateway accounts, available gateway providers, active routing assignments, currency settings, and metrics.
  */
 export async function GET(request, context) {
   try {
-    const auth = await verifyStaffPaymentAccess(request, context);
+    const auth = await verifyStaffPaymentAccess(request, context, null, 'view');
     if (auth.error) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
@@ -72,7 +73,7 @@ export async function GET(request, context) {
              pa.is_active, pa.allow_student_portal, pa.allow_public_checkout,
              pa.created_at, pa.updated_at,
              h.name AS hostel_name, h.type AS hostel_type,
-             ga.account_name, ga.gateway_code, ga.environment,
+             ga.account_name, ga.gateway_code, ga.environment, ga.currency,
              fga.account_name AS fallback_account_name, fga.gateway_code AS fallback_gateway_code,
              fga.environment AS fallback_environment
       FROM website_payment_purpose_assignments pa
@@ -90,6 +91,10 @@ export async function GET(request, context) {
       WHERE website_id = $1
       ORDER BY name ASC
     `, [websiteId]);
+
+    // 5. Fetch and ensure institutional currencies from website_currencies table
+    const websiteBaseCurrency = String(auth.website.currency || 'BDT').toUpperCase().trim();
+    const portalCurrencies = await ensureWebsiteCurrencies(websiteId, websiteBaseCurrency);
 
     // Compute metrics
     const totalAccounts = accounts.length;
@@ -110,12 +115,13 @@ export async function GET(request, context) {
 
     return NextResponse.json({
       success: true,
-      website_currency: auth.website.currency || 'BDT',
+      website_currency: websiteBaseCurrency,
       website: {
         id: auth.website.id,
         name: auth.website.name,
-        currency: auth.website.currency || 'BDT'
+        currency: websiteBaseCurrency
       },
+      currencies: portalCurrencies,
       gateways: gatewaysRes.rows,
       accounts,
       assignments: assignmentsRes.rows,
@@ -143,7 +149,7 @@ export async function GET(request, context) {
  */
 export async function POST(request, context) {
   try {
-    const auth = await verifyStaffPaymentAccess(request, context);
+    const auth = await verifyStaffPaymentAccess(request, context, null, 'create');
     if (auth.error) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
@@ -188,12 +194,23 @@ export async function POST(request, context) {
       }, { status: 400 });
     }
 
-    // 2. Verify gateway compatibility with the website base currency
-    if (!supportedCurrencies.includes(websiteCurrency)) {
-      return NextResponse.json({
-        success: false,
-        error: `Gateway '${gateway.name}' is incompatible with your portal base currency (${websiteCurrency}). This gateway only supports: ${supportedCurrencies.join(', ')}.`
-      }, { status: 400 });
+    // 2. Validate required credential fields according to credential schema
+    let parsedSchema = gateway.credential_schema;
+    if (typeof parsedSchema === 'string') {
+      try { parsedSchema = JSON.parse(parsedSchema); } catch { parsedSchema = []; }
+    }
+    if (Array.isArray(parsedSchema)) {
+      for (const field of parsedSchema) {
+        if (field && field.required) {
+          const val = credentials ? credentials[field.key] : undefined;
+          if (val === undefined || val === null || String(val).trim() === '') {
+            return NextResponse.json({
+              success: false,
+              error: `Missing required credential: '${field.label || field.key}' is required for ${gateway.name}.`
+            }, { status: 400 });
+          }
+        }
+      }
     }
 
     const cleanEnv = environment === 'live' ? 'live' : 'sandbox';
@@ -228,7 +245,7 @@ export async function POST(request, context) {
     ]);
 
     const created = insertRes.rows[0];
-    const maskedCreds = maskAccountCredentials(created.credentials, gwCheck.rows[0].credential_schema);
+    const maskedCreds = maskAccountCredentials(created.credentials, gateway.credential_schema);
 
     return NextResponse.json({
       success: true,
@@ -250,7 +267,7 @@ export async function POST(request, context) {
  */
 export async function PUT(request, context) {
   try {
-    const auth = await verifyStaffPaymentAccess(request, context);
+    const auth = await verifyStaffPaymentAccess(request, context, null, 'edit');
     if (auth.error) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
@@ -296,13 +313,6 @@ export async function PUT(request, context) {
         return NextResponse.json({
           success: false,
           error: `Gateway '${existing.gateway_name}' does not support currency '${newCurrency}'. Supported currencies: ${supportedCurrencies.join(', ')}.`
-        }, { status: 400 });
-      }
-
-      if (!supportedCurrencies.includes(websiteCurrency)) {
-        return NextResponse.json({
-          success: false,
-          error: `Gateway '${existing.gateway_name}' is incompatible with your portal base currency (${websiteCurrency}). Supported: ${supportedCurrencies.join(', ')}.`
         }, { status: 400 });
       }
     }
@@ -370,7 +380,7 @@ export async function PUT(request, context) {
  */
 export async function DELETE(request, context) {
   try {
-    const auth = await verifyStaffPaymentAccess(request, context);
+    const auth = await verifyStaffPaymentAccess(request, context, null, 'delete');
     if (auth.error) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
@@ -384,7 +394,7 @@ export async function DELETE(request, context) {
 
     // Check account existence
     const checkRes = await queryDb(`
-      SELECT id, account_name FROM website_payment_gateway_accounts
+      SELECT id, account_name, gateway_code FROM website_payment_gateway_accounts
       WHERE id = $1 AND website_id = $2
     `, [id, auth.website.id]);
 
@@ -397,7 +407,7 @@ export async function DELETE(request, context) {
     // Remove any route assignments referencing this account
     await queryDb(`
       DELETE FROM website_payment_purpose_assignments
-      WHERE website_id = $1 AND gateway_account_id = $2
+      WHERE website_id = $1 AND (gateway_account_id = $2 OR fallback_gateway_account_id = $2)
     `, [auth.website.id, id]);
 
     // Delete the account

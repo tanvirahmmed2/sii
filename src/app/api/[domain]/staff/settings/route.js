@@ -1,10 +1,79 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
-import { getStaffSession } from 'src/lib/middleware/staff';
+import { resolveWebsiteFromRequest, getCreatorSession } from 'src/lib/middleware/creator';
+import { getStaffSession, hasStaffModulePermission } from 'src/lib/middleware/staff';
 import { uploadImage, deleteImage } from 'src/lib/database/cloudinary';
+import {
+  ensureWebsiteCurrencies,
+  setWebsiteBaseCurrency,
+  getGatewaysForCurrency
+} from 'src/lib/database/paymentGateways';
 
-// GET: Fetch all website configuration and metadata for staff workstation
+// Helper: Authorize staff or creator access for settings management
+async function authorizeSettingsAccess(request, website, action = 'view') {
+  // 1. Staff session check
+  const staffSession = await getStaffSession(request);
+  if (staffSession) {
+    const staffWebsiteId =
+      staffSession?.website_id ||
+      staffSession?.websiteId ||
+      staffSession?.staff?.websiteId ||
+      staffSession?.staff?.website_id;
+
+    if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
+      return { authorized: false, error: 'Forbidden: Cross-tenant access denied.', status: 403 };
+    }
+
+    if (action === 'edit') {
+      const isSuper = Boolean(
+        staffSession.is_superadmin ||
+        staffSession.is_admin ||
+        staffSession.staff?.is_superadmin ||
+        staffSession.staff?.is_admin
+      );
+      const hasPerm =
+        isSuper ||
+        hasStaffModulePermission(staffSession, 'settings', 'edit') ||
+        hasStaffModulePermission(staffSession, 'fees', 'edit') ||
+        hasStaffModulePermission(staffSession, 'accounting', 'edit');
+
+      if (!hasPerm) {
+        return {
+          authorized: false,
+          error: 'Forbidden: Insufficient privileges. You do not have permission to modify institutional settings or currency.',
+          status: 403
+        };
+      }
+    }
+
+    return { authorized: true, user: staffSession, role: 'staff' };
+  }
+
+  // 2. Creator (Tenant Owner) session check
+  const creatorSession = await getCreatorSession(request);
+  if (creatorSession) {
+    const creatorId = creatorSession?.id || creatorSession?.creator?.id;
+    const isOwner = website.creator_id && String(website.creator_id) === String(creatorId);
+    const isAdmin = Boolean(
+      creatorSession.is_admin ||
+      creatorSession.is_superadmin ||
+      creatorSession.creator?.is_admin
+    );
+
+    if (isOwner || isAdmin) {
+      return { authorized: true, user: creatorSession, role: 'creator' };
+    }
+    return { authorized: false, error: 'Forbidden: Institution tenant ownership mismatch.', status: 403 };
+  }
+
+  return {
+    authorized: false,
+    error: 'Unauthorized: Staff or administrator authentication required to access website settings.',
+    status: 401
+  };
+}
+
+// GET: Fetch all website configuration, currencies, and compatible gateway catalog
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -15,21 +84,33 @@ export async function GET(request, context) {
       );
     }
 
-    const staffSession = await getStaffSession(request);
-
-    if (!staffSession) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized: Staff authentication required to view website settings.' },
-        { status: 401 }
-      );
+    const auth = await authorizeSettingsAccess(request, website, 'view');
+    if (!auth.authorized) {
+      return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
+
+    const baseCurrency = String(website.currency || 'BDT').toUpperCase().trim();
+
+    // Ensure institutional currencies table is synced
+    const currencies = await ensureWebsiteCurrencies(website.id, baseCurrency);
+
+    // Get gateways supporting this active currency
+    const compatibleGateways = await getGatewaysForCurrency(baseCurrency);
+
+    // Get all supported gateways in catalog
+    const allGatewaysRes = await queryDb(
+      `SELECT code, name, category, description, logo_icon, website_url, supported_currencies, is_active
+       FROM website_payment_gateways
+       WHERE is_active = TRUE
+       ORDER BY category ASC, name ASC`
+    );
 
     const mergedSettings = {
       id: website.id,
       name: website.name || '',
       institution_type: website.institution_type || 'School',
       eiin_number: website.eiin_number || '',
-      currency: website.currency || 'BDT',
+      currency: baseCurrency,
       logo: website.logo || '',
       logo_id: website.logo_id || '',
       favicon: website.favicon || '',
@@ -38,7 +119,9 @@ export async function GET(request, context) {
       primary_color: website.primary_color || '#1e40af',
       secondary_color: website.secondary_color || '#0ea5e9',
       is_maintenance_mode: Boolean(website.is_maintenance_mode),
-      maintenance_message: website.maintenance_message || 'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.',
+      maintenance_message:
+        website.maintenance_message ||
+        'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.',
       status: website.status || 'active',
       subdomain: website.subdomain || '',
       custom_domain: website.custom_domain || '',
@@ -61,6 +144,9 @@ export async function GET(request, context) {
     return NextResponse.json({
       success: true,
       settings: mergedSettings,
+      currencies,
+      compatible_gateways: compatibleGateways,
+      all_gateways: allGatewaysRes.rows,
       payload: { settings: mergedSettings },
       paylod: { settings: mergedSettings },
     });
@@ -73,7 +159,7 @@ export async function GET(request, context) {
   }
 }
 
-// PUT: Update all website information and institutional settings
+// PUT: Update all website information and institutional settings (with currency sync)
 export async function PUT(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -84,13 +170,9 @@ export async function PUT(request, context) {
       );
     }
 
-    const staffSession = await getStaffSession(request);
-
-    if (!staffSession) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized: Staff authentication required to update website settings.' },
-        { status: 401 }
-      );
+    const auth = await authorizeSettingsAccess(request, website, 'edit');
+    if (!auth.authorized) {
+      return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
 
     const body = await request.json().catch(() => ({}));
@@ -124,13 +206,18 @@ export async function PUT(request, context) {
         finalLogoId = uploadRes.publicId;
       } catch (uploadErr) {
         console.error('Failed to upload logo to Cloudinary:', uploadErr);
-        return NextResponse.json({ success: false, error: `Failed to upload logo to Cloudinary: ${uploadErr.message}` }, { status: 500 });
+        return NextResponse.json(
+          { success: false, error: `Failed to upload logo to Cloudinary: ${uploadErr.message}` },
+          { status: 500 }
+        );
       }
     }
 
     // Handle Cloudinary upload / removal for Favicon
-    let finalFavicon = data.favicon !== undefined ? (data.favicon ? String(data.favicon).trim() : null) : undefined;
-    let finalFaviconId = data.favicon_id !== undefined ? (data.favicon_id ? String(data.favicon_id).trim() : null) : undefined;
+    let finalFavicon =
+      data.favicon !== undefined ? (data.favicon ? String(data.favicon).trim() : null) : undefined;
+    let finalFaviconId =
+      data.favicon_id !== undefined ? (data.favicon_id ? String(data.favicon_id).trim() : null) : undefined;
 
     if (data.remove_favicon || (data.favicon === '' && website.favicon_id)) {
       if (website.favicon_id) {
@@ -142,7 +229,11 @@ export async function PUT(request, context) {
       }
       finalFavicon = null;
       finalFaviconId = null;
-    } else if (data.favicon && typeof data.favicon === 'string' && (data.favicon.startsWith('data:image/') || data.favicon.startsWith('data:application/'))) {
+    } else if (
+      data.favicon &&
+      typeof data.favicon === 'string' &&
+      (data.favicon.startsWith('data:image/') || data.favicon.startsWith('data:application/'))
+    ) {
       try {
         if (website.favicon_id) {
           try {
@@ -156,8 +247,18 @@ export async function PUT(request, context) {
         finalFaviconId = uploadRes.publicId;
       } catch (uploadErr) {
         console.error('Failed to upload favicon to Cloudinary:', uploadErr);
-        return NextResponse.json({ success: false, error: `Failed to upload favicon to Cloudinary: ${uploadErr.message}` }, { status: 500 });
+        return NextResponse.json(
+          { success: false, error: `Failed to upload favicon to Cloudinary: ${uploadErr.message}` },
+          { status: 500 }
+        );
       }
+    }
+
+    // Synchronize base currency if provided
+    let cleanCurrency = null;
+    if (data.currency !== undefined && String(data.currency).trim()) {
+      cleanCurrency = String(data.currency).trim().toUpperCase();
+      await setWebsiteBaseCurrency(website.id, cleanCurrency);
     }
 
     // Update websites table
@@ -191,7 +292,7 @@ export async function PUT(request, context) {
         data.name !== undefined ? String(data.name).trim() : null,
         data.institution_type !== undefined ? String(data.institution_type).trim() : null,
         data.eiin_number !== undefined ? String(data.eiin_number).trim() : null,
-        data.currency !== undefined ? String(data.currency).trim().toUpperCase() : null,
+        cleanCurrency,
         finalLogo !== undefined,
         finalLogo || null,
         finalLogoId || null,
@@ -216,6 +317,11 @@ export async function PUT(request, context) {
     );
 
     const updatedWebsite = webRes.rows[0];
+    const updatedCurrency = updatedWebsite.currency || 'BDT';
+
+    // Synchronize latest currency records and compatible gateways
+    const updatedCurrencies = await ensureWebsiteCurrencies(website.id, updatedCurrency);
+    const compatibleGateways = await getGatewaysForCurrency(updatedCurrency);
 
     const merged = {
       ...updatedWebsite,
@@ -227,8 +333,10 @@ export async function PUT(request, context) {
 
     return NextResponse.json({
       success: true,
-      message: 'Website all information updated successfully.',
+      message: `Website settings and operating currency (${updatedCurrency}) updated successfully.`,
       settings: merged,
+      currencies: updatedCurrencies,
+      compatible_gateways: compatibleGateways,
       payload: { settings: merged },
       paylod: { settings: merged },
     });

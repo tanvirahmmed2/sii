@@ -2371,6 +2371,31 @@ CREATE INDEX IF NOT EXISTS idx_ws_notes_subj ON website_classroom_notes(website_
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
+-- 58.1. WEBSITE CURRENCIES (Institutional Currencies & Exchange Standards)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_currencies (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    code VARCHAR(10) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    symbol VARCHAR(10) NOT NULL DEFAULT '৳',
+    exchange_rate NUMERIC(12, 4) DEFAULT 1.0000,
+    is_base_currency BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, code)
+);
+
+DROP TRIGGER IF EXISTS update_website_currencies_updated_at ON website_currencies;
+CREATE TRIGGER update_website_currencies_updated_at
+    BEFORE UPDATE ON website_currencies
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_currencies_web ON website_currencies(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_currencies_active ON website_currencies(website_id, is_active);
+
+-- ----------------------------------------------------------------------------
 -- 59. WEBSITE PAYMENT GATEWAYS CATALOG (Supported Gateway Providers)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_payment_gateways (
@@ -2393,9 +2418,32 @@ CREATE TRIGGER update_website_payment_gateways_updated_at
     BEFORE UPDATE ON website_payment_gateways
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- Seed supported payment gateway providers
+INSERT INTO website_payment_gateways (code, name, category, description, logo_icon, website_url, supported_currencies, credential_schema, is_active)
+VALUES
+    ('bkash', 'bKash Tokenized Checkout', 'mobile_banking', 'Direct tokenized checkout and merchant payment with bKash API v1.2.0-1.3.0', '/icons/gateways/bkash.svg', 'https://developer.bka.sh', ARRAY['BDT']::varchar[], '[{"key":"app_key","type":"text","label":"App Key","secret":true,"required":true,"placeholder":"bKash Merchant App Key"},{"key":"app_secret","type":"password","label":"App Secret","secret":true,"required":true,"placeholder":"bKash Merchant App Secret"},{"key":"username","type":"text","label":"Merchant Username","secret":false,"required":true,"placeholder":"API Username"},{"key":"password","type":"password","label":"Merchant Password","secret":true,"required":true,"placeholder":"API Password"},{"key":"merchant_number","type":"text","label":"Merchant Mobile Number","secret":false,"required":false,"placeholder":"01XXXXXXXXX"}]'::jsonb, TRUE),
+    ('nagad', 'Nagad Direct Gateway', 'mobile_banking', 'Bangladesh Postal Department digital financial service Nagad merchant integration', '/icons/gateways/nagad.svg', 'https://nagad.com.bd', ARRAY['BDT']::varchar[], '[{"key":"merchant_id","type":"text","label":"Merchant ID","secret":false,"required":true,"placeholder":"Nagad Merchant ID (e.g. 68...)"},{"key":"merchant_private_key","type":"textarea","label":"Merchant PG Private Key (RSA/PGP)","secret":true,"required":true,"placeholder":"-----BEGIN RSA PRIVATE KEY-----"},{"key":"nagad_public_key","type":"textarea","label":"Nagad PG Public Key","secret":true,"required":true,"placeholder":"-----BEGIN PUBLIC KEY-----"},{"key":"merchant_number","type":"text","label":"Nagad Wallet Number","secret":false,"required":false,"placeholder":"01XXXXXXXXX"}]'::jsonb, TRUE),
+    ('stripe', 'Stripe Payments', 'card_international', 'Global credit cards, Apple Pay, Google Pay, and multicurrency checkout with Stripe', '/icons/gateways/stripe.svg', 'https://stripe.com', ARRAY['USD', 'EUR', 'BDT', 'GBP', 'CAD', 'AUD', 'SGD']::varchar[], '[{"key":"publishable_key","type":"text","label":"Publishable Key","secret":false,"required":true,"placeholder":"pk_live_... or pk_test_..."},{"key":"secret_key","type":"password","label":"Secret Key","secret":true,"required":true,"placeholder":"sk_live_... or sk_test_..."},{"key":"webhook_secret","type":"password","label":"Webhook Signing Secret","secret":true,"required":false,"placeholder":"whsec_..."}]'::jsonb, TRUE),
+    ('sslcommerz', 'SSLCommerz Payment Gateway', 'aggregator', 'Pioneer multi-card and MFS payment aggregator in Bangladesh (Visa, MC, bKash, Nagad, Internet Banking)', '/icons/gateways/sslcommerz.svg', 'https://sslcommerz.com', ARRAY['BDT', 'USD', 'EUR', 'GBP']::varchar[], '[{"key":"store_id","type":"text","label":"Store ID","secret":false,"required":true,"placeholder":"Your Store ID"},{"key":"store_passwd","type":"password","label":"Store Password","secret":true,"required":true,"placeholder":"Store Secret Password"}]'::jsonb, TRUE),
+    ('paddle', 'Paddle Billing', 'card_international', 'Merchant of Record global checkout with tax compliance and multi-currency billing', '/icons/gateways/paddle.svg', 'https://paddle.com', ARRAY['USD', 'EUR', 'GBP']::varchar[], '[{"key":"vendor_id","type":"text","label":"Vendor / Seller ID","secret":false,"required":true,"placeholder":"Paddle Vendor ID"},{"key":"api_key","type":"password","label":"API Key","secret":true,"required":true,"placeholder":"padd_live_... or padd_sbox_..."},{"key":"client_token","type":"text","label":"Client Token","secret":false,"required":false,"placeholder":"live_... or test_..."},{"key":"webhook_secret","type":"password","label":"Webhook Secret Key","secret":true,"required":false,"placeholder":"padd_wsec_..."}]'::jsonb, TRUE),
+    ('sonali_gateway', 'Sonali Bank e-Payment Gateway', 'banking_portal', 'Sonali Bank e-Service & government educational treasury collections gateway', '/icons/gateways/sonali.svg', 'https://www.sonalibank.com.bd', ARRAY['BDT']::varchar[], '[{"key":"portal_id","type":"text","label":"Portal ID","secret":false,"required":true,"placeholder":"Sonali Portal ID"},{"key":"secret_key","type":"password","label":"API Secret Key","secret":true,"required":true,"placeholder":"Merchant Secret Key"},{"key":"merchant_id","type":"text","label":"Merchant / Institution Code","secret":false,"required":true,"placeholder":"Institution Code"},{"key":"service_id","type":"text","label":"Service / Scheme ID","secret":false,"required":false,"placeholder":"Service Scheme Code"}]'::jsonb, TRUE),
+    ('surjopay', 'Shurjopay (SurjoPay)', 'aggregator', 'Fintech aggregator gateway for educational institution fee collection in Bangladesh', '/icons/gateways/surjopay.svg', 'https://shurjopay.com.bd', ARRAY['BDT']::varchar[], '[{"key":"merchant_username","type":"text","label":"Merchant Username","secret":false,"required":true,"placeholder":"sp_username"},{"key":"merchant_password","type":"password","label":"Merchant Password","secret":true,"required":true,"placeholder":"sp_password"},{"key":"merchant_prefix","type":"text","label":"Merchant Prefix","secret":false,"required":true,"placeholder":"e.g. NOK"},{"key":"return_url","type":"text","label":"Return URL (Optional)","secret":false,"required":false,"placeholder":"https://..."}]'::jsonb, TRUE),
+    ('eps', 'Easy Payment System (EPS)', 'banking_portal', 'Bangladesh Bank approved electronic payment system gateway for fast online collections', '/icons/gateways/eps.svg', 'https://eps.com.bd', ARRAY['BDT']::varchar[], '[{"key":"merchant_id","type":"text","label":"Merchant ID","secret":false,"required":true,"placeholder":"EPS Merchant ID"},{"key":"username","type":"text","label":"Username","secret":false,"required":true,"placeholder":"EPS Username"},{"key":"password","type":"password","label":"Password","secret":true,"required":true,"placeholder":"EPS Password"},{"key":"hash_secret","type":"password","label":"Hash Key / Secret","secret":true,"required":true,"placeholder":"EPS Hash Key"}]'::jsonb, TRUE),
+    ('paypal', 'PayPal', 'card_international', 'Global PayPal digital wallet, pay with debit or credit cards, and multi-currency international checkout', '/icons/gateways/paypal.svg', 'https://developer.paypal.com', ARRAY['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'SGD']::varchar[], '[{"key":"client_id","type":"text","label":"Client ID","secret":false,"required":true,"placeholder":"PayPal REST Client ID"},{"key":"client_secret","type":"password","label":"Client Secret","secret":true,"required":true,"placeholder":"PayPal REST Client Secret"},{"key":"app_id","type":"text","label":"App ID (Optional)","secret":false,"required":false,"placeholder":"APP-..."},{"key":"webhook_id","type":"text","label":"Webhook ID (Optional)","secret":false,"required":false,"placeholder":"PayPal Webhook ID"}]'::jsonb, TRUE),
+    ('razorpay', 'Razorpay', 'card_international', 'International card payments, UPI, and multi-currency global checkout with Razorpay', '/icons/gateways/razorpay.svg', 'https://razorpay.com', ARRAY['INR', 'USD', 'EUR', 'GBP', 'BDT', 'AED', 'SGD']::varchar[], '[{"key":"key_id","type":"text","label":"Key ID","secret":false,"required":true,"placeholder":"rzp_live_... or rzp_test_..."},{"key":"key_secret","type":"password","label":"Key Secret","secret":true,"required":true,"placeholder":"Razorpay Key Secret"},{"key":"webhook_secret","type":"password","label":"Webhook Secret","secret":true,"required":false,"placeholder":"Razorpay Webhook Secret"}]'::jsonb, TRUE)
+ON CONFLICT (code) DO UPDATE SET
+    name = EXCLUDED.name,
+    category = EXCLUDED.category,
+    description = EXCLUDED.description,
+    logo_icon = EXCLUDED.logo_icon,
+    website_url = EXCLUDED.website_url,
+    supported_currencies = EXCLUDED.supported_currencies,
+    credential_schema = EXCLUDED.credential_schema,
+    is_active = EXCLUDED.is_active;
+
 -- ----------------------------------------------------------------------------
 -- 60. WEBSITE PAYMENT GATEWAY ACCOUNTS (Tenant Multi-Account Gateway Configurations)
--- Allows multiple accounts per gateway (e.g. 2 bKash, 2 Stripe) with sandbox & live support
+-- Unified accounts table for all gateways (e.g. bKash, Nagad, Stripe, PayPal, SSLCommerz, Paddle, Sonali, EPS, Razorpay)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_payment_gateway_accounts (
     id BIGSERIAL PRIMARY KEY,
@@ -2526,6 +2574,8 @@ CREATE TABLE IF NOT EXISTS website_admissions (
     last_class_grade NUMERIC(4, 2),
     last_institution TEXT,
     selection_method VARCHAR(50) DEFAULT 'manual' CHECK (selection_method IN ('exam', 'merit', 'manual')),
+    is_result_published BOOLEAN DEFAULT FALSE,
+    result_published_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -2623,10 +2673,13 @@ CREATE TABLE IF NOT EXISTS website_admission_applicants (
     phone VARCHAR(50) NOT NULL,
     gender VARCHAR(20) DEFAULT 'Male' CHECK (gender IN ('Male', 'Female', 'Other')),
     date_of_birth DATE,
-    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'selected', 'rejected', 'enrolled', 'completed')),
+    status VARCHAR(50) NOT NULL DEFAULT 'incomplete' CHECK (status IN ('pending', 'incomplete', 'unpaid', 'paid', 'completed', 'selected', 'rejected', 'enrolled', 'accepted')),
     selection_notes TEXT,
     score NUMERIC(6, 2) DEFAULT 0.00,
     merit_position INT,
+    exam_roll VARCHAR(50),
+    is_admit_card_issued BOOLEAN DEFAULT FALSE,
+    admit_card_issued_at TIMESTAMPTZ,
     selected_at TIMESTAMPTZ,
     selected_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
     enrolled_at TIMESTAMPTZ,
@@ -4162,4 +4215,58 @@ DROP TRIGGER IF EXISTS update_website_class_student_id_templates_updated_at ON w
 CREATE TRIGGER update_website_class_student_id_templates_updated_at
     BEFORE UPDATE ON website_class_student_id_templates
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- ADMIT CARD TEMPLATES (SYSTEM MASTER & TENANT WEBSITE SELECTIONS)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS system_admit_card_templates (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    description TEXT,
+    dimension_width NUMERIC(8, 2) NOT NULL DEFAULT 210.00,
+    dimension_height NUMERIC(8, 2) NOT NULL DEFAULT 297.00,
+    dimension_unit VARCHAR(10) NOT NULL DEFAULT 'mm' CHECK (dimension_unit IN ('mm', 'px', 'in')),
+    fabric_data JSONB NOT NULL DEFAULT '{}',
+    fabric_back_data JSONB DEFAULT '{}',
+    html_content TEXT NOT NULL DEFAULT '',
+    html_back_content TEXT,
+    css_content TEXT NOT NULL DEFAULT '',
+    available_merge_tags JSONB NOT NULL DEFAULT '[]',
+    is_active BOOLEAN DEFAULT TRUE,
+    is_system_default BOOLEAN DEFAULT FALSE,
+    created_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS website_admit_card_templates (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    system_template_id BIGINT REFERENCES system_admit_card_templates(id) ON DELETE SET NULL,
+    name VARCHAR(255) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    is_default BOOLEAN DEFAULT FALSE,
+    dimension_width NUMERIC(8, 2) DEFAULT 210.00,
+    dimension_height NUMERIC(8, 2) DEFAULT 297.00,
+    dimension_unit VARCHAR(10) DEFAULT 'mm',
+    custom_fabric_data JSONB,
+    custom_fabric_back_data JSONB,
+    custom_html TEXT,
+    custom_html_back TEXT,
+    custom_css TEXT,
+    custom_variables JSONB DEFAULT '{}',
+    created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_system_admit_card_tpls_slug ON system_admit_card_templates(slug);
+CREATE INDEX IF NOT EXISTS idx_website_admit_card_tpls_web ON website_admit_card_templates(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_admit_card_tpls_def ON website_admit_card_templates(website_id, is_default) WHERE is_default = TRUE;
+
+-- Spelling views supporting website_admit_card_templetes
+CREATE OR REPLACE VIEW website_admit_card_templetes AS SELECT * FROM website_admit_card_templates;
+CREATE OR REPLACE VIEW system_admit_card_templetes AS SELECT * FROM system_admit_card_templates;
 

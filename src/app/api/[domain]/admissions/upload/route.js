@@ -188,14 +188,41 @@ export async function POST(request, context) {
       signaturePublicId
     ]);
 
-    // 4. Update website_admission_applicants status to 'completed'
+    // 4. Check circular type and generate exam_roll if admission is exam based
+    const admRes = await queryDb(
+      `SELECT a.id, a.selection_method, a.exam_date,
+              ex.exam_date AS admission_exam_date, ex.admit_publish_date, ex.venue
+       FROM website_admissions a
+       LEFT JOIN website_admission_exams ex ON ex.admission_id = a.id
+       WHERE a.id = $1`,
+      [applicant.admission_id]
+    );
+    const circular = admRes.rows[0];
+
+    let generatedExamRoll = applicant.exam_roll || applicant.roll_no || null;
+    if (circular && circular.selection_method === 'exam' && !generatedExamRoll) {
+      const completedCountRes = await queryDb(
+        `SELECT COUNT(*)::int AS count
+         FROM website_admission_applicants
+         WHERE admission_id = $1 AND website_id = $2 AND exam_roll IS NOT NULL`,
+        [applicant.admission_id, website.id]
+      );
+      const completedSeq = (completedCountRes.rows[0]?.count || 0) + 1;
+      const currentYear = new Date().getFullYear();
+      generatedExamRoll = `${currentYear}${completedSeq}`;
+    }
+
+    // 5. Update website_admission_applicants status to 'completed' and set exam_roll
     await queryDb(`
       UPDATE website_admission_applicants
-      SET status = 'completed', updated_at = CURRENT_TIMESTAMP
-      WHERE id = $1 AND website_id = $2
-    `, [appId, website.id]);
+      SET status = 'completed',
+          exam_roll = COALESCE($1, exam_roll),
+          roll_no = COALESCE($1, roll_no),
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2 AND website_id = $3
+    `, [generatedExamRoll, appId, website.id]);
 
-    // 5. Also update website_admission_applicant_info for legacy fallback compatibility
+    // 6. Also update website_admission_applicant_info for legacy fallback compatibility
     await queryDb(`
       UPDATE website_admission_applicant_info
       SET photo_url = $1, photo_id = $2, signature_url = $3, signature_id = $4, updated_at = CURRENT_TIMESTAMP
@@ -215,7 +242,9 @@ export async function POST(request, context) {
       applicant_id: appId,
       photo_url: photoUrl,
       signature_url: signatureUrl,
-      status: 'completed'
+      status: 'completed',
+      exam_roll: generatedExamRoll,
+      roll_no: generatedExamRoll
     });
   } catch (error) {
     console.error('Error uploading candidate media:', error);

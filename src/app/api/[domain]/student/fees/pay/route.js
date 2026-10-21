@@ -33,6 +33,20 @@ export async function POST(request, context) {
       ? String(transaction_id).trim()
       : `TXN-${(payment_method || 'ONLINE').toUpperCase()}-${Date.now().toString().slice(-8)}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
 
+    // Verify gateway account if specified
+    let targetAccountId = null;
+    let gwCode = payment_method || 'bkash';
+    if (body.gateway_account_id) {
+      const accRes = await queryDb(
+        `SELECT id, gateway_code, currency, environment FROM website_payment_gateway_accounts WHERE id = $1 AND website_id = $2 AND is_active = TRUE`,
+        [body.gateway_account_id, website.id]
+      );
+      if (accRes.rows.length > 0) {
+        targetAccountId = accRes.rows[0].id;
+        gwCode = accRes.rows[0].gateway_code;
+      }
+    }
+
     if (isExamFee) {
       // Handle Exam Fee payment
       const examPayCheck = await queryDb(
@@ -59,8 +73,30 @@ export async function POST(request, context) {
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $4 AND website_id = $5
          RETURNING *`,
-        [totalAmount, payment_method, txnId, cleanPaymentId, website.id]
+        [totalAmount, gwCode, txnId, cleanPaymentId, website.id]
       );
+
+      // Record in website_payment_transactions ledger
+      try {
+        await queryDb(`
+          INSERT INTO website_payment_transactions (
+            website_id, gateway_code, purpose, invoice_ref, payer_name, payer_phone,
+            amount, currency, environment, transaction_id, status, gateway_account_id, created_at
+          ) VALUES ($1, $2, 'exam_fees', $3, $4, $5, $6, $7, 'live', $8, 'completed', $9, CURRENT_TIMESTAMP)
+        `, [
+          website.id,
+          gwCode,
+          rec.invoice_no || `EXAM-INV-${cleanPaymentId}`,
+          session.name || 'Student',
+          session.number || account_number || null,
+          totalAmount,
+          website.currency || 'BDT',
+          txnId,
+          targetAccountId
+        ]);
+      } catch (txErr) {
+        console.warn('Failed recording transaction in ledger:', txErr?.message);
+      }
 
       return NextResponse.json({
         success: true,
@@ -100,8 +136,30 @@ export async function POST(request, context) {
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $5 AND website_id = $6
        RETURNING *`,
-      [totalAmount, payment_method, txnId, account_number ? String(account_number).slice(-4) : 'N/A', cleanPaymentId, website.id]
+      [totalAmount, gwCode, txnId, account_number ? String(account_number).slice(-4) : 'N/A', cleanPaymentId, website.id]
     );
+
+    // Record in website_payment_transactions ledger
+    try {
+      await queryDb(`
+        INSERT INTO website_payment_transactions (
+          website_id, gateway_code, purpose, invoice_ref, payer_name, payer_phone,
+          amount, currency, environment, transaction_id, status, gateway_account_id, created_at
+        ) VALUES ($1, $2, 'education_fees', $3, $4, $5, $6, $7, 'live', $8, 'completed', $9, CURRENT_TIMESTAMP)
+      `, [
+        website.id,
+        gwCode,
+        rec.invoice_no || `EDU-INV-${cleanPaymentId}`,
+        session.name || 'Student',
+        session.number || account_number || null,
+        totalAmount,
+        website.currency || 'BDT',
+        txnId,
+        targetAccountId
+      ]);
+    } catch (txErr) {
+      console.warn('Failed recording transaction in ledger:', txErr?.message);
+    }
 
     return NextResponse.json({
       success: true,
