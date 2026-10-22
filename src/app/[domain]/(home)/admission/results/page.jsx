@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense, useContext } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, useContext } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';

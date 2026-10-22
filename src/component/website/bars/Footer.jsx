@@ -83,7 +83,7 @@ const Footer = () => {
     >
       {/* Top Bar: Follow us on */}
       <div className="w-full border-b border-white/10 bg-secondary-dark">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="text-xs sm:text-sm font-semibold tracking-wider uppercase text-white/90">
               Follow us on :
@@ -115,11 +115,6 @@ const Footer = () => {
           <span className="text-lg font-bold text-white tracking-tight">
             {schoolName}
           </span>
-          {eiin && (
-            <p className="text-xs font-mono text-white/70">
-              Government EIIN: {eiin}
-            </p>
-          )}
         </div>
 
         <p className="text-xs text-white/75 leading-relaxed max-w-sm">
@@ -155,7 +150,7 @@ const Footer = () => {
             className="px-3 py-1.5 text-xs font-semibold rounded-md border border-white/20 text-white/90 hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
             title={`Switch to ${isDark ? 'Light' : 'Dark'} mode`}
           >
-            <span>{isDark ? '☀ Switch to Light Mode' : '☾ Switch to Dark Mode'}</span>
+            <span>{isDark ? '☀' : '☾'}</span>
           </button>
         </div>
       </div>

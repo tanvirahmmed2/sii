@@ -76,8 +76,8 @@ const Navbar = () => {
   const navLinkClass = (path) => {
     const isActive = pathname === path || pathname === tenantUrl(path);
     return `text-xs font-semibold px-2.5 py-1.5 rounded-md transition-all duration-150 whitespace-nowrap flex items-center gap-1 ${isActive
-        ? 'bg-white/25 text-white shadow-xs'
-        : 'text-white/90 hover:text-white hover:bg-white/15'
+      ? 'bg-white/25 text-white shadow-xs'
+      : 'text-white/90 hover:text-white hover:bg-white/15'
       }`;
   };
 
@@ -98,7 +98,7 @@ const Navbar = () => {
           {/* Brand & Institution Info */}
           <Link href={tenantUrl('/')} className="flex items-center gap-2.5 min-w-0 group">
             {logoUrl && !logoError && (
-              <div className="relative w-8 h-8 sm:w-9 sm:h-9  overflow-hidden shrink-0 flex items-center justify-center shadow-xs">
+              <div className="relative w-8 h-8 sm:w-9 sm:h-9  overflow-hidden shrink-0 flex items-center justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={logoUrl}
