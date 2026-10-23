@@ -48,7 +48,10 @@ export async function GET(request, context) {
     let studentGender = 'Male';
     try {
       const stuRes = await queryDb(
-        `SELECT gender FROM website_student_info WHERE student_id = $1 LIMIT 1`,
+        `SELECT COALESCE(s.gender, i.data->>'gender') AS gender
+         FROM website_students s
+         LEFT JOIN website_student_info i ON i.student_id = s.id
+         WHERE s.id = $1 LIMIT 1`,
         [studentId]
       );
       if (stuRes.rows.length > 0) {

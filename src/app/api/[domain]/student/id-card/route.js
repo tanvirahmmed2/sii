@@ -31,15 +31,20 @@ export async function GET(request, context) {
     const studentRes = await queryDb(
       `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
               s.class_id, s.section_id, s.session_id,
-              i.name, i.email, i.number, i.blood_group, i.date_of_birth, i.admission_date,
+              COALESCE(s.name, i.data->>'name') AS name,
+              COALESCE(s.email, i.data->>'email') AS email,
+              COALESCE(s.number, i.data->>'number') AS number,
+              COALESCE(s.blood_group, i.data->>'blood_group') AS blood_group,
+              COALESCE(s.date_of_birth, (i.data->>'date_of_birth')::date) AS date_of_birth,
+              COALESCE(s.admission_date, (i.data->>'admission_date')::date) AS admission_date,
               c.name AS class_name,
               sec.name AS section_name,
               ses.name AS session_name,
               p.image_url AS photo_url,
               sig.signature_url,
-              g.father_name, g.guardian_phone AS emergency_phone
+              g.data->>'father_name' AS father_name, g.data->>'guardian_phone' AS emergency_phone
        FROM website_students s
-       JOIN website_student_info i ON i.student_id = s.id
+       LEFT JOIN website_student_info i ON i.student_id = s.id
        LEFT JOIN website_classes c ON c.id = s.class_id
        LEFT JOIN website_sections sec ON sec.id = s.section_id
        LEFT JOIN website_sessions ses ON ses.id = s.session_id

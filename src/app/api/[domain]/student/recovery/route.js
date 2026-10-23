@@ -31,10 +31,12 @@ export async function POST(request, context) {
 
     const studentRes = await queryDb(
       `SELECT s.id, s.registration_no, s.is_active,
-              i.name, i.email, i.recovery_token_expires
+              COALESCE(s.name, i.data->>'name') AS name,
+              COALESCE(s.email, i.data->>'email') AS email,
+              s.recovery_token_expires
        FROM website_students s
-       JOIN website_student_info i ON s.id = i.student_id
-       WHERE s.website_id = $1 AND (LOWER(i.email) = $2 OR LOWER(s.registration_no) = $2)
+       LEFT JOIN website_student_info i ON s.id = i.student_id
+       WHERE s.website_id = $1 AND (LOWER(s.email) = $2 OR LOWER(i.data->>'email') = $2 OR LOWER(s.registration_no) = $2)
        LIMIT 1`,
       [website.id, identifier]
     );
@@ -66,11 +68,11 @@ export async function POST(request, context) {
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     await queryDb(
-      `UPDATE website_student_info
+      `UPDATE website_students
        SET recovery_token = $1,
            recovery_token_expires = $2,
            updated_at = CURRENT_TIMESTAMP
-       WHERE student_id = $3 AND website_id = $4`,
+       WHERE id = $3 AND website_id = $4`,
       [sixDigitCode, expiresAt, student.id, website.id]
     );
 
@@ -161,10 +163,12 @@ async function handlePasswordReset(website, email, token, newPassword) {
 
   const studentRes = await queryDb(
     `SELECT s.id, s.registration_no,
-            i.name, i.email, i.recovery_token, i.recovery_token_expires
+            COALESCE(s.name, i.data->>'name') AS name,
+            COALESCE(s.email, i.data->>'email') AS email,
+            s.recovery_token, s.recovery_token_expires
      FROM website_students s
-     JOIN website_student_info i ON s.id = i.student_id
-     WHERE website_id = $1 AND (LOWER(i.email) = $2 OR LOWER(s.registration_no) = $2)
+     LEFT JOIN website_student_info i ON s.id = i.student_id
+     WHERE s.website_id = $1 AND (LOWER(s.email) = $2 OR LOWER(i.data->>'email') = $2 OR LOWER(s.registration_no) = $2)
      LIMIT 1`,
     [website.id, identifier]
   );
@@ -189,12 +193,12 @@ async function handlePasswordReset(website, email, token, newPassword) {
   const hashedPassword = await hashPassword(newPassword);
 
   await queryDb(
-    `UPDATE website_student_info
+    `UPDATE website_students
      SET password = $1,
          recovery_token = NULL,
          recovery_token_expires = NULL,
          updated_at = CURRENT_TIMESTAMP
-     WHERE student_id = $2 AND website_id = $3`,
+     WHERE id = $2 AND website_id = $3`,
     [hashedPassword, student.id, website.id]
   );
 

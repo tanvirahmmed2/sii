@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyStaffPaymentAccess } from 'src/lib/database/paymentGateways.js';
-import { DEFAULT_ADMISSION_FIELDS } from '../../../admissions/fields/route.js';
+import { DEFAULT_ADMISSION_FIELDS } from 'src/lib/constants/admissionFields.js';
 
 /**
  * GET /api/[domain]/staff/panel/admissions/fields?admission_id=...
@@ -31,12 +31,34 @@ export async function GET(request, context) {
     sql += ` ORDER BY sort_order ASC, id ASC`;
 
     const res = await queryDb(sql, params);
+    const fields = res.rows.length > 0 ? res.rows : DEFAULT_ADMISSION_FIELDS;
+
+    // Group fields by section for frontend tabbed organization
+    const sections = {
+      personal: [],
+      guardian: [],
+      address: [],
+      academic: [],
+      general: []
+    };
+
+    for (const f of fields) {
+      const sec = f.section || 'personal';
+      if (sections[sec]) {
+        sections[sec].push(f);
+      } else {
+        if (!sections.general) sections.general = [];
+        sections.general.push(f);
+      }
+    }
 
     return NextResponse.json({
       success: true,
-      fields: res.rows,
+      fields,
+      sections,
       default_fields: DEFAULT_ADMISSION_FIELDS,
-      count: res.rows.length
+      count: res.rows.length,
+      is_customized: res.rows.length > 0
     });
   } catch (error) {
     console.error('Error in GET /staff/panel/admissions/fields:', error);

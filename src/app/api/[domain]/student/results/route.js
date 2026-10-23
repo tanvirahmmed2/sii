@@ -23,10 +23,14 @@ export async function GET(request, context) {
     // Fetch student's class
     const studentRes = await queryDb(
       `SELECT s.id, s.class_id, s.section_id, s.session_id, s.roll_no, s.registration_no,
-              i.name AS student_name, i.name AS name, i.father_name, i.mother_name,
+              COALESCE(s.name, i.data->>'name') AS student_name,
+              COALESCE(s.name, i.data->>'name') AS name,
+              COALESCE(g.data->>'father_name', '') AS father_name,
+              COALESCE(g.data->>'mother_name', '') AS mother_name,
               c.name AS class_name, ses.name AS session_name, sec.name AS section_name
        FROM website_students s
-       JOIN website_student_info i ON i.student_id = s.id
+       LEFT JOIN website_student_info i ON i.student_id = s.id
+       LEFT JOIN website_student_guardians g ON g.student_id = s.id
        LEFT JOIN website_classes c ON c.id = s.class_id
        LEFT JOIN website_sections sec ON sec.id = s.section_id
        LEFT JOIN website_sessions ses ON ses.id = s.session_id

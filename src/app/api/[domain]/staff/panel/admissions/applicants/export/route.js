@@ -24,13 +24,19 @@ export async function GET(request, context) {
              a.score, a.merit_position, a.selection_notes, a.created_at,
              a.last_class, a.last_class_grade, a.last_institution,
              adm.title AS circular_title, c.name AS class_name,
-             inf.father_name, inf.father_phone, inf.mother_name,
-             inf.present_address, inf.previous_school, inf.previous_gpa
+             g.data->>'father_name' AS father_name,
+             g.data->>'father_phone' AS father_phone,
+             g.data->>'mother_name' AS mother_name,
+             addr.data->>'present_address' AS present_address,
+             inf.data->>'previous_school' AS previous_school,
+             inf.data->>'previous_gpa' AS previous_gpa
       FROM website_admission_applicants a
       JOIN website_admissions adm ON adm.id = a.admission_id
       LEFT JOIN website_classes c ON c.id = adm.class_id
       LEFT JOIN website_admission_fee_payments p ON p.applicant_id = a.id
       LEFT JOIN website_admission_applicant_info inf ON inf.applicant_id = a.id
+      LEFT JOIN website_admission_applicant_guardians g ON g.applicant_id = a.id
+      LEFT JOIN website_admission_applicant_addresses addr ON addr.applicant_id = a.id
       WHERE a.website_id = $1
     `;
 

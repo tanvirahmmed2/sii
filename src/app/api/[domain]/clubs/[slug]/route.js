@@ -54,7 +54,7 @@ export async function GET(request, context) {
               scm.role,
               scm.joined_date,
               s.registration_no,
-              si.name AS student_name,
+              COALESCE(s.name, si.data->>'name') AS student_name,
               cl.name AS class_name
        FROM website_student_club_members scm
        JOIN website_students s ON s.id = scm.student_id AND s.website_id = scm.website_id

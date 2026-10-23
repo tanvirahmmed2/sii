@@ -32,8 +32,13 @@ export async function POST(request, context) {
       `SELECT s.id, s.registration_no, s.roll_no, s.email, s.student_unique_id,
               s.class_id, s.section_id, s.session_id, s.department_id,
               s.two_factor_code AS student_two_factor_code, s.two_factor_expires AS student_two_factor_expires,
-              i.name, i.number, i.gender, i.blood_group, i.date_of_birth, i.religion,
-              i.two_factor_code, i.two_factor_expires, i.verification_token,
+              COALESCE(s.name, i.data->>'name') AS name,
+              COALESCE(s.number, i.data->>'number') AS number,
+              COALESCE(s.gender, i.data->>'gender') AS gender,
+              COALESCE(s.blood_group, i.data->>'blood_group') AS blood_group,
+              COALESCE(s.date_of_birth, (i.data->>'date_of_birth')::date) AS date_of_birth,
+              COALESCE(s.religion, i.data->>'religion') AS religion,
+              s.two_factor_code, s.two_factor_expires, s.verification_token,
               c.name AS class_name, sec.name AS section_name, ses.name AS session_name,
               d.name AS department_name
        FROM website_students s
@@ -43,7 +48,7 @@ export async function POST(request, context) {
        LEFT JOIN website_sessions ses ON s.session_id = ses.id
        LEFT JOIN website_departments d ON s.department_id = d.id
        WHERE s.website_id = $1 
-         AND LOWER(TRIM(COALESCE(s.email, i.email))) = $2
+         AND LOWER(TRIM(COALESCE(s.email, i.data->>'email'))) = $2
          ${cleanRegNo ? 'AND (s.registration_no = $3 OR s.roll_no = $3 OR s.student_unique_id = $3)' : ''}
        LIMIT 1`,
       cleanRegNo ? [website.id, cleanEmail, cleanRegNo] : [website.id, cleanEmail]
@@ -54,8 +59,13 @@ export async function POST(request, context) {
         `SELECT s.id, s.registration_no, s.roll_no, s.email, s.student_unique_id,
                 s.class_id, s.section_id, s.session_id, s.department_id,
                 s.two_factor_code AS student_two_factor_code, s.two_factor_expires AS student_two_factor_expires,
-                i.name, i.number, i.gender, i.blood_group, i.date_of_birth, i.religion,
-                i.two_factor_code, i.two_factor_expires, i.verification_token,
+                COALESCE(s.name, i.data->>'name') AS name,
+                COALESCE(s.number, i.data->>'number') AS number,
+                COALESCE(s.gender, i.data->>'gender') AS gender,
+                COALESCE(s.blood_group, i.data->>'blood_group') AS blood_group,
+                COALESCE(s.date_of_birth, (i.data->>'date_of_birth')::date) AS date_of_birth,
+                COALESCE(s.religion, i.data->>'religion') AS religion,
+                s.two_factor_code, s.two_factor_expires, s.verification_token,
                 c.name AS class_name, sec.name AS section_name, ses.name AS session_name,
                 d.name AS department_name
          FROM website_students s

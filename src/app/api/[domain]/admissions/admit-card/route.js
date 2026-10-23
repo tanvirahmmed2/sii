@@ -37,9 +37,11 @@ export async function GET(request, context) {
              adm.title AS circular_title, adm.selection_method,
              cls.name AS class_name, ses.name AS session_name, dept.name AS department_name,
              ex.exam_date, ex.admit_publish_date, ex.venue, ex.instructions,
-             COALESCE(img.photo_url, inf.photo_url) AS photo_url,
-             COALESCE(img.signature_url, inf.signature_url) AS signature_url,
-             inf.father_name, inf.mother_name, inf.present_address
+             img.photo_url,
+             img.signature_url,
+             grd.data->>'father_name' AS father_name,
+             grd.data->>'mother_name' AS mother_name,
+             addr.data->>'present_address' AS present_address
       FROM website_admission_applicants a
       JOIN website_admissions adm ON adm.id = a.admission_id
       LEFT JOIN website_classes cls ON cls.id = adm.class_id
@@ -48,6 +50,8 @@ export async function GET(request, context) {
       LEFT JOIN website_admission_exams ex ON ex.admission_id = adm.id
       LEFT JOIN website_admission_applicant_images img ON img.applicant_id = a.id
       LEFT JOIN website_admission_applicant_info inf ON inf.applicant_id = a.id
+      LEFT JOIN website_admission_applicant_guardians grd ON grd.applicant_id = a.id
+      LEFT JOIN website_admission_applicant_addresses addr ON addr.applicant_id = a.id
       WHERE a.website_id = $1
         AND (
           a.application_no ILIKE $2

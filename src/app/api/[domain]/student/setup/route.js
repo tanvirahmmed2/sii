@@ -73,8 +73,8 @@ export async function GET(request, context) {
           ...student,
           email: student.registered_email || student.email
         },
-        address: addrRes.rows[0] || null,
-        guardian: guardRes.rows[0] || null,
+        address: addrRes.rows[0] ? { ...addrRes.rows[0], ...(addrRes.rows[0].data || {}) } : null,
+        guardian: guardRes.rows[0] ? { ...guardRes.rows[0], ...(guardRes.rows[0].data || {}) } : null,
         picture: picRes.rows[0] || null,
         signature: sigRes.rows[0] || null,
       },
@@ -200,23 +200,21 @@ async function handleSetupSubmission(request, context) {
       const hashedPassword = await hashPassword(password);
       await queryDb(
         `INSERT INTO website_student_info (
-            website_id, student_id, password, email, is_registered, is_verified,
-            verification_status, verified_at, updated_at
+            website_id, student_id, data, is_registered,
+            verification_status, updated_at
          )
-         VALUES ($1, $2, $3, $4, TRUE, TRUE, 'verified', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+         VALUES ($1, $2, $3, TRUE, 'verified', CURRENT_TIMESTAMP)
          ON CONFLICT (student_id)
          DO UPDATE SET
-            password = EXCLUDED.password,
-            email = EXCLUDED.email,
+            data = website_student_info.data || EXCLUDED.data,
             is_registered = TRUE,
-            is_verified = TRUE,
             verification_status = 'verified',
             updated_at = CURRENT_TIMESTAMP`,
-        [website.id, student.id, hashedPassword, inputEmail]
+        [website.id, student.id, JSON.stringify({ email: inputEmail })]
       );
       await queryDb(
         `UPDATE website_students
-         SET password = $1, email = $2, updated_at = CURRENT_TIMESTAMP
+         SET password = $1, email = $2, is_registered = TRUE, is_verified = TRUE, verification_status = 'verified', updated_at = CURRENT_TIMESTAMP
          WHERE id = $3 AND website_id = $4`,
         [hashedPassword, inputEmail, student.id, website.id]
       );
@@ -233,29 +231,22 @@ async function handleSetupSubmission(request, context) {
       if (!name?.trim()) {
         return NextResponse.json({ success: false, error: 'Student full name is required.' }, { status: 400 });
       }
-      const customData = body.custom_fields && typeof body.custom_fields === 'object' ? body.custom_fields : {};
+      const personalData = {
+        name: name.trim(),
+        number: number?.trim() || null,
+        gender: gender || 'Male',
+        blood_group: blood_group || null,
+        date_of_birth: date_of_birth || null,
+        religion: religion || null,
+        ...(body.custom_fields && typeof body.custom_fields === 'object' ? body.custom_fields : {})
+      };
       await queryDb(
-        `UPDATE website_student_info
-         SET name = COALESCE($1, name),
-             number = COALESCE($2, number),
-             gender = COALESCE($3, gender),
-             blood_group = COALESCE($4, blood_group),
-             date_of_birth = COALESCE($5, date_of_birth),
-             religion = COALESCE($6, religion),
-             custom_fields = COALESCE(custom_fields, '{}'::jsonb) || $7::jsonb,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE student_id = $8 AND website_id = $9`,
-        [
-          name.trim(),
-          number?.trim() || null,
-          gender || 'Male',
-          blood_group || null,
-          date_of_birth || null,
-          religion || null,
-          JSON.stringify(customData),
-          student.id,
-          website.id,
-        ]
+        `INSERT INTO website_student_info (website_id, student_id, data, updated_at)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+         ON CONFLICT (student_id) DO UPDATE SET
+            data = website_student_info.data || EXCLUDED.data,
+            updated_at = CURRENT_TIMESTAMP`,
+        [website.id, student.id, JSON.stringify(personalData)]
       );
       await queryDb(
         `UPDATE website_students
@@ -287,52 +278,32 @@ async function handleSetupSubmission(request, context) {
 
     // STEP 4: Guardian information
     if (body.step === 4 || body.step === 'guardian') {
-      const guardianCustom = body.guardian_custom_fields || (body.custom_fields && typeof body.custom_fields === 'object' ? body.custom_fields : {});
+      const guardianPayload = {
+        father_name: father_name?.trim() || null,
+        father_phone: father_phone?.trim() || null,
+        father_nid: father_nid?.trim() || null,
+        father_occupation: father_occupation?.trim() || null,
+        mother_name: mother_name?.trim() || null,
+        mother_phone: mother_phone?.trim() || null,
+        mother_nid: mother_nid?.trim() || null,
+        mother_occupation: mother_occupation?.trim() || null,
+        guardian_name: guardian_name?.trim() || father_name?.trim() || null,
+        guardian_relation: guardian_relation?.trim() || 'Father',
+        guardian_phone: guardian_phone?.trim() || father_phone?.trim() || null,
+        guardian_email: guardian_email?.trim() || null,
+        guardian_address: guardian_address?.trim() || null,
+        ...(body.guardian_custom_fields || (body.custom_fields && typeof body.custom_fields === 'object' ? body.custom_fields : {}))
+      };
       await queryDb(
         `INSERT INTO website_student_guardians (
-            website_id, student_id,
-            father_name, father_phone, father_nid, father_occupation,
-            mother_name, mother_phone, mother_nid, mother_occupation,
-            guardian_name, guardian_relation, guardian_phone, guardian_email, guardian_address,
-            custom_fields,
-            updated_at
+            website_id, student_id, data, updated_at
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16::jsonb, CURRENT_TIMESTAMP)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
          ON CONFLICT (student_id)
          DO UPDATE SET
-            father_name = EXCLUDED.father_name,
-            father_phone = EXCLUDED.father_phone,
-            father_nid = EXCLUDED.father_nid,
-            father_occupation = EXCLUDED.father_occupation,
-            mother_name = EXCLUDED.mother_name,
-            mother_phone = EXCLUDED.mother_phone,
-            mother_nid = EXCLUDED.mother_nid,
-            mother_occupation = EXCLUDED.mother_occupation,
-            guardian_name = EXCLUDED.guardian_name,
-            guardian_relation = EXCLUDED.guardian_relation,
-            guardian_phone = EXCLUDED.guardian_phone,
-            guardian_email = EXCLUDED.guardian_email,
-            guardian_address = EXCLUDED.guardian_address,
-            custom_fields = COALESCE(website_student_guardians.custom_fields, '{}'::jsonb) || EXCLUDED.custom_fields,
+            data = website_student_guardians.data || EXCLUDED.data,
             updated_at = CURRENT_TIMESTAMP`,
-        [
-          website.id,
-          student.id,
-          father_name?.trim() || null,
-          father_phone?.trim() || null,
-          father_nid?.trim() || null,
-          father_occupation?.trim() || null,
-          mother_name?.trim() || null,
-          mother_phone?.trim() || null,
-          mother_nid?.trim() || null,
-          mother_occupation?.trim() || null,
-          guardian_name?.trim() || null,
-          guardian_relation?.trim() || 'Father',
-          guardian_phone?.trim() || null,
-          guardian_email?.trim() || null,
-          guardian_address?.trim() || null,
-          JSON.stringify(guardianCustom),
-        ]
+        [website.id, student.id, JSON.stringify(guardianPayload)]
       );
       return NextResponse.json({
         success: true,
@@ -347,156 +318,100 @@ async function handleSetupSubmission(request, context) {
       hashedPassword = await hashPassword(password);
     }
 
-    // 1. Upsert website_student_info
-    if (hashedPassword) {
-      await queryDb(
-        `INSERT INTO website_student_info (
-            website_id, student_id, password, name, email, number, gender, blood_group,
-            date_of_birth, religion, is_registered, is_verified, verification_status,
-            verified_at, verification_notes, updated_at
-         )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, TRUE, 'verified', CURRENT_TIMESTAMP, 'Verified via institutional email mailer OTP', CURRENT_TIMESTAMP)
-         ON CONFLICT (student_id)
-         DO UPDATE SET
-            password = EXCLUDED.password,
-            name = COALESCE(EXCLUDED.name, website_student_info.name),
-            email = EXCLUDED.email,
-            number = COALESCE(EXCLUDED.number, website_student_info.number),
-            gender = COALESCE(EXCLUDED.gender, website_student_info.gender),
-            blood_group = COALESCE(EXCLUDED.blood_group, website_student_info.blood_group),
-            date_of_birth = COALESCE(EXCLUDED.date_of_birth, website_student_info.date_of_birth),
-            religion = COALESCE(EXCLUDED.religion, website_student_info.religion),
-            is_registered = TRUE,
-            is_verified = TRUE,
-            verification_status = 'verified',
-            updated_at = CURRENT_TIMESTAMP`,
-        [
-          website.id,
-          student.id,
-          hashedPassword,
-          name?.trim() || null,
-          inputEmail,
-          number || null,
-          gender || null,
-          blood_group || null,
-          date_of_birth || null,
-          religion || null,
-        ]
-      );
-    } else {
-      await queryDb(
-        `UPDATE website_student_info
-         SET name = COALESCE($1, name),
-             email = $2,
-             number = COALESCE($3, number),
-             gender = COALESCE($4, gender),
-             blood_group = COALESCE($5, blood_group),
-             date_of_birth = COALESCE($6, date_of_birth),
-             religion = COALESCE($7, religion),
-             is_registered = TRUE,
-             is_verified = TRUE,
-             verification_status = 'verified',
-             updated_at = CURRENT_TIMESTAMP
-         WHERE student_id = $8 AND website_id = $9`,
-        [
-          name?.trim() || null,
-          inputEmail,
-          number || null,
-          gender || null,
-          blood_group || null,
-          date_of_birth || null,
-          religion || null,
-          student.id,
-          website.id,
-        ]
-      );
-    }
+    // 1. Upsert website_student_info (Modular)
+    const finalInfo = {
+      name: name?.trim() || null,
+      email: inputEmail,
+      number: number || null,
+      gender: gender || null,
+      blood_group: blood_group || null,
+      date_of_birth: date_of_birth || null,
+      religion: religion || null,
+      ...(body.custom_fields && typeof body.custom_fields === 'object' ? body.custom_fields : {})
+    };
 
-    // 2. In website_students, update and activate
     await queryDb(
-      `UPDATE website_students
-       SET email = $1,
-           name = COALESCE($2, name),
-           is_active = TRUE,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $3 AND website_id = $4`,
-      [inputEmail, name?.trim() || null, student.id, website.id]
-    );
-
-    // 3. Upsert website_student_addresses
-    await queryDb(
-      `INSERT INTO website_student_addresses (
-          website_id, student_id, present_address, permanent_address,
-          city, district, upazila, postal_code, country, updated_at
+      `INSERT INTO website_student_info (
+          website_id, student_id, data, is_registered, verification_status,
+          verification_notes, updated_at
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP)
+       VALUES ($1, $2, $3, TRUE, 'verified', 'Verified via institutional email mailer OTP', CURRENT_TIMESTAMP)
        ON CONFLICT (student_id)
        DO UPDATE SET
-          present_address = EXCLUDED.present_address,
-          permanent_address = EXCLUDED.permanent_address,
-          city = EXCLUDED.city,
-          district = EXCLUDED.district,
-          upazila = EXCLUDED.upazila,
-          postal_code = EXCLUDED.postal_code,
-          country = EXCLUDED.country,
+          data = website_student_info.data || EXCLUDED.data,
+          is_registered = TRUE,
+          verification_status = 'verified',
           updated_at = CURRENT_TIMESTAMP`,
-      [
-        website.id,
-        student.id,
-        present_address?.trim() || null,
-        permanent_address?.trim() || present_address?.trim() || null,
-        city?.trim() || null,
-        district?.trim() || null,
-        upazila?.trim() || null,
-        postal_code?.trim() || null,
-        country?.trim() || 'Bangladesh',
-      ]
+      [website.id, student.id, JSON.stringify(finalInfo)]
     );
 
-    // 4. Upsert website_student_guardians if guardian details provided
+    // 2. In website_students, update core and password
+    const studentUpdateFields = ['email = $1', 'name = COALESCE($2, name)', 'is_active = TRUE', 'is_registered = TRUE', 'is_verified = TRUE', 'updated_at = CURRENT_TIMESTAMP'];
+    const studentUpdateVals = [inputEmail, name?.trim() || null];
+    let sUpIdx = 3;
+    if (hashedPassword) {
+      studentUpdateFields.push(`password = $${sUpIdx++}`);
+      studentUpdateVals.push(hashedPassword);
+    }
+    studentUpdateVals.push(student.id, website.id);
+    await queryDb(
+      `UPDATE website_students
+       SET ${studentUpdateFields.join(', ')}
+       WHERE id = $${sUpIdx++} AND website_id = $${sUpIdx++}`,
+      studentUpdateVals
+    );
+
+    // 3. Upsert modular website_student_addresses
+    const addressPayload = {
+      present_address: present_address?.trim() || null,
+      permanent_address: permanent_address?.trim() || present_address?.trim() || null,
+      city: city?.trim() || null,
+      district: district?.trim() || null,
+      upazila: upazila?.trim() || null,
+      postal_code: postal_code?.trim() || null,
+      country: country?.trim() || 'Bangladesh',
+      ...(body.address_custom_fields && typeof body.address_custom_fields === 'object' ? body.address_custom_fields : {})
+    };
+    await queryDb(
+      `INSERT INTO website_student_addresses (
+          website_id, student_id, data, updated_at
+       )
+       VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+       ON CONFLICT (student_id)
+       DO UPDATE SET
+          data = website_student_addresses.data || EXCLUDED.data,
+          updated_at = CURRENT_TIMESTAMP`,
+      [website.id, student.id, JSON.stringify(addressPayload)]
+    );
+
+    // 4. Upsert modular website_student_guardians if guardian details provided
     if (father_name || mother_name || guardian_name) {
+      const finalGuardian = {
+        father_name: father_name?.trim() || null,
+        father_phone: father_phone?.trim() || null,
+        father_nid: father_nid?.trim() || null,
+        father_occupation: father_occupation?.trim() || null,
+        mother_name: mother_name?.trim() || null,
+        mother_phone: mother_phone?.trim() || null,
+        mother_nid: mother_nid?.trim() || null,
+        mother_occupation: mother_occupation?.trim() || null,
+        guardian_name: guardian_name?.trim() || father_name?.trim() || null,
+        guardian_relation: guardian_relation?.trim() || 'Father',
+        guardian_phone: guardian_phone?.trim() || father_phone?.trim() || null,
+        guardian_email: guardian_email?.trim() || null,
+        guardian_address: guardian_address?.trim() || null,
+        ...(body.guardian_custom_fields && typeof body.guardian_custom_fields === 'object' ? body.guardian_custom_fields : {})
+      };
       await queryDb(
         `INSERT INTO website_student_guardians (
-            website_id, student_id,
-            father_name, father_phone, father_nid, father_occupation,
-            mother_name, mother_phone, mother_nid, mother_occupation,
-            guardian_name, guardian_relation, guardian_phone, guardian_email, guardian_address,
-            updated_at
+            website_id, student_id, data, updated_at
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, CURRENT_TIMESTAMP)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
          ON CONFLICT (student_id)
          DO UPDATE SET
-            father_name = EXCLUDED.father_name,
-            father_phone = EXCLUDED.father_phone,
-            father_nid = EXCLUDED.father_nid,
-            father_occupation = EXCLUDED.father_occupation,
-            mother_name = EXCLUDED.mother_name,
-            mother_phone = EXCLUDED.mother_phone,
-            mother_nid = EXCLUDED.mother_nid,
-            mother_occupation = EXCLUDED.mother_occupation,
-            guardian_name = EXCLUDED.guardian_name,
-            guardian_relation = EXCLUDED.guardian_relation,
-            guardian_phone = EXCLUDED.guardian_phone,
-            guardian_email = EXCLUDED.guardian_email,
-            guardian_address = EXCLUDED.guardian_address,
+            data = website_student_guardians.data || EXCLUDED.data,
             updated_at = CURRENT_TIMESTAMP`,
-        [
-          website.id,
-          student.id,
-          father_name?.trim() || null,
-          father_phone?.trim() || null,
-          father_nid?.trim() || null,
-          father_occupation?.trim() || null,
-          mother_name?.trim() || null,
-          mother_phone?.trim() || null,
-          mother_nid?.trim() || null,
-          mother_occupation?.trim() || null,
-          guardian_name?.trim() || null,
-          guardian_relation?.trim() || 'Father',
-          guardian_phone?.trim() || null,
-          guardian_email?.trim() || null,
-          guardian_address?.trim() || null,
-        ]
+        [website.id, student.id, JSON.stringify(finalGuardian)]
       );
     }
 

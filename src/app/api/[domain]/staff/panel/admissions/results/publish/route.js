@@ -62,80 +62,51 @@ export async function enrollSelectedApplicant({ websiteId, circular, applicant, 
       // Temporary hashed password for initial setup
       const initialHashedPassword = await hashPassword(`Student@${applicant.id}!`);
 
-      // Insert website_student_info
+      // Insert modular website_student_info
+      const studentInfoData = {
+        name: applicant.applicant_name,
+        email: cleanEmail || null,
+        number: applicant.phone || null,
+        ...(applicant.info_data || {})
+      };
       await queryDb(
         `INSERT INTO website_student_info (
-          website_id, student_id, name, email, number,
-          gender, date_of_birth, admission_date, password,
-          verification_status, is_registered, is_verified
+          website_id, student_id, data, verification_status, is_registered, updated_at
         ) VALUES (
-          $1, $2, $3, $4, $5,
-          $6, $7, CURRENT_DATE, $8,
-          'pending_setup', FALSE, FALSE
+          $1, $2, $3, 'pending_setup', FALSE, CURRENT_TIMESTAMP
         )
         ON CONFLICT (student_id) DO UPDATE SET
-          name = EXCLUDED.name,
-          email = EXCLUDED.email,
-          number = EXCLUDED.number,
+          data = website_student_info.data || EXCLUDED.data,
           updated_at = CURRENT_TIMESTAMP`,
-        [
-          websiteId,
-          studentId,
-          applicant.applicant_name,
-          cleanEmail || null,
-          applicant.phone || null,
-          applicant.gender || 'Male',
-          applicant.date_of_birth || null,
-          initialHashedPassword
-        ]
+        [websiteId, studentId, JSON.stringify(studentInfoData)]
       );
 
-      // Insert website_student_addresses
+      // Insert modular website_student_addresses
+      const studentAddrData = {
+        ...(applicant.address_data || {})
+      };
       await queryDb(
         `INSERT INTO website_student_addresses (
-          website_id, student_id, present_address, permanent_address
-        ) VALUES ($1, $2, $3, $4)
+          website_id, student_id, data, updated_at
+        ) VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
         ON CONFLICT (student_id) DO UPDATE SET
-          present_address = EXCLUDED.present_address,
-          permanent_address = EXCLUDED.permanent_address,
+          data = website_student_addresses.data || EXCLUDED.data,
           updated_at = CURRENT_TIMESTAMP`,
-        [
-          websiteId,
-          studentId,
-          applicant.present_address || null,
-          applicant.permanent_address || applicant.present_address || null
-        ]
+        [websiteId, studentId, JSON.stringify(studentAddrData)]
       );
 
-      // Insert website_student_guardians
+      // Insert modular website_student_guardians
+      const studentGuardData = {
+        ...(applicant.guardian_data || {})
+      };
       await queryDb(
         `INSERT INTO website_student_guardians (
-          website_id, student_id, father_name, father_phone, father_occupation,
-          mother_name, mother_phone, mother_occupation,
-          guardian_name, guardian_phone, guardian_relation
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          website_id, student_id, data, updated_at
+        ) VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
         ON CONFLICT (student_id) DO UPDATE SET
-          father_name = EXCLUDED.father_name,
-          father_phone = EXCLUDED.father_phone,
-          mother_name = EXCLUDED.mother_name,
-          mother_phone = EXCLUDED.mother_phone,
-          guardian_name = EXCLUDED.guardian_name,
-          guardian_phone = EXCLUDED.guardian_phone,
-          guardian_relation = EXCLUDED.guardian_relation,
+          data = website_student_guardians.data || EXCLUDED.data,
           updated_at = CURRENT_TIMESTAMP`,
-        [
-          websiteId,
-          studentId,
-          applicant.father_name || null,
-          applicant.father_phone || null,
-          applicant.father_occupation || null,
-          applicant.mother_name || null,
-          applicant.mother_phone || null,
-          applicant.mother_occupation || null,
-          applicant.guardian_name || applicant.father_name || null,
-          applicant.guardian_phone || applicant.father_phone || null,
-          applicant.guardian_relation || 'Father'
-        ]
+        [websiteId, studentId, JSON.stringify(studentGuardData)]
       );
 
       // Insert picture if available
@@ -199,18 +170,19 @@ export async function autoPublishDueResults(websiteId) {
       // 1. Fetch candidates with status = 'selected' or 'accepted'
       const selRes = await queryDb(`
         SELECT a.id, a.application_no, a.exam_roll, a.roll_no, a.applicant_name, a.score,
-               a.selection_notes, a.email, a.phone, a.gender, a.date_of_birth,
+               a.selection_notes, a.email, a.phone,
+               inf.data AS info_data,
+               g.data AS guardian_data,
+               addr.data AS address_data,
                a.enrolled_student_id,
-               COALESCE(img.photo_url, inf.photo_url) AS photo_url,
-               COALESCE(img.photo_public_id, inf.photo_id) AS photo_id,
-               COALESCE(img.signature_url, inf.signature_url) AS signature_url,
-               COALESCE(img.signature_public_id, inf.signature_id) AS signature_id,
-               inf.father_name, inf.father_phone, inf.father_occupation,
-               inf.mother_name, inf.mother_phone, inf.mother_occupation,
-               inf.guardian_name, inf.guardian_phone, inf.guardian_relation,
-               inf.present_address, inf.permanent_address
+               img.photo_url,
+               img.photo_public_id,
+               img.signature_url,
+               img.signature_public_id
         FROM website_admission_applicants a
         LEFT JOIN website_admission_applicant_info inf ON inf.applicant_id = a.id
+        LEFT JOIN website_admission_applicant_guardians g ON g.applicant_id = a.id
+        LEFT JOIN website_admission_applicant_addresses addr ON addr.applicant_id = a.id
         LEFT JOIN website_admission_applicant_images img ON img.applicant_id = a.id
         WHERE a.website_id = $1 AND a.admission_id = $2 AND a.status IN ('selected', 'accepted', 'enrolled')
         ORDER BY a.score DESC NULLS LAST, a.created_at ASC
@@ -309,18 +281,19 @@ export async function POST(request, context) {
     // 1. Fetch only candidates with status = 'selected', 'accepted', or already 'enrolled'
     const selectedRes = await queryDb(`
       SELECT a.id, a.application_no, a.exam_roll, a.roll_no, a.applicant_name, a.score,
-             a.selection_notes, a.email, a.phone, a.gender, a.date_of_birth,
+             a.selection_notes, a.email, a.phone,
+             inf.data AS info_data,
+             g.data AS guardian_data,
+             addr.data AS address_data,
              a.enrolled_student_id,
-             COALESCE(img.photo_url, inf.photo_url) AS photo_url,
-             COALESCE(img.photo_public_id, inf.photo_id) AS photo_id,
-             COALESCE(img.signature_url, inf.signature_url) AS signature_url,
-             COALESCE(img.signature_public_id, inf.signature_id) AS signature_id,
-             inf.father_name, inf.father_phone, inf.father_occupation,
-             inf.mother_name, inf.mother_phone, inf.mother_occupation,
-             inf.guardian_name, inf.guardian_phone, inf.guardian_relation,
-             inf.present_address, inf.permanent_address
+             img.photo_url,
+             img.photo_public_id,
+             img.signature_url,
+             img.signature_public_id
       FROM website_admission_applicants a
       LEFT JOIN website_admission_applicant_info inf ON inf.applicant_id = a.id
+      LEFT JOIN website_admission_applicant_guardians g ON g.applicant_id = a.id
+      LEFT JOIN website_admission_applicant_addresses addr ON addr.applicant_id = a.id
       LEFT JOIN website_admission_applicant_images img ON img.applicant_id = a.id
       WHERE a.website_id = $1 AND a.admission_id = $2 AND a.status IN ('selected', 'accepted', 'enrolled')
       ORDER BY a.score DESC NULLS LAST, a.created_at ASC

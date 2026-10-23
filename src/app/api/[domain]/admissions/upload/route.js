@@ -30,9 +30,8 @@ export async function GET(request, context) {
         COALESCE(p.payment_status, 'unpaid') AS payment_status,
         COALESCE(p.amount, 500.00) AS fee_amount,
         COALESCE(p.currency, 'BDT') AS fee_currency,
-        COALESCE(img.photo_url, info.photo_url) AS photo_url,
-        COALESCE(img.signature_url, info.signature_url) AS signature_url,
-        info.father_name, info.mother_name,
+        img.photo_url,
+        img.signature_url,
         a.gender, a.date_of_birth
       FROM website_admission_applicants a
       JOIN website_admissions c ON a.admission_id = c.id
@@ -40,7 +39,6 @@ export async function GET(request, context) {
       LEFT JOIN website_sessions ses ON ses.id = c.session_id
       LEFT JOIN website_admission_fee_payments p ON p.applicant_id = a.id
       LEFT JOIN website_admission_applicant_images img ON img.applicant_id = a.id
-      LEFT JOIN website_admission_applicant_info info ON a.id = info.applicant_id
       WHERE a.website_id = $1 AND (${applicantId ? 'a.id = $2' : 'a.application_no = $2'})
       ORDER BY p.id DESC
       LIMIT 1
@@ -221,20 +219,6 @@ export async function POST(request, context) {
           updated_at = CURRENT_TIMESTAMP
       WHERE id = $2 AND website_id = $3
     `, [generatedExamRoll, appId, website.id]);
-
-    // 6. Also update website_admission_applicant_info for legacy fallback compatibility
-    await queryDb(`
-      UPDATE website_admission_applicant_info
-      SET photo_url = $1, photo_id = $2, signature_url = $3, signature_id = $4, updated_at = CURRENT_TIMESTAMP
-      WHERE applicant_id = $5 AND website_id = $6
-    `, [
-      photoUrl,
-      photoPublicId,
-      signatureUrl,
-      signaturePublicId,
-      appId,
-      website.id
-    ]);
 
     return NextResponse.json({
       success: true,

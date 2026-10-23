@@ -22,17 +22,34 @@ export async function GET(request, context) {
       SELECT a.*,
              adm.title AS circular_title, adm.class_id AS circular_class_id, adm.session_id AS circular_session_id,
              c.name AS class_name,
-             inf.father_name, inf.father_phone, inf.mother_name,
-             inf.guardian_name, inf.guardian_phone,
-             inf.present_address, inf.permanent_address,
-             inf.previous_school, inf.photo_url, inf.signature_url
+             inf.data AS info_data,
+             grd.data AS guardian_data,
+             addr.data AS address_data,
+             grd.data->>'father_name' AS father_name,
+             grd.data->>'father_phone' AS father_phone,
+             grd.data->>'mother_name' AS mother_name,
+             grd.data->>'guardian_name' AS guardian_name,
+             grd.data->>'guardian_phone' AS guardian_phone,
+             addr.data->>'present_address' AS present_address,
+             addr.data->>'permanent_address' AS permanent_address,
+             img.photo_url, img.signature_url
       FROM website_admission_applicants a
       JOIN website_admissions adm ON adm.id = a.admission_id
       LEFT JOIN website_classes c ON c.id = adm.class_id
       LEFT JOIN website_admission_applicant_info inf ON inf.applicant_id = a.id
+      LEFT JOIN website_admission_applicant_guardians grd ON grd.applicant_id = a.id
+      LEFT JOIN website_admission_applicant_addresses addr ON addr.applicant_id = a.id
+      LEFT JOIN website_admission_applicant_images img ON img.applicant_id = a.id
       WHERE a.website_id = $1 AND a.status = 'selected'
       ORDER BY a.merit_position ASC NULLS LAST, a.created_at ASC
     `, [websiteId]);
+
+    const enrichedCandidates = candidatesRes.rows.map(row => ({
+      ...row,
+      ...(row.info_data || {}),
+      ...(row.guardian_data || {}),
+      ...(row.address_data || {})
+    }));
 
     // Also fetch enrolled history
     const enrolledRes = await queryDb(`
@@ -56,6 +73,7 @@ export async function GET(request, context) {
 
     return NextResponse.json({
       success: true,
+      candidates: candidatesRes.rows,
       ready_candidates: candidatesRes.rows,
       recently_enrolled: enrolledRes.rows,
       classes: classesRes.rows,
@@ -97,10 +115,21 @@ export async function POST(request, context) {
 
     // 1. Fetch applicant and verify status is 'selected'
     const appRes = await queryDb(`
-      SELECT a.*, inf.*, adm.class_id AS circular_class_id, adm.session_id AS circular_session_id
+      SELECT a.*,
+             inf.data AS info_data,
+             g.data AS guardian_data,
+             addr.data AS address_data,
+             img.photo_url,
+             img.photo_public_id,
+             img.signature_url,
+             img.signature_public_id,
+             adm.class_id AS circular_class_id, adm.session_id AS circular_session_id
       FROM website_admission_applicants a
       JOIN website_admissions adm ON adm.id = a.admission_id
       LEFT JOIN website_admission_applicant_info inf ON inf.applicant_id = a.id
+      LEFT JOIN website_admission_applicant_guardians g ON g.applicant_id = a.id
+      LEFT JOIN website_admission_applicant_addresses addr ON addr.applicant_id = a.id
+      LEFT JOIN website_admission_applicant_images img ON img.applicant_id = a.id
       WHERE a.id = $1 AND a.website_id = $2
     `, [appId, auth.website.id]);
 
@@ -167,86 +196,65 @@ export async function POST(request, context) {
 
     const student = studentRes.rows[0];
 
-    // 3. Create website_student_info with candidate data and temporary password
-    const tempPasswordHash = await hashPassword(`Std@${studentUniqueId}`);
-    const setupToken = crypto.randomBytes(16).toString('hex');
-    const tokenExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days setup window
+    // 3. Create modular website_student_info with candidate data
+    const studentInfoData = {
+      name: candidate.applicant_name,
+      email: candidate.email.toLowerCase().trim(),
+      phone: candidate.phone,
+      ...(candidate.info_data || {})
+    };
 
     await queryDb(`
       INSERT INTO website_student_info (
-        website_id, student_id, name, email, number, gender,
-        date_of_birth, admission_date, password, verification_token,
-        verification_token_expires, verification_status, is_registered, is_verified,
-        verified_by_staff_id, verified_at, verification_notes
+        website_id, student_id, data, verification_status, is_registered,
+        verification_notes, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6,
-        $7, CURRENT_DATE, $8, $9,
-        $10, 'pending_setup', FALSE, TRUE,
-        $11, CURRENT_TIMESTAMP, $12
+        $1, $2, $3, 'pending_setup', FALSE,
+        $4, CURRENT_TIMESTAMP
       )
       ON CONFLICT (student_id) DO UPDATE SET
-        name = EXCLUDED.name,
-        email = EXCLUDED.email,
-        number = EXCLUDED.number,
-        gender = EXCLUDED.gender,
-        date_of_birth = EXCLUDED.date_of_birth,
-        verification_token = EXCLUDED.verification_token,
-        verification_token_expires = EXCLUDED.verification_token_expires,
+        data = website_student_info.data || EXCLUDED.data,
         updated_at = CURRENT_TIMESTAMP
     `, [
       auth.website.id,
       student.id,
-      candidate.applicant_name,
-      candidate.email.toLowerCase().trim(),
-      candidate.phone,
-      candidate.gender || 'Male',
-      candidate.date_of_birth,
-      tempPasswordHash,
-      setupToken,
-      tokenExpires,
-      auth.user?.id || null,
+      JSON.stringify(studentInfoData),
       `Manually enrolled from admission application #${candidate.application_no}`
     ]);
 
-    // 4. Copy address info if exists
-    if (candidate.present_address || candidate.permanent_address) {
-      await queryDb(`
-        INSERT INTO website_student_addresses (
-          website_id, student_id, present_address, permanent_address
-        ) VALUES (
-          $1, $2, $3, $4
-        )
-        ON CONFLICT DO NOTHING
-      `, [
-        auth.website.id,
-        student.id,
-        candidate.present_address || 'Same as permanent',
-        candidate.permanent_address || candidate.present_address || ''
-      ]);
-    }
+    // 4. Copy modular address info
+    const studentAddrData = {
+      ...(candidate.address_data || {})
+    };
+    await queryDb(`
+      INSERT INTO website_student_addresses (
+        website_id, student_id, data, updated_at
+      ) VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+      ON CONFLICT (student_id) DO UPDATE SET
+        data = website_student_addresses.data || EXCLUDED.data,
+        updated_at = CURRENT_TIMESTAMP
+    `, [
+      auth.website.id,
+      student.id,
+      JSON.stringify(studentAddrData)
+    ]);
 
-    // 5. Copy guardian info if exists
-    if (candidate.father_name || candidate.mother_name || candidate.guardian_name) {
-      await queryDb(`
-        INSERT INTO website_student_guardians (
-          website_id, student_id, father_name, father_phone, mother_name,
-          guardian_name, guardian_phone, guardian_relation
-        ) VALUES (
-          $1, $2, $3, $4, $5,
-          $6, $7, $8
-        )
-        ON CONFLICT DO NOTHING
-      `, [
-        auth.website.id,
-        student.id,
-        candidate.father_name,
-        candidate.father_phone,
-        candidate.mother_name,
-        candidate.guardian_name || candidate.father_name,
-        candidate.guardian_phone || candidate.father_phone,
-        candidate.guardian_relation || 'Father'
-      ]);
-    }
+    // 5. Copy modular guardian info
+    const studentGuardData = {
+      ...(candidate.guardian_data || {})
+    };
+    await queryDb(`
+      INSERT INTO website_student_guardians (
+        website_id, student_id, data, updated_at
+      ) VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+      ON CONFLICT (student_id) DO UPDATE SET
+        data = website_student_guardians.data || EXCLUDED.data,
+        updated_at = CURRENT_TIMESTAMP
+    `, [
+      auth.website.id,
+      student.id,
+      JSON.stringify(studentGuardData)
+    ]);
 
     // 6. Copy photo and signature if uploaded
     if (candidate.photo_url) {
@@ -262,6 +270,9 @@ export async function POST(request, context) {
         INSERT INTO website_student_signatures (
           website_id, student_id, signature_url, signature_id
         ) VALUES ($1, $2, $3, $4)
+        ON CONFLICT (student_id) DO UPDATE SET
+          signature_url = EXCLUDED.signature_url,
+          updated_at = CURRENT_TIMESTAMP
       `, [auth.website.id, student.id, candidate.signature_url, candidate.signature_id || null]);
     }
 

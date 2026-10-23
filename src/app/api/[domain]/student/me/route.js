@@ -23,14 +23,23 @@ export async function GET(request, context) {
       `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
               s.class_id, s.section_id, s.session_id, s.is_active,
               s.created_at, s.updated_at,
-              i.name, i.email, i.number, i.gender, i.blood_group,
-              i.date_of_birth, i.religion, i.admission_date,
-              i.is_registered, i.is_verified, i.verification_status,
+              COALESCE(s.name, i.data->>'name') AS name,
+              COALESCE(s.email, i.data->>'email') AS email,
+              COALESCE(s.number, i.data->>'number') AS number,
+              COALESCE(s.gender, i.data->>'gender') AS gender,
+              COALESCE(s.blood_group, i.data->>'blood_group') AS blood_group,
+              COALESCE(s.date_of_birth, (i.data->>'date_of_birth')::date) AS date_of_birth,
+              COALESCE(s.religion, i.data->>'religion') AS religion,
+              COALESCE(s.admission_date, (i.data->>'admission_date')::date) AS admission_date,
+              COALESCE(i.is_registered, s.is_registered) AS is_registered,
+              s.is_verified,
+              COALESCE(i.verification_status, s.verification_status) AS verification_status,
+              i.data AS info_data,
               c.name AS class_name, c.code AS class_code,
               sec.name AS section_name,
               ses.name AS session_name
        FROM website_students s
-       JOIN website_student_info i ON s.id = i.student_id
+       LEFT JOIN website_student_info i ON s.id = i.student_id
        LEFT JOIN website_classes c ON s.class_id = c.id
        LEFT JOIN website_sections sec ON s.section_id = sec.id
        LEFT JOIN website_sessions ses ON s.session_id = ses.id
@@ -52,8 +61,8 @@ export async function GET(request, context) {
       queryDb(`SELECT * FROM website_student_signatures WHERE student_id = $1 LIMIT 1`, [student.id]),
     ]);
 
-    const address = addrRes.rows[0] || null;
-    const guardian = guardRes.rows[0] || null;
+    const address = addrRes.rows[0] ? { ...addrRes.rows[0], ...(addrRes.rows[0].data || {}) } : null;
+    const guardian = guardRes.rows[0] ? { ...guardRes.rows[0], ...(guardRes.rows[0].data || {}) } : null;
     const picture = picRes.rows[0] || null;
     const signature = sigRes.rows[0] || null;
 

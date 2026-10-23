@@ -77,12 +77,18 @@ export async function GET(request, context) {
              ses.name AS session_name,
              st.name AS verified_by_staff_name,
              -- Address
-             addr.present_address, addr.permanent_address, addr.city, addr.district,
-             addr.upazila, addr.postal_code, addr.country,
+             addr.data AS address_data,
+             addr.data->>'present_address' AS present_address,
+             addr.data->>'permanent_address' AS permanent_address,
+             addr.data->>'district' AS district,
              -- Guardian
-             g.father_name, g.father_phone, g.father_nid, g.father_occupation,
-             g.mother_name, g.mother_phone, g.mother_nid, g.mother_occupation,
-             g.guardian_name, g.guardian_relation, g.guardian_phone, g.guardian_email, g.guardian_address,
+             g.data AS guardian_data,
+             g.data->>'father_name' AS father_name,
+             g.data->>'father_phone' AS father_phone,
+             g.data->>'mother_name' AS mother_name,
+             g.data->>'guardian_name' AS guardian_name,
+             g.data->>'guardian_phone' AS guardian_phone,
+             i.data AS info_data,
              -- Pictures & Signature
              p.image_url AS photo_url,
              sig.signature_url

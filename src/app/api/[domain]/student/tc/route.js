@@ -21,11 +21,11 @@ export async function GET(request, context) {
     // Student profile info
     const studentRes = await queryDb(
       `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.class_id, s.section_id,
-              i.name, i.email, i.number, i.date_of_birth, i.admission_date,
+              COALESCE(s.name, i.data->>'name') AS name, s.email, s.number, s.date_of_birth, s.admission_date,
               c.name AS class_name, sec.name AS section_name, ses.name AS session_name,
-              g.father_name, g.mother_name, g.guardian_name
+              g.data->>'father_name' AS father_name, g.data->>'mother_name' AS mother_name, g.data->>'guardian_name' AS guardian_name
        FROM website_students s
-       JOIN website_student_info i ON i.student_id = s.id
+       LEFT JOIN website_student_info i ON i.student_id = s.id
        LEFT JOIN website_student_guardians g ON g.student_id = s.id
        LEFT JOIN website_classes c ON c.id = s.class_id AND c.website_id = s.website_id
        LEFT JOIN website_sections sec ON sec.id = s.section_id AND sec.website_id = s.website_id

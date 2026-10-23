@@ -23,11 +23,16 @@ export async function GET(request, context) {
     // Fetch student info
     const studentRes = await queryDb(
       `SELECT s.id, s.registration_no, s.roll_no, s.class_id, s.section_id,
-              i.name, i.father_name, i.mother_name, i.gender, i.date_of_birth,
+              COALESCE(s.name, i.data->>'name') AS name,
+              COALESCE(g.data->>'father_name', '') AS father_name,
+              COALESCE(g.data->>'mother_name', '') AS mother_name,
+              COALESCE(s.gender, i.data->>'gender') AS gender,
+              COALESCE(s.date_of_birth, (i.data->>'date_of_birth')::date) AS date_of_birth,
               c.name AS class_name,
               sec.name AS section_name
        FROM website_students s
-       JOIN website_student_info i ON i.student_id = s.id
+       LEFT JOIN website_student_info i ON i.student_id = s.id
+       LEFT JOIN website_student_guardians g ON g.student_id = s.id
        LEFT JOIN website_classes c ON c.id = s.class_id
        LEFT JOIN website_sections sec ON sec.id = s.section_id
        WHERE s.id = $1 AND s.website_id = $2
@@ -59,11 +64,11 @@ export async function GET(request, context) {
       const res = await queryDb(
         `SELECT t.*,
                 s.registration_no, s.roll_no,
-                i.name AS student_name,
+                COALESCE(s.name, i.data->>'name') AS student_name,
                 c.name AS class_name
          FROM website_student_testimonials t
          JOIN website_students s ON s.id = t.student_id
-         JOIN website_student_info i ON i.student_id = s.id
+         LEFT JOIN website_student_info i ON i.student_id = s.id
          LEFT JOIN website_classes c ON c.id = s.class_id
          WHERE t.website_id = $1 AND t.student_id = $2
          ORDER BY t.created_at DESC`,

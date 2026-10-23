@@ -76,6 +76,11 @@ export const staffNavData = [
         "path": "/student-data"
       },
       {
+        "title": "Form Requirements & Fields",
+        "module": "sis",
+        "path": "/student-form-fields"
+      },
+      {
         "title": "Registration",
         "module": "sis",
         "path": "/student-registration"
@@ -190,6 +195,11 @@ export const staffNavData = [
         "title": "Circulars & Fees",
         "module": "admissions",
         "path": "/admission-circulars"
+      },
+      {
+        "title": "Form Requirements & Fields",
+        "module": "admissions",
+        "path": "/admission-form-fields"
       },
       {
         "title": "Admit Card Templates",

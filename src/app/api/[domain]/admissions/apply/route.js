@@ -320,69 +320,69 @@ export async function POST(request, context) {
       applicant = insertApp.rows[0];
     }
 
-    // 3. Upsert into website_admission_applicant_info with all modular details and custom_fields
+    // 3. Upsert modular data into website_admission_applicant_info
+    const personalData = {
+      gender: gender || 'Male',
+      date_of_birth: date_of_birth || null,
+      blood_group: blood_group || null,
+      religion: body.religion || null,
+      last_class: resolvedLastClass,
+      last_class_grade: resolvedLastGrade,
+      last_institution: resolvedLastInst,
+      ...submittedCustom
+    };
+
     await queryDb(`
-      INSERT INTO website_admission_applicant_info (
-        website_id, applicant_id, gender, date_of_birth, blood_group, religion,
-        father_name, father_phone, father_occupation,
-        mother_name, mother_phone, mother_occupation,
-        guardian_name, guardian_phone, guardian_relation,
-        present_address, permanent_address,
-        last_class, last_class_grade, last_institution,
-        custom_fields
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6,
-        $7, $8, $9,
-        $10, $11, $12,
-        $13, $14, $15,
-        $16, $17,
-        $18, $19, $20,
-        $21
-      )
+      INSERT INTO website_admission_applicant_info (website_id, applicant_id, data, updated_at)
+      VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
       ON CONFLICT (applicant_id) DO UPDATE SET
-        gender = EXCLUDED.gender,
-        date_of_birth = EXCLUDED.date_of_birth,
-        blood_group = EXCLUDED.blood_group,
-        religion = EXCLUDED.religion,
-        father_name = EXCLUDED.father_name,
-        father_phone = EXCLUDED.father_phone,
-        father_occupation = EXCLUDED.father_occupation,
-        mother_name = EXCLUDED.mother_name,
-        mother_phone = EXCLUDED.mother_phone,
-        mother_occupation = EXCLUDED.mother_occupation,
-        guardian_name = EXCLUDED.guardian_name,
-        guardian_phone = EXCLUDED.guardian_phone,
-        guardian_relation = EXCLUDED.guardian_relation,
-        present_address = EXCLUDED.present_address,
-        permanent_address = EXCLUDED.permanent_address,
-        last_class = EXCLUDED.last_class,
-        last_class_grade = EXCLUDED.last_class_grade,
-        last_institution = EXCLUDED.last_institution,
-        custom_fields = EXCLUDED.custom_fields,
+        data = website_admission_applicant_info.data || EXCLUDED.data,
         updated_at = CURRENT_TIMESTAMP
-    `, [
-      website.id,
-      applicant.id,
-      gender || 'Male',
-      date_of_birth || null,
-      blood_group || null,
-      body.religion || null,
-      father_name || null,
-      father_phone || null,
-      father_occupation || null,
-      mother_name || null,
-      mother_phone || null,
-      mother_occupation || null,
-      guardian_name || father_name || null,
-      guardian_phone || father_phone || null,
-      guardian_relation || 'Father',
-      present_address || address || null,
-      permanent_address || address || null,
-      resolvedLastClass,
-      resolvedLastGrade,
-      resolvedLastInst,
-      JSON.stringify(submittedCustom)
-    ]);
+    `, [website.id, applicant.id, JSON.stringify(personalData)]);
+
+    // 3b. Upsert modular data into website_admission_applicant_guardians
+    const guardianData = {
+      father_name: father_name || null,
+      father_phone: father_phone || null,
+      father_occupation: father_occupation || null,
+      mother_name: mother_name || null,
+      mother_phone: mother_phone || null,
+      mother_occupation: mother_occupation || null,
+      guardian_name: guardian_name || father_name || null,
+      guardian_phone: guardian_phone || father_phone || null,
+      guardian_relation: guardian_relation || 'Father',
+      guardian_email: body.guardian_email || null,
+      guardian_address: body.guardian_address || null,
+      ...submittedCustom
+    };
+
+    await queryDb(`
+      INSERT INTO website_admission_applicant_guardians (website_id, applicant_id, data, updated_at)
+      VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+      ON CONFLICT (applicant_id) DO UPDATE SET
+        data = website_admission_applicant_guardians.data || EXCLUDED.data,
+        updated_at = CURRENT_TIMESTAMP
+    `, [website.id, applicant.id, JSON.stringify(guardianData)]);
+
+    // 3c. Upsert modular data into website_admission_applicant_addresses
+    const addressData = {
+      present_address: present_address || address || null,
+      permanent_address: permanent_address || address || null,
+      city: body.city || null,
+      district: body.district || null,
+      upazila: body.upazila || null,
+      postal_code: body.postal_code || null,
+      country: body.country || 'Bangladesh',
+      ...submittedCustom
+    };
+
+    await queryDb(`
+      INSERT INTO website_admission_applicant_addresses (website_id, applicant_id, data, updated_at)
+      VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+      ON CONFLICT (applicant_id) DO UPDATE SET
+        data = website_admission_applicant_addresses.data || EXCLUDED.data,
+        updated_at = CURRENT_TIMESTAMP
+    `, [website.id, applicant.id, JSON.stringify(addressData)]);
 
     // 4. Upsert pending payment record in website_admission_fee_payments
     const feeAmount = parseFloat(circular.fee_amount) || 500.00;

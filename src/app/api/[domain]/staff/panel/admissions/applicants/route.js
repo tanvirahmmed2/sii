@@ -37,13 +37,19 @@ export async function GET(request, context) {
              COALESCE(p.amount, af.amount, 0.00) AS fee_amount,
              COALESCE(p.currency, af.currency, 'BDT') AS fee_currency,
              p.transaction_id, p.paid_date, p.gateway_code, p.invoice_no,
-             COALESCE(img.photo_url, inf.photo_url) AS photo_url,
-             COALESCE(img.signature_url, inf.signature_url) AS signature_url,
-             inf.father_name, inf.father_phone, inf.father_occupation,
-             inf.mother_name, inf.mother_phone, inf.mother_occupation,
-             inf.guardian_name, inf.guardian_phone, inf.guardian_relation,
-             inf.present_address, inf.permanent_address,
-             inf.submitted_at
+             img.photo_url,
+             img.signature_url,
+             inf.data AS info_data,
+             grd.data AS guardian_data,
+             addr.data AS address_data,
+             grd.data->>'father_name' AS father_name,
+             grd.data->>'father_phone' AS father_phone,
+             grd.data->>'mother_name' AS mother_name,
+             grd.data->>'guardian_name' AS guardian_name,
+             grd.data->>'guardian_phone' AS guardian_phone,
+             addr.data->>'present_address' AS present_address,
+             addr.data->>'permanent_address' AS permanent_address,
+             a.created_at AS submitted_at
       FROM website_admission_applicants a
       JOIN website_admissions adm ON adm.id = a.admission_id
       LEFT JOIN website_classes c ON c.id = adm.class_id
@@ -53,6 +59,8 @@ export async function GET(request, context) {
       LEFT JOIN website_admission_fee_payments p ON p.applicant_id = a.id
       LEFT JOIN website_admission_applicant_images img ON img.applicant_id = a.id
       LEFT JOIN website_admission_applicant_info inf ON inf.applicant_id = a.id
+      LEFT JOIN website_admission_applicant_guardians grd ON grd.applicant_id = a.id
+      LEFT JOIN website_admission_applicant_addresses addr ON addr.applicant_id = a.id
       WHERE a.website_id = $1
     `;
 
@@ -151,9 +159,16 @@ export async function GET(request, context) {
       (stats.enrolled || 0) +
       (stats.paid || 0);
 
+    const enrichedApplicants = res.rows.map(row => ({
+      ...row,
+      ...(row.info_data || {}),
+      ...(row.guardian_data || {}),
+      ...(row.address_data || {})
+    }));
+
     return NextResponse.json({
       success: true,
-      applicants: res.rows,
+      applicants: enrichedApplicants,
       counts: stats,
       status_counts: {
         all: completedEligibleTotal,

@@ -34,12 +34,11 @@ export async function POST(request, context) {
     // 1. Query for existing applicant for this circular
     const appRes = await queryDb(
       `SELECT a.*,
-              i.father_name, i.father_phone, i.father_occupation,
-              i.mother_name, i.mother_phone, i.mother_occupation,
-              i.guardian_name, i.guardian_phone, i.guardian_relation,
-              i.present_address, i.permanent_address,
-              COALESCE(img.photo_url, i.photo_url) AS photo_url,
-              COALESCE(img.signature_url, i.signature_url) AS signature_url,
+              i.data AS info_data,
+              g.data AS guardian_data,
+              addr.data AS address_data,
+              img.photo_url,
+              img.signature_url,
               pay.payment_status, pay.amount AS fee_amount, pay.currency AS fee_currency,
               pay.transaction_id, pay.invoice_no,
               c.title AS circular_title, c.selection_method, c.exam_date, c.result_date,
@@ -48,6 +47,8 @@ export async function POST(request, context) {
               ex.instructions AS exam_instructions
        FROM website_admission_applicants a
        LEFT JOIN website_admission_applicant_info i ON i.applicant_id = a.id
+       LEFT JOIN website_admission_applicant_guardians g ON g.applicant_id = a.id
+       LEFT JOIN website_admission_applicant_addresses addr ON addr.applicant_id = a.id
        LEFT JOIN website_admission_applicant_images img ON img.applicant_id = a.id
        LEFT JOIN website_admission_fee_payments pay ON pay.applicant_id = a.id
        LEFT JOIN website_admissions c ON c.id = a.admission_id
@@ -60,6 +61,9 @@ export async function POST(request, context) {
 
     if (appRes.rows.length > 0) {
       const applicant = appRes.rows[0];
+      const gData = applicant.guardian_data || {};
+      const addrData = applicant.address_data || {};
+      const iData = applicant.info_data || {};
 
       // Determine step based on applicant status
       let currentStep = 'info';
@@ -106,17 +110,20 @@ export async function POST(request, context) {
           last_class: applicant.last_class,
           last_class_grade: applicant.last_class_grade,
           last_institution: applicant.last_institution,
-          father_name: applicant.father_name,
-          father_phone: applicant.father_phone,
-          father_occupation: applicant.father_occupation,
-          mother_name: applicant.mother_name,
-          mother_phone: applicant.mother_phone,
-          mother_occupation: applicant.mother_occupation,
-          guardian_name: applicant.guardian_name,
-          guardian_phone: applicant.guardian_phone,
-          guardian_relation: applicant.guardian_relation,
-          present_address: applicant.present_address,
-          permanent_address: applicant.permanent_address,
+          ...iData,
+          ...gData,
+          ...addrData,
+          father_name: gData.father_name || iData.father_name || '',
+          father_phone: gData.father_phone || iData.father_phone || '',
+          father_occupation: gData.father_occupation || iData.father_occupation || '',
+          mother_name: gData.mother_name || iData.mother_name || '',
+          mother_phone: gData.mother_phone || iData.mother_phone || '',
+          mother_occupation: gData.mother_occupation || iData.mother_occupation || '',
+          guardian_name: gData.guardian_name || iData.guardian_name || '',
+          guardian_phone: gData.guardian_phone || iData.guardian_phone || '',
+          guardian_relation: gData.guardian_relation || iData.guardian_relation || '',
+          present_address: addrData.present_address || iData.present_address || '',
+          permanent_address: addrData.permanent_address || iData.permanent_address || '',
           photo_url: applicant.photo_url,
           signature_url: applicant.signature_url,
           is_admit_card_issued: applicant.is_admit_card_issued,

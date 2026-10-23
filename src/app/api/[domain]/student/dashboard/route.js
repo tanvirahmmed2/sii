@@ -30,13 +30,15 @@ export async function GET(request, context) {
     // 1. Fetch student basic info
     const studentRes = await queryDb(
       `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.class_id, s.section_id, s.session_id,
-              i.name, i.email, i.number,
+              COALESCE(s.name, i.data->>'name') AS name,
+              COALESCE(s.email, i.data->>'email') AS email,
+              COALESCE(s.number, i.data->>'number') AS number,
               c.name AS class_name,
               sec.name AS section_name,
               ses.name AS session_name,
               p.image_url AS photo_url
        FROM website_students s
-       JOIN website_student_info i ON i.student_id = s.id
+       LEFT JOIN website_student_info i ON i.student_id = s.id
        LEFT JOIN website_classes c ON c.id = s.class_id AND c.website_id = s.website_id
        LEFT JOIN website_sections sec ON sec.id = s.section_id AND sec.website_id = s.website_id
        LEFT JOIN website_sessions ses ON ses.id = s.session_id AND ses.website_id = s.website_id

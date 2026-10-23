@@ -28,14 +28,17 @@ export async function POST(request, context) {
     // Verify student exists in website_students matching the email or registration number
     let studentRes = await queryDb(
       `SELECT s.id, s.registration_no, s.roll_no, s.email, s.is_active,
-              i.name, i.email AS info_email, i.is_registered, i.is_verified,
+              COALESCE(s.name, i.data->>'name') AS name,
+              COALESCE(s.email, i.data->>'email') AS info_email,
+              COALESCE(i.is_registered, s.is_registered) AS is_registered,
+              s.is_verified,
               c.name AS class_name, ses.name AS session_name
        FROM website_students s
        LEFT JOIN website_student_info i ON s.id = i.student_id
        LEFT JOIN website_classes c ON s.class_id = c.id
        LEFT JOIN website_sessions ses ON s.session_id = ses.id
        WHERE s.website_id = $1 
-         AND LOWER(TRIM(COALESCE(s.email, i.email))) = $2
+         AND LOWER(TRIM(COALESCE(s.email, i.data->>'email'))) = $2
          ${cleanRegNo ? 'AND (s.registration_no = $3 OR s.roll_no = $3 OR s.student_unique_id = $3)' : ''}
        LIMIT 1`,
       cleanRegNo ? [website.id, cleanEmail, cleanRegNo] : [website.id, cleanEmail]
@@ -45,7 +48,10 @@ export async function POST(request, context) {
     if (studentRes.rows.length === 0 && cleanRegNo) {
       studentRes = await queryDb(
         `SELECT s.id, s.registration_no, s.roll_no, s.email, s.is_active,
-                i.name, i.email AS info_email, i.is_registered, i.is_verified,
+                COALESCE(s.name, i.data->>'name') AS name,
+                COALESCE(s.email, i.data->>'email') AS info_email,
+                COALESCE(i.is_registered, s.is_registered) AS is_registered,
+                s.is_verified,
                 c.name AS class_name, ses.name AS session_name
          FROM website_students s
          LEFT JOIN website_student_info i ON s.id = i.student_id

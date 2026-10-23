@@ -71,9 +71,12 @@ export async function GET(request, context) {
       return NextResponse.json({
         success: true,
         payload: {
-          student,
-          address: addrRes.rows[0] || null,
-          guardian: guardRes.rows[0] || null,
+          student: {
+            ...student,
+            ...(student.info_data || {})
+          },
+          address: addrRes.rows[0] ? { ...addrRes.rows[0], ...(addrRes.rows[0].data || {}) } : null,
+          guardian: guardRes.rows[0] ? { ...guardRes.rows[0], ...(guardRes.rows[0].data || {}) } : null,
           pictures: picsRes.rows,
           signature: sigRes.rows[0] || null,
         },
@@ -148,11 +151,17 @@ export async function GET(request, context) {
              sec.name AS section_name,
              ses.name AS session_name,
              p.image_url AS primary_photo_url,
-             g.father_name, g.father_phone, g.father_nid, g.father_occupation,
-             g.mother_name, g.mother_phone, g.mother_nid, g.mother_occupation,
-             g.guardian_name, g.guardian_phone, g.guardian_relation, g.guardian_email, g.guardian_address,
-             addr.present_address, addr.permanent_address,
-             addr.city, addr.district, addr.upazila, addr.postal_code, addr.country
+             g.data AS guardian_data,
+             g.data->>'father_name' AS father_name,
+             g.data->>'father_phone' AS father_phone,
+             g.data->>'mother_name' AS mother_name,
+             g.data->>'guardian_name' AS guardian_name,
+             g.data->>'guardian_phone' AS guardian_phone,
+             addr.data AS address_data,
+             addr.data->>'present_address' AS present_address,
+             addr.data->>'permanent_address' AS permanent_address,
+             addr.data->>'district' AS district,
+             i.data AS info_data
       FROM website_students s
       LEFT JOIN website_student_info i ON s.id = i.student_id
       LEFT JOIN website_departments dept ON s.department_id = dept.id
@@ -509,124 +518,65 @@ export async function PUT(request, context) {
       );
     }
 
-    // Personal & Info fields in website_student_info
-    const iFields = [];
-    const iValues = [website.id, studentId];
-    let iIdx = 3;
+    // Personal & Info fields in website_student_info (Modular)
+    const infoPayload = {
+      ...(body.name !== undefined ? { name: body.name?.trim() || null } : {}),
+      ...(cleanUpdateEmail !== undefined ? { email: cleanUpdateEmail } : {}),
+      ...(body.number !== undefined ? { number: body.number?.trim() || null } : {}),
+      ...(body.gender !== undefined ? { gender: body.gender || null } : {}),
+      ...(body.blood_group !== undefined ? { blood_group: body.blood_group || null } : {}),
+      ...(body.date_of_birth !== undefined ? { date_of_birth: body.date_of_birth || null } : {}),
+      ...(body.religion !== undefined ? { religion: body.religion || null } : {}),
+      ...(body.info || body.custom_fields || {})
+    };
 
-    if (body.name !== undefined) {
-      iFields.push(`name = $${iIdx++}`);
-      iValues.push(body.name?.trim() || null);
-    }
-    if (cleanUpdateEmail !== undefined) {
-      iFields.push(`email = $${iIdx++}`);
-      iValues.push(cleanUpdateEmail);
-    }
-    if (body.number !== undefined) {
-      iFields.push(`number = $${iIdx++}`);
-      iValues.push(body.number?.trim() || null);
-    }
-    if (body.gender !== undefined) {
-      iFields.push(`gender = $${iIdx++}`);
-      iValues.push(body.gender || null);
-    }
-    if (body.blood_group !== undefined) {
-      iFields.push(`blood_group = $${iIdx++}`);
-      iValues.push(body.blood_group || null);
-    }
-    if (body.date_of_birth !== undefined) {
-      iFields.push(`date_of_birth = $${iIdx++}`);
-      iValues.push(body.date_of_birth || null);
-    }
-    if (body.religion !== undefined) {
-      iFields.push(`religion = $${iIdx++}`);
-      iValues.push(body.religion || null);
-    }
-
-    if (iFields.length > 0) {
-      iFields.push(`updated_at = CURRENT_TIMESTAMP`);
+    if (Object.keys(infoPayload).length > 0) {
       await queryDb(
-        `UPDATE website_student_info SET ${iFields.join(', ')} WHERE website_id = $1 AND student_id = $2`,
-        iValues
+        `INSERT INTO website_student_info (website_id, student_id, data, updated_at)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+         ON CONFLICT (student_id) DO UPDATE SET
+           data = website_student_info.data || EXCLUDED.data,
+           updated_at = CURRENT_TIMESTAMP`,
+        [website.id, studentId, JSON.stringify(infoPayload)]
       );
     }
 
-    // Address upsert
+    // Address upsert (Modular)
     if (body.address) {
       const a = body.address;
       await queryDb(
         `INSERT INTO website_student_addresses (
-            website_id, student_id, present_address, permanent_address,
-            city, district, upazila, postal_code, country, updated_at
+            website_id, student_id, data, updated_at
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
          ON CONFLICT (student_id)
          DO UPDATE SET
-            present_address = EXCLUDED.present_address,
-            permanent_address = EXCLUDED.permanent_address,
-            city = EXCLUDED.city,
-            district = EXCLUDED.district,
-            upazila = EXCLUDED.upazila,
-            postal_code = EXCLUDED.postal_code,
-            country = EXCLUDED.country,
+            data = website_student_addresses.data || EXCLUDED.data,
             updated_at = CURRENT_TIMESTAMP`,
         [
           website.id,
           studentId,
-          a.present_address || null,
-          a.permanent_address || null,
-          a.city || null,
-          a.district || null,
-          a.upazila || null,
-          a.postal_code || null,
-          a.country || 'Bangladesh',
+          JSON.stringify(a)
         ]
       );
     }
 
-    // Guardian upsert
+    // Guardian upsert (Modular)
     if (body.guardian) {
       const g = body.guardian;
       await queryDb(
         `INSERT INTO website_student_guardians (
-            website_id, student_id, father_name, father_phone, father_nid, father_occupation,
-            mother_name, mother_phone, mother_nid, mother_occupation,
-            guardian_name, guardian_relation, guardian_phone, guardian_email, guardian_address,
-            updated_at
+            website_id, student_id, data, updated_at
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, CURRENT_TIMESTAMP)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
          ON CONFLICT (student_id)
          DO UPDATE SET
-            father_name = EXCLUDED.father_name,
-            father_phone = EXCLUDED.father_phone,
-            father_nid = EXCLUDED.father_nid,
-            father_occupation = EXCLUDED.father_occupation,
-            mother_name = EXCLUDED.mother_name,
-            mother_phone = EXCLUDED.mother_phone,
-            mother_nid = EXCLUDED.mother_nid,
-            mother_occupation = EXCLUDED.mother_occupation,
-            guardian_name = EXCLUDED.guardian_name,
-            guardian_relation = EXCLUDED.guardian_relation,
-            guardian_phone = EXCLUDED.guardian_phone,
-            guardian_email = EXCLUDED.guardian_email,
-            guardian_address = EXCLUDED.guardian_address,
+            data = website_student_guardians.data || EXCLUDED.data,
             updated_at = CURRENT_TIMESTAMP`,
         [
           website.id,
           studentId,
-          g.father_name || null,
-          g.father_phone || null,
-          g.father_nid || null,
-          g.father_occupation || null,
-          g.mother_name || null,
-          g.mother_phone || null,
-          g.mother_nid || null,
-          g.mother_occupation || null,
-          g.guardian_name || null,
-          g.guardian_relation || null,
-          g.guardian_phone || null,
-          g.guardian_email || null,
-          g.guardian_address || null,
+          JSON.stringify(g)
         ]
       );
     }

@@ -1148,21 +1148,13 @@ CREATE TRIGGER update_website_students_updated_at
 CREATE OR REPLACE VIEW website_student AS SELECT * FROM website_students;
 
 -- ----------------------------------------------------------------------------
--- 38b. WEBSITE STUDENT INFO TABLE (Modular Profile & Dynamic Attributes)
+-- 38b. WEBSITE STUDENT INFO TABLE (Modular Personal Profile & Verification State)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_student_info (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    name VARCHAR(255),
-    email VARCHAR(255),
-    number VARCHAR(50),
-    gender VARCHAR(20) CHECK (gender IN ('Male', 'Female', 'Other')),
-    blood_group VARCHAR(10),
-    date_of_birth DATE,
-    religion VARCHAR(50),
-    admission_date DATE DEFAULT CURRENT_DATE,
-    custom_fields JSONB DEFAULT '{}'::jsonb,
+    data JSONB NOT NULL DEFAULT '{}'::jsonb,
     verification_status VARCHAR(50) DEFAULT 'pending_setup' CHECK (verification_status IN ('pending_setup', 'submitted', 'verified', 'rejected')),
     is_registered BOOLEAN DEFAULT FALSE,
     verification_notes TEXT,
@@ -1178,7 +1170,7 @@ CREATE TRIGGER update_website_student_info_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 38c. WEBSITE STUDENT FORM FIELDS TABLE (Modular Form Fields for Student Info & Guardians)
+-- 38c. WEBSITE STUDENT FORM FIELDS TABLE (Modular Form Fields Configuration)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_student_form_fields (
     id BIGSERIAL PRIMARY KEY,
@@ -1210,19 +1202,13 @@ CREATE INDEX IF NOT EXISTS idx_ws_stu_ff_web ON website_student_form_fields(webs
 CREATE INDEX IF NOT EXISTS idx_ws_stu_ff_act ON website_student_form_fields(website_id, is_active);
 
 -- ----------------------------------------------------------------------------
--- 39. WEBSITE STUDENT ADDRESSES TABLE
+-- 39. WEBSITE STUDENT ADDRESSES TABLE (Modular Address Store)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_student_addresses (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    present_address TEXT,
-    permanent_address TEXT,
-    city VARCHAR(100),
-    district VARCHAR(100),
-    upazila VARCHAR(100),
-    postal_code VARCHAR(50),
-    country VARCHAR(100) DEFAULT 'Bangladesh',
+    data JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(student_id)
@@ -1234,26 +1220,13 @@ CREATE TRIGGER update_website_student_addresses_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 40. WEBSITE STUDENT GUARDIANS TABLE
+-- 40. WEBSITE STUDENT GUARDIANS TABLE (Modular Guardian Store)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_student_guardians (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-    father_name VARCHAR(255),
-    father_phone VARCHAR(50),
-    father_nid VARCHAR(100),
-    father_occupation VARCHAR(100),
-    mother_name VARCHAR(255),
-    mother_phone VARCHAR(50),
-    mother_nid VARCHAR(100),
-    mother_occupation VARCHAR(100),
-    guardian_name VARCHAR(255),
-    guardian_relation VARCHAR(100),
-    guardian_phone VARCHAR(50),
-    guardian_email VARCHAR(255),
-    guardian_address TEXT,
-    custom_fields JSONB DEFAULT '{}'::jsonb,
+    data JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(student_id)
@@ -2766,41 +2739,13 @@ CREATE INDEX IF NOT EXISTS idx_ws_adm_app_email ON website_admission_applicants(
 CREATE INDEX IF NOT EXISTS idx_ws_adm_app_exam_roll ON website_admission_applicants(admission_id, exam_roll);
 
 -- ----------------------------------------------------------------------------
--- 66. WEBSITE ADMISSION APPLICANT INFO TABLE (Extended Candidate & Guardian Data)
+-- 66. WEBSITE ADMISSION APPLICANT INFO TABLE (Modular Applicant Profile)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_admission_applicant_info (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     applicant_id BIGINT NOT NULL REFERENCES website_admission_applicants(id) ON DELETE CASCADE,
-    gender VARCHAR(20) DEFAULT 'Male' CHECK (gender IN ('Male', 'Female', 'Other')),
-    date_of_birth DATE,
-    blood_group VARCHAR(10),
-    religion VARCHAR(50),
-    father_name VARCHAR(255),
-    father_phone VARCHAR(50),
-    father_nid VARCHAR(100),
-    father_occupation VARCHAR(100),
-    mother_name VARCHAR(255),
-    mother_phone VARCHAR(50),
-    mother_nid VARCHAR(100),
-    mother_occupation VARCHAR(100),
-    guardian_name VARCHAR(255),
-    guardian_phone VARCHAR(50),
-    guardian_nid VARCHAR(100),
-    guardian_relation VARCHAR(50),
-    guardian_email VARCHAR(255),
-    guardian_address TEXT,
-    present_address TEXT,
-    permanent_address TEXT,
-    last_class TEXT,
-    last_class_grade NUMERIC(4, 2),
-    last_institution TEXT,
-    photo_url TEXT,
-    photo_id VARCHAR(255),
-    signature_url TEXT,
-    signature_id VARCHAR(255),
-    custom_fields JSONB DEFAULT '{}'::jsonb,
-    submitted_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    data JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(applicant_id)
@@ -2812,6 +2757,46 @@ CREATE TRIGGER update_website_admission_applicant_info_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE INDEX IF NOT EXISTS idx_ws_adm_info_app ON website_admission_applicant_info(applicant_id);
+
+-- ----------------------------------------------------------------------------
+-- 66A-1. WEBSITE ADMISSION APPLICANT GUARDIANS TABLE (Modular Applicant Guardians)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_admission_applicant_guardians (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    applicant_id BIGINT NOT NULL REFERENCES website_admission_applicants(id) ON DELETE CASCADE,
+    data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(applicant_id)
+);
+
+DROP TRIGGER IF EXISTS update_website_admission_applicant_guardians_updated_at ON website_admission_applicant_guardians;
+CREATE TRIGGER update_website_admission_applicant_guardians_updated_at
+    BEFORE UPDATE ON website_admission_applicant_guardians
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_adm_guard_app ON website_admission_applicant_guardians(applicant_id);
+
+-- ----------------------------------------------------------------------------
+-- 66A-2. WEBSITE ADMISSION APPLICANT ADDRESSES TABLE (Modular Applicant Addresses)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_admission_applicant_addresses (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    applicant_id BIGINT NOT NULL REFERENCES website_admission_applicants(id) ON DELETE CASCADE,
+    data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(applicant_id)
+);
+
+DROP TRIGGER IF EXISTS update_website_admission_applicant_addresses_updated_at ON website_admission_applicant_addresses;
+CREATE TRIGGER update_website_admission_applicant_addresses_updated_at
+    BEFORE UPDATE ON website_admission_applicant_addresses
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_adm_addr_app ON website_admission_applicant_addresses(applicant_id);
 
 -- ----------------------------------------------------------------------------
 -- 66B. WEBSITE ADMISSION APPLICANT IMAGES TABLE (Cloudinary Photo & Signature Store)
