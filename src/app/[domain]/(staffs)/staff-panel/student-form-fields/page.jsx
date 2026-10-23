@@ -65,21 +65,27 @@ function StudentFormFieldsContent() {
 
   // Toggle field required status
   const handleToggleRequired = async (field) => {
-    setSavingId(field.id);
+    const idKey = field.id || field.field_key;
+    setSavingId(idKey);
     const updatedRequired = !field.is_required;
     try {
       const res = await fetch(`${apiBase}/staff/panel/students/fields`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: field.id,
+          id: field.id && field.id !== 'undefined' ? field.id : undefined,
+          field_key: field.field_key,
           is_required: updatedRequired
         })
       });
       const data = await res.json();
       if (res.ok && data.success) {
         setFields((prev) =>
-          prev.map((f) => (f.id === field.id ? { ...f, is_required: updatedRequired } : f))
+          prev.map((f) =>
+            (field.id && f.id === field.id) || (!field.id && f.field_key === field.field_key)
+              ? { ...f, ...(data.field || {}), is_required: updatedRequired }
+              : f
+          )
         );
         toast.success(`'${field.label}' is now ${updatedRequired ? 'REQUIRED' : 'OPTIONAL'}.`);
       } else {
@@ -94,21 +100,27 @@ function StudentFormFieldsContent() {
 
   // Toggle field active status
   const handleToggleActive = async (field) => {
-    setSavingId(field.id);
+    const idKey = field.id || field.field_key;
+    setSavingId(idKey);
     const updatedActive = !field.is_active;
     try {
       const res = await fetch(`${apiBase}/staff/panel/students/fields`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: field.id,
+          id: field.id && field.id !== 'undefined' ? field.id : undefined,
+          field_key: field.field_key,
           is_active: updatedActive
         })
       });
       const data = await res.json();
       if (res.ok && data.success) {
         setFields((prev) =>
-          prev.map((f) => (f.id === field.id ? { ...f, is_active: updatedActive } : f))
+          prev.map((f) =>
+            (field.id && f.id === field.id) || (!field.id && f.field_key === field.field_key)
+              ? { ...f, ...(data.field || {}), is_active: updatedActive }
+              : f
+          )
         );
         toast.success(`'${field.label}' ${updatedActive ? 'activated' : 'deactivated'}.`);
       } else {
@@ -122,15 +134,26 @@ function StudentFormFieldsContent() {
   };
 
   // Delete modular field
-  const handleDeleteField = async (id, label) => {
+  const handleDeleteField = async (field) => {
+    const id = field?.id;
+    const label = field?.label || 'Field';
+    const fieldKey = field?.field_key;
     if (!confirm(`Are you sure you want to delete '${label}'?`)) return;
+
+    if (!id && !fieldKey) return;
+
     try {
-      const res = await fetch(`${apiBase}/staff/panel/students/fields?id=${id}`, {
+      const params = new URLSearchParams();
+      if (id && id !== 'undefined') params.set('id', id);
+      if (fieldKey) params.set('field_key', fieldKey);
+
+      const url = `${apiBase}/staff/panel/students/fields?${params.toString()}`;
+      const res = await fetch(url, {
         method: 'DELETE'
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setFields((prev) => prev.filter((f) => f.id !== id));
+        setFields((prev) => prev.filter((f) => (id ? f.id !== id : f.field_key !== fieldKey)));
         toast.success(`Field '${label}' removed successfully.`);
       } else {
         toast.error(data.error || 'Failed to delete field.');
@@ -139,6 +162,7 @@ function StudentFormFieldsContent() {
       toast.error('Network error deleting field.');
     }
   };
+
 
   // Initialize or reset defaults
   const handleInitializeDefaults = async () => {
@@ -167,10 +191,16 @@ function StudentFormFieldsContent() {
   // Create new field submit
   const handleCreateField = async (e) => {
     e.preventDefault();
-    if (!newField.field_key.trim() || !newField.label.trim()) {
-      toast.error('Field key and label are required.');
+    if (!newField.label.trim()) {
+      toast.error('Field label is required.');
       return;
     }
+
+    const autoKey = (newField.field_key || newField.label)
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '_')
+      .replace(/_+/g, '_');
 
     let parsedOptions = [];
     if (newField.field_type === 'select' && newField.options.trim()) {
@@ -182,7 +212,7 @@ function StudentFormFieldsContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          field_key: newField.field_key.trim(),
+          field_key: autoKey,
           label: newField.label.trim(),
           field_type: newField.field_type,
           options: parsedOptions,
@@ -194,6 +224,7 @@ function StudentFormFieldsContent() {
           sort_order: fields.length + 1
         })
       });
+
 
       const data = await res.json();
       if (res.ok && data.success) {
@@ -381,7 +412,7 @@ function StudentFormFieldsContent() {
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 uppercase text-[10px] font-semibold tracking-wider">
                 <tr>
-                  <th className="py-3.5 px-4">Field Label & Key</th>
+                  <th className="py-3.5 px-4">Field Label</th>
                   <th className="py-3.5 px-4">Type</th>
                   <th className="py-3.5 px-4">Placeholder / Help Text</th>
                   <th className="py-3.5 px-4 text-center">Required Status</th>
@@ -394,7 +425,6 @@ function StudentFormFieldsContent() {
                   <tr key={field.id || field.field_key} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
                     <td className="py-3.5 px-4">
                       <div className="font-semibold text-slate-900 dark:text-white">{field.label}</div>
-                      <div className="text-[10px] font-mono text-slate-400">{field.field_key}</div>
                     </td>
                     <td className="py-3.5 px-4">
                       <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono text-[10px]">
@@ -441,7 +471,7 @@ function StudentFormFieldsContent() {
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <button
-                        onClick={() => handleDeleteField(field.id, field.label)}
+                        onClick={() => handleDeleteField(field)}
                         className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition cursor-pointer"
                         title="Delete Field"
                       >
@@ -451,6 +481,7 @@ function StudentFormFieldsContent() {
                   </tr>
                 ))}
               </tbody>
+
             </table>
           </div>
         )}
@@ -490,39 +521,24 @@ function StudentFormFieldsContent() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Field Label *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Emergency Contact Relation"
-                    value={newField.label}
-                    onChange={(e) => {
-                      const lbl = e.target.value;
-                      const key = lbl.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
-                      setNewField({ ...newField, label: lbl, field_key: key });
-                    }}
-                    className="input-style w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Field Key (Slug) *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="emergency_contact_relation"
-                    value={newField.field_key}
-                    onChange={(e) => setNewField({ ...newField, field_key: e.target.value })}
-                    className="input-style w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-mono"
-                  />
-                </div>
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Field Label *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Emergency Contact Relation"
+                  value={newField.label}
+                  onChange={(e) => {
+                    const lbl = e.target.value;
+                    const key = lbl.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+                    setNewField({ ...newField, label: lbl, field_key: key });
+                  }}
+                  className="input-style w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                />
               </div>
+
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>

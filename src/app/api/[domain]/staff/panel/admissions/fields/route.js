@@ -30,7 +30,51 @@ export async function GET(request, context) {
     }
     sql += ` ORDER BY sort_order ASC, id ASC`;
 
-    const res = await queryDb(sql, params);
+    let res = await queryDb(sql, params);
+
+    // Auto-seed persistent records if none exist so all fields have valid database IDs
+    if (res.rows.length === 0) {
+      const stuRes = await queryDb(`
+        SELECT * FROM website_student_form_fields
+        WHERE website_id = $1
+        ORDER BY sort_order ASC, id ASC
+      `, [auth.website.id]);
+
+      const sourceList = stuRes.rows.length > 0 ? stuRes.rows : DEFAULT_ADMISSION_FIELDS;
+      for (let i = 0; i < sourceList.length; i++) {
+        const f = sourceList[i];
+        try {
+          await queryDb(`
+            INSERT INTO website_admission_form_fields (
+              website_id, admission_id, field_key, label, field_type,
+              options, is_required, is_unique, validation_regex, placeholder,
+              help_text, section, is_shown_in_id_card, sort_order, is_active
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+          `, [
+            auth.website.id,
+            admId,
+            f.field_key?.trim() || `field_${Date.now()}_${i}`,
+            f.label?.trim() || f.field_key,
+            f.field_type || 'text',
+            JSON.stringify(f.options || []),
+            Boolean(f.is_required),
+            Boolean(f.is_unique),
+            f.validation_regex || null,
+            f.placeholder || '',
+            f.help_text || '',
+            f.section || 'general',
+            Boolean(f.is_shown_in_id_card),
+            f.sort_order !== undefined ? f.sort_order : i + 1,
+            Boolean(f.is_active !== false)
+          ]);
+        } catch {
+          // ignore duplicate or non-fatal insert error
+        }
+      }
+
+      res = await queryDb(sql, params);
+    }
+
     const fields = res.rows.length > 0 ? res.rows : DEFAULT_ADMISSION_FIELDS;
 
     // Group fields by section for frontend tabbed organization
@@ -195,48 +239,123 @@ export async function PUT(request, context) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { id, label, field_type, options, is_required, is_unique, validation_regex, placeholder, help_text, section, is_shown_in_id_card, sort_order, is_active } = body;
+    const { id, field_key, label, field_type, options, is_required, is_unique, validation_regex, placeholder, help_text, section, is_shown_in_id_card, sort_order, is_active } = body;
 
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'Field ID is required.' }, { status: 400 });
+    const parsedId = id && id !== 'undefined' && id !== 'null' && !isNaN(parseInt(id, 10))
+      ? parseInt(id, 10)
+      : null;
+
+    if (!parsedId && (!field_key || field_key === 'undefined' || field_key === 'null')) {
+      return NextResponse.json({ success: false, error: 'Valid Field ID or field_key is required.' }, { status: 400 });
     }
 
-    const res = await queryDb(`
-      UPDATE website_admission_form_fields
-      SET label = COALESCE($1, label),
-          field_type = COALESCE($2, field_type),
-          options = COALESCE($3, options),
-          is_required = COALESCE($4, is_required),
-          is_unique = COALESCE($5, is_unique),
-          validation_regex = $6,
-          placeholder = COALESCE($7, placeholder),
-          help_text = COALESCE($8, help_text),
-          section = COALESCE($9, section),
-          is_shown_in_id_card = COALESCE($10, is_shown_in_id_card),
-          sort_order = COALESCE($11, sort_order),
-          is_active = COALESCE($12, is_active),
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = $13 AND website_id = $14
-      RETURNING *
-    `, [
-      label?.trim() || null,
-      field_type || null,
-      options ? JSON.stringify(options) : null,
-      is_required !== undefined ? Boolean(is_required) : null,
-      is_unique !== undefined ? Boolean(is_unique) : null,
-      validation_regex !== undefined ? validation_regex : null,
-      placeholder !== undefined ? placeholder : null,
-      help_text !== undefined ? help_text : null,
-      section || null,
-      is_shown_in_id_card !== undefined ? Boolean(is_shown_in_id_card) : null,
-      sort_order !== undefined ? parseInt(sort_order, 10) : null,
-      is_active !== undefined ? Boolean(is_active) : null,
-      parseInt(id, 10),
-      auth.website.id
-    ]);
+    let res;
+    if (parsedId) {
+      res = await queryDb(`
+        UPDATE website_admission_form_fields
+        SET label = COALESCE($1, label),
+            field_type = COALESCE($2, field_type),
+            options = COALESCE($3, options),
+            is_required = COALESCE($4, is_required),
+            is_unique = COALESCE($5, is_unique),
+            validation_regex = $6,
+            placeholder = COALESCE($7, placeholder),
+            help_text = COALESCE($8, help_text),
+            section = COALESCE($9, section),
+            is_shown_in_id_card = COALESCE($10, is_shown_in_id_card),
+            sort_order = COALESCE($11, sort_order),
+            is_active = COALESCE($12, is_active),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $13 AND website_id = $14
+        RETURNING *
+      `, [
+        label?.trim() || null,
+        field_type || null,
+        options ? JSON.stringify(options) : null,
+        is_required !== undefined ? Boolean(is_required) : null,
+        is_unique !== undefined ? Boolean(is_unique) : null,
+        validation_regex !== undefined ? validation_regex : null,
+        placeholder !== undefined ? placeholder : null,
+        help_text !== undefined ? help_text : null,
+        section || null,
+        is_shown_in_id_card !== undefined ? Boolean(is_shown_in_id_card) : null,
+        sort_order !== undefined ? parseInt(sort_order, 10) : null,
+        is_active !== undefined ? Boolean(is_active) : null,
+        parsedId,
+        auth.website.id
+      ]);
+    } else {
+      res = await queryDb(`
+        UPDATE website_admission_form_fields
+        SET label = COALESCE($1, label),
+            field_type = COALESCE($2, field_type),
+            options = COALESCE($3, options),
+            is_required = COALESCE($4, is_required),
+            is_unique = COALESCE($5, is_unique),
+            validation_regex = $6,
+            placeholder = COALESCE($7, placeholder),
+            help_text = COALESCE($8, help_text),
+            section = COALESCE($9, section),
+            is_shown_in_id_card = COALESCE($10, is_shown_in_id_card),
+            sort_order = COALESCE($11, sort_order),
+            is_active = COALESCE($12, is_active),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE field_key = $13 AND website_id = $14
+        RETURNING *
+      `, [
+        label?.trim() || null,
+        field_type || null,
+        options ? JSON.stringify(options) : null,
+        is_required !== undefined ? Boolean(is_required) : null,
+        is_unique !== undefined ? Boolean(is_unique) : null,
+        validation_regex !== undefined ? validation_regex : null,
+        placeholder !== undefined ? placeholder : null,
+        help_text !== undefined ? help_text : null,
+        section || null,
+        is_shown_in_id_card !== undefined ? Boolean(is_shown_in_id_card) : null,
+        sort_order !== undefined ? parseInt(sort_order, 10) : null,
+        is_active !== undefined ? Boolean(is_active) : null,
+        field_key.trim(),
+        auth.website.id
+      ]);
+    }
 
     if (res.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Field not found or unauthorized.' }, { status: 404 });
+      // If field was not yet saved in DB, insert it now with specified values
+      const targetKey = (field_key || label || 'custom_field')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+
+      const insertRes = await queryDb(`
+        INSERT INTO website_admission_form_fields (
+          website_id, field_key, label, field_type, options, is_required,
+          is_unique, validation_regex, placeholder, help_text, section,
+          is_shown_in_id_card, sort_order, is_active
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        RETURNING *
+      `, [
+        auth.website.id,
+        targetKey,
+        label?.trim() || targetKey,
+        field_type || 'text',
+        JSON.stringify(options || []),
+        is_required !== undefined ? Boolean(is_required) : false,
+        is_unique !== undefined ? Boolean(is_unique) : false,
+        validation_regex || null,
+        placeholder || '',
+        help_text || '',
+        section || 'general',
+        Boolean(is_shown_in_id_card),
+        sort_order !== undefined ? parseInt(sort_order, 10) : 0,
+        is_active !== undefined ? Boolean(is_active) : true
+      ]);
+
+      return NextResponse.json({
+        success: true,
+        message: 'Field updated and saved successfully.',
+        field: insertRes.rows[0]
+      });
     }
 
     return NextResponse.json({
@@ -262,15 +381,29 @@ export async function DELETE(request, context) {
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+    const fieldKey = searchParams.get('field_key');
 
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'Field ID is required.' }, { status: 400 });
+    const parsedId = id && id !== 'undefined' && id !== 'null' && !isNaN(parseInt(id, 10))
+      ? parseInt(id, 10)
+      : null;
+
+    if (parsedId) {
+      await queryDb(`
+        DELETE FROM website_admission_form_fields
+        WHERE id = $1 AND website_id = $2
+      `, [parsedId, auth.website.id]);
+    } else if (fieldKey && fieldKey !== 'undefined' && fieldKey !== 'null') {
+      await queryDb(`
+        DELETE FROM website_admission_form_fields
+        WHERE field_key = $1 AND website_id = $2
+      `, [fieldKey.trim(), auth.website.id]);
+    } else {
+      // Default field that has not been saved into DB yet
+      return NextResponse.json({
+        success: true,
+        message: 'Field removed successfully.'
+      });
     }
-
-    await queryDb(`
-      DELETE FROM website_admission_form_fields
-      WHERE id = $1 AND website_id = $2
-    `, [parseInt(id, 10), auth.website.id]);
 
     return NextResponse.json({
       success: true,
@@ -281,3 +414,4 @@ export async function DELETE(request, context) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+

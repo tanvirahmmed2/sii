@@ -183,7 +183,8 @@ export default function StudentDataPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: col.id,
+          id: col.id && col.id !== 'undefined' ? col.id : undefined,
+          field_key: col.field_key,
           is_required: nextReq
         })
       });
@@ -191,7 +192,11 @@ export default function StudentDataPage() {
       if (res.ok && data.success) {
         toast.success(`'${col.label}' is now ${nextReq ? 'REQUIRED' : 'OPTIONAL'} for student registration & admission.`);
         setCustomColumns((prev) =>
-          prev.map((c) => (c.id === col.id ? { ...c, is_required: nextReq } : c))
+          prev.map((c) =>
+            (col.id && c.id === col.id) || (!col.id && c.field_key === col.field_key)
+              ? { ...c, ...(data.field || {}), is_required: nextReq }
+              : c
+          )
         );
       } else {
         toast.error(data.error || 'Failed to update requirement.');
