@@ -6,6 +6,8 @@ import { verifyStudentStaffAccess } from 'src/lib/middleware/student-auth.js';
 import { hashPassword } from 'src/lib/middleware/students.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
 import { buildStudentSetupUrl } from 'src/lib/student/urls.js';
+import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
+
 
 export async function POST(request, context) {
   try {
@@ -135,21 +137,16 @@ export async function POST(request, context) {
       const resolvedSessionId = findSessionId(sessionInput) || matchedClass?.session_id || null;
       const resolvedSectionId = findSectionId(sectionInput, resolvedClassId);
 
-      // Check duplicate email if email was provided
+      // Check duplicate email across all roles if email was provided
       if (email) {
-        const emailCheck = await queryDb(
-          `SELECT s.id FROM website_students s
-           LEFT JOIN website_student_info i ON s.id = i.student_id
-           WHERE s.website_id = $1 AND (LOWER(s.email) = $2 OR LOWER(i.email) = $2)
-           LIMIT 1`,
-          [website.id, email]
-        );
-        if (emailCheck.rows.length > 0) {
+        const emailAvail = await checkInstitutionEmailAvailability(website.id, email);
+        if (!emailAvail.available) {
           results.failed++;
-          results.errors.push({ row: rowIdx, email, registration_no: rawReg, error: 'Email already registered.' });
+          results.errors.push({ row: rowIdx, email, registration_no: rawReg, error: emailAvail.message });
           continue;
         }
       }
+
 
       const regNo = rawReg;
 

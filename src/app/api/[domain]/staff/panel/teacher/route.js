@@ -5,6 +5,8 @@ import { verifyTeacherStaffAccess } from 'src/lib/middleware/teacher-auth.js';
 import { hashPassword } from 'src/lib/middleware/staff.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
 import { uploadImage, deleteImage } from 'src/lib/database/cloudinary.js';
+import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
+
 
 /**
  * Constructs the teacher verification link using custom domain (if set)
@@ -328,15 +330,12 @@ export async function POST(request, context) {
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedNumber = number.trim();
 
-    // Check duplicate email per website
-    const existing = await queryDb(
-      `SELECT id FROM website_teachers WHERE website_id = $1 AND LOWER(email) = $2 LIMIT 1`,
-      [website.id, trimmedEmail]
-    );
-
-    if (existing.rows.length > 0) {
-      return NextResponse.json({ success: false, error: 'A teacher with this email already exists in this institution.' }, { status: 409 });
+    // Check cross-role email uniqueness across all institution roles
+    const emailAvail = await checkInstitutionEmailAvailability(website.id, trimmedEmail);
+    if (!emailAvail.available) {
+      return NextResponse.json({ success: false, error: emailAvail.message }, { status: 409 });
     }
+
 
     // Verify department exists and belongs to this website
     const deptRes = await queryDb(
@@ -593,16 +592,17 @@ export async function PUT(request, context) {
 
     const currentTeacher = checkRes.rows[0];
 
-    // Check duplicate email
+    // Check duplicate email across all institution roles
     if (email) {
-      const emailConflict = await queryDb(
-        `SELECT id FROM website_teachers WHERE website_id = $1 AND LOWER(email) = LOWER($2) AND id != $3 LIMIT 1`,
-        [website.id, email.trim(), id]
-      );
-      if (emailConflict.rows.length > 0) {
-        return NextResponse.json({ success: false, error: 'Another teacher is already using this email.' }, { status: 409 });
+      const emailAvail = await checkInstitutionEmailAvailability(website.id, email.trim(), {
+        excludeRole: 'teacher',
+        excludeId: id
+      });
+      if (!emailAvail.available) {
+        return NextResponse.json({ success: false, error: emailAvail.message }, { status: 409 });
       }
     }
+
 
     // Handle password update if provided
     let passwordHash = currentTeacher.password;

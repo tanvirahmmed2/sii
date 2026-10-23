@@ -1137,6 +1137,7 @@ CREATE TABLE IF NOT EXISTS website_students (
     UNIQUE(website_id, student_unique_id)
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_website_students_unique_lower_email ON website_students(website_id, LOWER(TRIM(email))) WHERE email IS NOT NULL AND TRIM(email) != '';
 CREATE INDEX IF NOT EXISTS idx_ws_students_email ON website_students(website_id, email);
 
 DROP TRIGGER IF EXISTS update_website_students_updated_at ON website_students;
@@ -2724,8 +2725,10 @@ CREATE TABLE IF NOT EXISTS website_admission_applicants (
     enrolled_student_id BIGINT REFERENCES website_students(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, application_no)
+    UNIQUE(website_id, application_no),
+    UNIQUE(website_id, email)
 );
+
 
 DROP TRIGGER IF EXISTS update_website_admission_applicants_updated_at ON website_admission_applicants;
 CREATE TRIGGER update_website_admission_applicants_updated_at
@@ -2735,6 +2738,7 @@ CREATE TRIGGER update_website_admission_applicants_updated_at
 CREATE INDEX IF NOT EXISTS idx_ws_adm_app_web ON website_admission_applicants(website_id);
 CREATE INDEX IF NOT EXISTS idx_ws_adm_app_adm ON website_admission_applicants(admission_id);
 CREATE INDEX IF NOT EXISTS idx_ws_adm_app_stat ON website_admission_applicants(website_id, status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_website_admission_applicants_unique_lower_email ON website_admission_applicants (website_id, LOWER(TRIM(email))) WHERE email IS NOT NULL AND TRIM(email) != '';
 CREATE INDEX IF NOT EXISTS idx_ws_adm_app_email ON website_admission_applicants(website_id, email);
 CREATE INDEX IF NOT EXISTS idx_ws_adm_app_exam_roll ON website_admission_applicants(admission_id, exam_roll);
 
@@ -4328,4 +4332,128 @@ CREATE INDEX IF NOT EXISTS idx_website_admit_card_tpls_def ON website_admit_card
 -- Spelling views supporting website_admit_card_templetes
 CREATE OR REPLACE VIEW website_admit_card_templetes AS SELECT * FROM website_admit_card_templates;
 CREATE OR REPLACE VIEW system_admit_card_templetes AS SELECT * FROM system_admit_card_templates;
+
+-- ----------------------------------------------------------------------------
+-- CROSS-ROLE EMAIL UNIQUENESS TRIGGER (Ensures No Shared Emails Between Roles)
+-- Prevents student, applicant, staff, teacher, officer from sharing email within institution
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION check_institution_email_uniqueness_trg()
+RETURNS TRIGGER AS $$
+DECLARE
+  clean_email TEXT;
+  v_count INT;
+BEGIN
+  IF NEW.email IS NULL OR TRIM(NEW.email) = '' THEN
+    RETURN NEW;
+  END IF;
+
+  clean_email := LOWER(TRIM(NEW.email));
+
+  -- 1. Check against website_students
+  IF TG_TABLE_NAME = 'website_students' THEN
+    SELECT COUNT(*) INTO v_count FROM website_students
+    WHERE website_id = NEW.website_id AND LOWER(TRIM(email)) = clean_email AND id <> COALESCE(NEW.id, 0);
+    IF v_count > 0 THEN
+      RAISE EXCEPTION 'A student with email % already exists in this institution.', clean_email;
+    END IF;
+  ELSE
+    SELECT COUNT(*) INTO v_count FROM website_students
+    WHERE website_id = NEW.website_id AND LOWER(TRIM(email)) = clean_email;
+    IF v_count > 0 THEN
+      IF TG_TABLE_NAME = 'website_admission_applicants' THEN
+        RAISE EXCEPTION 'An enrolled student with email % already exists. Enrolled students cannot apply for new admissions.', clean_email;
+      ELSE
+        RAISE EXCEPTION 'Email % is already registered to an enrolled student in this institution.', clean_email;
+      END IF;
+    END IF;
+  END IF;
+
+  -- 2. Check against website_admission_applicants
+  IF TG_TABLE_NAME = 'website_admission_applicants' THEN
+    SELECT COUNT(*) INTO v_count FROM website_admission_applicants
+    WHERE website_id = NEW.website_id AND LOWER(TRIM(email)) = clean_email AND id <> COALESCE(NEW.id, 0);
+    IF v_count > 0 THEN
+      RAISE EXCEPTION 'An admission applicant with email % already exists in this institution.', clean_email;
+    END IF;
+  ELSEIF TG_TABLE_NAME <> 'website_students' THEN
+    SELECT COUNT(*) INTO v_count FROM website_admission_applicants
+    WHERE website_id = NEW.website_id AND LOWER(TRIM(email)) = clean_email;
+    IF v_count > 0 THEN
+      RAISE EXCEPTION 'Email % is already registered to an admission applicant in this institution.', clean_email;
+    END IF;
+  END IF;
+
+  -- 3. Check against website_staffs
+  IF TG_TABLE_NAME = 'website_staffs' THEN
+    SELECT COUNT(*) INTO v_count FROM website_staffs
+    WHERE website_id = NEW.website_id AND LOWER(TRIM(email)) = clean_email AND id <> COALESCE(NEW.id, 0);
+    IF v_count > 0 THEN
+      RAISE EXCEPTION 'A staff member with email % already exists in this institution.', clean_email;
+    END IF;
+  ELSE
+    SELECT COUNT(*) INTO v_count FROM website_staffs
+    WHERE website_id = NEW.website_id AND LOWER(TRIM(email)) = clean_email;
+    IF v_count > 0 THEN
+      RAISE EXCEPTION 'Email % is already registered to a staff member in this institution.', clean_email;
+    END IF;
+  END IF;
+
+  -- 4. Check against website_teachers
+  IF TG_TABLE_NAME = 'website_teachers' THEN
+    SELECT COUNT(*) INTO v_count FROM website_teachers
+    WHERE website_id = NEW.website_id AND LOWER(TRIM(email)) = clean_email AND id <> COALESCE(NEW.id, 0);
+    IF v_count > 0 THEN
+      RAISE EXCEPTION 'A teacher with email % already exists in this institution.', clean_email;
+    END IF;
+  ELSE
+    SELECT COUNT(*) INTO v_count FROM website_teachers
+    WHERE website_id = NEW.website_id AND LOWER(TRIM(email)) = clean_email;
+    IF v_count > 0 THEN
+      RAISE EXCEPTION 'Email % is already registered to a teacher in this institution.', clean_email;
+    END IF;
+  END IF;
+
+  -- 5. Check against website_officers
+  IF TG_TABLE_NAME = 'website_officers' THEN
+    SELECT COUNT(*) INTO v_count FROM website_officers
+    WHERE website_id = NEW.website_id AND LOWER(TRIM(email)) = clean_email AND id <> COALESCE(NEW.id, 0);
+    IF v_count > 0 THEN
+      RAISE EXCEPTION 'An officer with email % already exists in this institution.', clean_email;
+    END IF;
+  ELSE
+    SELECT COUNT(*) INTO v_count FROM website_officers
+    WHERE website_id = NEW.website_id AND LOWER(TRIM(email)) = clean_email;
+    IF v_count > 0 THEN
+      RAISE EXCEPTION 'Email % is already registered to an officer in this institution.', clean_email;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_website_students_institution_email_uniq ON website_students;
+CREATE TRIGGER trg_website_students_institution_email_uniq
+  BEFORE INSERT OR UPDATE OF email ON website_students
+  FOR EACH ROW EXECUTE FUNCTION check_institution_email_uniqueness_trg();
+
+DROP TRIGGER IF EXISTS trg_website_admission_applicants_institution_email_uniq ON website_admission_applicants;
+CREATE TRIGGER trg_website_admission_applicants_institution_email_uniq
+  BEFORE INSERT OR UPDATE OF email ON website_admission_applicants
+  FOR EACH ROW EXECUTE FUNCTION check_institution_email_uniqueness_trg();
+
+DROP TRIGGER IF EXISTS trg_website_staffs_institution_email_uniq ON website_staffs;
+CREATE TRIGGER trg_website_staffs_institution_email_uniq
+  BEFORE INSERT OR UPDATE OF email ON website_staffs
+  FOR EACH ROW EXECUTE FUNCTION check_institution_email_uniqueness_trg();
+
+DROP TRIGGER IF EXISTS trg_website_teachers_institution_email_uniq ON website_teachers;
+CREATE TRIGGER trg_website_teachers_institution_email_uniq
+  BEFORE INSERT OR UPDATE OF email ON website_teachers
+  FOR EACH ROW EXECUTE FUNCTION check_institution_email_uniqueness_trg();
+
+DROP TRIGGER IF EXISTS trg_website_officers_institution_email_uniq ON website_officers;
+CREATE TRIGGER trg_website_officers_institution_email_uniq
+  BEFORE INSERT OR UPDATE OF email ON website_officers
+  FOR EACH ROW EXECUTE FUNCTION check_institution_email_uniqueness_trg();
 

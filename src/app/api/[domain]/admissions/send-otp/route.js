@@ -4,6 +4,7 @@ import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { sendWebsiteEmail } from 'src/lib/database/websiteBrevo.js';
 import { buildStyledEmail } from 'src/lib/database/brevo.js';
+import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
 
 /**
  * POST /api/[domain]/admissions/send-otp
@@ -24,6 +25,12 @@ export async function POST(request, context) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
+
+    // Verify email uniqueness across institution roles (no student can apply, cannot duplicate staff/teacher/officer/applicant)
+    const emailCheck = await checkInstitutionEmailAvailability(website.id, cleanEmail);
+    if (!emailCheck.available) {
+      return NextResponse.json({ success: false, error: emailCheck.message }, { status: 409 });
+    }
 
     // 1. Rate-limiting check: enforce a 60-second cooldown per email
     const recentOtpRes = await queryDb(`

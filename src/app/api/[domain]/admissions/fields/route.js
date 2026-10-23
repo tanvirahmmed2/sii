@@ -232,7 +232,8 @@ export const DEFAULT_ADMISSION_FIELDS = [
 
 /**
  * GET /api/[domain]/admissions/fields?admission_id=...
- * Public endpoint to fetch active modular fields assigned to a circular.
+ * Public endpoint to fetch active modular fields assigned to this institution / circular.
+ * Primary source of truth is website_student_form_fields (custom columns configured by staff for students table).
  */
 export async function GET(request, context) {
   try {
@@ -245,25 +246,53 @@ export async function GET(request, context) {
     const admissionIdParam = searchParams.get('admission_id') || searchParams.get('circular_id');
     const admId = admissionIdParam ? parseInt(admissionIdParam, 10) : null;
 
-    let dbFields = [];
-    if (admId) {
-      const res = await queryDb(`
-        SELECT * FROM website_admission_form_fields
-        WHERE website_id = $1 AND (admission_id = $2 OR admission_id IS NULL) AND is_active = TRUE
-        ORDER BY sort_order ASC, id ASC
-      `, [website.id, admId]);
-      dbFields = res.rows;
-    } else {
-      const res = await queryDb(`
-        SELECT * FROM website_admission_form_fields
-        WHERE website_id = $1 AND is_active = TRUE
-        ORDER BY sort_order ASC, id ASC
-      `, [website.id]);
-      dbFields = res.rows;
-    }
+    // 1. Fetch custom columns configured for the student table (master blueprint)
+    const stuFieldsRes = await queryDb(`
+      SELECT * FROM website_student_form_fields
+      WHERE website_id = $1 AND is_active = TRUE
+      ORDER BY sort_order ASC, id ASC
+    `, [website.id]);
 
-    // If no custom fields configured in DB yet, fallback to default standard modular fields
-    const fields = dbFields.length > 0 ? dbFields : DEFAULT_ADMISSION_FIELDS;
+    let fields = [];
+
+    if (stuFieldsRes.rows.length > 0) {
+      fields = stuFieldsRes.rows;
+
+      // Also check if any circular-specific fields exist in website_admission_form_fields
+      if (admId) {
+        const admFieldsRes = await queryDb(`
+          SELECT * FROM website_admission_form_fields
+          WHERE website_id = $1 AND admission_id = $2 AND is_active = TRUE
+          ORDER BY sort_order ASC, id ASC
+        `, [website.id, admId]);
+
+        const existingKeys = new Set(fields.map((f) => f.field_key));
+        for (const af of admFieldsRes.rows) {
+          if (!existingKeys.has(af.field_key)) {
+            fields.push(af);
+            existingKeys.add(af.field_key);
+          }
+        }
+      }
+    } else {
+      // Check website_admission_form_fields
+      let admFieldsRes;
+      if (admId) {
+        admFieldsRes = await queryDb(`
+          SELECT * FROM website_admission_form_fields
+          WHERE website_id = $1 AND (admission_id = $2 OR admission_id IS NULL) AND is_active = TRUE
+          ORDER BY sort_order ASC, id ASC
+        `, [website.id, admId]);
+      } else {
+        admFieldsRes = await queryDb(`
+          SELECT * FROM website_admission_form_fields
+          WHERE website_id = $1 AND is_active = TRUE
+          ORDER BY sort_order ASC, id ASC
+        `, [website.id]);
+      }
+
+      fields = admFieldsRes.rows.length > 0 ? admFieldsRes.rows : DEFAULT_ADMISSION_FIELDS;
+    }
 
     // Group fields by section for seamless client rendering
     const sections = {};
@@ -277,10 +306,11 @@ export async function GET(request, context) {
       success: true,
       fields,
       sections,
-      is_customized: dbFields.length > 0
+      is_customized: stuFieldsRes.rows.length > 0 || fields !== DEFAULT_ADMISSION_FIELDS
     });
   } catch (error) {
     console.error('Error fetching admission form fields:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+

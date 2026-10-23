@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyStaffPaymentAccess } from 'src/lib/database/paymentGateways.js';
 import { hashPassword } from 'src/lib/middleware/students.js';
+import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
 
 /**
  * GET /api/[domain]/staff/panel/admissions/enrollment
@@ -174,6 +175,21 @@ export async function POST(request, context) {
       }, { status: 400 });
     }
 
+    const candidateEmail = candidate.email ? candidate.email.toLowerCase().trim() : null;
+    if (candidateEmail) {
+      const emailAvail = await checkInstitutionEmailAvailability(auth.website.id, candidateEmail, {
+        excludeRole: 'applicant',
+        excludeId: appId
+      });
+      if (!emailAvail.available) {
+        return NextResponse.json({
+          success: false,
+          error: `Cannot enroll student: ${emailAvail.message}`
+        }, { status: 409 });
+      }
+    }
+
+
     // 2. Insert into website_students with email
     const studentRes = await queryDb(`
       INSERT INTO website_students (
@@ -295,9 +311,10 @@ export async function POST(request, context) {
         roll_no: student.roll_no,
         email: student.email,
         student_unique_id: student.student_unique_id,
-        setup_token: setupToken
+        setup_token: null
       }
     });
+
   } catch (error) {
     console.error('Error in POST /staff/panel/admissions/enrollment:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

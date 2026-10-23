@@ -6,6 +6,8 @@ import { getStaffSession, hasStaffModulePermission, hashPassword } from 'src/lib
 import { revokeAllOfficerSessions } from 'src/lib/middleware/officer.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
 import { uploadImage, deleteImage } from 'src/lib/database/cloudinary.js';
+import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
+
 
 const VALID_DEPARTMENTS = [
   'Hall',
@@ -438,18 +440,12 @@ export async function POST(request, context) {
       validDept = department.trim();
     }
 
-    // Check duplicate email for this website
-    const existing = await queryDb(
-      `SELECT id FROM website_officers WHERE website_id = $1 AND LOWER(email) = $2 LIMIT 1`,
-      [website.id, trimmedEmail]
-    );
-
-    if (existing.rows.length > 0) {
-      return NextResponse.json(
-        { success: false, error: 'An officer with this email address already exists in this institution.' },
-        { status: 409 }
-      );
+    // Check duplicate email across all institution roles
+    const emailAvail = await checkInstitutionEmailAvailability(website.id, trimmedEmail);
+    if (!emailAvail.available) {
+      return NextResponse.json({ success: false, error: emailAvail.message }, { status: 409 });
     }
+
 
     // Verify and calculate direct payroll assignment
     let finalSalary = Number(salary) || 0.00;
@@ -708,16 +704,17 @@ export async function PUT(request, context) {
 
     const currentOfficer = checkRes.rows[0];
 
-    // Check duplicate email
+    // Check duplicate email across all institution roles
     if (email && email.trim()) {
-      const emailConflict = await queryDb(
-        `SELECT id FROM website_officers WHERE website_id = $1 AND LOWER(email) = LOWER($2) AND id != $3 LIMIT 1`,
-        [website.id, email.trim(), id]
-      );
-      if (emailConflict.rows.length > 0) {
-        return NextResponse.json({ success: false, error: 'Another officer is already using this email.' }, { status: 409 });
+      const emailAvail = await checkInstitutionEmailAvailability(website.id, email.trim(), {
+        excludeRole: 'officer',
+        excludeId: id
+      });
+      if (!emailAvail.available) {
+        return NextResponse.json({ success: false, error: emailAvail.message }, { status: 409 });
       }
     }
+
 
     // Handle password update if provided
     let passwordHash = currentOfficer.password;

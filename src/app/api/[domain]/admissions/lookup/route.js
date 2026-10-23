@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
+import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -142,7 +143,17 @@ export async function POST(request, context) {
       });
     }
 
-    // 2. Candidate does not exist yet. Check if email was already verified recently
+    // 2. Candidate does not exist yet for this circular.
+    // Verify that the email is not registered to an enrolled student, staff, teacher, officer, or other applicant
+    const emailCheck = await checkInstitutionEmailAvailability(website.id, cleanEmail);
+    if (!emailCheck.available) {
+      return NextResponse.json({
+        success: false,
+        error: emailCheck.message
+      }, { status: 409 });
+    }
+
+    // Check if email was already verified recently
     const verifiedRes = await queryDb(
       `SELECT id, is_verified, expires_at
        FROM website_email_verifications

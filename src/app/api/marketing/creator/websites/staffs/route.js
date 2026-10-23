@@ -5,6 +5,8 @@ import { revokeAllStaffSessions } from 'src/lib/middleware/staff';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
 import { getBaseUrl } from 'src/lib/database/secret';
 import { generateToken } from 'src/lib/utils/random';
+import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness';
+
 
 /**
  * Validates that the website belongs to the creator
@@ -201,17 +203,15 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Unauthorized or website not found.' }, { status: 403 });
     }
 
-    // Check email uniqueness within this website
-    const existing = await queryDb(
-      `SELECT id FROM website_staffs WHERE website_id = $1 AND LOWER(email) = LOWER($2)`,
-      [websiteId, email.trim()]
-    );
-    if (existing.rows.length > 0) {
+    // Check email uniqueness across all roles within this website
+    const emailAvail = await checkInstitutionEmailAvailability(websiteId, email.trim());
+    if (!emailAvail.available) {
       return NextResponse.json(
-        { success: false, error: 'A staff member with this email already exists for this website.' },
-        { status: 400 }
+        { success: false, error: emailAvail.message },
+        { status: 409 }
       );
     }
+
 
     const verificationToken = generateToken(32);
     const verificationExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
@@ -515,7 +515,20 @@ export async function PUT(request) {
 
     // Default: update_profile
     const { name, email, number, address, gradeId, bio } = body;
+    if (email && email.trim()) {
+      const emailAvail = await checkInstitutionEmailAvailability(websiteId, email.trim(), {
+        excludeRole: 'staff',
+        excludeId: staffId
+      });
+      if (!emailAvail.available) {
+        return NextResponse.json(
+          { success: false, error: emailAvail.message },
+          { status: 409 }
+        );
+      }
+    }
     const updRes = await queryDb(
+
       `UPDATE website_staffs
        SET name = COALESCE($1, name),
            email = COALESCE($2, email),

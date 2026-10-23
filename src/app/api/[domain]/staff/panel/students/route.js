@@ -5,6 +5,8 @@ import { verifyStudentStaffAccess } from 'src/lib/middleware/student-auth.js';
 import { hashPassword } from 'src/lib/middleware/students.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
 import { buildStudentSetupUrl } from 'src/lib/student/urls.js';
+import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
+
 
 // GET: Fetch students with academic metadata, filters, stats, and search
 export async function GET(request, context) {
@@ -197,10 +199,17 @@ export async function GET(request, context) {
       [website.id]
     );
 
+    // Fetch active form fields / custom columns configured for the students table
+    const fieldsRes = await queryDb(
+      `SELECT * FROM website_student_form_fields WHERE website_id = $1 AND is_active = TRUE ORDER BY sort_order ASC, id ASC`,
+      [website.id]
+    );
+
     return NextResponse.json({
       success: true,
       payload: {
         students: rosterRes.rows,
+        fields: fieldsRes.rows,
         pagination: {
           page,
           limit,
@@ -210,6 +219,7 @@ export async function GET(request, context) {
         stats: statsRes.rows[0] || {},
       },
     });
+
   } catch (error) {
     console.error('Error fetching students list:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch student records.' }, { status: 500 });
@@ -260,14 +270,11 @@ export async function POST(request, context) {
         return NextResponse.json({ success: false, error: 'Please enter a valid student email address.' }, { status: 400 });
       }
 
-      // Check duplicate email in website_students
-      const duplicateEmail = await queryDb(
-        `SELECT id FROM website_students WHERE website_id = $1 AND LOWER(email) = $2 LIMIT 1`,
-        [website.id, cleanEmail]
-      );
-      if (duplicateEmail.rows.length > 0) {
+      // Check cross-role email uniqueness across students, staff, teachers, officers, and applicants
+      const emailAvail = await checkInstitutionEmailAvailability(website.id, cleanEmail);
+      if (!emailAvail.available) {
         return NextResponse.json(
-          { success: false, error: `A student with email "${cleanEmail}" already exists in this institution.` },
+          { success: false, error: emailAvail.message },
           { status: 409 }
         );
       }
@@ -313,13 +320,73 @@ export async function POST(request, context) {
 
     const newStudent = insertRes.rows[0];
 
+    // Modular profile insertion if additional data was provided
+    const customFields = body.custom_fields && typeof body.custom_fields === 'object' ? body.custom_fields : {};
+    const infoData = {
+      name: body.name?.trim() || null,
+      email: cleanEmail,
+      number: body.number?.trim() || body.phone?.trim() || null,
+      gender: body.gender || 'Male',
+      blood_group: body.blood_group || null,
+      date_of_birth: body.date_of_birth || null,
+      religion: body.religion || null,
+      ...customFields
+    };
+
+    await queryDb(`
+      INSERT INTO website_student_info (website_id, student_id, data, verification_status, updated_at)
+      VALUES ($1, $2, $3, 'pending_setup', CURRENT_TIMESTAMP)
+      ON CONFLICT (student_id) DO UPDATE SET
+        data = website_student_info.data || EXCLUDED.data,
+        updated_at = CURRENT_TIMESTAMP
+    `, [website.id, newStudent.id, JSON.stringify(infoData)]);
+
+    if (body.guardian || body.father_name || body.mother_name) {
+      const g = body.guardian || {};
+      const guardData = {
+        father_name: body.father_name || g.father_name || null,
+        father_phone: body.father_phone || g.father_phone || null,
+        mother_name: body.mother_name || g.mother_name || null,
+        mother_phone: body.mother_phone || g.mother_phone || null,
+        guardian_name: body.guardian_name || g.guardian_name || null,
+        guardian_phone: body.guardian_phone || g.guardian_phone || null,
+        ...customFields
+      };
+      await queryDb(`
+        INSERT INTO website_student_guardians (website_id, student_id, data, updated_at)
+        VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+        ON CONFLICT (student_id) DO UPDATE SET
+          data = website_student_guardians.data || EXCLUDED.data,
+          updated_at = CURRENT_TIMESTAMP
+      `, [website.id, newStudent.id, JSON.stringify(guardData)]);
+    }
+
+    if (body.address || body.present_address) {
+      const a = body.address || {};
+      const addrData = {
+        present_address: body.present_address || a.present_address || (typeof body.address === 'string' ? body.address : null),
+        permanent_address: body.permanent_address || a.permanent_address || null,
+        city: body.city || a.city || null,
+        district: body.district || a.district || null,
+        upazila: body.upazila || a.upazila || null,
+        ...customFields
+      };
+      await queryDb(`
+        INSERT INTO website_student_addresses (website_id, student_id, data, updated_at)
+        VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+        ON CONFLICT (student_id) DO UPDATE SET
+          data = website_student_addresses.data || EXCLUDED.data,
+          updated_at = CURRENT_TIMESTAMP
+      `, [website.id, newStudent.id, JSON.stringify(addrData)]);
+    }
+
     // If student email is provided, send invitation to setup account via website mailer
     if (cleanEmail) {
       try {
         const setupUrl = `/auth/student/setup`;
         const emailHtml = buildStyledEmail({
           title: `Welcome to ${website.name || 'Student Portal'}`,
-          recipientName: 'Student',
+          recipientName: body.name?.trim() || 'Student',
           paragraphs: [
             `You have been registered at <strong>${website.name || 'our institution'}</strong>.`,
             `Your Registration Number: <strong>${newStudent.registration_no}</strong>`,
@@ -332,7 +399,7 @@ export async function POST(request, context) {
 
         await sendEmail({
           to: cleanEmail,
-          toName: 'Student',
+          toName: body.name?.trim() || 'Student',
           subject: `Student Account Setup - ${website.name || 'Portal'}`,
           html: emailHtml,
           websiteId: website.id,
@@ -341,6 +408,7 @@ export async function POST(request, context) {
         console.warn('Mail dispatch warning on registration:', mailErr.message);
       }
     }
+
 
     return NextResponse.json({
       success: true,
@@ -492,19 +560,17 @@ export async function PUT(request, context) {
         if (!emailRegex.test(cleanUpdateEmail)) {
           return NextResponse.json({ success: false, error: 'Please enter a valid student email address.' }, { status: 400 });
         }
-        const dup = await queryDb(
-          `SELECT s.id FROM website_students s
-           LEFT JOIN website_student_info i ON s.id = i.student_id
-           WHERE s.website_id = $1 AND s.id != $2 AND (LOWER(s.email) = $3 OR LOWER(i.email) = $3)
-           LIMIT 1`,
-          [website.id, studentId, cleanUpdateEmail]
-        );
-        if (dup.rows.length > 0) {
+        const emailAvail = await checkInstitutionEmailAvailability(website.id, cleanUpdateEmail, {
+          excludeRole: 'student',
+          excludeId: studentId
+        });
+        if (!emailAvail.available) {
           return NextResponse.json(
-            { success: false, error: `Email "${cleanUpdateEmail}" is already in use by another student.` },
+            { success: false, error: emailAvail.message },
             { status: 409 }
           );
         }
+
       }
       sFields.push(`email = $${sIdx++}`);
       sValues.push(cleanUpdateEmail);

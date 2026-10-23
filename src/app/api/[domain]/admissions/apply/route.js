@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
+import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
 
 /**
  * GET /api/[domain]/admissions/apply?admission_id=...
@@ -150,6 +151,23 @@ export async function POST(request, context) {
       LIMIT 1
     `, [website.id, admId, cleanEmail]);
 
+    const existingApp = existingAppCheck.rows[0] || null;
+
+    // 0a. Check cross-role email uniqueness:
+    // Prevent enrolled students from applying, prevent staff/teacher/officer/other applicant conflict
+    const emailAvailability = await checkInstitutionEmailAvailability(website.id, cleanEmail, {
+      excludeRole: existingApp ? 'applicant' : null,
+      excludeId: existingApp?.id || null,
+    });
+
+    if (!emailAvailability.available) {
+      return NextResponse.json({
+        success: false,
+        error: emailAvailability.message || 'This email address cannot be used for admission application.',
+        conflict_role: emailAvailability.conflictRole
+      }, { status: 409 });
+    }
+
     let verifiedCheck = null;
     if (existingAppCheck.rows.length === 0) {
       verifiedCheck = await queryDb(`
@@ -168,19 +186,43 @@ export async function POST(request, context) {
       }
     }
 
-    // 1. Fetch active modular form fields configured for this circular
-    const fieldsRes = await queryDb(`
-      SELECT * FROM website_admission_form_fields
-      WHERE website_id = $1 AND (admission_id = $2 OR admission_id IS NULL) AND is_active = TRUE
+    // 1. Fetch active modular form fields (primary blueprint is website_student_form_fields)
+    const stuFieldsRes = await queryDb(`
+      SELECT * FROM website_student_form_fields
+      WHERE website_id = $1 AND is_active = TRUE
       ORDER BY sort_order ASC, id ASC
-    `, [website.id, admId]);
+    `, [website.id]);
 
-    const activeFields = fieldsRes.rows.length > 0 ? fieldsRes.rows : [
-      { field_key: 'applicant_name', label: 'Applicant Name', field_type: 'text', is_required: true },
-      { field_key: 'phone', label: 'Phone', field_type: 'text', is_required: true, validation_regex: '^01[3-9]\\d{8}$' },
-      { field_key: 'gender', label: 'Gender', field_type: 'select', options: ['Male', 'Female', 'Other'], is_required: true },
-      { field_key: 'date_of_birth', label: 'Date of Birth', field_type: 'date', is_required: true }
-    ];
+    let activeFields = [];
+    if (stuFieldsRes.rows.length > 0) {
+      activeFields = stuFieldsRes.rows;
+      // Append any circular-specific fields
+      const admFieldsRes = await queryDb(`
+        SELECT * FROM website_admission_form_fields
+        WHERE website_id = $1 AND admission_id = $2 AND is_active = TRUE
+        ORDER BY sort_order ASC, id ASC
+      `, [website.id, admId]);
+      const existingKeys = new Set(activeFields.map((f) => f.field_key));
+      for (const af of admFieldsRes.rows) {
+        if (!existingKeys.has(af.field_key)) {
+          activeFields.push(af);
+          existingKeys.add(af.field_key);
+        }
+      }
+    } else {
+      const fieldsRes = await queryDb(`
+        SELECT * FROM website_admission_form_fields
+        WHERE website_id = $1 AND (admission_id = $2 OR admission_id IS NULL) AND is_active = TRUE
+        ORDER BY sort_order ASC, id ASC
+      `, [website.id, admId]);
+      activeFields = fieldsRes.rows.length > 0 ? fieldsRes.rows : [
+        { field_key: 'applicant_name', label: 'Applicant Name', field_type: 'text', is_required: true, section: 'personal' },
+        { field_key: 'phone', label: 'Phone', field_type: 'text', is_required: true, validation_regex: '^01[3-9]\\d{8}$', section: 'personal' },
+        { field_key: 'gender', label: 'Gender', field_type: 'select', options: ['Male', 'Female', 'Other'], is_required: true, section: 'personal' },
+        { field_key: 'date_of_birth', label: 'Date of Birth', field_type: 'date', is_required: true, section: 'personal' }
+      ];
+    }
+
 
     const validationErrors = [];
     const submittedCustom = body.custom_fields && typeof body.custom_fields === 'object' ? { ...body.custom_fields } : {};
@@ -320,16 +362,34 @@ export async function POST(request, context) {
       applicant = insertApp.rows[0];
     }
 
-    // 3. Upsert modular data into website_admission_applicant_info
+    // 3. Partition submitted custom fields by section
+    const customPersonal = {};
+    const customGuardian = {};
+    const customAddress = {};
+
+    for (const f of activeFields) {
+      const val = submittedCustom[f.field_key];
+      if (val !== undefined && val !== null) {
+        if (f.section === 'guardian') {
+          customGuardian[f.field_key] = val;
+        } else if (f.section === 'address') {
+          customAddress[f.field_key] = val;
+        } else {
+          customPersonal[f.field_key] = val;
+        }
+      }
+    }
+
+    // 3a. Upsert modular data into website_admission_applicant_info
     const personalData = {
       gender: gender || 'Male',
       date_of_birth: date_of_birth || null,
-      blood_group: blood_group || null,
+      blood_group: body.blood_group || null,
       religion: body.religion || null,
       last_class: resolvedLastClass,
       last_class_grade: resolvedLastGrade,
       last_institution: resolvedLastInst,
-      ...submittedCustom
+      ...customPersonal
     };
 
     await queryDb(`
@@ -353,7 +413,7 @@ export async function POST(request, context) {
       guardian_relation: guardian_relation || 'Father',
       guardian_email: body.guardian_email || null,
       guardian_address: body.guardian_address || null,
-      ...submittedCustom
+      ...customGuardian
     };
 
     await queryDb(`
@@ -373,7 +433,7 @@ export async function POST(request, context) {
       upazila: body.upazila || null,
       postal_code: body.postal_code || null,
       country: body.country || 'Bangladesh',
-      ...submittedCustom
+      ...customAddress
     };
 
     await queryDb(`
@@ -383,6 +443,7 @@ export async function POST(request, context) {
         data = website_admission_applicant_addresses.data || EXCLUDED.data,
         updated_at = CURRENT_TIMESTAMP
     `, [website.id, applicant.id, JSON.stringify(addressData)]);
+
 
     // 4. Upsert pending payment record in website_admission_fee_payments
     const feeAmount = parseFloat(circular.fee_amount) || 500.00;
