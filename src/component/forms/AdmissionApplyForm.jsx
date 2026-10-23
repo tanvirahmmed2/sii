@@ -1,13 +1,254 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import {
   FiUser, FiMail, FiPhone, FiCalendar, FiMapPin, FiLayers,
   FiAward, FiHeart, FiFileText, FiLock, FiCheckCircle, FiSend, FiKey,
-  FiSearch, FiAlertCircle, FiArrowRight
+  FiSearch, FiAlertCircle, FiArrowRight, FiUpload, FiCheckSquare
 } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
+
+export const FALLBACK_ADMISSION_FIELDS = [
+  {
+    field_key: 'applicant_name',
+    label: 'Applicant Full Name',
+    field_type: 'text',
+    options: [],
+    is_required: true,
+    is_unique: false,
+    validation_regex: null,
+    placeholder: 'e.g. Tanvir Ahmed',
+    help_text: 'Legal name as per birth certificate',
+    section: 'personal',
+    sort_order: 1,
+    is_active: true
+  },
+  {
+    field_key: 'phone',
+    label: 'Mobile Contact Number',
+    field_type: 'text',
+    options: [],
+    is_required: true,
+    is_unique: false,
+    validation_regex: '^01[3-9]\\d{8}$',
+    placeholder: '017XXXXXXXX',
+    help_text: '11-digit Bangladeshi mobile number',
+    section: 'personal',
+    sort_order: 2,
+    is_active: true
+  },
+  {
+    field_key: 'gender',
+    label: 'Gender',
+    field_type: 'select',
+    options: ['Male', 'Female', 'Other'],
+    is_required: true,
+    is_unique: false,
+    validation_regex: null,
+    placeholder: 'Select gender',
+    help_text: null,
+    section: 'personal',
+    sort_order: 3,
+    is_active: true
+  },
+  {
+    field_key: 'date_of_birth',
+    label: 'Date of Birth',
+    field_type: 'date',
+    options: [],
+    is_required: true,
+    is_unique: false,
+    validation_regex: null,
+    placeholder: 'YYYY-MM-DD',
+    help_text: null,
+    section: 'personal',
+    sort_order: 4,
+    is_active: true
+  },
+  {
+    field_key: 'blood_group',
+    label: 'Blood Group',
+    field_type: 'select',
+    options: ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'],
+    is_required: false,
+    is_unique: false,
+    validation_regex: null,
+    placeholder: 'Select blood group',
+    help_text: null,
+    section: 'personal',
+    sort_order: 5,
+    is_active: true
+  },
+  {
+    field_key: 'father_name',
+    label: "Father's Full Name",
+    field_type: 'text',
+    options: [],
+    is_required: true,
+    is_unique: false,
+    validation_regex: null,
+    placeholder: "Father's legal name",
+    help_text: null,
+    section: 'guardian',
+    sort_order: 6,
+    is_active: true
+  },
+  {
+    field_key: 'father_phone',
+    label: "Father's Mobile Phone",
+    field_type: 'text',
+    options: [],
+    is_required: false,
+    is_unique: false,
+    validation_regex: '^01[3-9]\\d{8}$',
+    placeholder: '01XXXXXXXXX',
+    help_text: null,
+    section: 'guardian',
+    sort_order: 7,
+    is_active: true
+  },
+  {
+    field_key: 'father_occupation',
+    label: "Father's Occupation",
+    field_type: 'text',
+    options: [],
+    is_required: false,
+    is_unique: false,
+    validation_regex: null,
+    placeholder: 'e.g. Teacher, Engineer, Businessman',
+    help_text: null,
+    section: 'guardian',
+    sort_order: 8,
+    is_active: true
+  },
+  {
+    field_key: 'mother_name',
+    label: "Mother's Full Name",
+    field_type: 'text',
+    options: [],
+    is_required: true,
+    is_unique: false,
+    validation_regex: null,
+    placeholder: "Mother's legal name",
+    help_text: null,
+    section: 'guardian',
+    sort_order: 9,
+    is_active: true
+  },
+  {
+    field_key: 'mother_phone',
+    label: "Mother's Mobile Phone",
+    field_type: 'text',
+    options: [],
+    is_required: false,
+    is_unique: false,
+    validation_regex: '^01[3-9]\\d{8}$',
+    placeholder: '01XXXXXXXXX',
+    help_text: null,
+    section: 'guardian',
+    sort_order: 10,
+    is_active: true
+  },
+  {
+    field_key: 'guardian_name',
+    label: 'Emergency Guardian Name',
+    field_type: 'text',
+    options: [],
+    is_required: false,
+    is_unique: false,
+    validation_regex: null,
+    placeholder: 'Guardian name if other than parents',
+    help_text: null,
+    section: 'guardian',
+    sort_order: 11,
+    is_active: true
+  },
+  {
+    field_key: 'guardian_phone',
+    label: 'Emergency Guardian Phone',
+    field_type: 'text',
+    options: [],
+    is_required: false,
+    is_unique: false,
+    validation_regex: '^01[3-9]\\d{8}$',
+    placeholder: '01XXXXXXXXX',
+    help_text: null,
+    section: 'guardian',
+    sort_order: 12,
+    is_active: true
+  },
+  {
+    field_key: 'present_address',
+    label: 'Present Address',
+    field_type: 'textarea',
+    options: [],
+    is_required: true,
+    is_unique: false,
+    validation_regex: null,
+    placeholder: 'House, Road, Area, Thana, District',
+    help_text: 'Current residential address for correspondence',
+    section: 'address',
+    sort_order: 13,
+    is_active: true
+  },
+  {
+    field_key: 'permanent_address',
+    label: 'Permanent Address',
+    field_type: 'textarea',
+    options: [],
+    is_required: false,
+    is_unique: false,
+    validation_regex: null,
+    placeholder: 'Village, Post, Thana, District',
+    help_text: 'Leave blank if same as present address',
+    section: 'address',
+    sort_order: 14,
+    is_active: true
+  },
+  {
+    field_key: 'past_school_class',
+    label: 'Previous Class / Level Passed',
+    field_type: 'text',
+    options: [],
+    is_required: false,
+    is_unique: false,
+    validation_regex: null,
+    placeholder: 'e.g. Class 5, Class 8, SSC',
+    help_text: 'Mandatory for merit-based intake',
+    section: 'academic',
+    sort_order: 15,
+    is_active: true
+  },
+  {
+    field_key: 'past_school_result',
+    label: 'Previous Grade / GPA',
+    field_type: 'text',
+    options: [],
+    is_required: false,
+    is_unique: false,
+    validation_regex: null,
+    placeholder: 'e.g. 5.00 or 4.50',
+    help_text: 'GPA obtained in last academic terminal',
+    section: 'academic',
+    sort_order: 16,
+    is_active: true
+  },
+  {
+    field_key: 'past_school_name',
+    label: 'Previous School / Institution',
+    field_type: 'text',
+    options: [],
+    is_required: false,
+    is_unique: false,
+    validation_regex: null,
+    placeholder: 'e.g. Govt. High School',
+    help_text: null,
+    section: 'academic',
+    sort_order: 17,
+    is_active: true
+  }
+];
 
 const AdmissionApplyForm = ({ 
   circulars, 
@@ -17,16 +258,16 @@ const AdmissionApplyForm = ({
   submitting, 
   admissionIdParam,
   onResumeExisting,
-  onGoBack
+  onGoBack,
+  serverValidationErrors = []
 }) => {
   const params = useParams();
   const domain = params?.domain || '';
   const apiBase = domain ? `/api/${domain}` : '/api';
 
-  // Email check & verification state
+  // Email check & verification state (Step 1)
   const [emailToVerify, setEmailToVerify] = useState('');
   const [checkingEmail, setCheckingEmail] = useState(false);
-  const [hasLookedUp, setHasLookedUp] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -34,39 +275,48 @@ const AdmissionApplyForm = ({
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [verifiedEmail, setVerifiedEmail] = useState('');
 
-  const [form, setForm] = useState({
-    applicant_name: '',
-    email: '',
-    phone: '',
-    date_of_birth: '',
-    gender: 'Male',
-    blood_group: '',
-    address: '',
-    applied_class_id: '',
-    father_name: '',
-    father_occupation: '',
-    father_phone: '',
-    mother_name: '',
-    mother_occupation: '',
-    mother_phone: '',
-    guardian_name: '',
-    guardian_phone: '',
-    guardian_relation: 'Father',
-    past_school_name: '',
-    past_school_class: '',
-    past_school_result: '',
-    special_note: '',
-    birth_regi_number: ''
-  });
+  // Modular Form Fields State
+  const [formFields, setFormFields] = useState(FALLBACK_ADMISSION_FIELDS);
+  const [loadingFields, setLoadingFields] = useState(false);
+  const [fieldValues, setFieldValues] = useState({});
+  const [fieldErrors, setFieldErrors] = useState({});
 
+  // Sync server validation errors
   useEffect(() => {
-    if (selectedCircular) {
-      setForm((prev) => ({
-        ...prev,
-        applied_class_id: selectedCircular.class_id ? selectedCircular.class_id.toString() : ''
-      }));
+    if (serverValidationErrors && serverValidationErrors.length > 0) {
+      const errMap = {};
+      serverValidationErrors.forEach((err) => {
+        if (err.field_key) {
+          errMap[err.field_key] = err.error || err.message;
+        }
+      });
+      setFieldErrors(errMap);
     }
-  }, [selectedCircular]);
+  }, [serverValidationErrors]);
+
+  // Fetch modular form fields whenever circular changes
+  useEffect(() => {
+    const fetchFields = async () => {
+      if (!selectedCircular?.id) return;
+      setLoadingFields(true);
+      try {
+        const res = await fetch(`${apiBase}/admissions/fields?admission_id=${selectedCircular.id}`);
+        const data = await res.json();
+        if (res.ok && data.success && Array.isArray(data.fields) && data.fields.length > 0) {
+          setFormFields(data.fields);
+        } else {
+          setFormFields(FALLBACK_ADMISSION_FIELDS);
+        }
+      } catch (err) {
+        console.warn('Failed to load circular fields, using defaults:', err);
+        setFormFields(FALLBACK_ADMISSION_FIELDS);
+      } finally {
+        setLoadingFields(false);
+      }
+    };
+
+    fetchFields();
+  }, [selectedCircular?.id, apiBase]);
 
   const isCircularLocked = selectedCircular && (
     selectedCircular.status === 'closed' ||
@@ -77,10 +327,60 @@ const AdmissionApplyForm = ({
   const isMeritBased = selectedCircular?.selection_method === 'merit';
   const isExamBased = selectedCircular?.selection_method === 'exam';
 
+  // Group active fields by section
+  const sections = useMemo(() => {
+    const active = formFields.filter((f) => f.is_active !== false);
+    const groups = {
+      personal: { title: '2. Candidate Personal Information', icon: FiUser, fields: [] },
+      guardian: { title: '3. Parents & Guardian Information', icon: FiUser, fields: [] },
+      academic: { title: '4. Academic Background', icon: FiAward, fields: [] },
+      address: { title: '5. Residential Address Details', icon: FiMapPin, fields: [] },
+      general: { title: '6. Additional Information', icon: FiFileText, fields: [] },
+    };
+
+    active.forEach((f) => {
+      const secKey = f.section && groups[f.section] ? f.section : 'general';
+      groups[secKey].fields.push(f);
+    });
+
+    return Object.entries(groups).filter(([_, group]) => group.fields.length > 0);
+  }, [formFields]);
+
+  // Handle dynamic field changes
+  const handleFieldChange = (fieldKey, value) => {
+    setFieldValues((prev) => ({ ...prev, [fieldKey]: value }));
+    if (fieldErrors[fieldKey]) {
+      setFieldErrors((prev) => {
+        const copy = { ...prev };
+        delete copy[fieldKey];
+        return copy;
+      });
+    }
+  };
+
+  // Handle File Upload (read as Base64)
+  const handleFileUpload = (fieldKey, e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('File size must be less than 2MB.');
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      handleFieldChange(fieldKey, reader.result);
+      toast.success(`Attached ${file.name}`);
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Step 1: Check if applicant already exists for this circular
   const handleCheckEmail = async () => {
     if (!emailToVerify.trim() || !emailToVerify.includes('@')) {
-      toast.error('Please enter a valid email address.');
+      toast.error('Please enter a valid candidate email address.');
       return;
     }
     if (!selectedCircular?.id) {
@@ -89,7 +389,6 @@ const AdmissionApplyForm = ({
     }
 
     setCheckingEmail(true);
-    setHasLookedUp(true);
 
     try {
       const res = await fetch(`${apiBase}/admissions/lookup`, {
@@ -107,26 +406,32 @@ const AdmissionApplyForm = ({
         const app = data.applicant;
         setIsEmailVerified(true);
         setVerifiedEmail(app.email);
-        setForm((prev) => ({
-          ...prev,
-          applicant_name: app.applicant_name || prev.applicant_name,
-          email: app.email,
-          phone: app.phone || prev.phone,
-          gender: app.gender || prev.gender,
-          date_of_birth: app.date_of_birth ? new Date(app.date_of_birth).toISOString().split('T')[0] : prev.date_of_birth,
-          address: app.present_address || prev.address,
-          father_name: app.father_name || prev.father_name,
-          father_phone: app.father_phone || prev.father_phone,
-          mother_name: app.mother_name || prev.mother_name,
-          mother_phone: app.mother_phone || prev.mother_phone,
-          past_school_name: app.last_institution || prev.past_school_name,
-          past_school_class: app.last_class || prev.past_school_class,
-          past_school_result: app.last_class_grade ? String(app.last_class_grade) : prev.past_school_result
-        }));
 
+        // Prepopulate existing field values
+        const newVals = {
+          applicant_name: app.applicant_name || '',
+          email: app.email || '',
+          phone: app.phone || '',
+          gender: app.gender || 'Male',
+          date_of_birth: app.date_of_birth ? new Date(app.date_of_birth).toISOString().split('T')[0] : '',
+          present_address: app.present_address || '',
+          permanent_address: app.permanent_address || '',
+          father_name: app.father_name || '',
+          father_phone: app.father_phone || '',
+          mother_name: app.mother_name || '',
+          mother_phone: app.mother_phone || '',
+          past_school_name: app.last_institution || '',
+          past_school_class: app.last_class || '',
+          past_school_result: app.last_class_grade ? String(app.last_class_grade) : ''
+        };
+
+        if (app.custom_fields && typeof app.custom_fields === 'object') {
+          Object.assign(newVals, app.custom_fields);
+        }
+
+        setFieldValues((prev) => ({ ...prev, ...newVals }));
         toast.success(`Found your application in '${app.status}' status! Resuming...`);
 
-        // If status requires next step, notify parent to resume at exact stage
         if (onResumeExisting) {
           if (app.status === 'unpaid') {
             onResumeExisting({ step: 'payment', applicant: app });
@@ -140,12 +445,11 @@ const AdmissionApplyForm = ({
           }
         }
       } else {
-        // Applicant doesn't exist yet, proceed with OTP dispatch
-        toast.info('No existing application found for this circular. Please verify your email with OTP.');
+        toast.info('No existing record found for this circular. Please verify your email with OTP.');
         await handleSendOtp();
       }
     } catch {
-      toast.error('Network error checking email status.');
+      toast.error('Network error checking candidate email.');
     } finally {
       setCheckingEmail(false);
     }
@@ -193,16 +497,16 @@ const AdmissionApplyForm = ({
           email: emailToVerify.trim(),
           code: otpCode.trim(),
           admission_id: selectedCircular?.id || null,
-          applicant_name: form.applicant_name || 'Candidate',
-          phone: form.phone || ''
+          applicant_name: fieldValues.applicant_name || 'Candidate',
+          phone: fieldValues.phone || ''
         }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
         setIsEmailVerified(true);
         setVerifiedEmail(emailToVerify.trim());
-        setForm((prev) => ({ ...prev, email: emailToVerify.trim() }));
-        toast.success('Email verified successfully! Application form is now unlocked.');
+        setFieldValues((prev) => ({ ...prev, email: emailToVerify.trim() }));
+        toast.success('Email verified successfully! Application form is unlocked.');
       } else {
         toast.error(data.error || 'Invalid verification code.');
       }
@@ -213,6 +517,7 @@ const AdmissionApplyForm = ({
     }
   };
 
+  // Validate form client-side before calling onSubmit
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!isEmailVerified) {
@@ -224,27 +529,248 @@ const AdmissionApplyForm = ({
       return;
     }
 
-    // Merit-based circular validation
-    if (isMeritBased) {
-      if (!form.past_school_class?.trim()) {
-        toast.error('Previous Class is required for merit-based admission circulars.');
-        return;
+    const errors = {};
+    const active = formFields.filter((f) => f.is_active !== false);
+
+    for (const f of active) {
+      const val = fieldValues[f.field_key];
+      const strVal = val !== undefined && val !== null ? String(val).trim() : '';
+
+      // Required Check
+      if (f.is_required) {
+        if (f.field_type === 'boolean' && !val) {
+          errors[f.field_key] = `${f.label} must be confirmed.`;
+        } else if (!strVal) {
+          errors[f.field_key] = `${f.label} is required.`;
+        }
       }
-      if (!form.past_school_result?.trim()) {
-        toast.error('Previous GPA / Grade is required for merit-based admission circulars.');
-        return;
-      }
-      if (selectedCircular.last_class_grade) {
-        const minGrade = parseFloat(selectedCircular.last_class_grade);
-        const enteredGrade = parseFloat(form.past_school_result);
-        if (!isNaN(minGrade) && !isNaN(enteredGrade) && enteredGrade < minGrade) {
-          toast.error(`Your GPA (${enteredGrade}) is below the required minimum GPA (${minGrade}) for this circular.`);
-          return;
+
+      if (strVal) {
+        // Number Check
+        if (f.field_type === 'number' && isNaN(Number(strVal))) {
+          errors[f.field_key] = `${f.label} must be a valid number.`;
+        }
+
+        // Date Check
+        if (f.field_type === 'date' && isNaN(Date.parse(strVal))) {
+          errors[f.field_key] = `${f.label} must be a valid date.`;
+        }
+
+        // Select Check
+        if (f.field_type === 'select') {
+          let opts = [];
+          if (Array.isArray(f.options)) opts = f.options;
+          else if (typeof f.options === 'string') {
+            try { opts = JSON.parse(f.options); } catch { opts = []; }
+          }
+          if (opts.length > 0 && !opts.includes(strVal)) {
+            errors[f.field_key] = `Please select an allowed option for ${f.label}.`;
+          }
+        }
+
+        // Regex Validation
+        if (f.validation_regex) {
+          try {
+            const re = new RegExp(f.validation_regex);
+            if (!re.test(strVal)) {
+              errors[f.field_key] = `${f.label} format is invalid. ${f.help_text || ''}`.trim();
+            }
+          } catch (_) {}
         }
       }
     }
 
-    onSubmit(form);
+    // Merit-based circular validation
+    if (isMeritBased) {
+      const pastClass = fieldValues.past_school_class || fieldValues.last_class;
+      const pastGrade = fieldValues.past_school_result || fieldValues.last_class_grade;
+
+      if (!pastClass?.trim()) {
+        errors.past_school_class = 'Previous Class is required for merit-based intake.';
+      }
+      if (!pastGrade?.trim()) {
+        errors.past_school_result = 'Previous GPA / Grade is required for merit-based intake.';
+      } else if (selectedCircular.last_class_grade) {
+        const minGrade = parseFloat(selectedCircular.last_class_grade);
+        const enteredGrade = parseFloat(pastGrade);
+        if (!isNaN(minGrade) && !isNaN(enteredGrade) && enteredGrade < minGrade) {
+          errors.past_school_result = `Your GPA (${enteredGrade}) is below the required minimum GPA (${minGrade}) for this circular.`;
+        }
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      const firstError = Object.values(errors)[0];
+      toast.error(`Please correct the errors in the form: ${firstError}`);
+      return;
+    }
+
+    // Prepare complete form payload
+    const payload = {
+      ...fieldValues,
+      email: verifiedEmail || emailToVerify.trim(),
+      custom_fields: { ...fieldValues },
+      address: fieldValues.present_address || fieldValues.address,
+      present_address: fieldValues.present_address || fieldValues.address,
+      last_class: fieldValues.past_school_class || fieldValues.last_class,
+      last_class_grade: fieldValues.past_school_result || fieldValues.last_class_grade,
+      last_institution: fieldValues.past_school_name || fieldValues.last_institution
+    };
+
+    onSubmit(payload);
+  };
+
+  // Render individual input control based on field_type
+  const renderFieldControl = (f) => {
+    const val = fieldValues[f.field_key] ?? '';
+    const err = fieldErrors[f.field_key];
+    const isRequired = Boolean(f.is_required);
+
+    let opts = [];
+    if (f.field_type === 'select') {
+      if (Array.isArray(f.options)) opts = f.options;
+      else if (typeof f.options === 'string') {
+        try { opts = JSON.parse(f.options); } catch { opts = []; }
+      }
+    }
+
+    return (
+      <div key={f.field_key} className="flex flex-col gap-1 w-full">
+        <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center justify-between">
+          <span>
+            {f.label} {isRequired && <span className="text-rose-500">*</span>}
+          </span>
+          {f.is_shown_in_id_card && (
+            <span className="text-[9px] lowercase bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded">
+              on ID card
+            </span>
+          )}
+        </label>
+
+        {f.field_type === 'text' && (
+          <input
+            type="text"
+            required={isRequired}
+            placeholder={f.placeholder || `Enter ${f.label.toLowerCase()}`}
+            disabled={!isEmailVerified || isCircularLocked}
+            value={val}
+            onChange={(e) => handleFieldChange(f.field_key, e.target.value)}
+            className={`w-full px-3.5 py-2 bg-white dark:bg-slate-800 border rounded-xl text-xs text-slate-900 dark:text-white outline-none transition ${
+              err ? 'border-rose-500 focus:border-rose-600' : 'border-slate-300 dark:border-slate-700 focus:border-blue-500'
+            }`}
+          />
+        )}
+
+        {f.field_type === 'number' && (
+          <input
+            type="number"
+            step="any"
+            required={isRequired}
+            placeholder={f.placeholder || '0'}
+            disabled={!isEmailVerified || isCircularLocked}
+            value={val}
+            onChange={(e) => handleFieldChange(f.field_key, e.target.value)}
+            className={`w-full px-3.5 py-2 bg-white dark:bg-slate-800 border rounded-xl text-xs font-mono text-slate-900 dark:text-white outline-none transition ${
+              err ? 'border-rose-500 focus:border-rose-600' : 'border-slate-300 dark:border-slate-700 focus:border-blue-500'
+            }`}
+          />
+        )}
+
+        {f.field_type === 'select' && (
+          <select
+            required={isRequired}
+            disabled={!isEmailVerified || isCircularLocked}
+            value={val}
+            onChange={(e) => handleFieldChange(f.field_key, e.target.value)}
+            className={`w-full px-3.5 py-2 bg-white dark:bg-slate-800 border rounded-xl text-xs text-slate-900 dark:text-white outline-none cursor-pointer transition ${
+              err ? 'border-rose-500' : 'border-slate-300 dark:border-slate-700'
+            }`}
+          >
+            <option value="">{f.placeholder || `Select ${f.label.toLowerCase()}...`}</option>
+            {opts.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {f.field_type === 'date' && (
+          <input
+            type="date"
+            required={isRequired}
+            disabled={!isEmailVerified || isCircularLocked}
+            value={val}
+            onChange={(e) => handleFieldChange(f.field_key, e.target.value)}
+            className={`w-full px-3.5 py-2 bg-white dark:bg-slate-800 border rounded-xl text-xs font-mono text-slate-900 dark:text-white outline-none transition ${
+              err ? 'border-rose-500' : 'border-slate-300 dark:border-slate-700'
+            }`}
+          />
+        )}
+
+        {f.field_type === 'textarea' && (
+          <textarea
+            rows={2}
+            required={isRequired}
+            placeholder={f.placeholder || `Enter ${f.label.toLowerCase()}`}
+            disabled={!isEmailVerified || isCircularLocked}
+            value={val}
+            onChange={(e) => handleFieldChange(f.field_key, e.target.value)}
+            className={`w-full px-3.5 py-2 bg-white dark:bg-slate-800 border rounded-xl text-xs text-slate-900 dark:text-white outline-none transition ${
+              err ? 'border-rose-500' : 'border-slate-300 dark:border-slate-700'
+            }`}
+          />
+        )}
+
+        {f.field_type === 'boolean' && (
+          <label className="flex items-center gap-2 pt-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              disabled={!isEmailVerified || isCircularLocked}
+              checked={Boolean(val)}
+              onChange={(e) => handleFieldChange(f.field_key, e.target.checked)}
+              className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-700 cursor-pointer"
+            />
+            <span className="text-xs text-slate-700 dark:text-slate-300">
+              {f.placeholder || `Confirm ${f.label}`}
+            </span>
+          </label>
+        )}
+
+        {f.field_type === 'file' && (
+          <div className="flex items-center gap-3">
+            <label className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs cursor-pointer flex items-center gap-1.5 transition">
+              <FiUpload className="w-3.5 h-3.5" />
+              <span>Choose Document</span>
+              <input
+                type="file"
+                disabled={!isEmailVerified || isCircularLocked}
+                onChange={(e) => handleFileUpload(f.field_key, e)}
+                className="hidden"
+              />
+            </label>
+            {val && (
+              <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                <FiCheckCircle /> Attached
+              </span>
+            )}
+          </div>
+        )}
+
+        {err && (
+          <span className="text-[10px] text-rose-500 font-semibold flex items-center gap-1 mt-0.5">
+            <FiAlertCircle /> {err}
+          </span>
+        )}
+
+        {f.help_text && !err && (
+          <span className="text-[10px] text-slate-400 mt-0.5">
+            {f.help_text}
+          </span>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -355,7 +881,6 @@ const AdmissionApplyForm = ({
                 value={emailToVerify}
                 onChange={(e) => {
                   setEmailToVerify(e.target.value);
-                  setHasLookedUp(false);
                   setOtpSent(false);
                 }}
                 className="w-full sm:flex-1 px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none font-mono"
@@ -419,256 +944,37 @@ const AdmissionApplyForm = ({
         ) : (
           <div className="flex items-center justify-between p-3 bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-xl text-xs text-emerald-900 dark:text-emerald-200">
             <span>Verified Candidate Email: <strong>{verifiedEmail}</strong></span>
-            <span className="text-[11px] text-emerald-700 dark:text-emerald-300">Ready to complete application</span>
+            <span className="text-[11px] text-emerald-700 dark:text-emerald-300 font-semibold">Form Unlocked</span>
           </div>
         )}
       </div>
 
-      {/* FORM SECTIONS (Unlocked when email is verified) */}
+      {/* DYNAMIC MODULAR SECTIONS (Unlocked when email is verified) */}
       <div className={!isEmailVerified ? 'opacity-40 pointer-events-none transition-opacity' : 'transition-opacity'}>
-        {/* 1. Basic Candidate Details */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-2xs flex flex-col gap-4 mb-6">
-          <h3 className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
-            <FiUser className="text-blue-600" /> 2. Candidate Personal Information
-          </h3>
+        {sections.map(([secKey, group]) => {
+          const IconComp = group.icon;
+          return (
+            <div
+              key={secKey}
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-2xs flex flex-col gap-4 mb-6"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                <h3 className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                  <IconComp className="text-blue-600" /> {group.title}
+                </h3>
+                {secKey === 'academic' && isMeritBased && (
+                  <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full uppercase">
+                    Required for Merit Evaluation
+                  </span>
+                )}
+              </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="flex flex-col gap-1 sm:col-span-2">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                <FiUser /> Full Legal Candidate Name *
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Tanvir Ahmmed"
-                disabled={!isEmailVerified || isCircularLocked}
-                value={form.applicant_name}
-                onChange={(e) => setForm((p) => ({ ...p, applicant_name: e.target.value }))}
-                className="w-full px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none"
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {group.fields.map((f) => renderFieldControl(f))}
+              </div>
             </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                <FiCalendar /> Date of Birth *
-              </label>
-              <input
-                type="date"
-                required
-                disabled={!isEmailVerified || isCircularLocked}
-                value={form.date_of_birth}
-                onChange={(e) => setForm((p) => ({ ...p, date_of_birth: e.target.value }))}
-                className="w-full px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none font-mono"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gender *</label>
-              <select
-                required
-                disabled={!isEmailVerified || isCircularLocked}
-                value={form.gender}
-                onChange={(e) => setForm((p) => ({ ...p, gender: e.target.value }))}
-                className="w-full px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none cursor-pointer"
-              >
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                <FiPhone /> Contact Number *
-              </label>
-              <input
-                type="tel"
-                required
-                placeholder="01XXXXXXXXX"
-                disabled={!isEmailVerified || isCircularLocked}
-                value={form.phone}
-                onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-                className="w-full px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none font-mono"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                <FiHeart /> Blood Group
-              </label>
-              <select
-                disabled={!isEmailVerified || isCircularLocked}
-                value={form.blood_group}
-                onChange={(e) => setForm((p) => ({ ...p, blood_group: e.target.value }))}
-                className="w-full px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none cursor-pointer"
-              >
-                <option value="">Select blood group...</option>
-                <option value="A+">A+</option>
-                <option value="A-">A-</option>
-                <option value="B+">B+</option>
-                <option value="B-">B-</option>
-                <option value="O+">O+</option>
-                <option value="O-">O-</option>
-                <option value="AB+">AB+</option>
-                <option value="AB-">AB-</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* 2. Guardian Details */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-2xs flex flex-col gap-4 mb-6">
-          <h3 className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
-            <FiUser className="text-purple-600" /> 3. Parents &amp; Guardian Information
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Father Name *</label>
-              <input
-                type="text"
-                required
-                disabled={!isEmailVerified || isCircularLocked}
-                value={form.father_name}
-                onChange={(e) => setForm((p) => ({ ...p, father_name: e.target.value }))}
-                className="w-full px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Father Occupation</label>
-              <input
-                type="text"
-                disabled={!isEmailVerified || isCircularLocked}
-                value={form.father_occupation}
-                onChange={(e) => setForm((p) => ({ ...p, father_occupation: e.target.value }))}
-                className="w-full px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Father Phone</label>
-              <input
-                type="tel"
-                disabled={!isEmailVerified || isCircularLocked}
-                value={form.father_phone}
-                onChange={(e) => setForm((p) => ({ ...p, father_phone: e.target.value }))}
-                className="w-full px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none font-mono"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mother Name *</label>
-              <input
-                type="text"
-                required
-                disabled={!isEmailVerified || isCircularLocked}
-                value={form.mother_name}
-                onChange={(e) => setForm((p) => ({ ...p, mother_name: e.target.value }))}
-                className="w-full px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mother Occupation</label>
-              <input
-                type="text"
-                disabled={!isEmailVerified || isCircularLocked}
-                value={form.mother_occupation}
-                onChange={(e) => setForm((p) => ({ ...p, mother_occupation: e.target.value }))}
-                className="w-full px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mother Phone</label>
-              <input
-                type="tel"
-                disabled={!isEmailVerified || isCircularLocked}
-                value={form.mother_phone}
-                onChange={(e) => setForm((p) => ({ ...p, mother_phone: e.target.value }))}
-                className="w-full px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none font-mono"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* 3. Academic Background (Conditional logic for Merit, Exam, Manual) */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-2xs flex flex-col gap-4 mb-6">
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
-            <h3 className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
-              <FiAward className="text-emerald-600" /> 4. Academic Background &amp; Address
-            </h3>
-            {isMeritBased && (
-              <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full uppercase">
-                Required for Merit Evaluation
-              </span>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="flex flex-col gap-1 sm:col-span-3">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Residential Address *</label>
-              <textarea
-                rows={2}
-                required
-                placeholder="House, Road, City, District"
-                disabled={!isEmailVerified || isCircularLocked}
-                value={form.address}
-                onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))}
-                className="w-full px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none"
-              />
-            </div>
-
-            {/* Previous Class */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Previous Class / Level {isMeritBased ? '*' : '(Optional)'}
-              </label>
-              <input
-                type="text"
-                required={isMeritBased}
-                placeholder="e.g. Class 5, Class 8, SSC"
-                disabled={!isEmailVerified || isCircularLocked}
-                value={form.past_school_class}
-                onChange={(e) => setForm((p) => ({ ...p, past_school_class: e.target.value }))}
-                className="w-full px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none"
-              />
-            </div>
-
-            {/* Previous GPA / Grade */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Previous GPA / Marks {isMeritBased ? '*' : '(Optional)'}
-              </label>
-              <input
-                type="text"
-                required={isMeritBased}
-                placeholder="e.g. 5.00 or 4.50"
-                disabled={!isEmailVerified || isCircularLocked}
-                value={form.past_school_result}
-                onChange={(e) => setForm((p) => ({ ...p, past_school_result: e.target.value }))}
-                className="w-full px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none font-mono"
-              />
-            </div>
-
-            {/* Previous Institution */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Previous Institution {isMeritBased ? '*' : '(Optional)'}
-              </label>
-              <input
-                type="text"
-                required={isMeritBased}
-                placeholder="e.g. Recognized High School"
-                disabled={!isEmailVerified || isCircularLocked}
-                value={form.past_school_name}
-                onChange={(e) => setForm((p) => ({ ...p, past_school_name: e.target.value }))}
-                className="w-full px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none"
-              />
-            </div>
-          </div>
-        </div>
+          );
+        })}
 
         {/* Submit Action */}
         <div className="flex items-center justify-end gap-3 pt-2">
@@ -688,8 +994,8 @@ const AdmissionApplyForm = ({
           >
             {submitting ? (
               <>
-                <div className="loader loader-xs loader-white" />
-                <span>Saving Profile &amp; Preparing Payment...</span>
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Validating &amp; Saving Profile...</span>
               </>
             ) : (
               <span>Proceed to Application Fee Payment &rarr;</span>

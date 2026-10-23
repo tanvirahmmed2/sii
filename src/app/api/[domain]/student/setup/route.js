@@ -233,6 +233,7 @@ async function handleSetupSubmission(request, context) {
       if (!name?.trim()) {
         return NextResponse.json({ success: false, error: 'Student full name is required.' }, { status: 400 });
       }
+      const customData = body.custom_fields && typeof body.custom_fields === 'object' ? body.custom_fields : {};
       await queryDb(
         `UPDATE website_student_info
          SET name = COALESCE($1, name),
@@ -241,8 +242,9 @@ async function handleSetupSubmission(request, context) {
              blood_group = COALESCE($4, blood_group),
              date_of_birth = COALESCE($5, date_of_birth),
              religion = COALESCE($6, religion),
+             custom_fields = COALESCE(custom_fields, '{}'::jsonb) || $7::jsonb,
              updated_at = CURRENT_TIMESTAMP
-         WHERE student_id = $7 AND website_id = $8`,
+         WHERE student_id = $8 AND website_id = $9`,
         [
           name.trim(),
           number?.trim() || null,
@@ -250,6 +252,7 @@ async function handleSetupSubmission(request, context) {
           blood_group || null,
           date_of_birth || null,
           religion || null,
+          JSON.stringify(customData),
           student.id,
           website.id,
         ]
@@ -284,15 +287,17 @@ async function handleSetupSubmission(request, context) {
 
     // STEP 4: Guardian information
     if (body.step === 4 || body.step === 'guardian') {
+      const guardianCustom = body.guardian_custom_fields || (body.custom_fields && typeof body.custom_fields === 'object' ? body.custom_fields : {});
       await queryDb(
         `INSERT INTO website_student_guardians (
             website_id, student_id,
             father_name, father_phone, father_nid, father_occupation,
             mother_name, mother_phone, mother_nid, mother_occupation,
             guardian_name, guardian_relation, guardian_phone, guardian_email, guardian_address,
+            custom_fields,
             updated_at
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, CURRENT_TIMESTAMP)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16::jsonb, CURRENT_TIMESTAMP)
          ON CONFLICT (student_id)
          DO UPDATE SET
             father_name = EXCLUDED.father_name,
@@ -308,6 +313,7 @@ async function handleSetupSubmission(request, context) {
             guardian_phone = EXCLUDED.guardian_phone,
             guardian_email = EXCLUDED.guardian_email,
             guardian_address = EXCLUDED.guardian_address,
+            custom_fields = COALESCE(website_student_guardians.custom_fields, '{}'::jsonb) || EXCLUDED.custom_fields,
             updated_at = CURRENT_TIMESTAMP`,
         [
           website.id,
@@ -325,6 +331,7 @@ async function handleSetupSubmission(request, context) {
           guardian_phone?.trim() || null,
           guardian_email?.trim() || null,
           guardian_address?.trim() || null,
+          JSON.stringify(guardianCustom),
         ]
       );
       return NextResponse.json({
@@ -513,9 +520,22 @@ async function handleSetupSubmission(request, context) {
       );
     }
 
-    const responseMessage = isAutoVerified
-      ? 'Account setup completed successfully! Your student account is now verified and active. You can log in directly to your student portal.'
-      : 'Profile setup submitted for staff verification! Since your email was not pre-registered by school administration, your profile has been sent to staff for verification. You will be able to log in once staff approves your account in staff panel.';
+    // Ensure student is active and verified in website_students
+    await queryDb(
+      `UPDATE website_students
+       SET is_active = TRUE,
+           is_verified = TRUE,
+           verified_at = COALESCE(verified_at, CURRENT_TIMESTAMP),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND website_id = $2`,
+      [student.id, website.id]
+    );
+
+    const isAutoVerified = true;
+    const verificationStatus = 'verified';
+    const isActive = true;
+
+    const responseMessage = 'Account setup completed successfully! Your student account is now verified and active. You can log in directly to your student portal.';
 
     return NextResponse.json({
       success: true,
@@ -524,7 +544,7 @@ async function handleSetupSubmission(request, context) {
         student_id: student.id,
         verification_status: verificationStatus,
         is_active: isActive,
-        requires_staff_verification: !isAutoVerified,
+        requires_staff_verification: false,
       },
     });
   } catch (error) {

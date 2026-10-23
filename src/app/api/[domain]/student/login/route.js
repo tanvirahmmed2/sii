@@ -27,22 +27,27 @@ export async function POST(request, context) {
     }
 
     // Lookup student joining website_students with website_student_info
+    // Lookup student using website_students as the primary account table
     let res = await queryDb(
       `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
               s.class_id, s.section_id, s.session_id, s.is_active,
-              i.name, i.email, i.password, i.is_registered, i.is_verified,
-              i.verification_status, i.verification_notes, i.rejection_reason,
+              COALESCE(s.password, i.password) AS password,
+              COALESCE(s.is_verified, i.is_verified, FALSE) AS is_verified,
+              COALESCE(i.is_registered, TRUE) AS is_registered,
+              COALESCE(i.verification_status, 'verified') AS verification_status,
+              COALESCE(i.name, 'Student') AS name,
+              COALESCE(s.email, i.email) AS email,
               c.name AS class_name,
               sec.name AS section_name,
               ses.name AS session_name
        FROM website_students s
-       JOIN website_student_info i ON s.id = i.student_id
+       LEFT JOIN website_student_info i ON s.id = i.student_id
        LEFT JOIN website_classes c ON s.class_id = c.id
        LEFT JOIN website_sections sec ON s.section_id = sec.id
        LEFT JOIN website_sessions ses ON s.session_id = ses.id
        WHERE s.website_id = $1 AND (
          LOWER(s.registration_no) = LOWER($2) OR
-         LOWER(i.email) = LOWER($2) OR
+         LOWER(COALESCE(s.email, i.email)) = LOWER($2) OR
          LOWER(s.student_unique_id) = LOWER($2)
        )
        LIMIT 1`,

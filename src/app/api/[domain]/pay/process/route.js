@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb, pool } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
-import { resolveGatewayRouteForTask } from 'src/lib/database/paymentGateways';
+import { resolveGatewayRouteForTask, processSecureAdmissionFeePayment } from 'src/lib/database/paymentGateways';
 
 export const dynamic = 'force-dynamic';
 
@@ -263,75 +263,33 @@ export async function POST(request, context) {
     // 3. ADMISSION APPLICATION FEES PAYMENT
     // =========================================================================
     else if (purpose === 'admission_fees') {
-      const invRes = await client.query(`
-        SELECT p.*, a.application_no, a.applicant_name, a.email, a.phone, a.id AS applicant_record_id,
-               c.title AS circular_title
-        FROM website_admission_fee_payments p
-        JOIN website_admission_applicants a ON a.id = p.applicant_id
-        LEFT JOIN website_admissions c ON c.id = p.admission_id
-        WHERE p.id = $1 AND p.website_id = $2
-        FOR UPDATE OF p
-      `, [invoice_id, website.id]);
+      let applicantTargetId = invoice_id;
 
-      if (invRes.rows.length === 0) {
-        await client.query('ROLLBACK');
-        return NextResponse.json({ success: false, error: 'Admission fee invoice not found.' }, { status: 404 });
+      // If invoice_id points to website_admission_fee_payments.id, look up applicant_id
+      const pCheck = await client.query(`
+        SELECT applicant_id FROM website_admission_fee_payments WHERE id = $1 AND website_id = $2
+      `, [invoice_id, website.id]).catch(() => ({ rows: [] }));
+
+      if (pCheck.rows.length > 0) {
+        applicantTargetId = pCheck.rows[0].applicant_id;
       }
 
-      const inv = invRes.rows[0];
-      if (inv.payment_status === 'paid') {
+      const payResult = await processSecureAdmissionFeePayment({
+        websiteId: website.id,
+        applicantIdentifier: applicantTargetId,
+        gatewayCode: gw,
+        gatewayAccountId: verifiedAccountId || gateway_account_id,
+        paymentDetails,
+        customTxnId: txnId,
+        client
+      });
+
+      if (!payResult.success) {
         await client.query('ROLLBACK');
-        return NextResponse.json({ success: false, error: 'Admission application fee has already been settled.' }, { status: 400 });
+        return NextResponse.json({ success: false, error: payResult.error }, { status: 400 });
       }
 
-      const dueAmount = parseFloat(inv.amount);
-
-      // Update admission fee payment
-      await client.query(`
-        UPDATE website_admission_fee_payments
-        SET payment_status = 'paid',
-            gateway_code = $1,
-            transaction_id = $2,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = $3
-      `, [gw, txnId, inv.id]);
-
-      // Update applicant updated_at timestamp
-      await client.query(`
-        UPDATE website_admission_applicants
-        SET updated_at = CURRENT_TIMESTAMP
-        WHERE id = $1
-      `, [inv.applicant_record_id]);
-
-      // Record transaction
-      await client.query(`
-        INSERT INTO website_payment_transactions (
-          website_id, gateway_account_id, gateway_code, purpose, invoice_ref,
-          payer_name, payer_email, payer_phone, amount,
-          currency, status, transaction_id, gateway_reference, notes
-        ) VALUES (
-          $1, $2, $3, $4, $5,
-          $6, $7, $8, $9,
-          $10, 'completed', $11, $12, $13
-        )
-      `, [
-        website.id, verifiedAccountId || null, gw, purpose, inv.invoice_no,
-        inv.applicant_name, inv.email, payerPhone || inv.phone, dueAmount,
-        inv.currency || 'BDT', txnId, `ONLINE-GATEWAY-${gw.toUpperCase()}`, `Admission Fee for ${inv.application_no} (${inv.circular_title})`
-      ]);
-
-      paymentResult = {
-        invoice_no: inv.invoice_no,
-        title: `Admission Fee — ${inv.circular_title || 'Application'}`,
-        application_no: inv.application_no,
-        applicant_id: inv.applicant_record_id,
-        payer_name: inv.applicant_name,
-        amount: dueAmount,
-        currency: inv.currency || 'BDT',
-        transaction_id: txnId,
-        redirect_url: `/admission/upload/${inv.applicant_record_id}`,
-        payment_date: new Date().toISOString()
-      };
+      paymentResult = payResult.receipt;
     }
 
     // =========================================================================

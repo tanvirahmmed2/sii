@@ -207,6 +207,11 @@ export const staffNavData = [
         "path": "/admission-applicants"
       },
       {
+        "title": "Incomplete Submissions",
+        "module": "admissions",
+        "path": "/admission-incomplete"
+      },
+      {
         "title": "Exam Marks Upload",
         "module": "admissions",
         "path": "/admission-exam-marks-upload"

@@ -156,10 +156,13 @@ export default function AdmissionExamMarksProcessPage() {
     }
   };
 
-  // Sorted candidates from highest total score to lowest
+  // Sorted candidates from highest total score to lowest - STRICT RULE: only completed applicants
   const sortedApplicants = useMemo(() => {
     if (!examData?.applicants) return [];
-    const list = [...examData.applicants];
+    const completedOnly = examData.applicants.filter(
+      (a) => a.status === 'completed' || a.status === 'selected' || a.status === 'rejected'
+    );
+    const list = [...completedOnly];
     list.sort((a, b) => (parseFloat(b.score) || 0) - (parseFloat(a.score) || 0));
     return list;
   }, [examData]);

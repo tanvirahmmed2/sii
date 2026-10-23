@@ -45,6 +45,8 @@ export async function GET(request, context) {
     if (status && status !== 'all') {
       sql += ` AND a.status = $${paramIndex++}`;
       params.push(status);
+    } else {
+      sql += ` AND a.status NOT IN ('incomplete', 'unpaid')`;
     }
 
     sql += ` ORDER BY a.merit_position ASC NULLS LAST, a.created_at DESC`;

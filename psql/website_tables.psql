@@ -1119,7 +1119,18 @@ CREATE TABLE IF NOT EXISTS website_students (
     roll_no VARCHAR(50),
     email VARCHAR(255),
     student_unique_id VARCHAR(100) NOT NULL,
+    password TEXT,
+    recovery_token VARCHAR(255),
+    recovery_token_expires TIMESTAMPTZ,
+    two_factor_code VARCHAR(50),
+    two_factor_expires TIMESTAMPTZ,
+    verification_token VARCHAR(255),
+    verification_token_expires TIMESTAMPTZ,
     is_active BOOLEAN DEFAULT FALSE, -- Indicates whether setup is completed and student account is active
+    is_verified BOOLEAN DEFAULT FALSE,
+    verified_at TIMESTAMPTZ,
+    verified_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
+    last_login TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(website_id, registration_no),
@@ -1137,7 +1148,7 @@ CREATE TRIGGER update_website_students_updated_at
 CREATE OR REPLACE VIEW website_student AS SELECT * FROM website_students;
 
 -- ----------------------------------------------------------------------------
--- 38b. WEBSITE STUDENT INFO TABLE (Profile, Credentials & Security)
+-- 38b. WEBSITE STUDENT INFO TABLE (Modular Profile & Dynamic Attributes)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_student_info (
     id BIGSERIAL PRIMARY KEY,
@@ -1151,18 +1162,9 @@ CREATE TABLE IF NOT EXISTS website_student_info (
     date_of_birth DATE,
     religion VARCHAR(50),
     admission_date DATE DEFAULT CURRENT_DATE,
-    password TEXT NOT NULL,
-    recovery_token VARCHAR(255),
-    recovery_token_expires TIMESTAMPTZ,
-    two_factor_code VARCHAR(50),
-    two_factor_expires TIMESTAMPTZ,
-    verification_token VARCHAR(255),
-    verification_token_expires TIMESTAMPTZ,
+    custom_fields JSONB DEFAULT '{}'::jsonb,
     verification_status VARCHAR(50) DEFAULT 'pending_setup' CHECK (verification_status IN ('pending_setup', 'submitted', 'verified', 'rejected')),
     is_registered BOOLEAN DEFAULT FALSE,
-    is_verified BOOLEAN DEFAULT FALSE,
-    verified_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
-    verified_at TIMESTAMPTZ,
     verification_notes TEXT,
     rejection_reason TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1174,6 +1176,38 @@ DROP TRIGGER IF EXISTS update_website_student_info_updated_at ON website_student
 CREATE TRIGGER update_website_student_info_updated_at
     BEFORE UPDATE ON website_student_info
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 38c. WEBSITE STUDENT FORM FIELDS TABLE (Modular Form Fields for Student Info & Guardians)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_student_form_fields (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    field_key VARCHAR(100) NOT NULL,
+    label VARCHAR(150) NOT NULL,
+    field_type VARCHAR(50) NOT NULL CHECK (field_type IN ('text', 'number', 'select', 'date', 'file', 'textarea', 'boolean')),
+    options JSONB DEFAULT '[]'::jsonb,
+    is_required BOOLEAN NOT NULL DEFAULT FALSE,
+    is_unique BOOLEAN NOT NULL DEFAULT FALSE,
+    validation_regex VARCHAR(255),
+    placeholder VARCHAR(150),
+    help_text VARCHAR(255),
+    section VARCHAR(100) DEFAULT 'general' CHECK (section IN ('personal', 'academic', 'guardian', 'address', 'general', 'medical', 'other')),
+    is_shown_in_id_card BOOLEAN DEFAULT FALSE,
+    sort_order INT DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, field_key)
+);
+
+DROP TRIGGER IF EXISTS update_website_student_form_fields_updated_at ON website_student_form_fields;
+CREATE TRIGGER update_website_student_form_fields_updated_at
+    BEFORE UPDATE ON website_student_form_fields
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_stu_ff_web ON website_student_form_fields(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_stu_ff_act ON website_student_form_fields(website_id, is_active);
 
 -- ----------------------------------------------------------------------------
 -- 39. WEBSITE STUDENT ADDRESSES TABLE
@@ -1219,6 +1253,7 @@ CREATE TABLE IF NOT EXISTS website_student_guardians (
     guardian_phone VARCHAR(50),
     guardian_email VARCHAR(255),
     guardian_address TEXT,
+    custom_fields JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(student_id)
@@ -2636,6 +2671,39 @@ CREATE TRIGGER update_website_admission_exam_subjects_updated_at
 CREATE INDEX IF NOT EXISTS idx_ws_adm_exam_sub_adm ON website_admission_exam_subjects(admission_id);
 
 -- ----------------------------------------------------------------------------
+-- 63D. WEBSITE ADMISSION FORM FIELDS TABLE (Modular Applicant Input Fields)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_admission_form_fields (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    admission_id BIGINT REFERENCES website_admissions(id) ON DELETE CASCADE,
+    field_key VARCHAR(100) NOT NULL,
+    label VARCHAR(150) NOT NULL,
+    field_type VARCHAR(50) NOT NULL CHECK (field_type IN ('text', 'number', 'select', 'date', 'file', 'textarea', 'boolean')),
+    options JSONB DEFAULT '[]'::jsonb,
+    is_required BOOLEAN NOT NULL DEFAULT FALSE,
+    is_unique BOOLEAN NOT NULL DEFAULT FALSE,
+    validation_regex VARCHAR(255),
+    placeholder VARCHAR(150),
+    help_text VARCHAR(255),
+    section VARCHAR(100) DEFAULT 'general',
+    is_shown_in_id_card BOOLEAN DEFAULT FALSE,
+    sort_order INT DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_admission_form_fields_updated_at ON website_admission_form_fields;
+CREATE TRIGGER update_website_admission_form_fields_updated_at
+    BEFORE UPDATE ON website_admission_form_fields
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_ws_adm_ff_web ON website_admission_form_fields(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_adm_ff_adm ON website_admission_form_fields(admission_id);
+CREATE INDEX IF NOT EXISTS idx_ws_adm_ff_act ON website_admission_form_fields(website_id, is_active);
+
+-- ----------------------------------------------------------------------------
 -- 64. WEBSITE ADMISSION FEES TABLE (Application & Intake Fees Structure)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_admission_fees (
@@ -2667,26 +2735,20 @@ CREATE TABLE IF NOT EXISTS website_admission_applicants (
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     admission_id BIGINT NOT NULL REFERENCES website_admissions(id) ON DELETE CASCADE,
     application_no VARCHAR(100) NOT NULL,
-    roll_no VARCHAR(50),
+    exam_roll VARCHAR(50),
     applicant_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
     phone VARCHAR(50) NOT NULL,
-    gender VARCHAR(20) DEFAULT 'Male' CHECK (gender IN ('Male', 'Female', 'Other')),
-    date_of_birth DATE,
     status VARCHAR(50) NOT NULL DEFAULT 'incomplete' CHECK (status IN ('pending', 'incomplete', 'unpaid', 'paid', 'completed', 'selected', 'rejected', 'enrolled', 'accepted')),
     selection_notes TEXT,
     score NUMERIC(6, 2) DEFAULT 0.00,
     merit_position INT,
-    exam_roll VARCHAR(50),
     is_admit_card_issued BOOLEAN DEFAULT FALSE,
     admit_card_issued_at TIMESTAMPTZ,
     selected_at TIMESTAMPTZ,
     selected_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
     enrolled_at TIMESTAMPTZ,
     enrolled_student_id BIGINT REFERENCES website_students(id) ON DELETE SET NULL,
-    last_class TEXT,
-    last_class_grade NUMERIC(4, 2),
-    last_institution TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(website_id, application_no)
@@ -2701,6 +2763,7 @@ CREATE INDEX IF NOT EXISTS idx_ws_adm_app_web ON website_admission_applicants(we
 CREATE INDEX IF NOT EXISTS idx_ws_adm_app_adm ON website_admission_applicants(admission_id);
 CREATE INDEX IF NOT EXISTS idx_ws_adm_app_stat ON website_admission_applicants(website_id, status);
 CREATE INDEX IF NOT EXISTS idx_ws_adm_app_email ON website_admission_applicants(website_id, email);
+CREATE INDEX IF NOT EXISTS idx_ws_adm_app_exam_roll ON website_admission_applicants(admission_id, exam_roll);
 
 -- ----------------------------------------------------------------------------
 -- 66. WEBSITE ADMISSION APPLICANT INFO TABLE (Extended Candidate & Guardian Data)
@@ -2709,23 +2772,34 @@ CREATE TABLE IF NOT EXISTS website_admission_applicant_info (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     applicant_id BIGINT NOT NULL REFERENCES website_admission_applicants(id) ON DELETE CASCADE,
+    gender VARCHAR(20) DEFAULT 'Male' CHECK (gender IN ('Male', 'Female', 'Other')),
+    date_of_birth DATE,
+    blood_group VARCHAR(10),
+    religion VARCHAR(50),
     father_name VARCHAR(255),
     father_phone VARCHAR(50),
+    father_nid VARCHAR(100),
     father_occupation VARCHAR(100),
     mother_name VARCHAR(255),
     mother_phone VARCHAR(50),
+    mother_nid VARCHAR(100),
     mother_occupation VARCHAR(100),
     guardian_name VARCHAR(255),
     guardian_phone VARCHAR(50),
+    guardian_nid VARCHAR(100),
     guardian_relation VARCHAR(50),
+    guardian_email VARCHAR(255),
+    guardian_address TEXT,
     present_address TEXT,
     permanent_address TEXT,
-    previous_school VARCHAR(255),
-    previous_gpa NUMERIC(4, 2),
+    last_class TEXT,
+    last_class_grade NUMERIC(4, 2),
+    last_institution TEXT,
     photo_url TEXT,
     photo_id VARCHAR(255),
     signature_url TEXT,
     signature_id VARCHAR(255),
+    custom_fields JSONB DEFAULT '{}'::jsonb,
     submitted_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,

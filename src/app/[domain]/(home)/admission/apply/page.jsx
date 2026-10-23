@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 import Image from 'next/image';
 import AdmissionApplyForm from 'src/component/forms/AdmissionApplyForm';
+import UniversalGatewayCheckout from 'src/component/payment/UniversalGatewayCheckout';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import { validateImageDimensions } from 'src/lib/imageResizer';
 import {
@@ -19,7 +20,9 @@ import {
   FiUpload,
   FiAward,
   FiCalendar,
-  FiUser
+  FiUser,
+  FiShield,
+  FiLock
 } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 
@@ -37,6 +40,10 @@ const ApplyFlowContent = () => {
   // Flow Step: 'form' | 'payment' | 'upload' | 'completed'
   const [currentStep, setCurrentStep] = useState('form');
   const [activeApplicant, setActiveApplicant] = useState(null);
+
+  // Available Gateways & Checkout Modal
+  const [availableGateways, setAvailableGateways] = useState([]);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   // Submission & Payment state
   const [submittingForm, setSubmittingForm] = useState(false);
@@ -78,6 +85,27 @@ const ApplyFlowContent = () => {
     loadCirculars();
   }, [admissionIdParam, getApiEndpoint]);
 
+  // Load configured payment gateways for admission fees
+  useEffect(() => {
+    if (activeApplicant?.id && currentStep === 'payment') {
+      const fetchGateways = async () => {
+        try {
+          const endpoint = getApiEndpoint
+            ? getApiEndpoint(`pay/admission-fees/${activeApplicant.id}`)
+            : `/api/pay/admission-fees/${activeApplicant.id}`;
+          const res = await fetch(endpoint);
+          const data = await res.json();
+          if (data.success && data.available_gateways) {
+            setAvailableGateways(data.available_gateways);
+          }
+        } catch (err) {
+          console.error('Failed to load gateways:', err);
+        }
+      };
+      fetchGateways();
+    }
+  }, [activeApplicant?.id, currentStep, getApiEndpoint]);
+
   // Handle circular change
   const handleCircularChange = (id) => {
     const found = circulars.find((c) => String(c.id) === String(id));
@@ -99,6 +127,8 @@ const ApplyFlowContent = () => {
     }
   };
 
+  const [serverValidationErrors, setServerValidationErrors] = useState([]);
+
   // Step 2: Information form submission -> sets status to 'unpaid'
   const handleFormSubmit = async (formValues) => {
     if (!selectedCircular) {
@@ -107,12 +137,14 @@ const ApplyFlowContent = () => {
     }
 
     setSubmittingForm(true);
+    setServerValidationErrors([]);
     try {
       const postEndpoint = getApiEndpoint ? getApiEndpoint('admissions/apply') : '/api/admissions/apply';
       const res = await fetch(postEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          ...formValues,
           admission_id: selectedCircular.id,
           applicant_name: formValues.applicant_name,
           email: formValues.email,
@@ -120,8 +152,8 @@ const ApplyFlowContent = () => {
           gender: formValues.gender,
           blood_group: formValues.blood_group,
           date_of_birth: formValues.date_of_birth,
-          address: formValues.address,
-          present_address: formValues.address,
+          address: formValues.present_address || formValues.address,
+          present_address: formValues.present_address || formValues.address,
           father_name: formValues.father_name,
           father_phone: formValues.father_phone,
           father_occupation: formValues.father_occupation,
@@ -131,16 +163,24 @@ const ApplyFlowContent = () => {
           guardian_name: formValues.guardian_name || formValues.father_name,
           guardian_phone: formValues.guardian_phone || formValues.father_phone,
           guardian_relation: formValues.guardian_relation || 'Father',
-          last_class: formValues.past_school_class,
-          last_class_grade: formValues.past_school_result,
-          last_institution: formValues.past_school_name
+          last_class: formValues.past_school_class || formValues.last_class,
+          last_class_grade: formValues.past_school_result || formValues.last_class_grade,
+          last_institution: formValues.past_school_name || formValues.last_institution,
+          custom_fields: formValues.custom_fields || { ...formValues }
         }),
       });
 
       const data = await res.json();
 
+      if (res.status === 422 || !data.success && data.validation_errors) {
+        setServerValidationErrors(data.validation_errors || []);
+        toast.error(data.error || 'Application data does not meet the circular requirements.');
+        return;
+      }
+
       if (res.ok && data.success && data.applicant) {
         toast.success('Application profile recorded! Please proceed with payment.');
+        setServerValidationErrors([]);
         setActiveApplicant({
           ...data.applicant,
           id: data.applicant.id || data.applicant_id,
@@ -359,6 +399,7 @@ const ApplyFlowContent = () => {
               submitting={submittingForm}
               admissionIdParam={admissionIdParam}
               onResumeExisting={handleResumeExisting}
+              serverValidationErrors={serverValidationErrors}
             />
           </motion.div>
         )}
@@ -378,7 +419,7 @@ const ApplyFlowContent = () => {
                 Application Fee Payment
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-                Candidate record registered. Please complete the application fee payment to proceed to photo &amp; signature upload.
+                Candidate record registered. Complete the application fee payment via our 100% secure payment gateway to unlock photo &amp; signature upload.
               </p>
             </div>
 
@@ -403,44 +444,107 @@ const ApplyFlowContent = () => {
               </div>
             </div>
 
-            {/* Payment Options */}
+            {/* Gateway Selection & 100% Secured Checkout Trigger */}
             <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
-                  Select Gateway / Payment Reference:
+              <div>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-2">
+                  Choose Online Payment Gateway:
                 </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    placeholder="Enter Online Transaction ID / Ref (e.g. TXN-123456) or leave auto"
-                    value={paymentTxnId}
-                    onChange={(e) => setPaymentTxnId(e.target.value)}
-                    className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white"
-                  />
+                {availableGateways && availableGateways.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {availableGateways.map((gw) => (
+                      <button
+                        key={gw.code}
+                        type="button"
+                        onClick={() => setCheckoutOpen(true)}
+                        className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/20 text-center transition group cursor-pointer"
+                      >
+                        <div className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 capitalize">
+                          {gw.label || gw.code}
+                        </div>
+                        <span className="text-[10px] text-slate-400 block mt-0.5">100% Secured</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs text-slate-500 text-center">
+                    Instant Online Payment Available (bKash, Nagad, Cards &amp; Mobile Banking)
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setCheckoutOpen(true)}
+                  className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md shadow-emerald-600/20 hover:shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <FiLock className="w-4 h-4" />
+                  <span>Pay Application Fee Online (৳{parseFloat(activeApplicant.fee_amount || 500).toFixed(2)}) &rarr;</span>
+                </button>
+                <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 mt-2">
+                  <FiShield className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>256-bit Encrypted Transaction &bull; Direct Merchant Settlement</span>
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => handlePaymentClearance('online')}
-                  disabled={clearingPayment}
-                  className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-xs transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {clearingPayment ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Verifying Fee Settlement...</span>
-                    </>
-                  ) : (
-                    <>
-                      <FiCheckCircle className="w-4 h-4" />
-                      <span>Confirm &amp; Clear Payment (৳{parseFloat(activeApplicant.fee_amount || 500).toFixed(2)}) &rarr;</span>
-                    </>
-                  )}
-                </button>
+              {/* Offline / Bank Reference manual fallback */}
+              <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
+                <details className="text-xs text-slate-500 cursor-pointer">
+                  <summary className="font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                    Already paid via Bank Slip or Cash Counter? Enter Reference &darr;
+                  </summary>
+                  <div className="mt-3 space-y-3 pt-2">
+                    <input
+                      type="text"
+                      placeholder="Enter Bank Deposit / Counter Slip Transaction ID..."
+                      value={paymentTxnId}
+                      onChange={(e) => setPaymentTxnId(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handlePaymentClearance('online')}
+                      disabled={clearingPayment}
+                      className="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-xl text-xs transition disabled:opacity-50"
+                    >
+                      {clearingPayment ? 'Verifying Reference...' : 'Submit Deposit Reference'}
+                    </button>
+                  </div>
+                </details>
               </div>
             </div>
+
+            {/* Universal Gateway Modal */}
+            <UniversalGatewayCheckout
+              isOpen={checkoutOpen}
+              onClose={() => setCheckoutOpen(false)}
+              invoice={{
+                id: activeApplicant.id,
+                category: 'admission_fees',
+                category_label: 'Admission Application Fee',
+                invoice_no: `INV-ADM-${activeApplicant.application_no}`,
+                title: `Admission Fee — ${activeApplicant.circular_title || 'Application'}`,
+                amount: parseFloat(activeApplicant.fee_amount || 500),
+                net_due: parseFloat(activeApplicant.fee_amount || 500),
+                currency: activeApplicant.fee_currency || 'BDT',
+                payment_status: 'pending'
+              }}
+              availableGateways={availableGateways}
+              domain={tenantUrl || ''}
+              apiEndpoint={getApiEndpoint ? getApiEndpoint('pay/process') : '/api/pay/process'}
+              onPaymentSuccess={(receipt) => {
+                setCheckoutOpen(false);
+                toast.success('Admission fee confirmed and settled! Please upload candidate photo and signature.');
+                setActiveApplicant((prev) => ({
+                  ...prev,
+                  status: 'paid',
+                  payment_status: 'paid',
+                  transaction_id: receipt?.transaction_id || `TXN-ADM-${Date.now()}`
+                }));
+                setCurrentStep('upload');
+              }}
+            />
           </motion.div>
         )}
 

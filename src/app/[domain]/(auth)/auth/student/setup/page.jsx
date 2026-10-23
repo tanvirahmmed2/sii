@@ -124,6 +124,10 @@ function StudentSetupContent() {
       toast.error('Please enter your student email address.');
       return;
     }
+    if (!tokenInput.trim()) {
+      toast.error('Please enter your student registration number.');
+      return;
+    }
 
     setSendingOtp(true);
     try {
@@ -133,7 +137,7 @@ function StudentSetupContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: emailInput.trim(),
-          registration_no: tokenInput.trim() || undefined,
+          registration_no: tokenInput.trim(),
         }),
       });
 
@@ -519,10 +523,11 @@ function StudentSetupContent() {
 
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                    Registration Number (Optional / Recommended)
+                    Student Registration Number *
                   </label>
                   <input
                     type="text"
+                    required
                     value={tokenInput}
                     onChange={(e) => setTokenInput(e.target.value)}
                     placeholder="e.g. REG-2026-1001"

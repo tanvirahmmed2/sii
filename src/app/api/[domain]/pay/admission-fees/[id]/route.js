@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb, pool } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
-import { fetchAssignedGatewaysForPurpose } from 'src/lib/database/paymentGateways';
+import { fetchAssignedGatewaysForPurpose, processSecureAdmissionFeePayment } from 'src/lib/database/paymentGateways';
 
 export const dynamic = 'force-dynamic';
 
@@ -146,121 +146,36 @@ export async function POST(request, context) {
     }
 
     const { id } = await context.params;
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const { gateway_code, gateway_account_id, payment_details = {} } = body;
 
     if (!gateway_code) {
-      return NextResponse.json({ success: false, error: 'Please select a payment gateway.' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Please select an active payment gateway.' }, { status: 400 });
     }
-
-    const gw = gateway_code.toLowerCase();
 
     await client.query('BEGIN');
 
-    // Fetch applicant and invoice
-    const appRes = await client.query(`
-      SELECT a.id, a.application_no, a.applicant_name, a.email, a.phone, a.status,
-             c.title AS circular_title,
-             COALESCE(af.amount, 500.00) AS fee_amount,
-             COALESCE(af.currency, 'BDT') AS fee_currency,
-             p.id AS payment_id, p.payment_status, p.invoice_no
-      FROM website_admission_applicants a
-      LEFT JOIN website_admissions c ON c.id = a.admission_id
-      LEFT JOIN website_admission_fees af ON af.admission_id = a.admission_id AND af.status = 'active'
-      LEFT JOIN website_admission_fee_payments p ON p.applicant_id = a.id
-      WHERE a.website_id = $1 AND (CAST(a.id AS TEXT) = $2 OR a.application_no = $2)
-      FOR UPDATE OF a
-    `, [website.id, id]);
+    const result = await processSecureAdmissionFeePayment({
+      websiteId: website.id,
+      applicantIdentifier: id,
+      gatewayCode: gateway_code,
+      gatewayAccountId: gateway_account_id,
+      paymentDetails,
+      client
+    });
 
-    if (appRes.rows.length === 0) {
+    if (!result.success) {
       await client.query('ROLLBACK');
-      return NextResponse.json({ success: false, error: 'Applicant record not found.' }, { status: 404 });
+      return NextResponse.json({ success: false, error: result.error }, { status: 400 });
     }
-
-    const app = appRes.rows[0];
-    if (app.status === 'fee_paid' || app.payment_status === 'paid') {
-      await client.query('ROLLBACK');
-      return NextResponse.json({ success: false, error: 'This application fee has already been settled.' }, { status: 400 });
-    }
-
-    const dueAmount = parseFloat(app.fee_amount || 500);
-    const currency = app.fee_currency || 'BDT';
-    const txnId = `TXN-${gw.toUpperCase()}-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
-    const payerPhone = payment_details.account_number || payment_details.phone || app.phone;
-    const invNo = app.invoice_no || `INV-ADM-${app.application_no}`;
-
-    // Update or Insert into website_admission_fee_payments
-    if (app.payment_id) {
-      await client.query(`
-        UPDATE website_admission_fee_payments
-        SET payment_status = 'paid',
-            gateway_code = $1,
-            transaction_id = $2,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = $3
-      `, [gw, txnId, app.payment_id]);
-    } else {
-      await client.query(`
-        INSERT INTO website_admission_fee_payments (
-          website_id, applicant_id, gateway_code, amount, currency,
-          transaction_id, payment_status, invoice_no
-        ) VALUES (
-          $1, $2, $3, $4, $5,
-          $6, 'paid', $7
-        )
-      `, [website.id, app.id, gw, dueAmount, currency, txnId, invNo]);
-    }
-
-    // Update applicant updated_at timestamp
-    await client.query(`
-      UPDATE website_admission_applicants
-      SET updated_at = CURRENT_TIMESTAMP
-      WHERE id = $1
-    `, [app.id]);
-
-    let finalAccountId = gateway_account_id || null;
-    if (!finalAccountId) {
-      const assigned = await fetchAssignedGatewaysForPurpose(website.id, 'admission_fees');
-      const match = assigned.find(g => g.code === gw);
-      if (match) finalAccountId = match.id;
-    }
-
-    // Record in transaction audit
-    await client.query(`
-      INSERT INTO website_payment_transactions (
-        website_id, gateway_account_id, gateway_code, purpose, invoice_ref,
-        payer_name, payer_email, payer_phone, amount,
-        currency, status, transaction_id, gateway_reference, notes
-      ) VALUES (
-        $1, $2, $3, 'admission_fees', $4,
-        $5, $6, $7, $8,
-        $9, 'completed', $10, $11, $12
-      )
-    `, [
-      website.id, finalAccountId, gw, invNo,
-      app.applicant_name, app.email, payerPhone, dueAmount,
-      currency, txnId, `ONLINE-GATEWAY-${gw.toUpperCase()}`,
-      `Admission fee payment for ${app.application_no} (${app.circular_title})`
-    ]);
 
     await client.query('COMMIT');
 
     return NextResponse.json({
       success: true,
-      message: 'Admission fee verified and settled! Advancing to photo & signature upload.',
-      transaction_id: txnId,
-      receipt: {
-        invoice_no: invNo,
-        title: `Admission Fee — ${app.circular_title || 'Application'}`,
-        application_no: app.application_no,
-        applicant_id: app.id,
-        payer_name: app.applicant_name,
-        amount: dueAmount,
-        currency: currency,
-        transaction_id: txnId,
-        redirect_url: `/admission/upload/${app.id}`,
-        payment_date: new Date().toISOString()
-      }
+      message: result.message || 'Admission fee verified and confirmed!',
+      transaction_id: result.transaction_id,
+      receipt: result.receipt
     });
   } catch (error) {
     await client.query('ROLLBACK');

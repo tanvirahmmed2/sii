@@ -360,6 +360,8 @@ function ApplicantsContent() {
 
   const filteredApplicants = useMemo(() => {
     return applicants.filter((a) => {
+      // STRICT RULE: Unpaid and incomplete applicants NEVER appear in admission-applicants!
+      if (a.status === 'incomplete' || a.status === 'unpaid') return false;
       if (statusFilter !== 'all' && a.status !== statusFilter) return false;
       return true;
     });
@@ -367,8 +369,57 @@ function ApplicantsContent() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Top Status Tabs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+      {/* Segregated Workstations Notice Bar */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+        <Link
+          href="/staff-panel/admission-incomplete"
+          className="flex items-center justify-between p-3 rounded-lg border border-amber-200 dark:border-amber-800/80 bg-amber-50/70 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 hover:bg-amber-100/70 transition shadow-2xs group"
+        >
+          <div className="flex items-center gap-2.5">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            <div>
+              <p className="text-xs font-bold flex items-center gap-1.5">
+                Incomplete Submissions
+                <span className="px-1.5 py-0.2 bg-amber-200 dark:bg-amber-900/60 rounded text-[10px] font-mono">
+                  {statusCounts.incomplete}
+                </span>
+              </p>
+              <p className="text-[11px] text-amber-700/80 dark:text-amber-400">
+                Step 1 draft drop-offs isolated strictly in /admission-incomplete
+              </p>
+            </div>
+          </div>
+          <span className="text-xs font-semibold text-amber-700 dark:text-amber-300 group-hover:translate-x-0.5 transition-transform">
+            Manage &rarr;
+          </span>
+        </Link>
+
+        <Link
+          href="/staff-panel/admission-spam"
+          className="flex items-center justify-between p-3 rounded-lg border border-rose-200 dark:border-rose-800/80 bg-rose-50/70 dark:bg-rose-950/30 text-rose-900 dark:text-rose-200 hover:bg-rose-100/70 transition shadow-2xs group"
+        >
+          <div className="flex items-center gap-2.5">
+            <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+            <div>
+              <p className="text-xs font-bold flex items-center gap-1.5">
+                Unpaid Applications (Spam)
+                <span className="px-1.5 py-0.2 bg-rose-200 dark:bg-rose-900/60 rounded text-[10px] font-mono">
+                  {statusCounts.unpaid}
+                </span>
+              </p>
+              <p className="text-[11px] text-rose-700/80 dark:text-rose-400">
+                Unpaid submissions isolated strictly in /admission-spam
+              </p>
+            </div>
+          </div>
+          <span className="text-xs font-semibold text-rose-700 dark:text-rose-300 group-hover:translate-x-0.5 transition-transform">
+            Review Spams &rarr;
+          </span>
+        </Link>
+      </div>
+
+      {/* Top Status Tabs - Only Completed & Processed Candidates */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
         <button
           onClick={() => setStatusFilter('all')}
           className={`p-2.5 rounded border text-left transition cursor-pointer ${
@@ -377,44 +428,8 @@ function ApplicantsContent() {
               : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50'
           }`}
         >
-          <span className="text-[10px] text-slate-500 uppercase font-bold block">All</span>
+          <span className="text-[10px] text-slate-500 uppercase font-bold block">All Completed</span>
           <span className="text-base font-bold text-slate-900 dark:text-white font-mono">{statusCounts.all}</span>
-        </button>
-
-        <button
-          onClick={() => setStatusFilter('incomplete')}
-          className={`p-2.5 rounded border text-left transition cursor-pointer ${
-            statusFilter === 'incomplete'
-              ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 ring-1 ring-amber-400'
-              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50'
-          }`}
-        >
-          <span className="text-[10px] text-amber-600 uppercase font-bold block">Incomplete</span>
-          <span className="text-base font-bold text-amber-600 dark:text-amber-400 font-mono">{statusCounts.incomplete}</span>
-        </button>
-
-        <button
-          onClick={() => setStatusFilter('unpaid')}
-          className={`p-2.5 rounded border text-left transition cursor-pointer ${
-            statusFilter === 'unpaid'
-              ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-700 ring-1 ring-rose-400'
-              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50'
-          }`}
-        >
-          <span className="text-[10px] text-rose-600 uppercase font-bold block">Unpaid</span>
-          <span className="text-base font-bold text-rose-600 dark:text-rose-400 font-mono">{statusCounts.unpaid}</span>
-        </button>
-
-        <button
-          onClick={() => setStatusFilter('paid')}
-          className={`p-2.5 rounded border text-left transition cursor-pointer ${
-            statusFilter === 'paid'
-              ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-300 dark:border-purple-700 ring-1 ring-purple-400'
-              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50'
-          }`}
-        >
-          <span className="text-[10px] text-purple-600 uppercase font-bold block">Paid</span>
-          <span className="text-base font-bold text-purple-600 dark:text-purple-400 font-mono">{statusCounts.paid}</span>
         </button>
 
         <button

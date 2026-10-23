@@ -68,7 +68,9 @@ export async function GET(request, context) {
 
     const subjects = subjectsRes.rows;
 
-    // 3. Fetch applicants for this circular with images and fee status
+    const statusParam = searchParams.get('status') || 'completed';
+
+    // 3. Fetch applicants for this circular with images and fee status - strictly completed applicants only
     const applicantsRes = await queryDb(`
       SELECT a.id, a.application_no, a.exam_roll,
              COALESCE(a.exam_roll, a.roll_no, 'ROL-' || a.id) AS roll_no,
@@ -81,8 +83,9 @@ export async function GET(request, context) {
       LEFT JOIN website_admission_applicant_images img ON img.applicant_id = a.id
       LEFT JOIN website_admission_applicant_info inf ON inf.applicant_id = a.id
       WHERE a.admission_id = $1 AND a.website_id = $2
+        AND a.status = $3
       ORDER BY a.score DESC NULLS LAST, a.created_at ASC
-    `, [admId, auth.website.id]);
+    `, [admId, auth.website.id, statusParam]);
 
     // 4. Fetch all recorded exam marks for this circular
     const marksRes = await queryDb(`

@@ -226,12 +226,17 @@ export default function AdmissionExamMarksUploadPage() {
     reader.readAsBinaryString(file);
   };
 
-  // Filter applicants by search query
+  // Filter applicants by search query - STRICT RULE: only completed applicants appear here
   const filteredApplicants = useMemo(() => {
     if (!examData?.applicants) return [];
+    const completedOnly = examData.applicants.filter(a => a.status === 'completed');
     const q = searchTerm.toLowerCase().trim();
-    if (!q) return examData.applicants;
-    return examData.applicants.filter(a => a.applicant_name.toLowerCase().includes(q) || a.application_no.toLowerCase().includes(q) || a.roll_no && a.roll_no.toLowerCase().includes(q));
+    if (!q) return completedOnly;
+    return completedOnly.filter(a => (
+      a.applicant_name?.toLowerCase().includes(q) ||
+      a.application_no?.toLowerCase().includes(q) ||
+      (a.roll_no && a.roll_no.toLowerCase().includes(q))
+    ));
   }, [examData, searchTerm]);
   return <div className="w-full space-y-4">
       {/* Top Header & Workstation Banner */}

@@ -59,14 +59,34 @@ export async function GET(request, context) {
     const params = [auth.website.id];
     let paramIndex = 2;
 
+    const scope = searchParams.get('scope'); // 'applicants' | 'spam' | 'incomplete' | 'completed' | 'all_raw'
+
     if (admissionId) {
       sql += ` AND a.admission_id = $${paramIndex++}`;
       params.push(parseInt(admissionId, 10));
     }
 
-    if (status && status !== 'all') {
+    if (status === 'unpaid' || scope === 'spam' || scope === 'unpaid') {
+      sql += ` AND a.status = 'unpaid'`;
+    } else if (status === 'incomplete' || scope === 'incomplete') {
+      sql += ` AND a.status = 'incomplete'`;
+    } else if (status === 'completed' || scope === 'completed') {
+      sql += ` AND a.status = 'completed'`;
+    } else if (status === 'selected') {
+      sql += ` AND a.status IN ('selected', 'accepted')`;
+    } else if (status === 'rejected') {
+      sql += ` AND a.status = 'rejected'`;
+    } else if (status === 'enrolled') {
+      sql += ` AND a.status = 'enrolled'`;
+    } else if (status === 'paid') {
+      sql += ` AND a.status = 'paid'`;
+    } else if (status && status !== 'all') {
       sql += ` AND a.status = $${paramIndex++}`;
       params.push(status);
+    } else if (scope !== 'all_raw') {
+      // Default for /staff-panel/admission-applicants (all / omitted):
+      // STRICT RULE: exclude 'incomplete' and 'unpaid' so they only appear in their dedicated desks!
+      sql += ` AND a.status NOT IN ('incomplete', 'unpaid')`;
     }
 
     if (paymentStatus && paymentStatus !== 'all') {
@@ -124,12 +144,20 @@ export async function GET(request, context) {
       enrolled: 0
     };
 
+    const completedEligibleTotal =
+      (stats.completed || 0) +
+      (stats.selected || 0) +
+      (stats.rejected || 0) +
+      (stats.enrolled || 0) +
+      (stats.paid || 0);
+
     return NextResponse.json({
       success: true,
       applicants: res.rows,
       counts: stats,
       status_counts: {
-        all: stats.total || 0,
+        all: completedEligibleTotal,
+        raw_total: stats.total || 0,
         incomplete: stats.incomplete || 0,
         unpaid: stats.unpaid || 0,
         paid: stats.paid || 0,
@@ -326,10 +354,18 @@ export async function DELETE(request, context) {
       return NextResponse.json({ success: false, error: 'Applicant ID is required.' }, { status: 400 });
     }
 
+    const applicantId = parseInt(id, 10);
+
+    // Cascade delete any child records cleanly
+    await queryDb(`DELETE FROM website_admission_applicant_images WHERE applicant_id = $1`, [applicantId]);
+    await queryDb(`DELETE FROM website_admission_applicant_info WHERE applicant_id = $1`, [applicantId]);
+    await queryDb(`DELETE FROM website_admission_exam_marks WHERE applicant_id = $1`, [applicantId]);
+    await queryDb(`DELETE FROM website_admission_results WHERE applicant_id = $1`, [applicantId]);
+    await queryDb(`DELETE FROM website_admission_fee_payments WHERE applicant_id = $1`, [applicantId]);
     await queryDb(`
       DELETE FROM website_admission_applicants
       WHERE id = $1 AND website_id = $2
-    `, [parseInt(id, 10), auth.website.id]);
+    `, [applicantId, auth.website.id]);
 
     return NextResponse.json({
       success: true,

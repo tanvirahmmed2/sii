@@ -43,6 +43,7 @@ export async function POST(request, context) {
     const effectiveSeats = Math.min(circCapacity, classMaxSeats);
 
     // 2. Determine ordering based on circular.selection_method ('exam' vs 'merit')
+    // STRICT RULE: Only completed applicants are evaluated for cutoff/selection
     let applicantsRes;
     if (circular.selection_method === 'merit') {
       applicantsRes = await queryDb(`
@@ -50,7 +51,7 @@ export async function POST(request, context) {
                COALESCE(a.last_class_grade, 0.00) AS score, a.last_class_grade
         FROM website_admission_applicants a
         WHERE a.admission_id = $1 AND a.website_id = $2
-          AND a.status IN ('completed', 'paid', 'pending', 'selected')
+          AND a.status = 'completed'
         ORDER BY a.last_class_grade DESC NULLS LAST, a.created_at ASC
       `, [admId, auth.website.id]);
     } else {
@@ -63,7 +64,7 @@ export async function POST(request, context) {
           WHERE m.applicant_id = a.id AND m.admission_id = $1
         ), 0),
         updated_at = CURRENT_TIMESTAMP
-        WHERE a.admission_id = $1 AND a.website_id = $2
+        WHERE a.admission_id = $1 AND a.website_id = $2 AND a.status = 'completed'
       `, [admId, auth.website.id]);
 
       // Fetch candidates ordered by highest exam score
@@ -71,7 +72,7 @@ export async function POST(request, context) {
         SELECT a.id, a.application_no, a.roll_no, a.applicant_name, a.score
         FROM website_admission_applicants a
         WHERE a.admission_id = $1 AND a.website_id = $2
-          AND a.status IN ('completed', 'paid', 'pending', 'selected')
+          AND a.status = 'completed'
         ORDER BY a.score DESC NULLS LAST, a.created_at ASC
       `, [admId, auth.website.id]);
     }

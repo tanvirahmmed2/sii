@@ -116,6 +116,21 @@ export async function POST(request, context) {
     if (!targetAdmId) {
       return NextResponse.json({ success: false, error: 'Please select an admission circular target.' }, { status: 400 });
     }
+    const admId = parseInt(targetAdmId, 10);
+
+    // Verify circular exists and get active fee
+    const circRes = await queryDb(`
+      SELECT a.*, af.amount AS fee_amount, af.currency AS fee_currency
+      FROM website_admissions a
+      LEFT JOIN website_admission_fees af ON af.admission_id = a.id AND af.status = 'active'
+      WHERE a.id = $1 AND a.website_id = $2
+    `, [admId, website.id]);
+
+    if (circRes.rows.length === 0) {
+      return NextResponse.json({ success: false, error: 'Admission circular not found.' }, { status: 404 });
+    }
+    const circular = circRes.rows[0];
+
     if (!applicant_name || !applicant_name.trim()) {
       return NextResponse.json({ success: false, error: 'Applicant candidate name is required.' }, { status: 400 });
     }
@@ -135,8 +150,9 @@ export async function POST(request, context) {
       LIMIT 1
     `, [website.id, admId, cleanEmail]);
 
+    let verifiedCheck = null;
     if (existingAppCheck.rows.length === 0) {
-      const verifiedCheck = await queryDb(`
+      verifiedCheck = await queryDb(`
         SELECT id, is_verified, expires_at
         FROM website_email_verifications
         WHERE website_id = $1 AND LOWER(email) = $2 AND purpose = 'admission' AND is_verified = TRUE
@@ -150,6 +166,102 @@ export async function POST(request, context) {
           error: 'Email verification required. Please verify your email with the one-time passcode before submitting.'
         }, { status: 403 });
       }
+    }
+
+    // 1. Fetch active modular form fields configured for this circular
+    const fieldsRes = await queryDb(`
+      SELECT * FROM website_admission_form_fields
+      WHERE website_id = $1 AND (admission_id = $2 OR admission_id IS NULL) AND is_active = TRUE
+      ORDER BY sort_order ASC, id ASC
+    `, [website.id, admId]);
+
+    const activeFields = fieldsRes.rows.length > 0 ? fieldsRes.rows : [
+      { field_key: 'applicant_name', label: 'Applicant Name', field_type: 'text', is_required: true },
+      { field_key: 'phone', label: 'Phone', field_type: 'text', is_required: true, validation_regex: '^01[3-9]\\d{8}$' },
+      { field_key: 'gender', label: 'Gender', field_type: 'select', options: ['Male', 'Female', 'Other'], is_required: true },
+      { field_key: 'date_of_birth', label: 'Date of Birth', field_type: 'date', is_required: true }
+    ];
+
+    const validationErrors = [];
+    const submittedCustom = body.custom_fields && typeof body.custom_fields === 'object' ? { ...body.custom_fields } : {};
+
+    for (const f of activeFields) {
+      let val = body[f.field_key];
+      if (val === undefined || val === null) {
+        val = submittedCustom[f.field_key];
+      }
+      const strVal = val !== undefined && val !== null ? String(val).trim() : '';
+
+      // Check Required
+      if (f.is_required && !strVal) {
+        validationErrors.push({
+          field_key: f.field_key,
+          label: f.label,
+          error: `${f.label} is required.`
+        });
+        continue;
+      }
+
+      if (strVal) {
+        // Field Type Checks
+        if (f.field_type === 'number') {
+          if (isNaN(Number(strVal))) {
+            validationErrors.push({
+              field_key: f.field_key,
+              label: f.label,
+              error: `${f.label} must be a valid number.`
+            });
+          }
+        } else if (f.field_type === 'date') {
+          if (isNaN(Date.parse(strVal))) {
+            validationErrors.push({
+              field_key: f.field_key,
+              label: f.label,
+              error: `${f.label} must be a valid date.`
+            });
+          }
+        } else if (f.field_type === 'select') {
+          let opts = [];
+          if (Array.isArray(f.options)) opts = f.options;
+          else if (typeof f.options === 'string') {
+            try { opts = JSON.parse(f.options); } catch { opts = []; }
+          }
+          if (opts.length > 0 && !opts.includes(strVal)) {
+            validationErrors.push({
+              field_key: f.field_key,
+              label: f.label,
+              error: `Invalid selection for ${f.label}. Allowed options: ${opts.join(', ')}.`
+            });
+          }
+        }
+
+        // Regex Pattern Validation
+        if (f.validation_regex) {
+          try {
+            const re = new RegExp(f.validation_regex);
+            if (!re.test(strVal)) {
+              validationErrors.push({
+                field_key: f.field_key,
+                label: f.label,
+                error: `${f.label} format is invalid. ${f.help_text || ''}`.trim()
+              });
+            }
+          } catch (e) {
+            console.warn(`Invalid regex pattern for field ${f.field_key}:`, e.message);
+          }
+        }
+      }
+
+      submittedCustom[f.field_key] = val !== undefined ? val : null;
+    }
+
+    // STRICT POLICY: IF NOT OK -> DO NOT SAVE!
+    if (validationErrors.length > 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'Application data does not meet the circular requirements.',
+        validation_errors: validationErrors
+      }, { status: 422 });
     }
 
     const resolvedLastClass = last_class ? last_class.trim() : (body.past_school_class || 'N/A');
@@ -170,24 +282,14 @@ export async function POST(request, context) {
         SET applicant_name = $1,
             email = $2,
             phone = $3,
-            gender = $4,
-            date_of_birth = $5,
             status = 'unpaid',
-            last_class = $6,
-            last_class_grade = $7,
-            last_institution = $8,
             updated_at = CURRENT_TIMESTAMP
-        WHERE id = $9 AND website_id = $10
+        WHERE id = $4 AND website_id = $5
         RETURNING *
       `, [
         applicant_name.trim(),
         cleanEmail,
         phone.trim(),
-        gender,
-        date_of_birth || null,
-        resolvedLastClass,
-        resolvedLastGrade,
-        resolvedLastInst,
         existing.id,
         website.id
       ]);
@@ -202,12 +304,10 @@ export async function POST(request, context) {
       const insertApp = await queryDb(`
         INSERT INTO website_admission_applicants (
           website_id, admission_id, application_no, applicant_name, email,
-          phone, gender, date_of_birth, status,
-          last_class, last_class_grade, last_institution
+          phone, status
         ) VALUES (
           $1, $2, $3, $4, $5,
-          $6, $7, $8, 'unpaid',
-          $9, $10, $11
+          $6, 'unpaid'
         ) RETURNING *
       `, [
         website.id,
@@ -215,28 +315,35 @@ export async function POST(request, context) {
         appNumber,
         applicant_name.trim(),
         cleanEmail,
-        phone.trim(),
-        gender,
-        date_of_birth || null,
-        resolvedLastClass,
-        resolvedLastGrade,
-        resolvedLastInst
+        phone.trim()
       ]);
       applicant = insertApp.rows[0];
     }
 
-    // 3. Upsert into website_admission_applicant_info
+    // 3. Upsert into website_admission_applicant_info with all modular details and custom_fields
     await queryDb(`
       INSERT INTO website_admission_applicant_info (
-        website_id, applicant_id, father_name, father_phone, father_occupation,
-        mother_name, mother_phone, mother_occupation, guardian_name, guardian_phone,
-        guardian_relation, present_address, permanent_address, previous_school, previous_gpa
+        website_id, applicant_id, gender, date_of_birth, blood_group, religion,
+        father_name, father_phone, father_occupation,
+        mother_name, mother_phone, mother_occupation,
+        guardian_name, guardian_phone, guardian_relation,
+        present_address, permanent_address,
+        last_class, last_class_grade, last_institution,
+        custom_fields
       ) VALUES (
-        $1, $2, $3, $4, $5,
-        $6, $7, $8, $9, $10,
-        $11, $12, $13, $14, $15
+        $1, $2, $3, $4, $5, $6,
+        $7, $8, $9,
+        $10, $11, $12,
+        $13, $14, $15,
+        $16, $17,
+        $18, $19, $20,
+        $21
       )
       ON CONFLICT (applicant_id) DO UPDATE SET
+        gender = EXCLUDED.gender,
+        date_of_birth = EXCLUDED.date_of_birth,
+        blood_group = EXCLUDED.blood_group,
+        religion = EXCLUDED.religion,
         father_name = EXCLUDED.father_name,
         father_phone = EXCLUDED.father_phone,
         father_occupation = EXCLUDED.father_occupation,
@@ -248,12 +355,18 @@ export async function POST(request, context) {
         guardian_relation = EXCLUDED.guardian_relation,
         present_address = EXCLUDED.present_address,
         permanent_address = EXCLUDED.permanent_address,
-        previous_school = EXCLUDED.previous_school,
-        previous_gpa = EXCLUDED.previous_gpa,
+        last_class = EXCLUDED.last_class,
+        last_class_grade = EXCLUDED.last_class_grade,
+        last_institution = EXCLUDED.last_institution,
+        custom_fields = EXCLUDED.custom_fields,
         updated_at = CURRENT_TIMESTAMP
     `, [
       website.id,
       applicant.id,
+      gender || 'Male',
+      date_of_birth || null,
+      blood_group || null,
+      body.religion || null,
       father_name || null,
       father_phone || null,
       father_occupation || null,
@@ -265,8 +378,10 @@ export async function POST(request, context) {
       guardian_relation || 'Father',
       present_address || address || null,
       permanent_address || address || null,
+      resolvedLastClass,
+      resolvedLastGrade,
       resolvedLastInst,
-      resolvedLastGrade
+      JSON.stringify(submittedCustom)
     ]);
 
     // 4. Upsert pending payment record in website_admission_fee_payments
