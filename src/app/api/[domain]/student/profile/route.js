@@ -65,11 +65,11 @@ export async function GET(request, context) {
       queryDb(`SELECT * FROM website_student_pictures WHERE student_id = $1 ORDER BY is_primary DESC, id DESC LIMIT 1`, [student.id]),
       queryDb(`SELECT * FROM website_student_signatures WHERE student_id = $1 LIMIT 1`, [student.id]),
       queryDb(
-        `SELECT id, field_key, field_name, label_translations, field_type, target_scope,
-                options, is_required, is_visible_in_student, display_order, placeholder
+        `SELECT id, field_key, label, label AS field_name, label_translations, field_type, target_scope,
+                options, is_required, is_visible_in_student, sort_order, sort_order AS display_order, placeholder
          FROM website_form_fields
-         WHERE website_id = $1 AND (is_visible_in_student = TRUE OR is_visible_in_student IS NULL)
-         ORDER BY display_order ASC, id ASC`,
+         WHERE website_id = $1 AND (is_visible_in_student = TRUE OR is_visible_in_student IS NULL) AND (is_active = TRUE OR is_active IS NULL)
+         ORDER BY sort_order ASC, id ASC`,
         [website.id]
       ),
     ]);

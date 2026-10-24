@@ -33,7 +33,7 @@ const Sidebar = () => {
     { label: 'Attendance Records', href: '/student/attendance' },
     { label: 'Subjects & Syllabus', href: '/student/subjects' },
     { label: 'Exam Schedules', href: '/student/exams' },
-    { label: 'Exam Admit Cards', href: '/student/cards' },
+    { label: 'Issued Cards & Passes', href: '/student/cards' },
     { label: 'Student ID Card', href: '/student/id-card' },
     { label: 'Payment Receipts', href: '/student/receipts' },
     { label: 'Institutional Testimonial', href: '/student/testimonial' },
