@@ -2,14 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import TenantLoader from 'src/component/tenant/TenantLoader';
-import { 
-  FiUser, FiUsers, FiBookOpen, FiActivity, FiDollarSign, 
-  FiAward, FiCalendar, FiClock, FiCheckSquare, FiArrowRight,
-  FiFileText, FiCheckCircle
-} from 'react-icons/fi';
 import Link from 'next/link';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
 const StudentHomePage = () => {
+  const { getApiEndpoint, tenantUrl } = useTenantWebsite();
   const [profile, setProfile] = useState(null);
   const [stats, setStats] = useState(null);
   const [todayRoutine, setTodayRoutine] = useState([]);
@@ -17,368 +14,313 @@ const StudentHomePage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchDashboardData = async () => {
       try {
-        const [profileRes, statsRes] = await Promise.all([
-          fetch('/api/student/me'),
-          fetch('/api/student/dashboard')
+        const [profileResult, statsResult] = await Promise.allSettled([
+          fetch(getApiEndpoint('student/me')),
+          fetch(getApiEndpoint('student/dashboard')),
         ]);
 
-        if (profileRes.ok && statsRes.ok) {
-          const profileData = await profileRes.json();
-          const statsData = await statsRes.json();
-          const profilePayload = profileData.payload || profileData.paylod || profileData;
-          const statsPayload = statsData.payload || statsData.paylod || statsData;
+        let resolvedStudent = null;
 
-          setProfile(profilePayload.student || null);
-          setStats(statsPayload.stats || null);
-          setTodayRoutine(statsPayload.todayRoutine || []);
-          setUpcomingExams(statsPayload.upcomingExams || []);
+        if (profileResult.status === 'fulfilled' && profileResult.value.ok) {
+          try {
+            const profileData = await profileResult.value.json();
+            const profilePayload = profileData.payload || profileData.paylod || profileData;
+            resolvedStudent = profilePayload?.student || profileData?.student || null;
+          } catch (e) {
+            console.warn('Failed to parse student profile JSON:', e);
+          }
+        }
+
+        if (statsResult.status === 'fulfilled' && statsResult.value.ok) {
+          try {
+            const statsData = await statsResult.value.json();
+            const statsPayload = statsData.payload || statsData.paylod || statsData;
+
+            if (!resolvedStudent) {
+              resolvedStudent = statsPayload?.student || statsData?.student || null;
+            } else if (statsPayload?.student || statsData?.student) {
+              resolvedStudent = {
+                ...(statsPayload?.student || statsData?.student),
+                ...resolvedStudent,
+              };
+            }
+
+            if (isMounted) {
+              setStats(statsPayload?.stats || statsData?.stats || null);
+              setTodayRoutine(statsPayload?.todayRoutine || statsData?.todayRoutine || []);
+              setUpcomingExams(statsPayload?.upcomingExams || statsData?.upcomingExams || []);
+            }
+          } catch (e) {
+            console.warn('Failed to parse student dashboard stats JSON:', e);
+          }
+        }
+
+        if (isMounted && resolvedStudent) {
+          setProfile(resolvedStudent);
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchDashboardData();
-  }, []);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [getApiEndpoint]);
 
   if (loading) {
     return <TenantLoader fullScreen={false} />;
   }
 
-  const welcomeMessage = () => {
-    const hrs = new Date().getHours();
-    if (hrs < 12) return 'Good Morning';
-    if (hrs < 18) return 'Good Afternoon';
-    return 'Good Evening';
-  };
-
   const pendingDues = (stats?.unpaidFeesCount || 0) + (stats?.unpaidFinesCount || 0);
 
-  const statCards = [
+  const kpis = [
     {
-      title: 'Subjects & Coursework',
+      title: 'Enrolled Subjects',
       value: stats?.subjectsCount || 0,
-      subText: 'Enrolled academic subjects',
-      icon: FiBookOpen,
-      iconBg: 'bg-emerald-500/10 text-emerald-600',
-      link: '/student/subjects'
+      subText: 'Active class courses',
+      link: '/student/subjects',
     },
     {
       title: 'Attendance Rate',
       value: `${stats?.attendanceRate || 100}%`,
       subText: `${stats?.presentAttendanceDays || 0}/${stats?.totalAttendanceDays || 0} class sessions logged`,
-      icon: FiActivity,
-      iconBg: stats?.attendanceRate < 75 ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-600',
-      link: '/student/attendance'
+      link: '/student/attendance',
     },
     {
-      title: 'Unpaid Fees & Dues',
+      title: 'Outstanding Fees',
       value: pendingDues,
-      subText: pendingDues > 0 ? 'Pending payment ledger balance' : 'All clear! No outstanding fees',
-      icon: FiDollarSign,
-      iconBg: pendingDues > 0 ? 'bg-rose-500/10 text-rose-600' : 'bg-slate-500/10 text-slate-600',
-      link: '/student/fees'
+      subText: pendingDues > 0 ? 'Pending payment balance' : 'No outstanding fees',
+      link: '/student/fees',
+      isWarning: pendingDues > 0,
     },
     {
-      title: 'Co-curricular Clubs',
+      title: 'Campus Clubs',
       value: stats?.clubsCount || 0,
       subText: 'Active club memberships',
-      icon: FiUsers,
-      iconBg: 'bg-indigo-500/10 text-indigo-600',
-      link: '/student/clubs'
-    }
+      link: '/student/clubs',
+    },
   ];
 
-  const quickActions = [
-    {
-      title: 'Class Routine',
-      desc: 'Check weekly schedule & hall rooms',
-      icon: FiClock,
-      href: '/student/routine',
-      color: 'bg-blue-50 text-blue-600'
-    },
-    {
-      title: 'Assignments & LMS',
-      desc: 'View & submit homework tasks',
-      icon: FiCheckSquare,
-      href: '/student/assignments',
-      color: 'bg-emerald-50 text-emerald-600'
-    },
-    {
-      title: 'Marks & Results',
-      desc: 'Review term performance & GPAs',
-      icon: FiAward,
-      href: '/student/results',
-      color: 'bg-purple-50 text-purple-600'
-    },
-    {
-      title: 'Admit Cards',
-      desc: 'Download examination permits',
-      icon: FiFileText,
-      href: '/student/cards',
-      color: 'bg-amber-50 text-amber-600'
-    },
-    {
-      title: 'Tuition Fees',
-      desc: 'Pay tuition fees & check receipts',
-      icon: FiDollarSign,
-      href: '/student/fees',
-      color: 'bg-rose-50 text-rose-600'
-    },
-    {
-      title: 'Testimonials',
-      desc: 'Apply for certificates & passes',
-      icon: FiAward,
-      href: '/student/testimonial',
-      color: 'bg-teal-50 text-teal-600'
-    }
+  const quickLinks = [
+    { label: 'Class Routine', desc: 'Weekly schedule & room allocation', href: '/student/routine' },
+    { label: 'Assignments', desc: 'View homework & coursework submissions', href: '/student/assignments' },
+    { label: 'Academic Results', desc: 'Term GPAs, marks & transcripts', href: '/student/results' },
+    { label: 'Exam Admit Cards', desc: 'Download examination entry passes', href: '/student/cards' },
+    { label: 'Tuition Fees', desc: 'Pay fees, view invoices & ledgers', href: '/student/fees' },
+    { label: 'Classrooms LMS', desc: 'Online lectures & class notes', href: '/student/classrooms' },
   ];
 
   return (
-    <div className="flex flex-col gap-6 w-full pb-12 animate-fade-up">
-      {/* Welcome Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-emerald-700 via-emerald-800 to-teal-900 text-white rounded-3xl p-6 sm:p-8 md:p-10 shadow-lg shadow-emerald-900/10">
-        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-white/5 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute right-1/3 -top-20 w-48 h-48 bg-emerald-500/10 rounded-full blur-xl pointer-events-none" />
-        
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/20 text-white border border-white/30 flex items-center justify-center text-3xl font-bold shrink-0 overflow-hidden shadow-inner">
-              {profile?.photo_url || profile?.image ? (
-                <img src={profile.photo_url || profile.image} alt={profile.name} className="w-full h-full object-cover" />
-              ) : profile?.name ? (
-                profile.name.charAt(0).toUpperCase()
-              ) : (
-                <FiUser />
-              )}
-            </div>
-            <div className="max-w-xl">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/15 text-emerald-100 backdrop-blur-md mb-2 border border-white/10">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                Official Student Portal
+    <div className="w-full space-y-4">
+      {/* Top Banner / Student Identity Bar */}
+      <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <h1 className="text-base font-semibold text-slate-900 dark:text-white">
+              {profile?.name || 'Student Portal'}
+            </h1>
+            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800">
+              Enrolled Student
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Welcome to your academic workstation. Manage course materials, attendance, exam permits, and tuition fees.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-600 dark:text-slate-300">
+          <span className="px-2.5 py-1 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            Reg: <strong className="text-slate-900 dark:text-white">{profile?.registration_number || profile?.registration_no || profile?.student_unique_id || 'N/A'}</strong>
+          </span>
+          <span className="px-2.5 py-1 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            Class: <strong className="text-slate-900 dark:text-white">{profile?.class_name || 'General Enrollment'} {profile?.section_name ? `(${profile.section_name})` : ''}</strong>
+          </span>
+          {(profile?.roll || profile?.roll_no) && (
+            <span className="px-2.5 py-1 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+              Roll: #{profile.roll || profile.roll_no}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* KPI Stats Cards */}
+      <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {kpis.map((kpi, idx) => (
+          <Link
+            key={idx}
+            href={tenantUrl(kpi.link)}
+            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-primary/50 dark:hover:border-primary/50 rounded-md p-4 transition flex flex-col justify-between space-y-2"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                {kpi.title}
               </span>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-1">
-                {welcomeMessage()}, {profile?.name || 'Student'} 👋
-              </h1>
-              <p className="text-emerald-100/90 text-xs sm:text-sm leading-relaxed font-normal">
-                Welcome back to your academic portal. Track your classes, submit assignments, verify fees, and stay updated with your curriculum.
+              <span
+                className={`text-lg font-semibold font-mono ${
+                  kpi.isWarning ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'
+                }`}
+              >
+                {kpi.value}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500">{kpi.subText}</p>
+          </Link>
+        ))}
+      </div>
+
+      {/* Two Column Layout: Today's Routine & Upcoming Exams */}
+      <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Today's Routine */}
+        <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+                Today&apos;s Class Routine
+              </h2>
+              <p className="text-xs text-slate-400">
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
               </p>
             </div>
-          </div>
-
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 min-w-[220px] shadow-inner">
-            <span className="text-[11px] font-bold text-emerald-200 uppercase tracking-wider block mb-2">
-              Identity Profile
-            </span>
-            <div className="flex flex-col gap-1.5 text-sm">
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-emerald-100 text-xs font-medium">Class:</span>
-                <span className="font-semibold text-white">{profile?.class_name || 'N/A'}</span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-emerald-100 text-xs font-medium">Section:</span>
-                <span className="font-semibold text-white">{profile?.section_name || 'N/A'}</span>
-              </div>
-              <div className="flex items-center justify-between gap-4 border-t border-white/10 pt-1.5">
-                <span className="text-emerald-100 text-xs font-medium">Reg No:</span>
-                <span className="font-mono text-xs font-semibold text-emerald-200">{profile?.registration_number || profile?.registration_no || 'N/A'}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-        {statCards.map((card, idx) => {
-          const Icon = card.icon;
-          return (
-            <Link 
-              key={idx} 
-              href={card.link}
-              className="group bg-white border border-slate-200/70 hover:border-emerald-500/40 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+            <Link
+              href={tenantUrl('/student/routine')}
+              className="px-2.5 py-1 text-xs font-medium text-primary hover:underline"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className={`p-3 rounded-xl ${card.iconBg} transition-transform duration-200 group-hover:scale-105`}>
-                  <Icon className="text-xl" />
-                </div>
-                <span className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight font-mono">
-                  {card.value}
-                </span>
-              </div>
-              <div>
-                <h3 className="font-semibold text-slate-800 text-sm mb-1 group-hover:text-emerald-600 transition-colors">
-                  {card.title}
-                </h3>
-                <p className="text-slate-400 text-xs font-normal">{card.subText}</p>
-              </div>
+              Full Routine
             </Link>
-          );
-        })}
-      </div>
-
-      {/* Two-Column Tables Section: Today's Routine & Upcoming Exams */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Today's Timetable Table */}
-        <div className="bg-white border border-slate-200/70 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                  <FiClock className="text-emerald-600" /> Today's Class Routine
-                </h3>
-                <p className="text-xs text-slate-400 font-medium">
-                  {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                </p>
-              </div>
-              <Link 
-                href="/student/routine"
-                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
-              >
-                Full Routine <FiArrowRight />
-              </Link>
-            </div>
-
-            {todayRoutine.length === 0 ? (
-              <div className="text-center py-10 text-slate-400 text-xs border border-dashed border-slate-200 rounded-2xl">
-                No classes scheduled for today. Enjoy your study break!
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider bg-slate-50/50">
-                      <th className="py-2.5 px-3 rounded-l-lg">Time</th>
-                      <th className="py-2.5 px-3">Subject</th>
-                      <th className="py-2.5 px-3">Teacher</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {todayRoutine.map((slot, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50/60">
-                        <td className="py-3 px-3 font-mono font-bold text-slate-700 whitespace-nowrap">
-                          {slot.start_time} - {slot.end_time}
-                        </td>
-                        <td className="py-3 px-3">
-                          <p className="font-bold text-slate-800">{slot.subject_name}</p>
-                          {slot.subject_code && (
-                            <span className="text-[10px] text-slate-400 font-mono">({slot.subject_code})</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-3 text-slate-600">
-                          {slot.teacher_name || 'Faculty Member'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </div>
+
+          {todayRoutine.length === 0 ? (
+            <div className="py-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded">
+              No classes scheduled for today.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50">
+                    <th className="py-2 px-3 font-medium">Time</th>
+                    <th className="py-2 px-3 font-medium">Subject</th>
+                    <th className="py-2 px-3 font-medium">Teacher</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {todayRoutine.map((slot, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="py-2 px-3 font-mono text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                        {slot.start_time} - {slot.end_time}
+                      </td>
+                      <td className="py-2 px-3 font-medium text-slate-900 dark:text-white">
+                        {slot.subject_name}
+                      </td>
+                      <td className="py-2 px-3 text-slate-600 dark:text-slate-400">
+                        {slot.teacher_name || 'Faculty Member'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
-        {/* Upcoming Examination Schedule Table */}
-        <div className="bg-white border border-slate-200/70 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                  <FiAward className="text-purple-600" /> Upcoming Examinations
-                </h3>
-                <p className="text-xs text-slate-400 font-medium">Scheduled class examinations</p>
-              </div>
-              <Link 
-                href="/student/exams"
-                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
-              >
-                View Exams <FiArrowRight />
-              </Link>
+        {/* Upcoming Exams */}
+        <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+                Upcoming Examination Schedules
+              </h2>
+              <p className="text-xs text-slate-400">Published term assessments</p>
             </div>
-
-            {upcomingExams.length === 0 ? (
-              <div className="text-center py-10 text-slate-400 text-xs border border-dashed border-slate-200 rounded-2xl">
-                No upcoming term examinations scheduled at this time.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider bg-slate-50/50">
-                      <th className="py-2.5 px-3 rounded-l-lg">Exam Name</th>
-                      <th className="py-2.5 px-3">Term</th>
-                      <th className="py-2.5 px-3">Date</th>
-                      <th className="py-2.5 px-3 text-right rounded-r-lg">Permit</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {upcomingExams.map((exam) => (
-                      <tr key={exam.id} className="hover:bg-slate-50/60">
-                        <td className="py-3 px-3 font-bold text-slate-800">
-                          {exam.name}
-                        </td>
-                        <td className="py-3 px-3">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            {exam.term || 'Term Final'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-slate-500 whitespace-nowrap">
-                          {exam.start_date ? new Date(exam.start_date).toLocaleDateString('en-GB') : 'TBA'}
-                        </td>
-                        <td className="py-3 px-3 text-right">
-                          <Link 
-                            href="/student/cards"
-                            className="px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg text-[11px] font-bold text-slate-700 transition-colors inline-block"
-                          >
-                            Admit Card
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <Link
+              href={tenantUrl('/student/exams')}
+              className="px-2.5 py-1 text-xs font-medium text-primary hover:underline"
+            >
+              All Exams
+            </Link>
           </div>
+
+          {upcomingExams.length === 0 ? (
+            <div className="py-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded">
+              No upcoming examinations scheduled.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50">
+                    <th className="py-2 px-3 font-medium">Exam Name</th>
+                    <th className="py-2 px-3 font-medium">Term</th>
+                    <th className="py-2 px-3 font-medium">Date</th>
+                    <th className="py-2 px-3 text-right font-medium">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {upcomingExams.map((exam) => (
+                    <tr key={exam.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="py-2 px-3 font-medium text-slate-900 dark:text-white">
+                        {exam.name}
+                      </td>
+                      <td className="py-2 px-3">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary border border-primary/20">
+                          {exam.term || 'Term Final'}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                        {exam.start_date ? new Date(exam.start_date).toLocaleDateString('en-GB') : 'TBA'}
+                      </td>
+                      <td className="py-2 px-3 text-right">
+                        <Link
+                          href={tenantUrl('/student/cards')}
+                          className="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium transition"
+                        >
+                          Admit Card
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Quick Access Grid */}
-      <div className="bg-white border border-slate-200/70 rounded-3xl p-6 sm:p-8 shadow-xs">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-lg font-bold text-slate-800">Quick Navigation</h2>
-            <p className="text-xs text-slate-400 font-medium">Direct access to core academic features</p>
-          </div>
+      {/* Quick Navigation Cards */}
+      <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-3">
+        <div className="pb-1 border-b border-slate-100 dark:border-slate-800">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+            Workstation Quick Navigation
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Direct access to core academic operations and records.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {quickActions.map((action, idx) => {
-            const Icon = action.icon;
-            return (
-              <Link 
-                key={idx}
-                href={action.href}
-                className="group flex items-center justify-between p-4 border border-slate-100 hover:border-emerald-200 rounded-2xl bg-slate-50/40 hover:bg-emerald-50/30 transition-all duration-200"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className={`p-3 rounded-xl ${action.color} group-hover:scale-105 transition-transform`}>
-                    <Icon className="text-xl" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-slate-800 text-sm group-hover:text-emerald-700 transition-colors">
-                      {action.title}
-                    </h4>
-                    <p className="text-slate-400 text-xs">{action.desc}</p>
-                  </div>
-                </div>
-                <FiArrowRight className="text-slate-300 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all text-base" />
-              </Link>
-            );
-          })}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {quickLinks.map((ql, idx) => (
+            <Link
+              key={idx}
+              href={tenantUrl(ql.href)}
+              className="p-3 rounded-md border border-slate-200 dark:border-slate-800 hover:border-primary/50 dark:hover:border-primary/50 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 transition space-y-1"
+            >
+              <div className="text-xs font-medium text-slate-900 dark:text-white">
+                {ql.label}
+              </div>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500">{ql.desc}</p>
+            </Link>
+          ))}
         </div>
       </div>
     </div>

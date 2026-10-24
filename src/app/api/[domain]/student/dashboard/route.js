@@ -29,11 +29,13 @@ export async function GET(request, context) {
 
     // 1. Fetch student basic info
     const studentRes = await queryDb(
-      `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.class_id, s.section_id, s.session_id,
-              COALESCE(s.name, i.data->>'name') AS name,
+      `SELECT s.id, s.website_id,
+              COALESCE(s.registration_no, s.student_unique_id, i.data->>'registration_no', i.data->>'registration_number') AS registration_no,
+              s.roll_no, s.student_unique_id, s.class_id, s.section_id, s.session_id,
+              COALESCE(s.name, i.data->>'name', 'Student') AS name,
               COALESCE(s.email, i.data->>'email') AS email,
               COALESCE(s.number, i.data->>'number') AS number,
-              c.name AS class_name,
+              COALESCE(c.name, i.data->>'class_name', 'General Enrollment') AS class_name,
               sec.name AS section_name,
               ses.name AS session_name,
               p.image_url AS photo_url
@@ -52,42 +54,65 @@ export async function GET(request, context) {
       return NextResponse.json({ success: false, error: 'Student not found.' }, { status: 404 });
     }
 
-    const student = studentRes.rows[0];
+    const studentRow = studentRes.rows[0];
+    const student = {
+      ...studentRow,
+      registration_number: studentRow.registration_no,
+      roll: studentRow.roll_no,
+    };
 
     // 2. Fetch Subjects Count
-    const subjectsCountRes = await queryDb(
-      `SELECT COUNT(*)::int AS count 
-       FROM website_class_subjects 
-       WHERE website_id = $1 AND class_id = $2`,
-      [website.id, student.class_id || 0]
-    );
-    const subjectsCount = subjectsCountRes.rows[0]?.count || 0;
+    let subjectsCount = 0;
+    try {
+      const subjectsCountRes = await queryDb(
+        `SELECT COUNT(*)::int AS count 
+         FROM website_class_subjects 
+         WHERE website_id = $1 AND class_id = $2`,
+        [website.id, student.class_id || 0]
+      );
+      subjectsCount = subjectsCountRes.rows[0]?.count || 0;
+    } catch (e) {
+      console.warn('Error fetching subjects count:', e.message);
+    }
 
     // 3. Fetch Attendance Stats
-    const attRes = await queryDb(
-      `SELECT 
-         COUNT(*)::int AS total_days,
-         COUNT(CASE WHEN status IN ('present', 'late') THEN 1 END)::int AS present_days,
-         COUNT(CASE WHEN status = 'absent' THEN 1 END)::int AS absent_days
-       FROM website_student_attendances
-       WHERE website_id = $1 AND student_id = $2`,
-      [website.id, studentId]
-    );
-    const totalDays = attRes.rows[0]?.total_days || 0;
-    const presentDays = attRes.rows[0]?.present_days || 0;
-    const attendanceRate = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 100;
+    let totalDays = 0;
+    let presentDays = 0;
+    let attendanceRate = 100;
+    try {
+      const attRes = await queryDb(
+        `SELECT 
+           COUNT(*)::int AS total_days,
+           COUNT(CASE WHEN status IN ('present', 'late') THEN 1 END)::int AS present_days,
+           COUNT(CASE WHEN status = 'absent' THEN 1 END)::int AS absent_days
+         FROM website_student_attendances
+         WHERE website_id = $1 AND student_id = $2`,
+        [website.id, studentId]
+      );
+      totalDays = attRes.rows[0]?.total_days || 0;
+      presentDays = attRes.rows[0]?.present_days || 0;
+      attendanceRate = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 100;
+    } catch (e) {
+      console.warn('Error fetching attendance stats:', e.message);
+    }
 
     // 4. Fetch Unpaid Fees & Fines Count
-    const feesRes = await queryDb(
-      `SELECT 
-         COUNT(CASE WHEN payment_status != 'paid' THEN 1 END)::int AS unpaid_fees,
-         COALESCE(SUM(CASE WHEN payment_status != 'paid' AND fine_amount > 0 THEN 1 ELSE 0 END), 0)::int AS unpaid_fines
-       FROM website_education_fee_payments
-       WHERE website_id = $1 AND student_id = $2`,
-      [website.id, studentId]
-    );
-    const unpaidFeesCount = feesRes.rows[0]?.unpaid_fees || 0;
-    const unpaidFinesCount = feesRes.rows[0]?.unpaid_fines || 0;
+    let unpaidFeesCount = 0;
+    let unpaidFinesCount = 0;
+    try {
+      const feesRes = await queryDb(
+        `SELECT 
+           COUNT(CASE WHEN payment_status != 'paid' THEN 1 END)::int AS unpaid_fees,
+           COALESCE(SUM(CASE WHEN payment_status != 'paid' AND fine_amount > 0 THEN 1 ELSE 0 END), 0)::int AS unpaid_fines
+         FROM website_education_fee_payments
+         WHERE website_id = $1 AND student_id = $2`,
+        [website.id, studentId]
+      );
+      unpaidFeesCount = feesRes.rows[0]?.unpaid_fees || 0;
+      unpaidFinesCount = feesRes.rows[0]?.unpaid_fines || 0;
+    } catch (e) {
+      console.warn('Error fetching fees stats:', e.message);
+    }
 
     // 5. Fetch Clubs Count
     let clubsCount = 0;
@@ -99,37 +124,57 @@ export async function GET(request, context) {
         [website.id, studentId]
       );
       clubsCount = clubsRes.rows[0]?.count || 0;
-    } catch {}
+    } catch (e) {
+      console.warn('Error fetching clubs count:', e.message);
+    }
 
     // 6. Fetch Upcoming Exams
-    const upcomingExamsRes = await queryDb(
-      `SELECT e.id, e.name, e.term, e.start_date, e.end_date, e.status
-       FROM website_exams e
-       WHERE e.website_id = $1 AND e.class_id = $2 AND e.is_published = TRUE AND e.start_date >= CURRENT_DATE - INTERVAL '1 day'
-       ORDER BY e.start_date ASC
-       LIMIT 5`,
-      [website.id, student.class_id || 0]
-    );
+    let upcomingExams = [];
+    try {
+      const upcomingExamsRes = await queryDb(
+        `SELECT e.id, e.name, e.term, e.start_date, e.end_date, e.status
+         FROM website_exams e
+         WHERE e.website_id = $1 AND e.class_id = $2 AND e.is_published = TRUE AND e.start_date >= CURRENT_DATE - INTERVAL '1 day'
+         ORDER BY e.start_date ASC
+         LIMIT 5`,
+        [website.id, student.class_id || 0]
+      );
+      upcomingExams = upcomingExamsRes.rows || [];
+    } catch (e) {
+      console.warn('Error fetching upcoming exams:', e.message);
+    }
 
     // 7. Today's Class Routine
-    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const currentDay = daysOfWeek[new Date().getDay()];
+    let todayRoutine = [];
+    try {
+      const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const currentDay = daysOfWeek[new Date().getDay()];
 
-    const routineRes = await queryDb(
-      `SELECT pcs.id,
-              d.name AS day_name,
-              p.name AS period_name, p.start_time, p.end_time,
-              sub.name AS subject_name, sub.code AS subject_code,
-              t.name AS teacher_name
-       FROM website_period_class_subjects pcs
-       JOIN website_days d ON d.id = pcs.day_id
-       JOIN website_periods p ON p.id = pcs.period_id
-       JOIN website_subjects sub ON sub.id = pcs.subject_id
-       LEFT JOIN website_teachers t ON t.id = pcs.teacher_id
-       WHERE pcs.website_id = $1 AND pcs.class_id = $2 AND LOWER(d.name) = LOWER($3)
-       ORDER BY p.start_time ASC`,
-      [website.id, student.class_id || 0, currentDay]
-    );
+      const routineRes = await queryDb(
+        `SELECT pcs.id,
+                d.name AS day_name,
+                d.name AS day_of_week,
+                p.name AS period_name, p.start_time, p.end_time,
+                sub.name AS subject_name, sub.code AS subject_code,
+                t.name AS teacher_name,
+                sec.name AS section_name,
+                COALESCE(pcs.room_number, 'Room ' || p.id) AS room_number
+         FROM website_period_class_subjects pcs
+         JOIN website_periods p ON p.id = pcs.period_id
+         JOIN website_days d ON d.id = p.day_id
+         JOIN website_class_subjects cs ON cs.id = pcs.class_subject_id
+         JOIN website_subjects sub ON sub.id = cs.subject_id
+         LEFT JOIN website_sections sec ON sec.id = pcs.section_id
+         LEFT JOIN website_teacher_class_periods tcp ON tcp.period_id = p.id AND tcp.class_id = cs.class_id
+         LEFT JOIN website_teachers t ON t.id = tcp.teacher_id
+         WHERE pcs.website_id = $1 AND cs.class_id = $2 AND LOWER(d.name) = LOWER($3)
+         ORDER BY p.start_time ASC`,
+        [website.id, student.class_id || 0, currentDay]
+      );
+      todayRoutine = routineRes.rows || [];
+    } catch (e) {
+      console.warn('Error fetching today routine:', e.message);
+    }
 
     const stats = {
       subjectsCount,
@@ -139,21 +184,21 @@ export async function GET(request, context) {
       unpaidFeesCount,
       unpaidFinesCount,
       clubsCount,
-      upcomingExamsCount: upcomingExamsRes.rows.length
+      upcomingExamsCount: upcomingExams.length
     };
 
     return NextResponse.json({
       success: true,
       stats,
       student,
-      todayRoutine: routineRes.rows,
-      upcomingExams: upcomingExamsRes.rows,
+      todayRoutine,
+      upcomingExams,
       // Backwards-compatible payload
       payload: {
         stats,
         student,
-        todayRoutine: routineRes.rows,
-        upcomingExams: upcomingExamsRes.rows
+        todayRoutine,
+        upcomingExams
       }
     });
   } catch (error) {

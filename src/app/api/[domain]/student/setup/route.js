@@ -24,9 +24,18 @@ export async function GET(request, context) {
     const res = await queryDb(
       `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
               s.class_id, s.section_id, s.session_id, s.is_active, s.email AS registered_email,
-              i.name, i.email, i.number, i.gender, i.blood_group, i.date_of_birth,
-              i.religion, i.admission_date, i.is_registered, i.is_verified,
-              i.verification_status, i.verification_token_expires,
+              COALESCE(s.name, i.data->>'name') AS name,
+              COALESCE(s.email, i.data->>'email') AS email,
+              COALESCE(s.number, i.data->>'number') AS number,
+              COALESCE(s.gender, i.data->>'gender') AS gender,
+              COALESCE(s.blood_group, i.data->>'blood_group') AS blood_group,
+              COALESCE(s.date_of_birth, (i.data->>'date_of_birth')::date) AS date_of_birth,
+              COALESCE(s.religion, i.data->>'religion') AS religion,
+              COALESCE(s.admission_date, (i.data->>'admission_date')::date) AS admission_date,
+              COALESCE(i.is_registered, s.is_registered, FALSE) AS is_registered,
+              COALESCE(s.is_verified, FALSE) AS is_verified,
+              COALESCE(i.verification_status, s.verification_status, 'pending_setup') AS verification_status,
+              s.verification_token_expires,
               c.name AS class_name, sec.name AS section_name, ses.name AS session_name
        FROM website_students s
        LEFT JOIN website_student_info i ON s.id = i.student_id
@@ -35,8 +44,8 @@ export async function GET(request, context) {
        LEFT JOIN website_sessions ses ON s.session_id = ses.id
        WHERE s.website_id = $1 
          AND (
-           ($2::text IS NOT NULL AND (i.verification_token = $2 OR s.registration_no = $2))
-           OR ($3::text IS NOT NULL AND LOWER(TRIM(COALESCE(s.email, i.email))) = LOWER(TRIM($3)))
+           ($2::text IS NOT NULL AND (s.verification_token = $2 OR s.registration_no = $2))
+           OR ($3::text IS NOT NULL AND LOWER(TRIM(COALESCE(s.email, i.data->>'email'))) = LOWER(TRIM($3)))
          )
        LIMIT 1`,
       [website.id, token || null, emailParam || null]
@@ -58,12 +67,20 @@ export async function GET(request, context) {
       );
     }
 
-    // Fetch existing addresses, guardians, picture, signature if any
-    const [addrRes, guardRes, picRes, sigRes] = await Promise.all([
+    // Fetch existing addresses, guardians, picture, signature, and configured form fields
+    const [addrRes, guardRes, picRes, sigRes, fieldsRes] = await Promise.all([
       queryDb(`SELECT * FROM website_student_addresses WHERE student_id = $1 LIMIT 1`, [student.id]),
       queryDb(`SELECT * FROM website_student_guardians WHERE student_id = $1 LIMIT 1`, [student.id]),
       queryDb(`SELECT * FROM website_student_pictures WHERE student_id = $1 ORDER BY id DESC LIMIT 1`, [student.id]),
       queryDb(`SELECT * FROM website_student_signatures WHERE student_id = $1 LIMIT 1`, [student.id]),
+      queryDb(
+        `SELECT id, field_key, field_name, label_translations, field_type, target_scope,
+                options, is_required, is_visible_in_student, display_order, placeholder, default_value
+         FROM website_form_fields
+         WHERE website_id = $1 AND (is_visible_in_student = TRUE OR is_visible_in_student IS NULL)
+         ORDER BY display_order ASC, id ASC`,
+        [website.id]
+      ),
     ]);
 
     return NextResponse.json({
@@ -77,6 +94,7 @@ export async function GET(request, context) {
         guardian: guardRes.rows[0] ? { ...guardRes.rows[0], ...(guardRes.rows[0].data || {}) } : null,
         picture: picRes.rows[0] || null,
         signature: sigRes.rows[0] || null,
+        fields: fieldsRes.rows,
       },
     });
   } catch (error) {
@@ -152,11 +170,11 @@ async function handleSetupSubmission(request, context) {
     // Verify student exists in website_students
     const studentCheck = await queryDb(
       `SELECT s.id, s.registration_no, s.email AS registered_student_email, s.two_factor_code,
-              i.email AS info_email, i.name, i.is_verified, i.verification_token_expires
+              i.data->>'email' AS info_email, COALESCE(s.name, i.data->>'name') AS name, COALESCE(s.is_verified, FALSE) AS is_verified, s.verification_token_expires
        FROM website_students s
        LEFT JOIN website_student_info i ON s.id = i.student_id
        WHERE s.website_id = $1 
-         AND (i.verification_token = $2 OR s.registration_no = $2 OR LOWER(TRIM(s.email)) = LOWER(TRIM($2)))
+         AND (s.verification_token = $2 OR s.registration_no = $2 OR LOWER(TRIM(s.email)) = LOWER(TRIM($2)))
        LIMIT 1`,
       [website.id, token.trim()]
     );
@@ -187,6 +205,32 @@ async function handleSetupSubmission(request, context) {
         success: false,
         error: 'Institutional email verification is required. Please verify the OTP code sent to your email before continuing.'
       }, { status: 403 });
+    }
+
+    // Dynamic field partitioning based on target_scope from website_form_fields
+    const dynamicFieldsRes = await queryDb(
+      `SELECT field_key, target_scope FROM website_form_fields WHERE website_id = $1`,
+      [website.id]
+    );
+    const scopeMap = {};
+    for (const f of dynamicFieldsRes.rows) {
+      scopeMap[f.field_key] = f.target_scope || 'info';
+    }
+
+    const rawCustom = body.custom_fields && typeof body.custom_fields === 'object' ? body.custom_fields : {};
+    const dynamicInfo = {};
+    const dynamicGuardians = {};
+    const dynamicAddresses = {};
+
+    for (const [key, val] of Object.entries(rawCustom)) {
+      const scope = scopeMap[key] || 'info';
+      if (scope === 'guardians') {
+        dynamicGuardians[key] = val;
+      } else if (scope === 'addresses') {
+        dynamicAddresses[key] = val;
+      } else {
+        dynamicInfo[key] = val;
+      }
     }
 
     // STEP 2: Password setup and account creation in website_student_info
@@ -238,7 +282,7 @@ async function handleSetupSubmission(request, context) {
         blood_group: blood_group || null,
         date_of_birth: date_of_birth || null,
         religion: religion || null,
-        ...(body.custom_fields && typeof body.custom_fields === 'object' ? body.custom_fields : {})
+        ...dynamicInfo,
       };
       await queryDb(
         `INSERT INTO website_student_info (website_id, student_id, data, updated_at)
@@ -292,7 +336,8 @@ async function handleSetupSubmission(request, context) {
         guardian_phone: guardian_phone?.trim() || father_phone?.trim() || null,
         guardian_email: guardian_email?.trim() || null,
         guardian_address: guardian_address?.trim() || null,
-        ...(body.guardian_custom_fields || (body.custom_fields && typeof body.custom_fields === 'object' ? body.custom_fields : {}))
+        ...dynamicGuardians,
+        ...(body.guardian_custom_fields && typeof body.guardian_custom_fields === 'object' ? body.guardian_custom_fields : {})
       };
       await queryDb(
         `INSERT INTO website_student_guardians (
@@ -327,7 +372,7 @@ async function handleSetupSubmission(request, context) {
       blood_group: blood_group || null,
       date_of_birth: date_of_birth || null,
       religion: religion || null,
-      ...(body.custom_fields && typeof body.custom_fields === 'object' ? body.custom_fields : {})
+      ...dynamicInfo,
     };
 
     await queryDb(
@@ -370,6 +415,7 @@ async function handleSetupSubmission(request, context) {
       upazila: upazila?.trim() || null,
       postal_code: postal_code?.trim() || null,
       country: country?.trim() || 'Bangladesh',
+      ...dynamicAddresses,
       ...(body.address_custom_fields && typeof body.address_custom_fields === 'object' ? body.address_custom_fields : {})
     };
     await queryDb(
@@ -385,7 +431,7 @@ async function handleSetupSubmission(request, context) {
     );
 
     // 4. Upsert modular website_student_guardians if guardian details provided
-    if (father_name || mother_name || guardian_name) {
+    if (father_name || mother_name || guardian_name || Object.keys(dynamicGuardians).length > 0) {
       const finalGuardian = {
         father_name: father_name?.trim() || null,
         father_phone: father_phone?.trim() || null,
@@ -400,6 +446,7 @@ async function handleSetupSubmission(request, context) {
         guardian_phone: guardian_phone?.trim() || father_phone?.trim() || null,
         guardian_email: guardian_email?.trim() || null,
         guardian_address: guardian_address?.trim() || null,
+        ...dynamicGuardians,
         ...(body.guardian_custom_fields && typeof body.guardian_custom_fields === 'object' ? body.guardian_custom_fields : {})
       };
       await queryDb(

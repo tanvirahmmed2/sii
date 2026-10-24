@@ -22,7 +22,7 @@ export const DEFAULT_STUDENT_FIELDS = [
 
 /**
  * GET /api/[domain]/staff/panel/students/fields
- * List modular fields configured for student info, guardians & address.
+ * List unified modular form fields configured for the institution.
  */
 export async function GET(request, context) {
   try {
@@ -32,7 +32,7 @@ export async function GET(request, context) {
     }
 
     let res = await queryDb(`
-      SELECT * FROM website_student_form_fields
+      SELECT * FROM website_form_fields
       WHERE website_id = $1
       ORDER BY sort_order ASC, id ASC
     `, [auth.website.id]);
@@ -42,7 +42,7 @@ export async function GET(request, context) {
         const f = DEFAULT_STUDENT_FIELDS[i];
         try {
           await queryDb(`
-            INSERT INTO website_student_form_fields (
+            INSERT INTO website_form_fields (
               website_id, field_key, label, field_type, options, is_required,
               is_unique, validation_regex, placeholder, help_text, section,
               is_shown_in_id_card, sort_order, is_active
@@ -59,7 +59,7 @@ export async function GET(request, context) {
             f.validation_regex || null,
             f.placeholder || '',
             f.help_text || '',
-            f.section || 'general',
+            f.section || 'personal',
             Boolean(f.is_shown_in_id_card),
             f.sort_order !== undefined ? f.sort_order : i + 1,
             Boolean(f.is_active !== false)
@@ -70,7 +70,7 @@ export async function GET(request, context) {
       }
 
       res = await queryDb(`
-        SELECT * FROM website_student_form_fields
+        SELECT * FROM website_form_fields
         WHERE website_id = $1
         ORDER BY sort_order ASC, id ASC
       `, [auth.website.id]);
@@ -78,11 +78,12 @@ export async function GET(request, context) {
 
     const fields = res.rows.length > 0 ? res.rows : DEFAULT_STUDENT_FIELDS;
 
-    // Group fields by section for frontend tabbed organization
     const sections = {
       personal: [],
       guardian: [],
       address: [],
+      academic: [],
+      general: [],
       other: []
     };
 
@@ -112,7 +113,7 @@ export async function GET(request, context) {
 
 /**
  * POST /api/[domain]/staff/panel/students/fields
- * Create modular field or bulk initialize defaults.
+ * Create modular field or bulk initialize defaults in unified table.
  */
 export async function POST(request, context) {
   try {
@@ -135,12 +136,16 @@ export async function POST(request, context) {
       placeholder = '',
       help_text = '',
       section = 'personal',
+      target_scope,
+      label_translations = {},
+      is_visible_in_admission = true,
+      is_visible_in_student = true,
       is_shown_in_id_card = false,
       sort_order = 0,
       is_active = true
     } = body;
 
-    // Bulk initialization from defaults
+    // Bulk initialization
     if (action === 'initialize_defaults' || Array.isArray(bulkFields)) {
       const fieldsToInsert = Array.isArray(bulkFields) ? bulkFields : DEFAULT_STUDENT_FIELDS;
       const inserted = [];
@@ -148,7 +153,7 @@ export async function POST(request, context) {
       for (let i = 0; i < fieldsToInsert.length; i++) {
         const f = fieldsToInsert[i];
         const res = await queryDb(`
-          INSERT INTO website_student_form_fields (
+          INSERT INTO website_form_fields (
             website_id, field_key, label, field_type,
             options, is_required, is_unique, validation_regex, placeholder,
             help_text, section, is_shown_in_id_card, sort_order, is_active
@@ -158,9 +163,13 @@ export async function POST(request, context) {
             field_type = EXCLUDED.field_type,
             options = EXCLUDED.options,
             is_required = EXCLUDED.is_required,
-            section = EXCLUDED.section,
+            is_unique = EXCLUDED.is_unique,
+            validation_regex = EXCLUDED.validation_regex,
             placeholder = EXCLUDED.placeholder,
             help_text = EXCLUDED.help_text,
+            section = EXCLUDED.section,
+            is_shown_in_id_card = EXCLUDED.is_shown_in_id_card,
+            sort_order = EXCLUDED.sort_order,
             is_active = EXCLUDED.is_active,
             updated_at = CURRENT_TIMESTAMP
           RETURNING *
@@ -180,31 +189,41 @@ export async function POST(request, context) {
           f.sort_order !== undefined ? f.sort_order : i + 1,
           f.is_active !== undefined ? Boolean(f.is_active) : true
         ]);
-        inserted.push(res.rows[0]);
+        if (res.rows[0]) inserted.push(res.rows[0]);
       }
 
       return NextResponse.json({
         success: true,
-        message: `Successfully initialized ${inserted.length} student modular form fields.`,
+        message: `Successfully initialized ${inserted.length} unified modular form fields.`,
         fields: inserted
       });
     }
 
     // Single field insertion
-    if (!field_key?.trim() || !label?.trim()) {
-      return NextResponse.json({ success: false, error: 'Field key and label are required.' }, { status: 400 });
+    if (!label?.trim()) {
+      return NextResponse.json({ success: false, error: 'Field label is required.' }, { status: 400 });
     }
 
-    const cleanKey = field_key.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    const cleanKey = (field_key || label)
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 50);
+
+    const resolvedScope = target_scope || (section === 'guardian' ? 'guardians' : section === 'address' ? 'addresses' : section === 'academic' ? 'academic' : 'info');
 
     const res = await queryDb(`
-      INSERT INTO website_student_form_fields (
-        website_id, field_key, label, field_type,
+      INSERT INTO website_form_fields (
+        website_id, target_scope, field_key, label, label_translations, field_type,
         options, is_required, is_unique, validation_regex, placeholder,
-        help_text, section, is_shown_in_id_card, sort_order, is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        help_text, section, is_visible_in_admission, is_visible_in_student,
+        is_shown_in_id_card, sort_order, is_active
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
       ON CONFLICT (website_id, field_key) DO UPDATE SET
+        target_scope = EXCLUDED.target_scope,
         label = EXCLUDED.label,
+        label_translations = EXCLUDED.label_translations,
         field_type = EXCLUDED.field_type,
         options = EXCLUDED.options,
         is_required = EXCLUDED.is_required,
@@ -213,6 +232,8 @@ export async function POST(request, context) {
         placeholder = EXCLUDED.placeholder,
         help_text = EXCLUDED.help_text,
         section = EXCLUDED.section,
+        is_visible_in_admission = EXCLUDED.is_visible_in_admission,
+        is_visible_in_student = EXCLUDED.is_visible_in_student,
         is_shown_in_id_card = EXCLUDED.is_shown_in_id_card,
         sort_order = EXCLUDED.sort_order,
         is_active = EXCLUDED.is_active,
@@ -220,16 +241,20 @@ export async function POST(request, context) {
       RETURNING *
     `, [
       auth.website.id,
+      resolvedScope,
       cleanKey,
       label.trim(),
+      JSON.stringify(label_translations || {}),
       field_type,
-      JSON.stringify(options || []),
+      JSON.stringify(Array.isArray(options) ? options : []),
       Boolean(is_required),
       Boolean(is_unique),
       validation_regex || null,
       placeholder || '',
       help_text || '',
       section || 'personal',
+      Boolean(is_visible_in_admission),
+      Boolean(is_visible_in_student),
       Boolean(is_shown_in_id_card),
       parseInt(sort_order, 10) || 0,
       Boolean(is_active)
@@ -237,7 +262,7 @@ export async function POST(request, context) {
 
     return NextResponse.json({
       success: true,
-      message: 'Student modular form field saved successfully.',
+      message: 'Unified form field saved successfully.',
       field: res.rows[0]
     });
   } catch (error) {
@@ -258,7 +283,7 @@ export async function PUT(request, context) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { id, field_key, label, field_type, options, is_required, is_unique, validation_regex, placeholder, help_text, section, is_shown_in_id_card, sort_order, is_active } = body;
+    const { id, field_key, label, field_type, options, is_required, is_unique, validation_regex, placeholder, help_text, section, target_scope, label_translations, is_visible_in_admission, is_visible_in_student, is_shown_in_id_card, sort_order, is_active } = body;
 
     const parsedId = id && id !== 'undefined' && id !== 'null' && !isNaN(parseInt(id, 10))
       ? parseInt(id, 10)
@@ -271,7 +296,7 @@ export async function PUT(request, context) {
     let res;
     if (parsedId) {
       res = await queryDb(`
-        UPDATE website_student_form_fields
+        UPDATE website_form_fields
         SET label = COALESCE($1, label),
             field_type = COALESCE($2, field_type),
             options = COALESCE($3, options),
@@ -281,11 +306,15 @@ export async function PUT(request, context) {
             placeholder = COALESCE($7, placeholder),
             help_text = COALESCE($8, help_text),
             section = COALESCE($9, section),
-            is_shown_in_id_card = COALESCE($10, is_shown_in_id_card),
-            sort_order = COALESCE($11, sort_order),
-            is_active = COALESCE($12, is_active),
+            target_scope = COALESCE($10, target_scope),
+            label_translations = COALESCE($11, label_translations),
+            is_visible_in_admission = COALESCE($12, is_visible_in_admission),
+            is_visible_in_student = COALESCE($13, is_visible_in_student),
+            is_shown_in_id_card = COALESCE($14, is_shown_in_id_card),
+            sort_order = COALESCE($15, sort_order),
+            is_active = COALESCE($16, is_active),
             updated_at = CURRENT_TIMESTAMP
-        WHERE id = $13 AND website_id = $14
+        WHERE id = $17 AND website_id = $18
         RETURNING *
       `, [
         label?.trim() || null,
@@ -297,6 +326,10 @@ export async function PUT(request, context) {
         placeholder !== undefined ? placeholder : null,
         help_text !== undefined ? help_text : null,
         section || null,
+        target_scope || null,
+        label_translations ? JSON.stringify(label_translations) : null,
+        is_visible_in_admission !== undefined ? Boolean(is_visible_in_admission) : null,
+        is_visible_in_student !== undefined ? Boolean(is_visible_in_student) : null,
         is_shown_in_id_card !== undefined ? Boolean(is_shown_in_id_card) : null,
         sort_order !== undefined ? parseInt(sort_order, 10) : null,
         is_active !== undefined ? Boolean(is_active) : null,
@@ -305,7 +338,7 @@ export async function PUT(request, context) {
       ]);
     } else {
       res = await queryDb(`
-        UPDATE website_student_form_fields
+        UPDATE website_form_fields
         SET label = COALESCE($1, label),
             field_type = COALESCE($2, field_type),
             options = COALESCE($3, options),
@@ -346,13 +379,23 @@ export async function PUT(request, context) {
         .replace(/^_+|_+$/g, '');
 
       const insertRes = await queryDb(`
-        INSERT INTO website_student_form_fields (
+        INSERT INTO website_form_fields (
           website_id, field_key, label, field_type, options, is_required,
           is_unique, validation_regex, placeholder, help_text, section,
           is_shown_in_id_card, sort_order, is_active
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         ON CONFLICT (website_id, field_key) DO UPDATE
-        SET is_required = EXCLUDED.is_required,
+        SET label = EXCLUDED.label,
+            field_type = EXCLUDED.field_type,
+            options = EXCLUDED.options,
+            is_required = EXCLUDED.is_required,
+            is_unique = EXCLUDED.is_unique,
+            validation_regex = EXCLUDED.validation_regex,
+            placeholder = EXCLUDED.placeholder,
+            help_text = EXCLUDED.help_text,
+            section = EXCLUDED.section,
+            is_shown_in_id_card = EXCLUDED.is_shown_in_id_card,
+            sort_order = EXCLUDED.sort_order,
             is_active = EXCLUDED.is_active,
             updated_at = CURRENT_TIMESTAMP
         RETURNING *
@@ -367,7 +410,7 @@ export async function PUT(request, context) {
         validation_regex || null,
         placeholder || '',
         help_text || '',
-        section || 'general',
+        section || 'personal',
         Boolean(is_shown_in_id_card),
         sort_order !== undefined ? parseInt(sort_order, 10) : 0,
         is_active !== undefined ? Boolean(is_active) : true
@@ -411,12 +454,12 @@ export async function DELETE(request, context) {
 
     if (parsedId) {
       await queryDb(`
-        DELETE FROM website_student_form_fields
+        DELETE FROM website_form_fields
         WHERE id = $1 AND website_id = $2
       `, [parsedId, auth.website.id]);
     } else if (fieldKey && fieldKey !== 'undefined' && fieldKey !== 'null') {
       await queryDb(`
-        DELETE FROM website_student_form_fields
+        DELETE FROM website_form_fields
         WHERE field_key = $1 AND website_id = $2
       `, [fieldKey.trim(), auth.website.id]);
     } else {
@@ -428,11 +471,10 @@ export async function DELETE(request, context) {
 
     return NextResponse.json({
       success: true,
-      message: 'Student modular form field deleted successfully.'
+      message: 'Unified form field deleted successfully.'
     });
   } catch (error) {
     console.error('Error in DELETE /staff/panel/students/fields:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
-

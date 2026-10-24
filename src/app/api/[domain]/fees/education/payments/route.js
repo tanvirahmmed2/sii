@@ -57,7 +57,7 @@ export async function GET(request, context) {
       whereClauses.push(`(
         p.invoice_no ILIKE $${idx} OR
         p.title ILIKE $${idx} OR
-        i.name ILIKE $${idx} OR
+        COALESCE(s.name, i.data->>'name', '') ILIKE $${idx} OR
         s.registration_no ILIKE $${idx} OR
         s.roll_no ILIKE $${idx} OR
         p.transaction_id ILIKE $${idx}
@@ -103,8 +103,8 @@ export async function GET(request, context) {
              sess.name AS session_name,
              s.roll_no,
              s.registration_no,
-             i.name AS student_name,
-             i.number AS student_phone,
+             COALESCE(s.name, i.data->>'name') AS student_name,
+             COALESCE(s.number, i.data->>'number') AS student_phone,
              (p.amount + p.fine_amount - p.paid_amount) AS net_due
       FROM website_education_fee_payments p
       JOIN website_students s ON s.id = p.student_id AND s.website_id = p.website_id

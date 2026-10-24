@@ -24,7 +24,7 @@ export async function GET(request, context) {
 
     if (search) {
       params.push(`%${search}%`);
-      whereClause += ` AND (info.name ILIKE $${params.length} OR s.roll_no ILIKE $${params.length} OR s.registration_no ILIKE $${params.length} OR p.invoice_no ILIKE $${params.length} OR p.transaction_id ILIKE $${params.length} OR e.name ILIKE $${params.length})`;
+      whereClause += ` AND (COALESCE(s.name, info.data->>'name', '') ILIKE $${params.length} OR s.roll_no ILIKE $${params.length} OR s.registration_no ILIKE $${params.length} OR p.invoice_no ILIKE $${params.length} OR p.transaction_id ILIKE $${params.length} OR e.name ILIKE $${params.length})`;
     }
 
     if (examId && examId !== 'all') {

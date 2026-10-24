@@ -192,24 +192,32 @@ export async function POST(request, context) {
         // Send setup notification email via Brevo if email is provided
         if (email) {
           try {
-            const setupUrl = `/auth/student/setup`;
+            const setupUrl = buildStudentSetupUrl(website, null, request, email);
+            const instName = website.name || 'Campus Student Portal';
             const emailHtml = buildStyledEmail({
-              title: `Student Account Setup - ${website.name || 'Portal'}`,
+              title: `Welcome to ${instName}`,
+              subtitle: 'Official Student Identity & Portal Account Setup',
               recipientName: 'Student',
-              paragraphs: [
-                `You have been registered at <strong>${website.name || 'our institution'}</strong>.`,
-                `Your registration number is: <strong>${newStudent.registration_no}</strong>`,
-                `Please complete your student account setup by verifying your email and configuring your credentials.`,
+              bodyParagraphs: [
+                `Congratulations! You have been registered into the official academic database at <strong>${instName}</strong>.`,
+                `Please keep your institutional credentials safe:`,
+                `<div style="margin: 12px 0; padding: 14px 18px; background-color: #f1f5f9; border-left: 4px solid #4f46e5; border-radius: 4px; font-size: 13px; color: #1e293b;">
+                  <div style="margin-bottom: 6px;"><strong>Registration No:</strong> <code style="font-family: monospace; font-size: 14px; font-weight: 700; color: #4338ca;">${newStudent.registration_no}</code></div>
+                  <div style="margin-bottom: 6px;"><strong>Student ID:</strong> <code style="font-family: monospace; font-size: 13px; color: #0f172a;">${newStudent.student_unique_id}</code></div>
+                  ${newStudent.roll_no ? `<div style="margin-bottom: 6px;"><strong>Roll No:</strong> ${newStudent.roll_no}</div>` : ''}
+                  <div><strong>Registered Email:</strong> <code style="font-family: monospace; font-size: 13px; color: #0f172a;">${email}</code></div>
+                </div>`,
+                `To activate your portal account, access online gradesheets, ID cards, exam results, and notice boards, click the button below to complete your one-time email verification and configure your personal password:`,
               ],
-              buttonText: 'Complete Account Setup',
-              buttonUrl: setupUrl,
-              footerNote: 'If you did not request this registration, please contact your administration office.'
+              actionText: 'Activate & Set Up Student Account →',
+              actionUrl: setupUrl,
+              footerNote: `If you did not request this registration or have questions, please contact the ${instName} administrative office.`
             });
 
             await sendEmail({
               to: email,
               toName: 'Student',
-              subject: `Student Account Setup - ${website.name || 'Portal'}`,
+              subject: `Student Account Setup & Registration - ${instName}`,
               html: emailHtml,
               websiteId: website.id,
             });

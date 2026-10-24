@@ -2,6 +2,7 @@ export const DEFAULT_ADMISSION_FIELDS = [
   {
     field_key: 'applicant_name',
     label: 'Applicant Full Name',
+    target_scope: 'info',
     field_type: 'text',
     options: [],
     is_required: true,
@@ -10,6 +11,8 @@ export const DEFAULT_ADMISSION_FIELDS = [
     placeholder: 'e.g. Tanvir Ahmed',
     help_text: 'Legal name as per birth certificate or prior transcript',
     section: 'personal',
+    is_visible_in_admission: true,
+    is_visible_in_student: true,
     is_shown_in_id_card: true,
     sort_order: 1,
     is_active: true
@@ -17,6 +20,7 @@ export const DEFAULT_ADMISSION_FIELDS = [
   {
     field_key: 'phone',
     label: 'Mobile Contact Number',
+    target_scope: 'info',
     field_type: 'text',
     options: [],
     is_required: true,
@@ -25,6 +29,8 @@ export const DEFAULT_ADMISSION_FIELDS = [
     placeholder: '017XXXXXXXX',
     help_text: '11-digit Bangladeshi mobile number for SMS alerts',
     section: 'personal',
+    is_visible_in_admission: true,
+    is_visible_in_student: true,
     is_shown_in_id_card: false,
     sort_order: 2,
     is_active: true
@@ -32,6 +38,7 @@ export const DEFAULT_ADMISSION_FIELDS = [
   {
     field_key: 'gender',
     label: 'Gender',
+    target_scope: 'info',
     field_type: 'select',
     options: ['Male', 'Female', 'Other'],
     is_required: true,
@@ -40,6 +47,8 @@ export const DEFAULT_ADMISSION_FIELDS = [
     placeholder: 'Select gender',
     help_text: null,
     section: 'personal',
+    is_visible_in_admission: true,
+    is_visible_in_student: true,
     is_shown_in_id_card: false,
     sort_order: 3,
     is_active: true
@@ -47,6 +56,7 @@ export const DEFAULT_ADMISSION_FIELDS = [
   {
     field_key: 'date_of_birth',
     label: 'Date of Birth',
+    target_scope: 'info',
     field_type: 'date',
     options: [],
     is_required: true,
@@ -55,6 +65,8 @@ export const DEFAULT_ADMISSION_FIELDS = [
     placeholder: 'YYYY-MM-DD',
     help_text: null,
     section: 'personal',
+    is_visible_in_admission: true,
+    is_visible_in_student: true,
     is_shown_in_id_card: false,
     sort_order: 4,
     is_active: true
@@ -62,6 +74,7 @@ export const DEFAULT_ADMISSION_FIELDS = [
   {
     field_key: 'blood_group',
     label: 'Blood Group',
+    target_scope: 'info',
     field_type: 'select',
     options: ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'],
     is_required: false,
@@ -70,6 +83,8 @@ export const DEFAULT_ADMISSION_FIELDS = [
     placeholder: 'Select blood group',
     help_text: null,
     section: 'personal',
+    is_visible_in_admission: true,
+    is_visible_in_student: true,
     is_shown_in_id_card: true,
     sort_order: 5,
     is_active: true
@@ -77,6 +92,7 @@ export const DEFAULT_ADMISSION_FIELDS = [
   {
     field_key: 'father_name',
     label: "Father's Full Name",
+    target_scope: 'guardians',
     field_type: 'text',
     options: [],
     is_required: true,
@@ -85,6 +101,8 @@ export const DEFAULT_ADMISSION_FIELDS = [
     placeholder: "Father's legal name",
     help_text: null,
     section: 'guardian',
+    is_visible_in_admission: true,
+    is_visible_in_student: true,
     is_shown_in_id_card: false,
     sort_order: 6,
     is_active: true
@@ -92,6 +110,7 @@ export const DEFAULT_ADMISSION_FIELDS = [
   {
     field_key: 'father_phone',
     label: "Father's Mobile Phone",
+    target_scope: 'guardians',
     field_type: 'text',
     options: [],
     is_required: false,
@@ -100,6 +119,8 @@ export const DEFAULT_ADMISSION_FIELDS = [
     placeholder: '01XXXXXXXXX',
     help_text: null,
     section: 'guardian',
+    is_visible_in_admission: true,
+    is_visible_in_student: true,
     is_shown_in_id_card: false,
     sort_order: 7,
     is_active: true
@@ -107,6 +128,7 @@ export const DEFAULT_ADMISSION_FIELDS = [
   {
     field_key: 'father_occupation',
     label: "Father's Occupation",
+    target_scope: 'guardians',
     field_type: 'text',
     options: [],
     is_required: false,
@@ -115,6 +137,8 @@ export const DEFAULT_ADMISSION_FIELDS = [
     placeholder: 'e.g. Teacher, Engineer, Businessman',
     help_text: null,
     section: 'guardian',
+    is_visible_in_admission: true,
+    is_visible_in_student: true,
     is_shown_in_id_card: false,
     sort_order: 8,
     is_active: true
@@ -122,6 +146,7 @@ export const DEFAULT_ADMISSION_FIELDS = [
   {
     field_key: 'mother_name',
     label: "Mother's Full Name",
+    target_scope: 'guardians',
     field_type: 'text',
     options: [],
     is_required: true,
@@ -130,6 +155,8 @@ export const DEFAULT_ADMISSION_FIELDS = [
     placeholder: "Mother's legal name",
     help_text: null,
     section: 'guardian',
+    is_visible_in_admission: true,
+    is_visible_in_student: true,
     is_shown_in_id_card: false,
     sort_order: 9,
     is_active: true
@@ -137,6 +164,7 @@ export const DEFAULT_ADMISSION_FIELDS = [
   {
     field_key: 'guardian_name',
     label: 'Legal Guardian Name',
+    target_scope: 'guardians',
     field_type: 'text',
     options: [],
     is_required: false,
@@ -145,6 +173,8 @@ export const DEFAULT_ADMISSION_FIELDS = [
     placeholder: 'If different from parents',
     help_text: null,
     section: 'guardian',
+    is_visible_in_admission: true,
+    is_visible_in_student: true,
     is_shown_in_id_card: false,
     sort_order: 10,
     is_active: true
@@ -152,6 +182,7 @@ export const DEFAULT_ADMISSION_FIELDS = [
   {
     field_key: 'guardian_phone',
     label: 'Guardian Phone',
+    target_scope: 'guardians',
     field_type: 'text',
     options: [],
     is_required: false,
@@ -160,6 +191,8 @@ export const DEFAULT_ADMISSION_FIELDS = [
     placeholder: '01XXXXXXXXX',
     help_text: null,
     section: 'guardian',
+    is_visible_in_admission: true,
+    is_visible_in_student: true,
     is_shown_in_id_card: false,
     sort_order: 11,
     is_active: true
@@ -167,6 +200,7 @@ export const DEFAULT_ADMISSION_FIELDS = [
   {
     field_key: 'present_address',
     label: 'Present Address',
+    target_scope: 'addresses',
     field_type: 'textarea',
     options: [],
     is_required: true,
@@ -175,6 +209,8 @@ export const DEFAULT_ADMISSION_FIELDS = [
     placeholder: 'House / Village, Road, Upazila, District',
     help_text: 'Current residential address for correspondence',
     section: 'address',
+    is_visible_in_admission: true,
+    is_visible_in_student: true,
     is_shown_in_id_card: false,
     sort_order: 12,
     is_active: true
@@ -182,6 +218,7 @@ export const DEFAULT_ADMISSION_FIELDS = [
   {
     field_key: 'permanent_address',
     label: 'Permanent Address',
+    target_scope: 'addresses',
     field_type: 'textarea',
     options: [],
     is_required: false,
@@ -190,6 +227,8 @@ export const DEFAULT_ADMISSION_FIELDS = [
     placeholder: 'Permanent ancestral home address',
     help_text: null,
     section: 'address',
+    is_visible_in_admission: true,
+    is_visible_in_student: true,
     is_shown_in_id_card: false,
     sort_order: 13,
     is_active: true
@@ -197,6 +236,7 @@ export const DEFAULT_ADMISSION_FIELDS = [
   {
     field_key: 'previous_school',
     label: 'Previous School / Institute',
+    target_scope: 'academic',
     field_type: 'text',
     options: [],
     is_required: false,
@@ -205,6 +245,8 @@ export const DEFAULT_ADMISSION_FIELDS = [
     placeholder: 'Last attended institution',
     help_text: null,
     section: 'academic',
+    is_visible_in_admission: true,
+    is_visible_in_student: true,
     is_shown_in_id_card: false,
     sort_order: 14,
     is_active: true
@@ -212,6 +254,7 @@ export const DEFAULT_ADMISSION_FIELDS = [
   {
     field_key: 'previous_gpa',
     label: 'Previous Exam Result / GPA',
+    target_scope: 'academic',
     field_type: 'text',
     options: [],
     is_required: false,
@@ -220,6 +263,8 @@ export const DEFAULT_ADMISSION_FIELDS = [
     placeholder: 'e.g. 5.00 / A+',
     help_text: null,
     section: 'academic',
+    is_visible_in_admission: true,
+    is_visible_in_student: true,
     is_shown_in_id_card: false,
     sort_order: 15,
     is_active: true

@@ -97,7 +97,7 @@ export async function GET(request, context) {
       conditions.push(`(
         s.registration_no ILIKE $${pIdx} OR
         s.roll_no ILIKE $${pIdx} OR
-        i.name ILIKE $${pIdx} OR
+        COALESCE(s.name, i.data->>'name', '') ILIKE $${pIdx} OR
         sid.card_number ILIKE $${pIdx}
       )`);
       values.push(`%${search}%`);
@@ -179,7 +179,8 @@ export async function POST(request, context) {
     const studentsRes = await queryDb(
       `SELECT s.id, s.registration_no, s.roll_no, s.student_unique_id,
               s.class_id, s.section_id, s.session_id,
-              i.name, i.blood_group
+              COALESCE(s.name, i.data->>'name') AS name,
+              COALESCE(s.blood_group, i.data->>'blood_group') AS blood_group
        FROM website_students s
        LEFT JOIN website_student_info i ON s.id = i.student_id
        WHERE s.website_id = $1 AND s.id = ANY($2::bigint[])`,

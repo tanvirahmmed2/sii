@@ -49,22 +49,23 @@ export async function GET(request, context) {
 
     const studentRes = await queryDb(`
       SELECT s.id, s.registration_no, s.roll_no, s.student_unique_id,
-             COALESCE(i.name, s.name, 'Student') AS name,
-             COALESCE(i.email, s.email) AS raw_email,
-             COALESCE(i.phone, s.number) AS raw_phone,
+             COALESCE(s.name, i.data->>'name', 'Student') AS name,
+             COALESCE(s.email, i.data->>'email') AS raw_email,
+             COALESCE(s.number, i.data->>'phone', i.data->>'number') AS raw_phone,
              c.name AS class_name, c.id AS class_id
       FROM website_students s
-      LEFT JOIN website_student_information i ON i.student_id = s.id
+      LEFT JOIN website_student_info i ON i.student_id = s.id
       LEFT JOIN website_classes c ON c.id = s.class_id
       WHERE s.website_id = $1
         AND (
           s.student_unique_id = $2 OR
           s.roll_no = $2 OR
           s.registration_no = $2 OR
-          i.email = $2 OR
           s.email = $2 OR
-          i.phone = $2 OR
-          s.number = $2
+          i.data->>'email' = $2 OR
+          s.number = $2 OR
+          i.data->>'phone' = $2 OR
+          i.data->>'number' = $2
         )
       LIMIT 1
     `, [website.id, identifier]);

@@ -29,8 +29,9 @@ export async function GET(request, context) {
              cert.status, cert.issued_by_staff_id, cert.custom_data,
              cert.created_at, cert.updated_at,
              s.registration_no, s.roll_no, s.student_unique_id, s.is_active AS student_is_active,
-             COALESCE(i.name, 'Student Name') AS student_name,
-             i.gender, i.blood_group,
+             COALESCE(s.name, i.data->>'name', 'Student Name') AS student_name,
+             COALESCE(s.gender, i.data->>'gender') AS gender,
+             COALESCE(s.blood_group, i.data->>'blood_group') AS blood_group,
              c.name AS class_name,
              sec.name AS section_name,
              ses.name AS session_name,
@@ -76,7 +77,7 @@ export async function GET(request, context) {
       conditions.push(`(
         s.registration_no ILIKE $${pIdx} OR
         s.roll_no ILIKE $${pIdx} OR
-        i.name ILIKE $${pIdx} OR
+        COALESCE(s.name, i.data->>'name', '') ILIKE $${pIdx} OR
         cert.certificate_no ILIKE $${pIdx} OR
         cert.award_title ILIKE $${pIdx}
       )`);

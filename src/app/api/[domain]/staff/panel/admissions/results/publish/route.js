@@ -28,9 +28,19 @@ export async function enrollSelectedApplicant({ websiteId, circular, applicant, 
     }
 
     if (!studentId) {
-      // Generate unique registration_no and student_unique_id
+      // Generate unique registration_no (without REG prefix) and student_unique_id
       const regSeq = 1000 + parseInt(applicant.id, 10);
-      const regNo = `REG${currentYear}${regSeq}`;
+      let regNo = `${currentYear}${regSeq}`;
+      let counter = 0;
+      while (true) {
+        const check = await queryDb(
+          `SELECT id FROM website_students WHERE website_id = $1 AND LOWER(TRIM(registration_no)) = LOWER(TRIM($2)) LIMIT 1`,
+          [websiteId, regNo]
+        );
+        if (check.rows.length === 0) break;
+        counter++;
+        regNo = `${currentYear}${regSeq + counter}`;
+      }
       const studentUniqueId = `STU${currentYear}${regSeq}`;
       const rollNo = applicant.roll_no || applicant.exam_roll || String(meritPosition || regSeq);
 

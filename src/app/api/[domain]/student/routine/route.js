@@ -36,6 +36,7 @@ export async function GET(request, context) {
     const routineRes = await queryDb(
       `SELECT pcs.id,
               d.name AS day_of_week,
+              d.name AS day_name,
               p.name AS period_name,
               p.start_time,
               p.end_time,
@@ -43,14 +44,16 @@ export async function GET(request, context) {
               s.code AS subject_code,
               t.name AS teacher_name,
               sec.name AS section_name,
-              'Campus Room ' || p.id AS room_number
+              COALESCE(pcs.room_number, 'Campus Room ' || p.id) AS room_number
        FROM website_period_class_subjects pcs
-       JOIN website_days d ON d.id = pcs.day_id
        JOIN website_periods p ON p.id = pcs.period_id
-       JOIN website_subjects s ON s.id = pcs.subject_id
-       LEFT JOIN website_teachers t ON t.id = pcs.teacher_id
+       JOIN website_days d ON d.id = p.day_id
+       JOIN website_class_subjects cs ON cs.id = pcs.class_subject_id
+       JOIN website_subjects s ON s.id = cs.subject_id
        LEFT JOIN website_sections sec ON sec.id = pcs.section_id
-       WHERE pcs.website_id = $1 AND pcs.class_id = $2
+       LEFT JOIN website_teacher_class_periods tcp ON tcp.period_id = p.id AND tcp.class_id = cs.class_id
+       LEFT JOIN website_teachers t ON t.id = tcp.teacher_id
+       WHERE pcs.website_id = $1 AND cs.class_id = $2
        ORDER BY d.id ASC, p.start_time ASC`,
       [website.id, classId]
     );

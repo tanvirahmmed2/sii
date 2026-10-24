@@ -42,7 +42,9 @@ export async function GET(request, context) {
         `SELECT s.*,
                 a.id AS allocation_id, a.student_id, a.allocated_date,
                 stu.registration_no AS student_reg, stu.roll_no AS student_roll,
-                info.name AS student_name, info.email AS student_email, info.number AS student_number
+                COALESCE(stu.name, info.data->>'name') AS student_name,
+                COALESCE(stu.email, info.data->>'email') AS student_email,
+                COALESCE(stu.number, info.data->>'number') AS student_number
          FROM website_hall_room_seats s
          LEFT JOIN website_hall_seat_allocations a ON s.id = a.seat_id AND a.status = 'active'
          LEFT JOIN website_students stu ON a.student_id = stu.id

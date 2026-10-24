@@ -84,9 +84,9 @@ export async function GET(request, context) {
     if (type !== 'admission') {
       const studentQuery = `
         SELECT s.id, s.registration_no, s.roll_no, s.student_unique_id,
-               COALESCE(i.name, s.name, 'Student') AS name,
-               COALESCE(i.email, s.email) AS raw_email,
-               COALESCE(i.phone, s.number) AS raw_phone,
+               COALESCE(s.name, i.data->>'name', 'Student') AS name,
+               COALESCE(s.email, i.data->>'email') AS raw_email,
+               COALESCE(s.number, i.data->>'phone', i.data->>'number') AS raw_phone,
                c.name AS class_name, c.id AS class_id,
                sec.name AS section_name, ses.name AS session_name
         FROM website_students s
@@ -99,8 +99,8 @@ export async function GET(request, context) {
             LOWER(s.registration_no) = LOWER($2) OR
             LOWER(s.roll_no) = LOWER($2) OR
             LOWER(s.student_unique_id) = LOWER($2) OR
-            LOWER(COALESCE(i.email, s.email, '')) = LOWER($2) OR
-            LOWER(COALESCE(i.phone, s.number, '')) = LOWER($2)
+            LOWER(COALESCE(s.email, i.data->>'email', '')) = LOWER($2) OR
+            LOWER(COALESCE(s.number, i.data->>'phone', i.data->>'number', '')) = LOWER($2)
           `}
         )
         LIMIT 1

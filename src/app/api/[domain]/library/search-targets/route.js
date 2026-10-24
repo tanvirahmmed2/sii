@@ -19,8 +19,8 @@ export async function GET(request, context) {
         SELECT s.id,
                s.registration_no,
                s.roll_no,
-               COALESCE(si.name, 'Student #' || s.registration_no) AS name,
-               si.number AS phone,
+               COALESCE(s.name, si.data->>'name', 'Student #' || s.registration_no) AS name,
+               COALESCE(s.number, si.data->>'number') AS phone,
                c.name AS class_name,
                sec.name AS section_name
         FROM website_students s
@@ -33,7 +33,7 @@ export async function GET(request, context) {
 
       if (q) {
         params.push(`%${q}%`);
-        queryText += ` AND (s.registration_no ILIKE $${params.length} OR s.roll_no ILIKE $${params.length} OR si.name ILIKE $${params.length} OR si.number ILIKE $${params.length})`;
+        queryText += ` AND (s.registration_no ILIKE $${params.length} OR s.roll_no ILIKE $${params.length} OR COALESCE(s.name, si.data->>'name', '') ILIKE $${params.length} OR COALESCE(s.number, si.data->>'number', '') ILIKE $${params.length})`;
       }
 
       queryText += ` ORDER BY s.registration_no ASC LIMIT 30`;

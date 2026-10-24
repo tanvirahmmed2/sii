@@ -186,42 +186,19 @@ export async function POST(request, context) {
       }
     }
 
-    // 1. Fetch active modular form fields (primary blueprint is website_student_form_fields)
-    const stuFieldsRes = await queryDb(`
-      SELECT * FROM website_student_form_fields
+    // 1. Fetch active modular form fields from unified website_form_fields
+    const fieldsRes = await queryDb(`
+      SELECT * FROM website_form_fields
       WHERE website_id = $1 AND is_active = TRUE
       ORDER BY sort_order ASC, id ASC
     `, [website.id]);
 
-    let activeFields = [];
-    if (stuFieldsRes.rows.length > 0) {
-      activeFields = stuFieldsRes.rows;
-      // Append any circular-specific fields
-      const admFieldsRes = await queryDb(`
-        SELECT * FROM website_admission_form_fields
-        WHERE website_id = $1 AND admission_id = $2 AND is_active = TRUE
-        ORDER BY sort_order ASC, id ASC
-      `, [website.id, admId]);
-      const existingKeys = new Set(activeFields.map((f) => f.field_key));
-      for (const af of admFieldsRes.rows) {
-        if (!existingKeys.has(af.field_key)) {
-          activeFields.push(af);
-          existingKeys.add(af.field_key);
-        }
-      }
-    } else {
-      const fieldsRes = await queryDb(`
-        SELECT * FROM website_admission_form_fields
-        WHERE website_id = $1 AND (admission_id = $2 OR admission_id IS NULL) AND is_active = TRUE
-        ORDER BY sort_order ASC, id ASC
-      `, [website.id, admId]);
-      activeFields = fieldsRes.rows.length > 0 ? fieldsRes.rows : [
-        { field_key: 'applicant_name', label: 'Applicant Name', field_type: 'text', is_required: true, section: 'personal' },
-        { field_key: 'phone', label: 'Phone', field_type: 'text', is_required: true, validation_regex: '^01[3-9]\\d{8}$', section: 'personal' },
-        { field_key: 'gender', label: 'Gender', field_type: 'select', options: ['Male', 'Female', 'Other'], is_required: true, section: 'personal' },
-        { field_key: 'date_of_birth', label: 'Date of Birth', field_type: 'date', is_required: true, section: 'personal' }
-      ];
-    }
+    const activeFields = fieldsRes.rows.length > 0 ? fieldsRes.rows : [
+      { field_key: 'applicant_name', label: 'Applicant Name', field_type: 'text', is_required: true, section: 'personal' },
+      { field_key: 'phone', label: 'Phone', field_type: 'text', is_required: true, validation_regex: '^01[3-9]\\d{8}$', section: 'personal' },
+      { field_key: 'gender', label: 'Gender', field_type: 'select', options: ['Male', 'Female', 'Other'], is_required: true, section: 'personal' },
+      { field_key: 'date_of_birth', label: 'Date of Birth', field_type: 'date', is_required: true, section: 'personal' }
+    ];
 
 
     const validationErrors = [];
@@ -315,6 +292,9 @@ export async function POST(request, context) {
     let applicant;
     let appNumber;
 
+    const resolvedGender = body.gender || submittedCustom.gender || 'Male';
+    const resolvedDob = body.date_of_birth || submittedCustom.date_of_birth || null;
+
     if (existingAppCheck.rows.length > 0) {
       // Update existing applicant -> status becomes 'unpaid'
       const existing = existingAppCheck.rows[0];
@@ -324,14 +304,18 @@ export async function POST(request, context) {
         SET applicant_name = $1,
             email = $2,
             phone = $3,
+            gender = $4,
+            date_of_birth = $5,
             status = 'unpaid',
             updated_at = CURRENT_TIMESTAMP
-        WHERE id = $4 AND website_id = $5
+        WHERE id = $6 AND website_id = $7
         RETURNING *
       `, [
         applicant_name.trim(),
         cleanEmail,
         phone.trim(),
+        resolvedGender,
+        resolvedDob,
         existing.id,
         website.id
       ]);
@@ -346,10 +330,10 @@ export async function POST(request, context) {
       const insertApp = await queryDb(`
         INSERT INTO website_admission_applicants (
           website_id, admission_id, application_no, applicant_name, email,
-          phone, status
+          phone, gender, date_of_birth, status
         ) VALUES (
           $1, $2, $3, $4, $5,
-          $6, 'unpaid'
+          $6, $7, $8, 'unpaid'
         ) RETURNING *
       `, [
         website.id,
@@ -357,22 +341,25 @@ export async function POST(request, context) {
         appNumber,
         applicant_name.trim(),
         cleanEmail,
-        phone.trim()
+        phone.trim(),
+        resolvedGender,
+        resolvedDob
       ]);
       applicant = insertApp.rows[0];
     }
 
-    // 3. Partition submitted custom fields by section
+    // 3. Partition submitted custom fields by target_scope (deterministic routing)
     const customPersonal = {};
     const customGuardian = {};
     const customAddress = {};
 
     for (const f of activeFields) {
-      const val = submittedCustom[f.field_key];
+      const val = submittedCustom[f.field_key] !== undefined ? submittedCustom[f.field_key] : body[f.field_key];
       if (val !== undefined && val !== null) {
-        if (f.section === 'guardian') {
+        const scope = f.target_scope || (f.section === 'guardian' ? 'guardians' : f.section === 'address' ? 'addresses' : 'info');
+        if (scope === 'guardians') {
           customGuardian[f.field_key] = val;
-        } else if (f.section === 'address') {
+        } else if (scope === 'addresses') {
           customAddress[f.field_key] = val;
         } else {
           customPersonal[f.field_key] = val;

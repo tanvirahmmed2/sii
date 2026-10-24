@@ -121,7 +121,7 @@ export default function StudentRegistrationPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          registration_no: singleRegNo.trim(),
+          registration_no: singleRegNo.trim().replace(/^REG-?/i, ''),
           department_id: singleDepartmentId,
           session_id: singleSessionId,
           class_id: singleClassId,
@@ -464,8 +464,8 @@ export default function StudentRegistrationPage() {
                   type="text"
                   required
                   value={singleRegNo}
-                  onChange={(e) => setSingleRegNo(e.target.value)}
-                  placeholder="e.g. REG-2026-1001"
+                  onChange={(e) => setSingleRegNo(e.target.value.replace(/^REG-?/i, ''))}
+                  placeholder="e.g. 2026-1001"
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
                 />
                 <span className="text-[10px] text-slate-400 mt-1 block">Unique student institutional registration code</span>

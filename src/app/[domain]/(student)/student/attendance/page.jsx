@@ -2,22 +2,20 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import TenantLoader from 'src/component/tenant/TenantLoader';
-import { 
-  FiCheckCircle, FiXCircle, FiClock, FiActivity, 
-  FiCalendar, FiFileText, FiSearch, FiFilter, FiAlertCircle 
-} from 'react-icons/fi';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
 const AttendancePage = () => {
+  const { getApiEndpoint } = useTenantWebsite();
   const [data, setData] = useState({ history: [], summary: null });
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeViewTab, setActiveViewTab] = useState('logs'); // 'logs' | 'subjects'
+  const [activeTab, setActiveTab] = useState('logs'); // 'logs' | 'subjects'
 
   useEffect(() => {
     const fetchAttendance = async () => {
       try {
-        const res = await fetch('/api/student/attendance');
+        const res = await fetch(getApiEndpoint('student/attendance'));
         if (res.ok) {
           const resData = await res.json();
           setData(resData.payload || resData.paylod || { history: [], summary: null });
@@ -30,7 +28,7 @@ const AttendancePage = () => {
     };
 
     fetchAttendance();
-  }, []);
+  }, [getApiEndpoint]);
 
   const { history = [], summary = null } = data;
 
@@ -42,11 +40,11 @@ const AttendancePage = () => {
 
   const rate = total > 0 ? Math.round(((present + late) / total) * 100) : 100;
 
-  // Compute subject-wise statistics
+  // Subject-wise stats
   const subjectStats = useMemo(() => {
     const map = {};
     history.forEach((row) => {
-      const key = row.subject_name || 'General';
+      const key = row.subject_name || 'General Daily Roll Call';
       if (!map[key]) {
         map[key] = {
           name: key,
@@ -55,7 +53,7 @@ const AttendancePage = () => {
           present: 0,
           absent: 0,
           late: 0,
-          leave: 0
+          leave: 0,
         };
       }
       map[key].total += 1;
@@ -71,7 +69,7 @@ const AttendancePage = () => {
       return {
         ...s,
         rate: subRate,
-        isEligible: subRate >= 75
+        isEligible: subRate >= 75,
       };
     });
   }, [history]);
@@ -92,311 +90,253 @@ const AttendancePage = () => {
     return <TenantLoader fullScreen={false} />;
   }
 
-  const summaryCards = [
-    { 
-      label: 'Aggregate Attendance', 
-      value: `${rate}%`, 
+  const kpis = [
+    {
+      label: 'Aggregate Attendance',
+      value: `${rate}%`,
       sub: `${present + late} of ${total} sessions attended`,
-      color: rate >= 75 ? 'text-emerald-700 bg-emerald-50 border-emerald-100' : 'text-amber-700 bg-amber-50 border-amber-100', 
-      icon: FiActivity 
+      isSuccess: rate >= 75,
+      isWarning: rate < 75,
     },
-    { 
-      label: 'Present Days', 
-      value: present, 
-      sub: 'On-time lecture attendance',
-      color: 'text-emerald-700 bg-emerald-50 border-emerald-100', 
-      icon: FiCheckCircle 
+    {
+      label: 'Present Sessions',
+      value: present,
+      sub: 'Verified present',
     },
-    { 
-      label: 'Absences', 
-      value: absent, 
-      sub: 'Recorded unexcused absences',
-      color: 'text-rose-700 bg-rose-50 border-rose-100', 
-      icon: FiXCircle 
+    {
+      label: 'Late Check-ins',
+      value: late,
+      sub: 'Recorded with remarks',
     },
-    { 
-      label: 'Late Check-ins', 
-      value: late, 
-      sub: 'Delayed arrival markings',
-      color: 'text-amber-700 bg-amber-50 border-amber-100', 
-      icon: FiClock 
-    }
+    {
+      label: 'Absences',
+      value: absent,
+      sub: absent > 0 ? 'Review unexcused days' : 'Zero absences recorded',
+      isWarning: absent > 0,
+    },
   ];
 
-  const getStatusBadge = (status) => {
-    const norm = (status || '').toLowerCase();
-    switch (norm) {
-      case 'present':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <FiCheckCircle className="text-xs" /> Present
-          </span>
-        );
-      case 'absent':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-            <FiXCircle className="text-xs" /> Absent
-          </span>
-        );
-      case 'late':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-            <FiClock className="text-xs" /> Late
-          </span>
-        );
-      case 'leave':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-            <FiFileText className="text-xs" /> Authorized Leave
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-50 text-slate-700 border border-slate-200">
-            {status}
-          </span>
-        );
-    }
-  };
-
   return (
-    <div className="flex flex-col gap-6 w-full pb-12 animate-fade-up">
+    <div className="w-full space-y-4 pb-8">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/70 shadow-xs">
+      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800 gap-2">
         <div>
-          <div className="flex items-center gap-2 text-emerald-600 text-xs font-bold uppercase tracking-wider mb-1">
-            <FiCalendar /> Institutional Attendance Registry
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">My Attendance Registry</h1>
-          <p className="text-slate-500 text-xs sm:text-sm font-normal mt-0.5">
-            Monitor period-wise presence, subject attendance percentages, and examination eligibility status (75% threshold).
+          <h1 className="text-base font-semibold text-slate-900 dark:text-white">
+            Attendance Records &amp; Logs
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Monitor daily roll-call logs, course attendance percentages, and examination eligibility.
           </p>
         </div>
-
         <div className="flex items-center gap-2">
-          {rate >= 75 ? (
-            <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 rounded-2xl border border-emerald-200 text-emerald-700 text-xs font-bold">
-              <FiCheckCircle className="text-base" /> Exam Eligible (&ge;75%)
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-2xl border border-amber-200 text-amber-800 text-xs font-bold">
-              <FiAlertCircle className="text-base text-amber-600" /> Shortage Warning (&lt;75%)
-            </div>
-          )}
+          <span
+            className={`px-2.5 py-1 text-xs font-medium rounded ${
+              rate >= 75
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
+                : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800'
+            }`}
+          >
+            {rate >= 75 ? 'Exam Eligible (>=75%)' : 'Below Exam Threshold (<75%)'}
+          </span>
         </div>
       </div>
 
-      {/* Grid Summaries */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {summaryCards.map((card, idx) => {
-          const Icon = card.icon;
-          return (
-            <div key={idx} className={`p-5 rounded-2xl border ${card.color} flex flex-col justify-between shadow-xs`}>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold uppercase tracking-wider opacity-90">{card.label}</span>
-                <Icon className="text-xl opacity-80" />
-              </div>
-              <div>
-                <span className="text-2xl sm:text-3xl font-bold block mb-0.5 font-mono">{card.value}</span>
-                <span className="text-[11px] font-medium opacity-80">{card.sub}</span>
-              </div>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {kpis.map((kpi, idx) => (
+          <div
+            key={idx}
+            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 space-y-1"
+          >
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{kpi.label}</span>
+            <div
+              className={`text-lg font-semibold font-mono ${
+                kpi.isWarning
+                  ? 'text-rose-600 dark:text-rose-400'
+                  : kpi.isSuccess
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-slate-900 dark:text-white'
+              }`}
+            >
+              {kpi.value}
             </div>
-          );
-        })}
+            <p className="text-[11px] text-slate-400 dark:text-slate-500">{kpi.sub}</p>
+          </div>
+        ))}
       </div>
 
-      {/* View Switcher Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
-        <button
-          onClick={() => setActiveViewTab('logs')}
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-            activeViewTab === 'logs'
-              ? 'bg-emerald-700 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          Daily Attendance Logs ({filteredHistory.length})
-        </button>
-        <button
-          onClick={() => setActiveViewTab('subjects')}
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-            activeViewTab === 'subjects'
-              ? 'bg-emerald-700 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          Subject-wise Attendance Rate ({subjectStats.length})
-        </button>
-      </div>
-
-      {activeViewTab === 'subjects' ? (
-        /* Subject-wise Attendance Table */
-        <div className="bg-white border border-slate-200/70 rounded-3xl p-6 sm:p-8 shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-            <div>
-              <h2 className="text-lg font-bold text-slate-800">Subject-wise Class Attendance</h2>
-              <p className="text-xs text-slate-400 font-medium">Verify your minimum 75% attendance threshold per subject</p>
-            </div>
-            <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full self-start sm:self-auto">
-              Total Subjects: {subjectStats.length}
-            </span>
+      {/* Main Content Card */}
+      <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-4">
+        {/* Tab Controls & Filters */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab('logs')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition cursor-pointer ${
+                activeTab === 'logs'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              Daily Attendance Logs ({filteredHistory.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('subjects')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition cursor-pointer ${
+                activeTab === 'subjects'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              Subject-Wise Breakdown ({subjectStats.length})
+            </button>
           </div>
 
-          {subjectStats.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 font-medium text-xs border border-dashed border-slate-200 rounded-2xl">
-              No subject-specific attendance recorded yet.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[700px]">
-                <thead>
-                  <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50">
-                    <th className="py-3 px-4 rounded-l-xl">Subject</th>
-                    <th className="py-3 px-4 text-center">Total Classes</th>
-                    <th className="py-3 px-4 text-center">Present</th>
-                    <th className="py-3 px-4 text-center">Absent</th>
-                    <th className="py-3 px-4 text-center">Late / Leave</th>
-                    <th className="py-3 px-4">Attendance Progress</th>
-                    <th className="py-3 px-4 text-center rounded-r-xl">Exam Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
-                  {subjectStats.map((sub, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-3.5 px-4 font-bold text-slate-800">
-                        {sub.name}
-                        {sub.code && <span className="block text-[10px] text-slate-400 font-mono font-normal">Code: {sub.code}</span>}
-                      </td>
-                      <td className="py-3.5 px-4 text-center font-semibold text-slate-700">
-                        {sub.total}
-                      </td>
-                      <td className="py-3.5 px-4 text-center font-bold text-emerald-600">
-                        {sub.present}
-                      </td>
-                      <td className="py-3.5 px-4 text-center font-bold text-rose-500">
-                        {sub.absent}
-                      </td>
-                      <td className="py-3.5 px-4 text-center text-slate-500">
-                        {sub.late + sub.leave}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 bg-slate-100 h-2 rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full rounded-full transition-all duration-300 ${
-                                sub.rate >= 75 ? 'bg-emerald-500' : 'bg-amber-500'
-                              }`}
-                              style={{ width: `${Math.min(sub.rate, 100)}%` }}
-                            />
-                          </div>
-                          <span className="font-bold text-xs font-mono text-slate-700 w-10 text-right">
-                            {sub.rate}%
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        {sub.isEligible ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            Eligible
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                            Shortage
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      ) : (
-        /* Daily History Table */
-        <div className="bg-white border border-slate-200/70 rounded-3xl p-6 sm:p-8 shadow-xs">
-          {/* Filters Bar */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-              {['all', 'present', 'absent', 'late', 'leave'].map((st) => (
-                <button
-                  key={st}
-                  onClick={() => setStatusFilter(st)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold capitalize transition-all cursor-pointer whitespace-nowrap ${
-                    statusFilter === st
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {st}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs w-full md:w-64">
-              <FiSearch className="text-slate-400" />
+          {activeTab === 'logs' && (
+            <div className="flex items-center gap-2">
               <input
                 type="text"
                 placeholder="Search subject or date..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-transparent text-slate-800 placeholder-slate-400 focus:outline-none w-full"
+                className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden"
               />
-            </div>
-          </div>
-
-          {filteredHistory.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 font-medium text-xs border border-dashed border-slate-200 rounded-2xl">
-              No matching attendance records found.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[650px]">
-                <thead>
-                  <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50">
-                    <th className="py-3 px-4 rounded-l-xl">Date & Day</th>
-                    <th className="py-3 px-4">Subject</th>
-                    <th className="py-3 px-4">Period & Timing</th>
-                    <th className="py-3 px-4 text-center">Status</th>
-                    <th className="py-3 px-4 rounded-r-xl">Remarks</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
-                  {filteredHistory.map((row) => {
-                    const rowDate = new Date(row.date);
-                    const dateFormatted = !isNaN(rowDate) 
-                      ? rowDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
-                      : row.date;
-
-                    return (
-                      <tr key={row.id} className="hover:bg-slate-50/60 transition-colors">
-                        <td className="py-3.5 px-4 font-semibold text-slate-700 whitespace-nowrap">
-                          {dateFormatted}
-                        </td>
-                        <td className="py-3.5 px-4 font-semibold text-slate-800">
-                          {row.subject_name || 'Class Session'}
-                          {row.subject_code && (
-                            <span className="text-xs font-mono text-slate-400 font-normal ml-1">({row.subject_code})</span>
-                          )}
-                        </td>
-                        <td className="py-3.5 px-4 text-slate-600 text-xs font-medium">
-                          {row.period_name || 'Period'} {row.start_time && <span className="text-slate-400">({row.start_time} - {row.end_time})</span>}
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          {getStatusBadge(row.status)}
-                        </td>
-                        <td className="py-3.5 px-4 text-xs text-slate-400">
-                          {row.remarks || '—'}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
+              >
+                <option value="all">All Statuses</option>
+                <option value="present">Present</option>
+                <option value="late">Late</option>
+                <option value="absent">Absent</option>
+                <option value="leave">Leave</option>
+              </select>
             </div>
           )}
         </div>
-      )}
+
+        {/* Tab 1: Daily Attendance Logs Table */}
+        {activeTab === 'logs' && (
+          <div>
+            {filteredHistory.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded">
+                No attendance logs found matching filters.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50">
+                      <th className="py-2.5 px-3 font-medium">Date</th>
+                      <th className="py-2.5 px-3 font-medium">Session / Subject</th>
+                      <th className="py-2.5 px-3 font-medium">Check-In</th>
+                      <th className="py-2.5 px-3 font-medium">Check-Out</th>
+                      <th className="py-2.5 px-3 font-medium text-center">Status</th>
+                      <th className="py-2.5 px-3 font-medium">Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {filteredHistory.map((row) => {
+                      const st = (row.status || '').toLowerCase();
+                      const isPresent = st === 'present';
+                      const isLate = st === 'late';
+                      const isAbsent = st === 'absent';
+
+                      return (
+                        <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                          <td className="py-2.5 px-3 font-mono font-medium text-slate-900 dark:text-white whitespace-nowrap">
+                            {row.date ? new Date(row.date).toLocaleDateString('en-GB') : '—'}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300">
+                            {row.subject_name || 'Daily Roll Call'}
+                            {row.subject_code && (
+                              <span className="block text-[10px] text-slate-400 font-mono">({row.subject_code})</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-slate-600 dark:text-slate-400">
+                            {row.in_time || '—'}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-slate-600 dark:text-slate-400">
+                            {row.out_time || '—'}
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            {isPresent ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800">
+                                Present
+                              </span>
+                            ) : isLate ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800">
+                                Late
+                              </span>
+                            ) : isAbsent ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800">
+                                Absent
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
+                                {row.status || 'Logged'}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">
+                            {row.remark || '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 2: Subject-Wise Breakdown */}
+        {activeTab === 'subjects' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50">
+                  <th className="py-2.5 px-3 font-medium">Subject Name</th>
+                  <th className="py-2.5 px-3 font-medium">Total Held</th>
+                  <th className="py-2.5 px-3 font-medium">Attended</th>
+                  <th className="py-2.5 px-3 font-medium">Absences</th>
+                  <th className="py-2.5 px-3 font-medium">Rate</th>
+                  <th className="py-2.5 px-3 font-medium text-right">Eligibility</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {subjectStats.map((sub, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">
+                      {sub.name}
+                      {sub.code && <span className="block text-[10px] text-slate-400 font-mono">({sub.code})</span>}
+                    </td>
+                    <td className="py-2.5 px-3 font-mono text-slate-700 dark:text-slate-300">{sub.total}</td>
+                    <td className="py-2.5 px-3 font-mono text-emerald-700 dark:text-emerald-400 font-medium">{sub.present + sub.late}</td>
+                    <td className="py-2.5 px-3 font-mono text-rose-600 dark:text-rose-400">{sub.absent}</td>
+                    <td className="py-2.5 px-3 font-mono font-medium text-slate-900 dark:text-white">{sub.rate}%</td>
+                    <td className="py-2.5 px-3 text-right">
+                      {sub.isEligible ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800">
+                          Eligible
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800">
+                          Ineligible
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

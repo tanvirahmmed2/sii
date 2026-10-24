@@ -43,7 +43,9 @@ export async function GET(request, context) {
               h.name AS hall_name, h.code AS hall_code, h.gender AS hall_gender,
               a.id AS allocation_id, a.student_id, a.allocated_date, a.fee_monthly,
               stu.registration_no, stu.roll_no,
-              info.name AS student_name, info.email AS student_email, info.number AS student_number,
+              COALESCE(stu.name, info.data->>'name') AS student_name,
+              COALESCE(stu.email, info.data->>'email') AS student_email,
+              COALESCE(stu.number, info.data->>'number') AS student_number,
               cls.name AS class_name
        FROM website_hall_room_seats s
        JOIN website_hall_rooms r ON s.room_id = r.id

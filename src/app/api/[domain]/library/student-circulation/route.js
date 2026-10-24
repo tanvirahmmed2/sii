@@ -25,9 +25,9 @@ export async function GET(request, context) {
              b.shelf_location AS book_shelf,
              s.registration_no,
              s.roll_no,
-             si.name AS student_name,
-             si.number AS student_phone,
-             si.email AS student_email,
+             COALESCE(s.name, si.data->>'name') AS student_name,
+             COALESCE(s.number, si.data->>'number') AS student_phone,
+             COALESCE(s.email, si.data->>'email') AS student_email,
              c.name AS class_name,
              sec.name AS section_name,
              ret.id AS return_id,
@@ -58,7 +58,7 @@ export async function GET(request, context) {
 
     if (search) {
       params.push(`%${search}%`);
-      queryText += ` AND (b.title ILIKE $${params.length} OR b.isbn ILIKE $${params.length} OR s.registration_no ILIKE $${params.length} OR s.roll_no ILIKE $${params.length} OR si.name ILIKE $${params.length})`;
+      queryText += ` AND (b.title ILIKE $${params.length} OR b.isbn ILIKE $${params.length} OR s.registration_no ILIKE $${params.length} OR s.roll_no ILIKE $${params.length} OR COALESCE(s.name, si.data->>'name') ILIKE $${params.length})`;
     }
 
     if (studentId) {
@@ -157,7 +157,7 @@ export async function POST(request, context) {
 
       // 2. Validate Student
       const stuRes = await client.query(
-        `SELECT s.id, s.registration_no, si.name
+        `SELECT s.id, s.registration_no, COALESCE(s.name, si.data->>'name') AS name
          FROM website_students s
          LEFT JOIN website_student_info si ON si.student_id = s.id AND si.website_id = s.website_id
          WHERE s.id = $1 AND s.website_id = $2`,

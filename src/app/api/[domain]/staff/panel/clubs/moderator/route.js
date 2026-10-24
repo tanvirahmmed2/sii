@@ -52,12 +52,14 @@ export async function GET(request, context) {
     // 3. Fetch students for quick-member assignment dropdown
     const studentsRes = await queryDb(
       `SELECT s.id, s.registration_no, s.roll_no,
-              i.name, i.number, c.name AS class_name
+              COALESCE(s.name, i.data->>'name') AS name,
+              COALESCE(s.number, i.data->>'number') AS number,
+              c.name AS class_name
        FROM website_students s
        LEFT JOIN website_student_info i ON i.student_id = s.id
        LEFT JOIN website_classes c ON c.id = s.class_id
        WHERE s.website_id = $1 AND s.is_active = true
-       ORDER BY i.name ASC, s.registration_no ASC
+       ORDER BY COALESCE(s.name, i.data->>'name') ASC, s.registration_no ASC
        LIMIT 200`,
       [website.id]
     );
@@ -72,14 +74,16 @@ export async function GET(request, context) {
           `SELECT scm.id, scm.club_id, scm.student_id, scm.role, scm.status,
                   scm.can_access_chat, scm.joined_date,
                   s.registration_no, s.roll_no,
-                  i.name AS student_name, i.number AS student_phone, i.gender,
+                  COALESCE(s.name, i.data->>'name') AS student_name,
+                  COALESCE(s.number, i.data->>'number') AS student_phone,
+                  COALESCE(s.gender, i.data->>'gender') AS gender,
                   cl.name AS class_name
            FROM website_student_club_members scm
            JOIN website_students s ON s.id = scm.student_id
            LEFT JOIN website_student_info i ON i.student_id = s.id
            LEFT JOIN website_classes cl ON cl.id = s.class_id
            WHERE scm.website_id = $1 AND scm.club_id = $2
-           ORDER BY scm.can_access_chat DESC, scm.role ASC, i.name ASC`,
+           ORDER BY scm.can_access_chat DESC, scm.role ASC, COALESCE(s.name, i.data->>'name') ASC`,
           [website.id, parsedClubId]
         );
         selectedClubMembers = membersRes.rows;
@@ -295,7 +299,7 @@ export async function POST(request, context) {
       }
 
       const studentRes = await queryDb(
-        `SELECT s.id, i.name 
+        `SELECT s.id, COALESCE(s.name, i.data->>'name') AS name 
          FROM website_students s 
          LEFT JOIN website_student_info i ON i.student_id = s.id 
          WHERE s.id = $1 AND s.website_id = $2 LIMIT 1`,

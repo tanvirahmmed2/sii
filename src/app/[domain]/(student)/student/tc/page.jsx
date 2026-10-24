@@ -5,10 +5,6 @@ import { toast } from 'react-hot-toast';
 import TenantLoader from 'src/component/tenant/TenantLoader';
 import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 import { exportElementAsJpeg, exportElementAsPdf } from 'src/lib/export/documentExporter';
-import { 
-  FiFileText, FiPrinter, FiDownload, FiCheckCircle, 
-  FiLock, FiClock, FiShield, FiUser 
-} from 'react-icons/fi';
 
 export default function StudentTCPage() {
   const { website, getApiEndpoint } = useTenantWebsite();
@@ -126,72 +122,77 @@ export default function StudentTCPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full pb-12 animate-fade-up">
+    <div className="w-full space-y-4">
       {/* Header */}
-      <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/70 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
-          <div className="flex items-center gap-2 text-indigo-600 text-xs font-bold uppercase tracking-wider mb-1">
-            <FiFileText /> Institutional Academic Release
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Transfer Certificate (TC)</h1>
-          <p className="text-slate-500 text-xs sm:text-sm font-normal mt-1">
-            Official institutional clearance and transfer document for migrating to other educational institutions.
+          <span className="text-[10px] font-semibold text-primary uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 border border-primary/20 inline-block mb-1">
+            Institutional Academic Release
+          </span>
+          <h1 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">
+            Transfer Certificate (TC)
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Official institutional clearance and migration credential document for transferring institutions.
           </p>
         </div>
 
         {tc && (
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <button
+              type="button"
               onClick={handleDownloadJpeg}
               disabled={isExporting}
-              className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50"
+              className="px-3 py-1.5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-50"
             >
-              <FiDownload className="text-xs" /> JPEG
+              Download JPEG
             </button>
             <button
+              type="button"
               onClick={handleDownloadPdf}
               disabled={isExporting}
-              className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50"
+              className="px-3 py-1.5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-50"
             >
-              <FiDownload className="text-xs" /> PDF
+              Download PDF
             </button>
             <button
+              type="button"
               onClick={handlePrint}
-              className="flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+              className="px-3.5 py-1.5 rounded-md bg-primary hover:bg-primary-dark text-white text-xs font-medium transition-colors shadow-xs cursor-pointer"
             >
-              <FiPrinter className="text-xs" /> Print TC
+              Print Certificate
             </button>
           </div>
         )}
       </div>
 
-      {/* Student Summary */}
+      {/* Student Summary Strip */}
       {student && (
-        <div className="bg-white border border-slate-200/70 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-100/70 text-indigo-700 rounded-2xl flex items-center justify-center font-bold text-lg border border-indigo-200/60 shrink-0">
-              {student.name ? student.name.charAt(0).toUpperCase() : <FiUser />}
+        <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-md bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-semibold text-sm shrink-0">
+              {student.name ? student.name.charAt(0).toUpperCase() : 'S'}
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-800">{student.name}</h2>
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mt-1">
-                <span>Reg No: <strong className="text-slate-800 font-mono">{student.registration_no}</strong></span>
-                <span>&bull;</span>
-                <span>Class: <strong className="text-slate-800">{student.class_name}</strong></span>
-                <span>&bull;</span>
-                <span>Session: <strong className="text-slate-800">{student.session_name || 'Active Session'}</strong></span>
+              <h2 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">{student.name}</h2>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                <span>Reg: <strong className="font-mono font-medium text-slate-700 dark:text-slate-300">{student.registration_no}</strong></span>
+                <span>•</span>
+                <span>Class: <strong className="font-medium text-slate-700 dark:text-slate-300">{student.class_name}</strong></span>
+                <span>•</span>
+                <span>Session: <strong className="font-medium text-slate-700 dark:text-slate-300">{student.session_name || 'Active Session'}</strong></span>
               </div>
             </div>
           </div>
 
           <div>
             {tc ? (
-              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200/60 rounded-full text-xs font-bold">
-                <FiCheckCircle className="text-emerald-600 text-sm" /> TC Issued &amp; Registered
+              <span className="px-2.5 py-1 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800 text-[10px] font-semibold uppercase tracking-wider">
+                TC Issued &amp; Registered
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-50 text-amber-700 border border-amber-200/60 rounded-full text-xs font-bold">
-                <FiClock className="text-amber-600 text-sm" /> No TC Issued
+              <span className="px-2.5 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800 text-[10px] font-semibold uppercase tracking-wider">
+                Active Enrolled Student
               </span>
             )}
           </div>
@@ -200,29 +201,29 @@ export default function StudentTCPage() {
 
       {/* TC Preview or Notice */}
       {tc ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
           {/* Visual TC Preview */}
-          <div className="lg:col-span-8 bg-white border border-slate-200/70 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col items-center space-y-4">
-            <div className="flex items-center justify-between w-full border-b border-slate-100 pb-3">
+          <div className="lg:col-span-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 flex flex-col items-center space-y-4">
+            <div className="flex items-center justify-between w-full border-b border-slate-100 dark:border-slate-800 pb-3">
               <div>
-                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                <h3 className="text-xs font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
                   Transfer Certificate Preview
                 </h3>
                 <span className="text-[11px] text-slate-400 font-mono">
                   Certificate No: {tcNumber}
                 </span>
               </div>
-              <span className="text-xs text-slate-500 font-mono">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
                 Issued: {issueDateFormatted}
               </span>
             </div>
 
             {compiled && (
-              <div className="w-full flex justify-center overflow-x-auto p-4 bg-slate-50 rounded-2xl">
+              <div className="w-full flex justify-center overflow-x-auto p-4 bg-slate-50 dark:bg-slate-950/60 rounded-md border border-slate-100 dark:border-slate-800">
                 <style dangerouslySetInnerHTML={{ __html: compiled.css }} />
                 <div
                   ref={tcDocRef}
-                  className="bg-white shadow-md border border-slate-200 rounded p-8 max-w-3xl w-full"
+                  className="bg-white shadow-xs border border-slate-200 rounded p-6 max-w-3xl w-full"
                 >
                   <div dangerouslySetInnerHTML={{ __html: compiled.html }} />
                 </div>
@@ -231,34 +232,34 @@ export default function StudentTCPage() {
           </div>
 
           {/* TC Parameter Details */}
-          <div className="lg:col-span-4 bg-white border border-slate-200/70 rounded-3xl p-6 shadow-xs space-y-4">
-            <h3 className="text-sm font-bold text-slate-800">Clearance &amp; Exit Record</h3>
+          <div className="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 space-y-3">
+            <h3 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">Clearance &amp; Exit Parameters</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
-                <tbody className="divide-y divide-slate-100">
-                  <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-400">TC Serial</td>
-                    <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{tcNumber}</td>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">TC Serial</td>
+                    <td className="py-2.5 px-3 font-mono font-medium text-slate-900 dark:text-white">{tcNumber}</td>
                   </tr>
-                  <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-400">Last Class</td>
-                    <td className="py-2.5 px-3 font-bold text-slate-800">{tc.last_class_passed || student?.class_name}</td>
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">Last Class</td>
+                    <td className="py-2.5 px-3 font-medium text-slate-800 dark:text-slate-200">{tc.last_class_passed || student?.class_name}</td>
                   </tr>
-                  <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-400">Promoted To</td>
-                    <td className="py-2.5 px-3 font-medium text-slate-800">{tc.promoted_class || 'Grade Promotion'}</td>
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">Promoted To</td>
+                    <td className="py-2.5 px-3 font-medium text-slate-800 dark:text-slate-200">{tc.promoted_class || 'Grade Promotion'}</td>
                   </tr>
-                  <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-400">Reason</td>
-                    <td className="py-2.5 px-3 text-slate-700">{tc.reason_for_leaving || 'Parent Request'}</td>
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">Reason</td>
+                    <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300">{tc.reason_for_leaving || 'Parent Request'}</td>
                   </tr>
-                  <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-400">Dues Clearance</td>
-                    <td className="py-2.5 px-3 font-bold text-emerald-700">{tc.dues_status || 'Paid In Full'}</td>
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">Dues Clearance</td>
+                    <td className="py-2.5 px-3 font-medium text-emerald-700 dark:text-emerald-400">{tc.dues_status || 'Paid In Full'}</td>
                   </tr>
-                  <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-400">Conduct</td>
-                    <td className="py-2.5 px-3 font-bold text-slate-800">{tc.conduct || 'Very Good'}</td>
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">Conduct</td>
+                    <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{tc.conduct || 'Very Good'}</td>
                   </tr>
                 </tbody>
               </table>
@@ -266,13 +267,10 @@ export default function StudentTCPage() {
           </div>
         </div>
       ) : (
-        <div className="bg-white border border-slate-200/70 rounded-3xl p-12 text-center flex flex-col items-center justify-center shadow-xs space-y-3">
-          <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-400">
-            <FiLock className="text-3xl text-slate-400" />
-          </div>
-          <h3 className="font-bold text-slate-800 text-base">No Transfer Certificate (TC) Issued</h3>
-          <p className="text-slate-400 text-xs max-w-md">
-            You are currently an active enrolled student. An official Transfer Certificate is issued by the registrar upon graduation or exit clearance.
+        <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-10 text-center space-y-2">
+          <h3 className="font-semibold text-slate-900 dark:text-white text-sm">No Transfer Certificate (TC) Issued</h3>
+          <p className="text-slate-500 dark:text-slate-400 text-xs max-w-md mx-auto">
+            You are currently an active enrolled student. An official Transfer Certificate is issued by the registrar upon graduation or formal exit clearance.
           </p>
         </div>
       )}

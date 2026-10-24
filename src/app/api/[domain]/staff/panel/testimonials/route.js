@@ -75,7 +75,7 @@ export async function GET(request, context) {
       conditions.push(`(
         s.registration_no ILIKE $${pIdx} OR
         s.roll_no ILIKE $${pIdx} OR
-        i.name ILIKE $${pIdx} OR
+        COALESCE(s.name, i.data->>'name', '') ILIKE $${pIdx} OR
         tm.testimonial_no ILIKE $${pIdx} OR
         tm.certificate_number ILIKE $${pIdx}
       )`);

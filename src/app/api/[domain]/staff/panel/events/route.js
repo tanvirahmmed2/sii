@@ -147,8 +147,8 @@ export async function GET(request, context) {
            s.registration_no,
            s.roll_no,
            s.image AS student_image,
-           COALESCE(s.email, i.email) AS student_email,
-           COALESCE(s.phone, i.number) AS student_phone,
+           COALESCE(s.email, i.data->>'email') AS student_email,
+           COALESCE(s.number, i.data->>'number') AS student_phone,
            c.name AS class_name,
            sec.name AS section_name,
            ses.name AS session_name

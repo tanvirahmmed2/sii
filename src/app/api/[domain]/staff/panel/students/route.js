@@ -36,23 +36,31 @@ export async function GET(request, context) {
         `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
                 s.department_id, s.class_id, s.section_id, s.session_id, s.is_active,
                 s.created_at, s.updated_at,
-                COALESCE(s.email, i.email) AS email, s.email AS registered_email,
-                i.name, i.number, i.gender, i.blood_group,
-                i.date_of_birth, i.religion, i.admission_date,
-                i.is_registered, i.is_verified, i.verification_status,
-                i.verification_token, i.verification_notes, i.rejection_reason, i.verified_at,
+                COALESCE(s.email, i.data->>'email') AS email, s.email AS registered_email,
+                COALESCE(s.name, i.data->>'name') AS name,
+                COALESCE(s.number, i.data->>'number') AS number,
+                COALESCE(s.gender, i.data->>'gender') AS gender,
+                COALESCE(s.blood_group, i.data->>'blood_group') AS blood_group,
+                COALESCE(s.date_of_birth, (i.data->>'date_of_birth')::date) AS date_of_birth,
+                COALESCE(s.religion, i.data->>'religion') AS religion,
+                COALESCE(s.admission_date, (i.data->>'admission_date')::date) AS admission_date,
+                COALESCE(i.is_registered, s.is_registered, FALSE) AS is_registered,
+                COALESCE(s.is_verified, FALSE) AS is_verified,
+                COALESCE(i.verification_status, s.verification_status, 'pending_setup') AS verification_status,
+                s.verification_token, i.verification_notes, i.rejection_reason, s.verified_at,
                 dept.name AS department_name,
                 c.name AS class_name, c.code AS class_code,
                 sec.name AS section_name,
                 ses.name AS session_name,
-                st.name AS verified_by_staff_name
+                st.name AS verified_by_staff_name,
+                i.data AS info_data
          FROM website_students s
          LEFT JOIN website_student_info i ON s.id = i.student_id
          LEFT JOIN website_departments dept ON s.department_id = dept.id
          LEFT JOIN website_classes c ON s.class_id = c.id
          LEFT JOIN website_sections sec ON s.section_id = sec.id
          LEFT JOIN website_sessions ses ON s.session_id = ses.id
-         LEFT JOIN website_staffs st ON i.verified_by_staff_id = st.id
+         LEFT JOIN website_staffs st ON s.verified_by_staff_id = st.id
          WHERE s.website_id = $1 AND s.id = $2
          LIMIT 1`,
         [website.id, id]
@@ -111,13 +119,13 @@ export async function GET(request, context) {
     }
 
     if (status && status !== 'all') {
-      conditions.push(`i.verification_status = $${pIdx++}`);
+      conditions.push(`COALESCE(i.verification_status, s.verification_status, 'pending_setup') = $${pIdx++}`);
       values.push(status);
     }
 
     if (search) {
       conditions.push(
-        `(i.name ILIKE $${pIdx} OR i.email ILIKE $${pIdx} OR s.registration_no ILIKE $${pIdx} OR s.student_unique_id ILIKE $${pIdx} OR s.roll_no ILIKE $${pIdx} OR i.number ILIKE $${pIdx})`
+        `(COALESCE(s.name, i.data->>'name', '') ILIKE $${pIdx} OR COALESCE(s.email, i.data->>'email', '') ILIKE $${pIdx} OR s.registration_no ILIKE $${pIdx} OR s.student_unique_id ILIKE $${pIdx} OR s.roll_no ILIKE $${pIdx} OR COALESCE(s.number, i.data->>'number', '') ILIKE $${pIdx})`
       );
       values.push(`%${search}%`);
       pIdx++;
@@ -136,18 +144,18 @@ export async function GET(request, context) {
       SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
              s.department_id, s.class_id, s.section_id, s.session_id, s.is_active,
              s.created_at, s.updated_at,
-             COALESCE(s.email, i.email) AS email, s.email AS registered_email,
-             COALESCE(i.name, s.name) AS name,
-             COALESCE(i.number, s.number) AS number,
-             COALESCE(i.gender, s.gender) AS gender,
-             COALESCE(i.blood_group, s.blood_group) AS blood_group,
-             COALESCE(i.date_of_birth, s.date_of_birth) AS date_of_birth,
-             COALESCE(i.religion, s.religion) AS religion,
-             COALESCE(i.admission_date, s.admission_date) AS admission_date,
-             COALESCE(i.is_registered, s.is_registered) AS is_registered,
-             COALESCE(i.is_verified, s.is_verified) AS is_verified,
+             COALESCE(s.email, i.data->>'email') AS email, s.email AS registered_email,
+             COALESCE(s.name, i.data->>'name') AS name,
+             COALESCE(s.number, i.data->>'number') AS number,
+             COALESCE(s.gender, i.data->>'gender') AS gender,
+             COALESCE(s.blood_group, i.data->>'blood_group') AS blood_group,
+             COALESCE(s.date_of_birth, (i.data->>'date_of_birth')::date) AS date_of_birth,
+             COALESCE(s.religion, i.data->>'religion') AS religion,
+             COALESCE(s.admission_date, (i.data->>'admission_date')::date) AS admission_date,
+             COALESCE(i.is_registered, s.is_registered, FALSE) AS is_registered,
+             COALESCE(s.is_verified, FALSE) AS is_verified,
              COALESCE(i.verification_status, s.verification_status, 'pending_setup') AS verification_status,
-             i.verification_token, i.verification_notes,
+             s.verification_token, i.verification_notes,
              dept.name AS department_name,
              c.name AS class_name, c.code AS class_code,
              sec.name AS section_name,
@@ -188,10 +196,10 @@ export async function GET(request, context) {
     const statsRes = await queryDb(
       `SELECT
          COUNT(*)::int AS total,
-         COUNT(*) FILTER (WHERE i.verification_status = 'pending_setup')::int AS pending_setup,
-         COUNT(*) FILTER (WHERE i.verification_status = 'submitted')::int AS submitted,
-         COUNT(*) FILTER (WHERE i.verification_status = 'verified')::int AS verified,
-         COUNT(*) FILTER (WHERE i.verification_status = 'rejected')::int AS rejected,
+         COUNT(*) FILTER (WHERE COALESCE(i.verification_status, s.verification_status, 'pending_setup') = 'pending_setup')::int AS pending_setup,
+         COUNT(*) FILTER (WHERE COALESCE(i.verification_status, s.verification_status) = 'submitted')::int AS submitted,
+         COUNT(*) FILTER (WHERE COALESCE(i.verification_status, s.verification_status) = 'verified')::int AS verified,
+         COUNT(*) FILTER (WHERE COALESCE(i.verification_status, s.verification_status) = 'rejected')::int AS rejected,
          COUNT(*) FILTER (WHERE s.is_active = TRUE)::int AS active_count
        FROM website_students s
        LEFT JOIN website_student_info i ON s.id = i.student_id
@@ -201,7 +209,7 @@ export async function GET(request, context) {
 
     // Fetch active form fields / custom columns configured for the students table
     const fieldsRes = await queryDb(
-      `SELECT * FROM website_student_form_fields WHERE website_id = $1 AND is_active = TRUE ORDER BY sort_order ASC, id ASC`,
+      `SELECT * FROM website_form_fields WHERE website_id = $1 AND is_active = TRUE ORDER BY sort_order ASC, id ASC`,
       [website.id]
     );
 
@@ -280,16 +288,20 @@ export async function POST(request, context) {
       }
     }
 
-    const regNo = registration_no.trim();
+    // Do not add or allow REG- prefix in registration number
+    const regNo = registration_no.trim().replace(/^REG-?/i, '');
+    if (!regNo) {
+      return NextResponse.json({ success: false, error: 'Registration number is required.' }, { status: 400 });
+    }
 
-    // Check duplicate registration_no in website_students
+    // Check duplicate registration_no in website_students (case-insensitive and trimmed)
     const duplicateReg = await queryDb(
-      `SELECT id FROM website_students WHERE website_id = $1 AND registration_no = $2 LIMIT 1`,
+      `SELECT id FROM website_students WHERE website_id = $1 AND LOWER(TRIM(registration_no)) = LOWER(TRIM($2)) LIMIT 1`,
       [website.id, regNo]
     );
     if (duplicateReg.rows.length > 0) {
       return NextResponse.json(
-        { success: false, error: `Registration number "${regNo}" is already in use.` },
+        { success: false, error: `Registration number "${regNo}" is already in use in this institution.` },
         { status: 409 }
       );
     }
@@ -381,26 +393,37 @@ export async function POST(request, context) {
     }
 
     // If student email is provided, send invitation to setup account via website mailer
+    let setupUrl = `/auth/student/setup?email=${encodeURIComponent(cleanEmail || '')}`;
     if (cleanEmail) {
       try {
-        const setupUrl = `/auth/student/setup`;
+        setupUrl = buildStudentSetupUrl(website, null, request, cleanEmail);
+        const recipientName = body.name?.trim() || 'Student';
+        const instName = website.name || 'Campus Student Portal';
+
         const emailHtml = buildStyledEmail({
-          title: `Welcome to ${website.name || 'Student Portal'}`,
-          recipientName: body.name?.trim() || 'Student',
-          paragraphs: [
-            `You have been registered at <strong>${website.name || 'our institution'}</strong>.`,
-            `Your Registration Number: <strong>${newStudent.registration_no}</strong>`,
-            `Please visit the student setup page to verify your email and configure your account password and profile details.`,
+          title: `Welcome to ${instName}`,
+          subtitle: 'Official Student Identity & Portal Account Setup',
+          recipientName,
+          bodyParagraphs: [
+            `Congratulations! You have been registered into the official academic database at <strong>${instName}</strong>.`,
+            `Please keep your institutional credentials safe:`,
+            `<div style="margin: 12px 0; padding: 14px 18px; background-color: #f1f5f9; border-left: 4px solid #4f46e5; border-radius: 4px; font-size: 13px; color: #1e293b;">
+              <div style="margin-bottom: 6px;"><strong>Registration No:</strong> <code style="font-family: monospace; font-size: 14px; font-weight: 700; color: #4338ca;">${newStudent.registration_no}</code></div>
+              <div style="margin-bottom: 6px;"><strong>Student ID:</strong> <code style="font-family: monospace; font-size: 13px; color: #0f172a;">${newStudent.student_unique_id}</code></div>
+              ${newStudent.roll_no ? `<div style="margin-bottom: 6px;"><strong>Roll No:</strong> ${newStudent.roll_no}</div>` : ''}
+              <div><strong>Registered Email:</strong> <code style="font-family: monospace; font-size: 13px; color: #0f172a;">${cleanEmail}</code></div>
+            </div>`,
+            `To activate your portal account, access online gradesheets, ID cards, exam results, and notice boards, click the button below to complete your one-time email verification and configure your personal password:`,
           ],
-          buttonText: 'Setup Student Account',
-          buttonUrl: setupUrl,
-          footerNote: 'If you did not expect this message, please contact your school administration.'
+          actionText: 'Activate & Set Up Student Account →',
+          actionUrl: setupUrl,
+          footerNote: `If you did not expect this enrollment notification or have questions, please reach out to the ${instName} administrative office.`
         });
 
         await sendEmail({
           to: cleanEmail,
-          toName: body.name?.trim() || 'Student',
-          subject: `Student Account Setup - ${website.name || 'Portal'}`,
+          toName: recipientName,
+          subject: `Student Account Setup & Registration - ${instName}`,
           html: emailHtml,
           websiteId: website.id,
         });
@@ -412,10 +435,10 @@ export async function POST(request, context) {
 
     return NextResponse.json({
       success: true,
-      message: 'Student registered successfully in website_students table. Student can now setup account at /auth/student/setup.',
+      message: 'Student registered successfully in website_students table. Setup email sent.',
       payload: {
         student: newStudent,
-        setupUrl: `/auth/student/setup`,
+        setupUrl,
       },
     });
   } catch (error) {
@@ -530,6 +553,25 @@ export async function PUT(request, context) {
     const sFields = [];
     const sValues = [website.id, studentId];
     let sIdx = 3;
+
+    if (body.registration_no !== undefined) {
+      const cleanReg = body.registration_no?.trim().replace(/^REG-?/i, '');
+      if (!cleanReg) {
+        return NextResponse.json({ success: false, error: 'Registration number cannot be empty.' }, { status: 400 });
+      }
+      const duplicateReg = await queryDb(
+        `SELECT id FROM website_students WHERE website_id = $1 AND LOWER(TRIM(registration_no)) = LOWER(TRIM($2)) AND id != $3 LIMIT 1`,
+        [website.id, cleanReg, studentId]
+      );
+      if (duplicateReg.rows.length > 0) {
+        return NextResponse.json(
+          { success: false, error: `Registration number "${cleanReg}" is already in use in this institution.` },
+          { status: 409 }
+        );
+      }
+      sFields.push(`registration_no = $${sIdx++}`);
+      sValues.push(cleanReg);
+    }
 
     if (body.roll_no !== undefined) {
       sFields.push(`roll_no = $${sIdx++}`);

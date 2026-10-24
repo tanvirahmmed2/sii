@@ -23,7 +23,7 @@ export async function GET(request, context) {
 
     if (search) {
       params.push(`%${search}%`);
-      whereClause += ` AND (info.name ILIKE $${params.length} OR cand.roll_no ILIKE $${params.length} OR cand.registration_no ILIKE $${params.length} OR cand.admit_card_number ILIKE $${params.length} OR e.name ILIKE $${params.length})`;
+      whereClause += ` AND (COALESCE(s.name, info.data->>'name', '') ILIKE $${params.length} OR cand.roll_no ILIKE $${params.length} OR cand.registration_no ILIKE $${params.length} OR cand.admit_card_number ILIKE $${params.length} OR e.name ILIKE $${params.length})`;
     }
 
     if (examId && examId !== 'all') {
@@ -58,9 +58,9 @@ export async function GET(request, context) {
              e.term AS exam_term,
              e.start_date AS exam_start_date,
              e.end_date AS exam_end_date,
-             info.name AS student_name,
-             info.email AS student_email,
-             info.number AS student_phone,
+             COALESCE(s.name, info.data->>'name') AS student_name,
+             COALESCE(s.email, info.data->>'email') AS student_email,
+             COALESCE(s.number, info.data->>'number') AS student_phone,
              c.name AS class_name,
              c.code AS class_code,
              ses.name AS session_name,

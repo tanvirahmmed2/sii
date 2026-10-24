@@ -1131,6 +1131,7 @@ CREATE TABLE IF NOT EXISTS website_students (
     verified_at TIMESTAMPTZ,
     verified_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
     last_login TIMESTAMPTZ,
+    admission_applicant_id BIGINT REFERENCES website_admission_applicants(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(website_id, registration_no),
@@ -1138,7 +1139,9 @@ CREATE TABLE IF NOT EXISTS website_students (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_website_students_unique_lower_email ON website_students(website_id, LOWER(TRIM(email))) WHERE email IS NOT NULL AND TRIM(email) != '';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_website_students_unique_lower_reg_no ON website_students(website_id, LOWER(TRIM(registration_no)));
 CREATE INDEX IF NOT EXISTS idx_ws_students_email ON website_students(website_id, email);
+CREATE INDEX IF NOT EXISTS idx_website_students_admission_app ON website_students(website_id, admission_applicant_id);
 
 DROP TRIGGER IF EXISTS update_website_students_updated_at ON website_students;
 CREATE TRIGGER update_website_students_updated_at
@@ -1171,22 +1174,26 @@ CREATE TRIGGER update_website_student_info_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 38c. WEBSITE STUDENT FORM FIELDS TABLE (Modular Form Fields Configuration)
+-- 38c. WEBSITE FORM FIELDS TABLE (Unified Modular Fields for Students & Applicants)
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_student_form_fields (
+CREATE TABLE IF NOT EXISTS website_form_fields (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    target_scope VARCHAR(50) NOT NULL DEFAULT 'info' CHECK (target_scope IN ('info', 'guardians', 'addresses', 'academic', 'custom')),
     field_key VARCHAR(100) NOT NULL,
     label VARCHAR(150) NOT NULL,
-    field_type VARCHAR(50) NOT NULL CHECK (field_type IN ('text', 'number', 'select', 'date', 'file', 'textarea', 'boolean')),
+    label_translations JSONB DEFAULT '{}'::jsonb,
+    field_type VARCHAR(50) NOT NULL CHECK (field_type IN ('text', 'number', 'select', 'multiselect', 'date', 'file', 'textarea', 'boolean')),
     options JSONB DEFAULT '[]'::jsonb,
     is_required BOOLEAN NOT NULL DEFAULT FALSE,
     is_unique BOOLEAN NOT NULL DEFAULT FALSE,
     validation_regex VARCHAR(255),
     placeholder VARCHAR(150),
     help_text VARCHAR(255),
-    section VARCHAR(100) DEFAULT 'general' CHECK (section IN ('personal', 'academic', 'guardian', 'address', 'general', 'medical', 'other')),
-    is_shown_in_id_card BOOLEAN DEFAULT FALSE,
+    section VARCHAR(100) DEFAULT 'personal' CHECK (section IN ('personal', 'academic', 'guardian', 'address', 'general', 'medical', 'other')),
+    is_visible_in_admission BOOLEAN DEFAULT TRUE,
+    is_visible_in_student BOOLEAN DEFAULT TRUE,
+    is_visible_in_id_card BOOLEAN DEFAULT FALSE,
     sort_order INT DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -1194,13 +1201,14 @@ CREATE TABLE IF NOT EXISTS website_student_form_fields (
     UNIQUE(website_id, field_key)
 );
 
-DROP TRIGGER IF EXISTS update_website_student_form_fields_updated_at ON website_student_form_fields;
-CREATE TRIGGER update_website_student_form_fields_updated_at
-    BEFORE UPDATE ON website_student_form_fields
+DROP TRIGGER IF EXISTS update_website_form_fields_updated_at ON website_form_fields;
+CREATE TRIGGER update_website_form_fields_updated_at
+    BEFORE UPDATE ON website_form_fields
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE INDEX IF NOT EXISTS idx_ws_stu_ff_web ON website_student_form_fields(website_id);
-CREATE INDEX IF NOT EXISTS idx_ws_stu_ff_act ON website_student_form_fields(website_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_ws_form_fields_web ON website_form_fields(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_form_fields_act ON website_form_fields(website_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_website_form_fields_scope ON website_form_fields(website_id, target_scope, is_active, sort_order);
 
 -- ----------------------------------------------------------------------------
 -- 39. WEBSITE STUDENT ADDRESSES TABLE (Modular Address Store)
@@ -2645,37 +2653,12 @@ CREATE TRIGGER update_website_admission_exam_subjects_updated_at
 CREATE INDEX IF NOT EXISTS idx_ws_adm_exam_sub_adm ON website_admission_exam_subjects(admission_id);
 
 -- ----------------------------------------------------------------------------
--- 63D. WEBSITE ADMISSION FORM FIELDS TABLE (Modular Applicant Input Fields)
+-- 63D. WEBSITE ADMISSION FORM FIELDS (Unified with website_form_fields)
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_admission_form_fields (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    admission_id BIGINT REFERENCES website_admissions(id) ON DELETE CASCADE,
-    field_key VARCHAR(100) NOT NULL,
-    label VARCHAR(150) NOT NULL,
-    field_type VARCHAR(50) NOT NULL CHECK (field_type IN ('text', 'number', 'select', 'date', 'file', 'textarea', 'boolean')),
-    options JSONB DEFAULT '[]'::jsonb,
-    is_required BOOLEAN NOT NULL DEFAULT FALSE,
-    is_unique BOOLEAN NOT NULL DEFAULT FALSE,
-    validation_regex VARCHAR(255),
-    placeholder VARCHAR(150),
-    help_text VARCHAR(255),
-    section VARCHAR(100) DEFAULT 'general',
-    is_shown_in_id_card BOOLEAN DEFAULT FALSE,
-    sort_order INT DEFAULT 0,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_admission_form_fields_updated_at ON website_admission_form_fields;
-CREATE TRIGGER update_website_admission_form_fields_updated_at
-    BEFORE UPDATE ON website_admission_form_fields
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE INDEX IF NOT EXISTS idx_ws_adm_ff_web ON website_admission_form_fields(website_id);
-CREATE INDEX IF NOT EXISTS idx_ws_adm_ff_adm ON website_admission_form_fields(admission_id);
-CREATE INDEX IF NOT EXISTS idx_ws_adm_ff_act ON website_admission_form_fields(website_id, is_active);
+-- The unified table `website_form_fields` (Section 38c) serves as the single source of truth 
+-- for modular fields across both student rosters and applicant intake.
+CREATE OR REPLACE VIEW website_admission_form_fields AS
+    SELECT * FROM website_form_fields;
 
 -- ----------------------------------------------------------------------------
 -- 64. WEBSITE ADMISSION FEES TABLE (Application & Intake Fees Structure)
@@ -2713,6 +2696,8 @@ CREATE TABLE IF NOT EXISTS website_admission_applicants (
     applicant_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
     phone VARCHAR(50) NOT NULL,
+    gender VARCHAR(20) DEFAULT 'Male' CHECK (gender IN ('Male', 'Female', 'Other')),
+    date_of_birth DATE,
     status VARCHAR(50) NOT NULL DEFAULT 'incomplete' CHECK (status IN ('pending', 'incomplete', 'unpaid', 'paid', 'completed', 'selected', 'rejected', 'enrolled', 'accepted')),
     selection_notes TEXT,
     score NUMERIC(6, 2) DEFAULT 0.00,
@@ -4456,4 +4441,177 @@ DROP TRIGGER IF EXISTS trg_website_officers_institution_email_uniq ON website_of
 CREATE TRIGGER trg_website_officers_institution_email_uniq
   BEFORE INSERT OR UPDATE OF email ON website_officers
   FOR EACH ROW EXECUTE FUNCTION check_institution_email_uniqueness_trg();
+
+-- ============================================================================
+-- SECTION: ENTERPRISE ADMISSION-TO-STUDENT PROMOTION RPC & GIN INDEXES
+-- ============================================================================
+
+CREATE INDEX IF NOT EXISTS idx_applicant_info_data_gin 
+  ON website_admission_applicant_info USING GIN (data jsonb_path_ops);
+
+CREATE INDEX IF NOT EXISTS idx_student_info_data_gin 
+  ON website_student_info USING GIN (data jsonb_path_ops);
+
+CREATE INDEX IF NOT EXISTS idx_student_guardians_phone 
+  ON website_student_guardians ((data->>'guardian_phone'))
+  WHERE data->>'guardian_phone' IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_student_info_nid 
+  ON website_student_info ((data->>'nid_number')) 
+  WHERE data->>'nid_number' IS NOT NULL;
+
+CREATE OR REPLACE FUNCTION fn_enroll_admission_applicant(
+    p_applicant_id BIGINT,
+    p_class_id BIGINT,
+    p_session_id BIGINT,
+    p_section_id BIGINT,
+    p_department_id BIGINT,
+    p_registration_no VARCHAR(100),
+    p_student_unique_id VARCHAR(100),
+    p_roll_no VARCHAR(50),
+    p_temp_password_hash TEXT DEFAULT NULL,
+    p_setup_token VARCHAR(255) DEFAULT NULL
+)
+RETURNS BIGINT AS $$
+DECLARE
+    v_website_id BIGINT;
+    v_applicant_name VARCHAR(255);
+    v_applicant_email VARCHAR(255);
+    v_applicant_phone VARCHAR(50);
+    v_applicant_gender VARCHAR(20);
+    v_applicant_dob DATE;
+    v_new_student_id BIGINT;
+    v_clean_reg_no VARCHAR(100);
+BEGIN
+    -- 1. Lock and validate applicant record
+    SELECT website_id, applicant_name, LOWER(TRIM(email)), phone, gender, date_of_birth
+    INTO v_website_id, v_applicant_name, v_applicant_email, v_applicant_phone, v_applicant_gender, v_applicant_dob
+    FROM website_admission_applicants
+    WHERE id = p_applicant_id AND status IN ('completed', 'selected', 'paid')
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Applicant % is not eligible for enrollment (must be in "completed", "paid", or "selected" status).', p_applicant_id;
+    END IF;
+
+    -- Clean up registration number (strip REG- if passed)
+    v_clean_reg_no := TRIM(REGEXP_REPLACE(p_registration_no, '^REG-?', '', 'i'));
+
+    -- 2. Guard against duplicate registration number per website
+    IF EXISTS (
+        SELECT 1 FROM website_students 
+        WHERE website_id = v_website_id 
+          AND LOWER(TRIM(registration_no)) = LOWER(v_clean_reg_no)
+    ) THEN
+        RAISE EXCEPTION 'Registration number "%" is already taken in this institution.', v_clean_reg_no;
+    END IF;
+
+    -- 3. Insert Core Student Identity
+    INSERT INTO website_students (
+        website_id,
+        session_id,
+        department_id,
+        class_id,
+        section_id,
+        registration_no,
+        student_unique_id,
+        roll_no,
+        name,
+        email,
+        number,
+        gender,
+        date_of_birth,
+        password,
+        admission_applicant_id,
+        verification_token,
+        verification_token_expires,
+        is_active,
+        is_verified
+    ) VALUES (
+        v_website_id,
+        p_session_id,
+        p_department_id,
+        p_class_id,
+        p_section_id,
+        v_clean_reg_no,
+        p_student_unique_id,
+        TRIM(p_roll_no),
+        v_applicant_name,
+        v_applicant_email,
+        v_applicant_phone,
+        COALESCE(v_applicant_gender, 'Male'),
+        v_applicant_dob,
+        p_temp_password_hash,
+        p_applicant_id,
+        p_setup_token,
+        CASE WHEN p_setup_token IS NOT NULL THEN CURRENT_TIMESTAMP + INTERVAL '7 days' ELSE NULL END,
+        FALSE,
+        FALSE
+    ) RETURNING id INTO v_new_student_id;
+
+    -- 4. Copy Extended Modular Info
+    INSERT INTO website_student_info (
+        website_id,
+        student_id,
+        verification_status,
+        is_registered,
+        verification_notes,
+        data
+    )
+    SELECT 
+        v_website_id,
+        v_new_student_id,
+        'pending_setup',
+        FALSE,
+        'Enrolled from admission application #' || app.application_no,
+        COALESCE(info.data, '{}'::jsonb)
+    FROM website_admission_applicants app
+    LEFT JOIN website_admission_applicant_info info ON info.applicant_id = app.id
+    WHERE app.id = p_applicant_id
+    ON CONFLICT (student_id) DO UPDATE SET 
+        data = website_student_info.data || EXCLUDED.data,
+        updated_at = CURRENT_TIMESTAMP;
+
+    -- 5. Copy Guardian Details
+    INSERT INTO website_student_guardians (website_id, student_id, data)
+    SELECT v_website_id, v_new_student_id, COALESCE(data, '{}'::jsonb)
+    FROM website_admission_applicant_guardians
+    WHERE applicant_id = p_applicant_id
+    ON CONFLICT (student_id) DO UPDATE SET 
+        data = website_student_guardians.data || EXCLUDED.data,
+        updated_at = CURRENT_TIMESTAMP;
+
+    -- 6. Copy Addresses
+    INSERT INTO website_student_addresses (website_id, student_id, data)
+    SELECT v_website_id, v_new_student_id, COALESCE(data, '{}'::jsonb)
+    FROM website_admission_applicant_addresses
+    WHERE applicant_id = p_applicant_id
+    ON CONFLICT (student_id) DO UPDATE SET 
+        data = website_student_addresses.data || EXCLUDED.data,
+        updated_at = CURRENT_TIMESTAMP;
+
+    -- 7. Copy Primary Image & Signature
+    INSERT INTO website_student_pictures (website_id, student_id, image_url, image_id, is_primary)
+    SELECT v_website_id, v_new_student_id, photo_url, photo_public_id, TRUE
+    FROM website_admission_applicant_images
+    WHERE applicant_id = p_applicant_id AND photo_url IS NOT NULL;
+
+    INSERT INTO website_student_signatures (website_id, student_id, signature_url, signature_id)
+    SELECT v_website_id, v_new_student_id, signature_url, signature_public_id
+    FROM website_admission_applicant_images
+    WHERE applicant_id = p_applicant_id AND signature_url IS NOT NULL
+    ON CONFLICT (student_id) DO UPDATE SET 
+        signature_url = EXCLUDED.signature_url,
+        updated_at = CURRENT_TIMESTAMP;
+
+    -- 8. Establish Forward Link & Update Applicant Status
+    UPDATE website_admission_applicants
+    SET status = 'enrolled',
+        enrolled_student_id = v_new_student_id,
+        enrolled_at = CURRENT_TIMESTAMP
+    WHERE id = p_applicant_id;
+
+    RETURN v_new_student_id;
+END;
+$$ LANGUAGE plpgsql;
 

@@ -50,7 +50,7 @@ export async function GET(request, context) {
 
     if (search) {
       conditions.push(
-        `(i.name ILIKE $${pIdx} OR i.email ILIKE $${pIdx} OR s.registration_no ILIKE $${pIdx} OR s.student_unique_id ILIKE $${pIdx} OR i.number ILIKE $${pIdx})`
+        `(COALESCE(s.name, i.data->>'name', '') ILIKE $${pIdx} OR COALESCE(s.email, i.data->>'email', '') ILIKE $${pIdx} OR s.registration_no ILIKE $${pIdx} OR s.student_unique_id ILIKE $${pIdx} OR COALESCE(s.number, i.data->>'number', '') ILIKE $${pIdx})`
       );
       values.push(`%${search}%`);
       pIdx++;
@@ -68,10 +68,19 @@ export async function GET(request, context) {
       SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
              s.class_id, s.section_id, s.session_id, s.is_active,
              s.created_at, s.updated_at,
-             i.name, i.email, i.number, i.gender, i.blood_group, i.date_of_birth,
-             i.religion, i.admission_date, i.is_registered, i.is_verified,
-             i.verification_status, i.verification_notes, i.verification_token,
-             i.verified_at, i.rejection_reason,
+             COALESCE(s.name, i.data->>'name') AS name,
+             COALESCE(s.email, i.data->>'email') AS email,
+             COALESCE(s.number, i.data->>'number') AS number,
+             COALESCE(s.gender, i.data->>'gender') AS gender,
+             COALESCE(s.blood_group, i.data->>'blood_group') AS blood_group,
+             COALESCE(s.date_of_birth, (i.data->>'date_of_birth')::date) AS date_of_birth,
+             COALESCE(s.religion, i.data->>'religion') AS religion,
+             COALESCE(s.admission_date, (i.data->>'admission_date')::date) AS admission_date,
+             COALESCE(i.is_registered, s.is_registered, FALSE) AS is_registered,
+             COALESCE(s.is_verified, FALSE) AS is_verified,
+             COALESCE(i.verification_status, s.verification_status, 'pending_setup') AS verification_status,
+             i.verification_notes, s.verification_token,
+             s.verified_at, i.rejection_reason,
              c.name AS class_name, c.code AS class_code,
              sec.name AS section_name,
              ses.name AS session_name,
@@ -97,7 +106,7 @@ export async function GET(request, context) {
       LEFT JOIN website_classes c ON s.class_id = c.id
       LEFT JOIN website_sections sec ON s.section_id = sec.id
       LEFT JOIN website_sessions ses ON s.session_id = ses.id
-      LEFT JOIN website_staffs st ON i.verified_by_staff_id = st.id
+      LEFT JOIN website_staffs st ON s.verified_by_staff_id = st.id
       LEFT JOIN website_student_addresses addr ON s.id = addr.student_id
       LEFT JOIN website_student_guardians g ON s.id = g.student_id
       LEFT JOIN LATERAL (
@@ -171,7 +180,9 @@ export async function PUT(request, context) {
     // Verify student exists and belongs to website
     const checkRes = await queryDb(
       `SELECT s.id, s.registration_no, s.student_unique_id,
-              i.name, i.email, i.verification_token
+              COALESCE(s.name, i.data->>'name') AS name,
+              COALESCE(s.email, i.data->>'email') AS email,
+              s.verification_token
        FROM website_students s
        LEFT JOIN website_student_info i ON s.id = i.student_id
        WHERE s.id = $1 AND s.website_id = $2

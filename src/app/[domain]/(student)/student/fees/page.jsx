@@ -1,25 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
 import TenantLoader from 'src/component/tenant/TenantLoader';
-import {
-  FiDollarSign,
-  FiClock,
-  FiCheck,
-  FiPrinter,
-  FiAlertCircle,
-  FiCreditCard,
-  FiX,
-  FiCheckCircle,
-  FiShield,
-  FiSmartphone,
-} from 'react-icons/fi';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 import { printStudentFeeReceipt } from 'src/lib/receipts/student_fee';
 
 const FeesPage = () => {
-  const params = useParams();
-  const domain = params?.domain || '';
+  const { getApiEndpoint } = useTenantWebsite();
 
   const [data, setData] = useState({ fees: [], fines: [], student: {} });
   const [loading, setLoading] = useState(true);
@@ -43,17 +30,17 @@ const FeesPage = () => {
   };
 
   const fetchFees = async () => {
-    if (!domain) return;
     try {
-      const res = await fetch(`/api/${domain}/student/fees`);
+      const res = await fetch(getApiEndpoint('student/fees'));
       if (res.ok) {
         const resData = await res.json();
-        setData(resData.paylod || { fees: [], fines: [], student: {} });
-        if (resData.assigned_gateways || resData.paylod?.assigned_gateways) {
-          setAssignedGateways(resData.assigned_gateways || resData.paylod?.assigned_gateways || []);
+        const payload = resData.payload || resData.paylod || resData;
+        setData(payload || { fees: [], fines: [], student: {} });
+        if (resData.assigned_gateways || payload.assigned_gateways) {
+          setAssignedGateways(resData.assigned_gateways || payload.assigned_gateways || []);
         }
-        if (resData.currency || resData.paylod?.currency) {
-          setInstitutionCurrency(resData.currency || resData.paylod?.currency || 'BDT');
+        if (resData.currency || payload.currency) {
+          setInstitutionCurrency(resData.currency || payload.currency || 'BDT');
         }
       }
     } catch (error) {
@@ -65,37 +52,8 @@ const FeesPage = () => {
   };
 
   useEffect(() => {
-    let active = true;
-    async function loadInitialFees() {
-      try {
-        const res = await fetch(`/api/${domain}/student/fees`);
-        if (res.ok) {
-          const resData = await res.json();
-          if (active) {
-            setData(resData.paylod || { fees: [], fines: [], student: {} });
-            if (resData.assigned_gateways || resData.paylod?.assigned_gateways) {
-              setAssignedGateways(resData.assigned_gateways || resData.paylod?.assigned_gateways || []);
-            }
-            if (resData.currency || resData.paylod?.currency) {
-              setInstitutionCurrency(resData.currency || resData.paylod?.currency || 'BDT');
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching fees:', error);
-        if (active) showFeedback('error', 'Network error fetching fees.');
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-
-    if (domain) {
-      loadInitialFees();
-    }
-    return () => {
-      active = false;
-    };
-  }, [domain]);
+    fetchFees();
+  }, [getApiEndpoint]);
 
   const handleOpenPayModal = (fee) => {
     setSelectedFee(fee);
@@ -120,7 +78,7 @@ const FeesPage = () => {
 
     setProcessing(true);
     try {
-      const res = await fetch(`/api/${domain}/student/fees/pay`, {
+      const res = await fetch(getApiEndpoint('student/fees/pay'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -157,11 +115,11 @@ const FeesPage = () => {
   }
 
   const { fees = [], student = {} } = data;
+  const currencySymbol = institutionCurrency === 'USD' ? '$' : '৳';
 
   const educationFees = fees.filter((f) => f.type === 'Education Fee');
   const examFees = fees.filter((f) => f.type === 'Exam Fee');
 
-  // Calculate summary stats
   const totalUnpaid = fees
     .filter((f) => (f.status || '').toLowerCase() !== 'paid' && (f.status || '').toLowerCase() !== 'waived')
     .reduce((sum, f) => sum + (parseFloat(f.amount || 0) + parseFloat(f.fine_amount || 0) - parseFloat(f.paid_amount || 0)), 0);
@@ -171,461 +129,389 @@ const FeesPage = () => {
   const stats = [
     {
       label: 'Outstanding Dues',
-      value: `৳${totalUnpaid.toFixed(2)}`,
+      value: `${currencySymbol}${totalUnpaid.toFixed(2)}`,
       sub: totalUnpaid > 0 ? 'Pending payment balance' : 'No outstanding dues',
-      color: totalUnpaid > 0 ? 'bg-rose-50 text-rose-700 border-rose-200/60' : 'bg-slate-50 text-slate-700 border-slate-200/60',
-      icon: FiClock,
+      isWarning: totalUnpaid > 0,
     },
     {
       label: 'Total Paid Fees',
-      value: `৳${totalPaid.toFixed(2)}`,
-      sub: 'Total cleared institutional transactions',
-      color: 'bg-emerald-50 text-emerald-700 border-emerald-200/60',
-      icon: FiCheck,
+      value: `${currencySymbol}${totalPaid.toFixed(2)}`,
+      sub: 'Verified institutional receipts',
+      isSuccess: true,
+    },
+    {
+      label: 'Pending Invoices',
+      value: fees.filter((f) => (f.status || '').toLowerCase() !== 'paid' && (f.status || '').toLowerCase() !== 'waived').length,
+      sub: 'Action required',
     },
   ];
 
-  const getStatusBadge = (status) => {
-    const norm = (status || 'unpaid').toLowerCase();
-    switch (norm) {
-      case 'paid':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-            <FiCheck className="text-xs" /> Paid
-          </span>
-        );
-      case 'partially_paid':
-      case 'partially paid':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">
-            Partial
-          </span>
-        );
-      case 'waived':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200">
-            Waived
-          </span>
-        );
-      case 'unpaid':
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200/60">
-            <FiClock className="text-xs" /> Due
-          </span>
-        );
-    }
-  };
-
-  const renderFeeRow = (fee) => {
-    const totalRequired = parseFloat(fee.amount || 0) + parseFloat(fee.fine_amount || 0);
-    const netDue = Math.max(0, totalRequired - parseFloat(fee.paid_amount || 0));
-    const isPaid = (fee.status || '').toLowerCase() === 'paid';
-
-    return (
-      <tr key={fee.id} className="hover:bg-slate-50/60 transition-colors">
-        <td className="py-3.5 px-4 font-bold text-slate-800">
-          <div className="flex items-center gap-2">
-            <span>{fee.title}</span>
-            {fee.month_name && (
-              <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
-                {fee.month_name}
-              </span>
-            )}
-          </div>
-          {fee.invoice_no && (
-            <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-              Invoice: {fee.invoice_no}
-            </div>
-          )}
-        </td>
-        <td className="py-3.5 px-4 text-xs text-slate-500 font-medium">
-          {fee.due_date ? new Date(fee.due_date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
-        </td>
-        <td className="py-3.5 px-4">
-          {getStatusBadge(fee.status)}
-        </td>
-        <td className="py-3.5 px-4 font-bold text-slate-800 text-right font-mono text-xs">
-          ৳{parseFloat(fee.amount).toFixed(2)}
-          {parseFloat(fee.fine_amount || 0) > 0 && (
-            <span className="text-[10px] text-rose-500 font-normal block">
-              +৳{parseFloat(fee.fine_amount).toFixed(2)} fine
-            </span>
-          )}
-        </td>
-        <td className="py-3.5 px-4 font-semibold text-emerald-700 text-right font-mono text-xs">
-          ৳{parseFloat(fee.paid_amount || 0).toFixed(2)}
-        </td>
-        <td className="py-3.5 px-4 text-right">
-          <div className="flex items-center justify-end gap-2">
-            {!isPaid && fee.status !== 'waived' && (
-              <button
-                onClick={() => handleOpenPayModal(fee)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
-              >
-                <FiCreditCard className="text-xs" /> Pay Now
-              </button>
-            )}
-            <button
-              onClick={() => printStudentFeeReceipt(fee, student || fee)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-medium transition-colors cursor-pointer"
-            >
-              <FiPrinter className="text-xs" /> Receipt
-            </button>
-          </div>
-        </td>
-      </tr>
-    );
-  };
-
   return (
-    <div className="flex flex-col gap-6 w-full pb-10">
-      {/* Feedback Toast */}
+    <div className="w-full space-y-4 pb-8">
+      {/* Header */}
+      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800 gap-2">
+        <div>
+          <h1 className="text-base font-semibold text-slate-900 dark:text-white">
+            Tuition Fees &amp; Invoices
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            View fee invoices, pay fees online, and download verified payment receipts.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="px-2.5 py-1 text-xs font-mono rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+            Reg: {student.registration_no || student.registration_number || 'N/A'}
+          </span>
+        </div>
+      </div>
+
+      {/* Feedback banner */}
       {feedback && (
         <div
-          className={`p-4 rounded-2xl flex items-center justify-between text-sm shadow-xs transition-all ${
+          className={`w-full px-3 py-2 rounded-md text-xs font-medium border ${
             feedback.type === 'success'
-              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-              : 'bg-rose-50 text-rose-800 border border-rose-200'
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+              : 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
           }`}
         >
-          <div className="flex items-center gap-2">
-            {feedback.type === 'success' ? (
-              <FiCheckCircle className="text-emerald-600 text-lg" />
-            ) : (
-              <FiAlertCircle className="text-rose-600 text-lg" />
-            )}
-            <span className="font-medium">{feedback.message}</span>
-          </div>
-          <button onClick={() => setFeedback(null)} className="cursor-pointer opacity-70 hover:opacity-100">
-            <FiX />
-          </button>
+          {feedback.message}
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/70 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2 text-indigo-600 text-xs font-bold uppercase tracking-wider mb-1">
-            <FiDollarSign /> Student Portal
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Financial Ledger & Fees</h1>
-          <p className="text-slate-500 text-xs sm:text-sm font-normal mt-1">
-            Track tuition fee ledgers, exam fees, pay dues online via bKash / Cards, and download verified receipts.
-          </p>
-        </div>
-        {student.name && (
-          <div className="px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
-            <span className="font-bold text-slate-800 block">{student.name}</span>
-            <span className="text-slate-500 font-mono">
-              Roll: {student.roll_no || '—'} • Reg: {student.registration_no || '—'}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Summary Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {stats.map((stat, idx) => {
-          const Icon = stat.icon;
-          return (
-            <div key={idx} className={`p-6 rounded-3xl border ${stat.color} flex items-center justify-between shadow-xs`}>
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider opacity-80 block mb-1">{stat.label}</span>
-                <span className="text-2xl sm:text-3xl font-bold block mb-0.5">{stat.value}</span>
-                <span className="text-xs opacity-75">{stat.sub}</span>
-              </div>
-              <div className="p-3.5 rounded-2xl bg-white/40 backdrop-blur-xs border border-white/20">
-                <Icon className="text-2xl opacity-90" />
-              </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {stats.map((s, idx) => (
+          <div
+            key={idx}
+            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 space-y-1"
+          >
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{s.label}</span>
+            <div
+              className={`text-lg font-semibold font-mono ${
+                s.isWarning
+                  ? 'text-rose-600 dark:text-rose-400'
+                  : s.isSuccess
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-slate-900 dark:text-white'
+              }`}
+            >
+              {s.value}
             </div>
-          );
-        })}
+            <p className="text-[11px] text-slate-400 dark:text-slate-500">{s.sub}</p>
+          </div>
+        ))}
       </div>
 
-      {/* 1. Class Education Fees Section */}
-      <div className="bg-white border border-slate-200/70 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <div>
-            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <FiDollarSign className="text-indigo-600" /> Class Tuition & Education Fees
-            </h2>
-            <p className="text-xs text-slate-400 font-medium">Monthly tuition, admission, and academic dues</p>
-          </div>
+      {/* Education Fees Section */}
+      <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-3">
+        <div className="pb-1 border-b border-slate-100 dark:border-slate-800">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+            Class Tuition &amp; Monthly Fees
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Regular academic session tuition installments.
+          </p>
         </div>
 
         {educationFees.length === 0 ? (
-          <p className="text-slate-400 text-xs font-medium text-center py-10 border border-dashed border-slate-200 rounded-2xl">
-            No education fee invoices issued for your account.
-          </p>
+          <div className="py-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded">
+            No class tuition fees recorded for your account.
+          </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[700px]">
+            <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  <th className="py-3 px-4">Fee Description</th>
-                  <th className="py-3 px-4">Due Date</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Total Amount</th>
-                  <th className="py-3 px-4 text-right">Paid Amount</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50">
+                  <th className="py-2.5 px-3 font-medium">Invoice No</th>
+                  <th className="py-2.5 px-3 font-medium">Fee Title</th>
+                  <th className="py-2.5 px-3 font-medium">Month / Term</th>
+                  <th className="py-2.5 px-3 font-medium">Due Date</th>
+                  <th className="py-2.5 px-3 font-medium">Amount</th>
+                  <th className="py-2.5 px-3 font-medium text-center">Status</th>
+                  <th className="py-2.5 px-3 text-right font-medium">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
-                {educationFees.map(renderFeeRow)}
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {educationFees.map((fee) => {
+                  const isPaid = (fee.status || '').toLowerCase() === 'paid';
+                  const isOverdue = !isPaid && fee.due_date && new Date(fee.due_date) < new Date();
+                  const netDue = (parseFloat(fee.amount || 0) + parseFloat(fee.fine_amount || 0)) - parseFloat(fee.paid_amount || 0);
+
+                  return (
+                    <tr key={fee.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="py-2.5 px-3 font-mono text-slate-700 dark:text-slate-300">
+                        {fee.invoice_no || `INV-${fee.id}`}
+                      </td>
+                      <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">
+                        {fee.title || fee.fee_type || 'Tuition Fee'}
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">
+                        {fee.month_name || '—'}
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400 font-mono">
+                        {fee.due_date ? new Date(fee.due_date).toLocaleDateString('en-GB') : '—'}
+                      </td>
+                      <td className="py-2.5 px-3 font-mono font-medium text-slate-900 dark:text-white">
+                        {currencySymbol}{parseFloat(fee.amount).toFixed(2)}
+                        {fee.fine_amount > 0 && (
+                          <span className="block text-[10px] text-rose-600 font-normal">
+                            +{currencySymbol}{parseFloat(fee.fine_amount).toFixed(2)} Fine
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        {isPaid ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800">
+                            Paid
+                          </span>
+                        ) : isOverdue ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800">
+                            Overdue
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800">
+                            Unpaid
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {isPaid ? (
+                            <button
+                              type="button"
+                              onClick={() => printStudentFeeReceipt(fee, student, institutionCurrency)}
+                              className="px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition cursor-pointer"
+                            >
+                              Print Receipt
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPayModal(fee)}
+                              className="px-3 py-1 rounded-md bg-secondary hover:bg-secondary-dark text-white text-xs font-medium cursor-pointer shadow-xs transition"
+                            >
+                              Pay {currencySymbol}{netDue.toFixed(2)}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {/* 2. Exam Registration Fees Section */}
-      {examFees.length > 0 && (
-        <div className="bg-white border border-slate-200/70 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div>
-              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <FiClock className="text-purple-600" /> Term Examination Registration Fees
-              </h2>
-              <p className="text-xs text-slate-400 font-medium">Exam candidate registration charges</p>
-            </div>
-          </div>
+      {/* Exam Fees Section */}
+      <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-3">
+        <div className="pb-1 border-b border-slate-100 dark:border-slate-800">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+            Examination Registration Fees
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Required registration fees for published examination permits.
+          </p>
+        </div>
 
+        {examFees.length === 0 ? (
+          <div className="py-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded">
+            No examination fees pending or recorded.
+          </div>
+        ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[700px]">
+            <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  <th className="py-3 px-4">Exam Fee Description</th>
-                  <th className="py-3 px-4">Due Date</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Total Amount</th>
-                  <th className="py-3 px-4 text-right">Paid Amount</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50">
+                  <th className="py-2.5 px-3 font-medium">Exam Name</th>
+                  <th className="py-2.5 px-3 font-medium">Term</th>
+                  <th className="py-2.5 px-3 font-medium">Amount</th>
+                  <th className="py-2.5 px-3 font-medium text-center">Status</th>
+                  <th className="py-2.5 px-3 text-right font-medium">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
-                {examFees.map(renderFeeRow)}
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {examFees.map((fee) => {
+                  const isPaid = (fee.status || '').toLowerCase() === 'paid';
+
+                  return (
+                    <tr key={fee.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">
+                        {fee.title || fee.exam_name || 'Exam Fee'}
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">
+                        {fee.exam_term || 'Term Final'}
+                      </td>
+                      <td className="py-2.5 px-3 font-mono font-medium text-slate-900 dark:text-white">
+                        {currencySymbol}{parseFloat(fee.amount).toFixed(2)}
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        {isPaid ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800">
+                            Paid
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800">
+                            Pending
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {isPaid ? (
+                            <button
+                              type="button"
+                              onClick={() => printStudentFeeReceipt(fee, student, institutionCurrency)}
+                              className="px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition cursor-pointer"
+                            >
+                              Print Receipt
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPayModal(fee)}
+                              className="px-3 py-1 rounded-md bg-secondary hover:bg-secondary-dark text-white text-xs font-medium cursor-pointer shadow-xs transition"
+                            >
+                              Pay Online
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Online Pay Modal */}
+      {/* Online Payment Modal */}
       {payModalOpen && selectedFee && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-200">
-            {/* Modal Header */}
-            <div className="p-6 bg-gradient-to-r from-indigo-900 to-slate-900 text-white flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-300 flex items-center gap-1.5">
-                  <FiShield /> Secure Payment Gateway
-                </span>
-                <h3 className="text-lg font-bold text-white mt-0.5">Pay Student Fee Online</h3>
-              </div>
-              <button onClick={handleClosePayModal} className="p-2 text-slate-400 hover:text-white cursor-pointer">
-                <FiX className="text-lg" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-5 space-y-4 shadow-lg">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                Online Fee Payment Checkout
+              </h3>
+              <button
+                type="button"
+                onClick={handleClosePayModal}
+                className="px-2 py-1 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                Close
               </button>
             </div>
 
             {paySuccessData ? (
-              <div className="p-8 text-center space-y-4">
-                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center text-3xl">
-                  <FiCheck />
-                </div>
-                <div>
-                  <h4 className="text-xl font-bold text-slate-900">Payment Completed!</h4>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Your institutional fee invoice has been cleared successfully.
-                  </p>
-                </div>
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-1 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Invoice:</span>
-                    <span className="font-mono font-bold text-slate-800">{paySuccessData.fee?.invoice_no}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Transaction ID:</span>
-                    <span className="font-mono font-bold text-emerald-700">{paySuccessData.transaction_id}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Amount Paid:</span>
-                    <span className="font-bold text-slate-900">
-                      ৳{(parseFloat(paySuccessData.fee?.amount || 0) + parseFloat(paySuccessData.fee?.fine_amount || 0)).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="pt-2 flex items-center justify-center gap-3">
+              <div className="space-y-4 text-center py-4">
+                <span className="inline-block px-2.5 py-1 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800">
+                  Payment Recorded Successfully
+                </span>
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  Transaction ID: <code className="font-mono font-semibold text-slate-900 dark:text-white">{paySuccessData.transaction_id}</code>
+                </p>
+                <div className="flex justify-center gap-2 pt-2">
                   <button
+                    type="button"
                     onClick={() => {
-                      handleClosePayModal();
                       printStudentFeeReceipt(
-                        {
-                          ...paySuccessData.fee,
-                          transaction_id: paySuccessData.transaction_id,
-                          status: 'paid',
-                          paid_amount: parseFloat(paySuccessData.fee?.amount || 0) + parseFloat(paySuccessData.fee?.fine_amount || 0),
-                        },
-                        student
+                        { ...selectedFee, payment_status: 'Paid', status: 'paid', transaction_id: paySuccessData.transaction_id },
+                        student,
+                        institutionCurrency
                       );
+                      handleClosePayModal();
                     }}
-                    className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-md bg-primary hover:bg-primary-dark text-white text-xs font-medium cursor-pointer transition"
                   >
-                    <FiPrinter /> Print Receipt
+                    Download Receipt
                   </button>
                   <button
+                    type="button"
                     onClick={handleClosePayModal}
-                    className="px-4 py-2.5 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                    className="px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium transition cursor-pointer"
                   >
-                    Done
+                    Close
                   </button>
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleProcessPayment} className="p-6 space-y-5">
-                {/* Invoice Summary Box */}
-                <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 block">
-                      Payable Invoice
-                    </span>
-                    <span className="font-bold text-slate-900 text-sm block">{selectedFee.title}</span>
-                    <span className="text-[10px] text-slate-500 font-mono">Invoice #{selectedFee.invoice_no}</span>
+              <form onSubmit={handleProcessPayment} className="space-y-4">
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded border border-slate-200 dark:border-slate-700 space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Invoice:</span>
+                    <span className="font-mono text-slate-900 dark:text-white">{selectedFee.title}</span>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 block">
-                      Net Total
-                    </span>
-                    <span className="text-xl font-black text-indigo-950 font-mono">
-                      ৳{(parseFloat(selectedFee.amount || 0) + parseFloat(selectedFee.fine_amount || 0) - parseFloat(selectedFee.paid_amount || 0)).toFixed(2)}
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Total Payable:</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      {currencySymbol}{(parseFloat(selectedFee.amount || 0) + parseFloat(selectedFee.fine_amount || 0)).toFixed(2)}
                     </span>
                   </div>
                 </div>
 
-                {/* Payment Channel Selection */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Select Payment Gateway
+                {assignedGateways.length > 0 && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                      Select Payment Gateway *
                     </label>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      Currency: {institutionCurrency}
-                    </span>
-                  </div>
-                  {assignedGateways.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {assignedGateways.map((gw) => {
-                        const isSelected = (selectedGatewayAccount?.id && selectedGatewayAccount.id === gw.id) || paymentMethod === gw.gateway_code;
-                        return (
-                          <button
-                            key={gw.id || gw.gateway_code}
-                            type="button"
-                            onClick={() => {
-                              setSelectedGatewayAccount(gw);
-                              setPaymentMethod(gw.gateway_code);
-                            }}
-                            className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-left cursor-pointer flex flex-col justify-between gap-1 ${
-                              isSelected
-                                ? 'border-indigo-600 bg-indigo-50/70 text-indigo-950 ring-2 ring-indigo-500/30'
-                                : 'border-slate-200 text-slate-700 bg-white hover:border-slate-300'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between gap-1">
-                              <span className="truncate">{gw.name || gw.gateway_name}</span>
-                              <span className={`text-[9px] px-1 py-0.2 rounded font-mono font-medium ${
-                                gw.environment === 'live' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                              }`}>
-                                {gw.environment === 'live' ? 'LIVE' : 'TEST'}
-                              </span>
-                            </div>
-                            {gw.account_name && (
-                              <span className="text-[10px] text-slate-500 truncate block font-normal">
-                                {gw.account_name}
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { id: 'bkash', name: 'bKash', color: 'border-pink-500 text-pink-700 bg-pink-50/50' },
-                        { id: 'nagad', name: 'Nagad', color: 'border-orange-500 text-orange-700 bg-orange-50/50' },
-                        { id: 'rocket', name: 'Rocket', color: 'border-purple-500 text-purple-700 bg-purple-50/50' },
-                        { id: 'card', name: 'Card / Visa', color: 'border-blue-500 text-blue-700 bg-blue-50/50' },
-                        { id: 'bank', name: 'Bank Net', color: 'border-emerald-500 text-emerald-700 bg-emerald-50/50' },
-                        { id: 'online', name: 'Gateway', color: 'border-slate-500 text-slate-700 bg-slate-50' },
-                      ].map((ch) => (
-                        <button
-                          key={ch.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedGatewayAccount(null);
-                            setPaymentMethod(ch.id);
-                          }}
-                          className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center cursor-pointer ${
-                            paymentMethod === ch.id
-                              ? `${ch.color} ring-2 ring-indigo-500/30`
-                              : 'border-slate-200 text-slate-600 hover:border-slate-300'
-                          }`}
-                        >
-                          {ch.name}
-                        </button>
+                    <select
+                      value={selectedGatewayAccount?.id || ''}
+                      onChange={(e) => {
+                        const gw = assignedGateways.find((g) => String(g.id) === String(e.target.value));
+                        setSelectedGatewayAccount(gw);
+                        setPaymentMethod(gw?.gateway_code || 'bkash');
+                      }}
+                      className="w-full px-3 py-1.5 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
+                    >
+                      {assignedGateways.map((gw) => (
+                        <option key={gw.id} value={gw.id}>
+                          {gw.gateway_name || gw.gateway_code.toUpperCase()} ({gw.currency || 'BDT'})
+                        </option>
                       ))}
-                    </div>
-                  )}
-                </div>
+                    </select>
+                  </div>
+                )}
 
-                {/* Account / Mobile Number Input */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-                    {paymentMethod === 'card'
-                      ? 'Card Number (Simulated)'
-                      : `${paymentMethod.toUpperCase()} Account Number`}
-                  </label>
-                  <div className="relative">
-                    <FiSmartphone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Sender Account / Phone</label>
                     <input
                       type="text"
-                      placeholder={paymentMethod === 'card' ? '4111 2222 3333 4444' : '017XXXXXXXX'}
                       value={accountNumber}
                       onChange={(e) => setAccountNumber(e.target.value)}
-                      className="w-full text-xs sm:text-sm pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-900 font-mono focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20"
-                      required
+                      placeholder="01XXXXXXXXX"
+                      className="w-full px-3 py-1.5 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Transaction ID</label>
+                    <input
+                      type="text"
+                      value={transactionId}
+                      onChange={(e) => setTransactionId(e.target.value)}
+                      placeholder="e.g. TXN98765432"
+                      className="w-full px-3 py-1.5 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden font-mono"
                     />
                   </div>
                 </div>
 
-                {/* Transaction ID (optional simulator input) */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-                    TrxID / Reference (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Leave empty for auto-generated gateway reference"
-                    value={transactionId}
-                    onChange={(e) => setTransactionId(e.target.value)}
-                    className="w-full text-xs sm:text-sm px-3.5 py-2 rounded-xl border border-slate-200 text-slate-900 font-mono placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20"
-                  />
-                </div>
-
-                <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-100">
+                <div className="flex justify-end gap-2 pt-2">
                   <button
                     type="button"
                     onClick={handleClosePayModal}
-                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                    className="px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-medium cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    disabled={processing || !accountNumber.trim()}
-                    className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                    disabled={processing}
+                    className="px-4 py-1.5 rounded-md bg-secondary hover:bg-secondary-dark text-white text-xs font-medium cursor-pointer shadow-xs transition disabled:opacity-50"
                   >
-                    {processing ? 'Authorizing Payment...' : `Authorize & Pay ৳${(parseFloat(selectedFee.amount || 0) + parseFloat(selectedFee.fine_amount || 0) - parseFloat(selectedFee.paid_amount || 0)).toFixed(2)}`}
+                    {processing ? 'Processing Payment...' : 'Confirm Payment'}
                   </button>
                 </div>
               </form>

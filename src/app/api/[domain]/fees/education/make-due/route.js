@@ -24,7 +24,8 @@ export async function GET(request, context) {
 
     let studentQuery = `
       SELECT s.id, s.registration_no, s.roll_no, s.class_id, s.section_id,
-             i.name, i.number AS phone
+             COALESCE(s.name, i.data->>'name') AS name,
+             COALESCE(s.number, i.data->>'number') AS phone
       FROM website_students s
       LEFT JOIN website_student_info i ON i.student_id = s.id
       WHERE s.website_id = $1 AND s.class_id = $2

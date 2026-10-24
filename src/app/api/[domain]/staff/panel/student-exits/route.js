@@ -88,7 +88,7 @@ export async function GET(request, context) {
       conditions.push(`(
         s.registration_no ILIKE $${pIdx} OR
         s.roll_no ILIKE $${pIdx} OR
-        i.name ILIKE $${pIdx} OR
+        COALESCE(s.name, i.data->>'name', '') ILIKE $${pIdx} OR
         e.destination_institution ILIKE $${pIdx} OR
         e.reason ILIKE $${pIdx}
       )`);
@@ -180,7 +180,7 @@ export async function POST(request, context) {
 
     // Verify student exists
     const stuRes = await client.query(
-      `SELECT s.id, s.class_id, s.section_id, s.session_id, i.name
+      `SELECT s.id, s.class_id, s.section_id, s.session_id, COALESCE(s.name, i.data->>'name') AS name
        FROM website_students s
        LEFT JOIN website_student_info i ON s.id = i.student_id
        WHERE s.website_id = $1 AND s.id = $2

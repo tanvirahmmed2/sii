@@ -5,10 +5,6 @@ import { toast } from 'react-hot-toast';
 import TenantLoader from 'src/component/tenant/TenantLoader';
 import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 import { exportElementAsJpeg, exportElementAsPdf } from 'src/lib/export/documentExporter';
-import { 
-  FiCreditCard, FiPrinter, FiLock, FiCheckCircle, 
-  FiUser, FiClock, FiDownload, FiLayers 
-} from 'react-icons/fi';
 import { printStudentIDCard } from 'src/lib/receipts/student_id_card';
 
 export default function StudentIDCardPage() {
@@ -63,12 +59,12 @@ export default function StudentIDCardPage() {
     if (!template) return null;
     let frontHtml = template.custom_html || template.html_content || '';
     let backHtml = template.custom_html_back || template.html_back_content || '';
-    let css = (template.custom_css || template.css_content || '') + ' svg { width: 100% !important; height: 100% !important; max-width: 100% !important; max-height: 100% !important; display: block; }';
+    const css = (template.custom_css || template.css_content || '') + ' svg { width: 100% !important; height: 100% !important; max-width: 100% !important; max-height: 100% !important; display: block; }';
 
     if (!backHtml || !backHtml.trim()) {
       backHtml = `
         <div style="width: 100%; height: 100%; box-sizing: border-box; background: #0f172a; color: #f8fafc; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align: center;">
-          <div style="background: #1e293b; padding: 5px 10px; border-radius: 6px; font-size: 8.5px; font-weight: 700; color: #38bdf8; letter-spacing: 0.8px;">
+          <div style="background: #1e293b; padding: 5px 10px; border-radius: 4px; font-size: 8.5px; font-weight: 600; color: #38bdf8; letter-spacing: 0.8px;">
             OFFICIAL STUDENT PASS TERMS
           </div>
           <div style="font-size: 8.5px; color: #94a3b8; line-height: 1.5; text-align: left; padding: 0 4px;">
@@ -164,76 +160,81 @@ export default function StudentIDCardPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full pb-12 animate-fade-up">
+    <div className="w-full space-y-4">
       {/* Header */}
-      <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/70 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
-          <div className="flex items-center gap-2 text-indigo-600 text-xs font-bold uppercase tracking-wider mb-1">
-            <FiCreditCard /> Student Identity &amp; Campus Pass
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Student Identity Card</h1>
-          <p className="text-slate-500 text-xs sm:text-sm font-normal mt-1">
-            Official institutional identity card for student authentication, library borrowing, and campus security access.
+          <span className="text-[10px] font-semibold text-primary uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 border border-primary/20 inline-block mb-1">
+            Student Identity &amp; Campus Pass
+          </span>
+          <h1 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">
+            Student Identity Card
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Official institutional identity credentials for student authentication, library borrowing, and campus security access.
           </p>
         </div>
 
         {isProvided && student && (
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <button
+              type="button"
               onClick={handleDownloadJpeg}
               disabled={isExporting}
-              className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50"
+              className="px-3 py-1.5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-50"
             >
-              <FiDownload className="text-xs" /> JPEG
+              Download JPEG
             </button>
             <button
+              type="button"
               onClick={handleDownloadPdf}
               disabled={isExporting}
-              className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50"
+              className="px-3 py-1.5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-50"
             >
-              <FiDownload className="text-xs" /> PDF
+              Download PDF
             </button>
             <button
+              type="button"
               onClick={() => printStudentIDCard({
                 id_card_no: cardNumber,
                 student: student,
                 expiry_date: expiryDateFormatted,
               })}
-              className="flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+              className="px-3.5 py-1.5 rounded-md bg-primary hover:bg-primary-dark text-white text-xs font-medium shadow-xs transition-colors cursor-pointer"
             >
-              <FiPrinter className="text-xs" /> Print Card
+              Print ID Card
             </button>
           </div>
         )}
       </div>
 
-      {/* Candidate Profile Summary */}
+      {/* Student Overview Strip */}
       {student && (
-        <div className="bg-white border border-slate-200/70 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-100/70 text-indigo-700 rounded-2xl flex items-center justify-center font-bold text-lg border border-indigo-200/60 shrink-0">
-              {student.name ? student.name.charAt(0).toUpperCase() : <FiUser />}
+        <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-md bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-semibold text-sm shrink-0">
+              {student.name ? student.name.charAt(0).toUpperCase() : 'S'}
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-800">{student.name}</h2>
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mt-1">
-                <span>Reg No: <strong className="text-slate-800 font-mono">{student.registration_number || student.registration_no}</strong></span>
-                <span>&bull;</span>
-                <span>Class: <strong className="text-slate-800">{student.class_name} {student.section_name ? `(${student.section_name})` : ''}</strong></span>
-                <span>&bull;</span>
-                <span>Roll: <strong className="text-slate-800">{student.roll || student.roll_no || 'N/A'}</strong></span>
+              <h2 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">{student.name}</h2>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                <span>Reg: <strong className="font-mono font-medium text-slate-700 dark:text-slate-300">{student.registration_number || student.registration_no}</strong></span>
+                <span>•</span>
+                <span>Class: <strong className="font-medium text-slate-700 dark:text-slate-300">{student.class_name} {student.section_name ? `(${student.section_name})` : ''}</strong></span>
+                <span>•</span>
+                <span>Roll: <strong className="font-medium text-slate-700 dark:text-slate-300">{student.roll || student.roll_no || 'N/A'}</strong></span>
               </div>
             </div>
           </div>
 
           <div>
             {isProvided ? (
-              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200/60 rounded-full text-xs font-bold">
-                <FiCheckCircle className="text-emerald-600 text-sm" /> ID Card Active
+              <span className="px-2.5 py-1 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800 text-[10px] font-semibold uppercase tracking-wider">
+                ID Card Active &amp; Verified
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-50 text-amber-700 border border-amber-200/60 rounded-full text-xs font-bold">
-                <FiClock className="text-amber-600 text-sm" /> Inactive
+              <span className="px-2.5 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800 text-[10px] font-semibold uppercase tracking-wider">
+                Pending Office Issuance
               </span>
             )}
           </div>
@@ -242,20 +243,19 @@ export default function StudentIDCardPage() {
 
       {/* ID Card Display */}
       {isProvided && student ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Visual Card Canvas Preview */}
-          <div className="lg:col-span-7 bg-white border border-slate-200/70 rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center shadow-xs space-y-4">
-            <div className="flex items-center justify-between w-full border-b border-slate-100 pb-3">
-              <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-1">
-                <FiLayers className="text-indigo-600" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+          {/* Card Visual Preview */}
+          <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 flex flex-col items-center justify-center space-y-4">
+            <div className="flex items-center justify-between w-full border-b border-slate-100 dark:border-slate-800 pb-3">
+              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                 {template?.name || 'Institutional Identity Card'}
               </span>
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded">
                 <button
                   type="button"
                   onClick={() => setCardSideView('both')}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                    cardSideView === 'both' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500'
+                  className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+                    cardSideView === 'both' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs' : 'text-slate-500 dark:text-slate-400'
                   }`}
                 >
                   Both
@@ -263,8 +263,8 @@ export default function StudentIDCardPage() {
                 <button
                   type="button"
                   onClick={() => setCardSideView('front')}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                    cardSideView === 'front' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500'
+                  className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+                    cardSideView === 'front' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs' : 'text-slate-500 dark:text-slate-400'
                   }`}
                 >
                   Front
@@ -272,8 +272,8 @@ export default function StudentIDCardPage() {
                 <button
                   type="button"
                   onClick={() => setCardSideView('back')}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                    cardSideView === 'back' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500'
+                  className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+                    cardSideView === 'back' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs' : 'text-slate-500 dark:text-slate-400'
                   }`}
                 >
                   Back
@@ -286,14 +286,14 @@ export default function StudentIDCardPage() {
               <style dangerouslySetInnerHTML={{ __html: cardCompiled.css }} />
             )}
 
-            <div className="flex flex-wrap items-center justify-center gap-4 p-4 bg-slate-50 rounded-2xl w-full overflow-x-auto">
+            <div className="flex flex-wrap items-center justify-center gap-4 p-4 bg-slate-50 dark:bg-slate-950/60 rounded-md w-full overflow-x-auto border border-slate-100 dark:border-slate-800">
               {/* FRONT SIDE */}
               {(cardSideView === 'both' || cardSideView === 'front') && (
                 <div className="flex flex-col items-center gap-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Front</span>
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Card Front</span>
                   <div
                     ref={cardFrontRef}
-                    className="rounded overflow-hidden shadow-md bg-white border border-slate-200"
+                    className="rounded overflow-hidden shadow-xs bg-white border border-slate-200 dark:border-slate-700"
                     style={{ width: cardWidth, height: cardHeight }}
                   >
                     {cardCompiled ? (
@@ -313,10 +313,10 @@ export default function StudentIDCardPage() {
               {/* BACK SIDE */}
               {(cardSideView === 'both' || cardSideView === 'back') && cardCompiled?.backHtml && (
                 <div className="flex flex-col items-center gap-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Back</span>
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Card Back</span>
                   <div
                     ref={cardBackRef}
-                    className="rounded overflow-hidden shadow-md bg-white border border-slate-200"
+                    className="rounded overflow-hidden shadow-xs bg-white border border-slate-200 dark:border-slate-700"
                     style={{ width: cardWidth, height: cardHeight }}
                   >
                     <div
@@ -329,53 +329,55 @@ export default function StudentIDCardPage() {
             </div>
           </div>
 
-          {/* Identity Credentials Specification Table */}
-          <div className="lg:col-span-5 bg-white border border-slate-200/70 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col gap-4">
+          {/* Identity Parameters Table */}
+          <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-3">
             <div>
-              <h3 className="text-base font-bold text-slate-800">Identity Record Specifications</h3>
-              <p className="text-xs text-slate-400 font-medium">Certified institutional registration parameters</p>
+              <h3 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
+                Identity Record Specifications
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Certified institutional enrollment record</p>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
-                <tbody className="divide-y divide-slate-100">
-                  <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-400 w-36">Serial Number</td>
-                    <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{cardNumber}</td>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400 w-36">Serial Number</td>
+                    <td className="py-2.5 px-3 font-mono font-medium text-slate-900 dark:text-white">{cardNumber}</td>
                   </tr>
-                  <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-400">Student Name</td>
-                    <td className="py-2.5 px-3 font-bold text-slate-800">{student.name}</td>
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">Student Name</td>
+                    <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{student.name}</td>
                   </tr>
-                  <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-400">Reg Number</td>
-                    <td className="py-2.5 px-3 font-mono font-bold text-slate-700">{student.registration_number || student.registration_no}</td>
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">Registration</td>
+                    <td className="py-2.5 px-3 font-mono font-medium text-slate-800 dark:text-slate-200">{student.registration_number || student.registration_no}</td>
                   </tr>
-                  <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-400">Class &amp; Section</td>
-                    <td className="py-2.5 px-3 font-medium text-slate-800">{student.class_name} {student.section_name ? `(${student.section_name})` : ''}</td>
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">Class &amp; Section</td>
+                    <td className="py-2.5 px-3 font-medium text-slate-800 dark:text-slate-200">{student.class_name} {student.section_name ? `(${student.section_name})` : ''}</td>
                   </tr>
-                  <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-400">Roll Number</td>
-                    <td className="py-2.5 px-3 font-bold text-slate-800">{student.roll || student.roll_no || 'N/A'}</td>
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">Roll Number</td>
+                    <td className="py-2.5 px-3 font-medium text-slate-800 dark:text-slate-200">{student.roll || student.roll_no || 'N/A'}</td>
                   </tr>
-                  <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-400">Blood Group</td>
-                    <td className="py-2.5 px-3 font-bold text-rose-600">{student.blood_group || 'Not Specified'}</td>
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">Blood Group</td>
+                    <td className="py-2.5 px-3 font-medium text-secondary">{student.blood_group || 'Not Specified'}</td>
                   </tr>
-                  <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-400">Issue Date</td>
-                    <td className="py-2.5 px-3 font-medium text-slate-700">{issueDateFormatted}</td>
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">Issue Date</td>
+                    <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300 font-mono">{issueDateFormatted}</td>
                   </tr>
-                  <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-400">Expiration Date</td>
-                    <td className="py-2.5 px-3 font-medium text-slate-700">{expiryDateFormatted}</td>
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">Expiration Date</td>
+                    <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300 font-mono">{expiryDateFormatted}</td>
                   </tr>
-                  <tr className="hover:bg-slate-50/60">
-                    <td className="py-2.5 px-3 font-semibold text-slate-400">Card Status</td>
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">Card Status</td>
                     <td className="py-2.5 px-3">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        <FiCheckCircle className="text-[10px]" /> Verified &amp; Active
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800">
+                        Verified &amp; Active
                       </span>
                     </td>
                   </tr>
@@ -385,12 +387,9 @@ export default function StudentIDCardPage() {
           </div>
         </div>
       ) : (
-        <div className="bg-white border border-slate-200/70 rounded-3xl p-12 text-center flex flex-col items-center justify-center shadow-xs space-y-3">
-          <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-400">
-            <FiLock className="text-3xl text-slate-400" />
-          </div>
-          <h3 className="font-bold text-slate-800 text-base">Student ID Card Not Issued Yet</h3>
-          <p className="text-slate-400 text-xs max-w-sm">
+        <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-10 text-center space-y-2">
+          <h3 className="font-semibold text-slate-900 dark:text-white text-sm">Student ID Card Not Issued Yet</h3>
+          <p className="text-slate-500 dark:text-slate-400 text-xs max-w-sm mx-auto">
             Your official student identity card has not been registered by the administration office yet. Please verify your admission profile with the registrar.
           </p>
         </div>

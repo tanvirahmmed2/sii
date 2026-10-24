@@ -38,7 +38,7 @@ export async function GET(request, context) {
 
     if (search) {
       conditions.push(
-        `(stu.registration_no ILIKE $${pIdx} OR stu.roll_no ILIKE $${pIdx} OR info.name ILIKE $${pIdx} OR info.email ILIKE $${pIdx} OR info.number ILIKE $${pIdx} OR r.room_number ILIKE $${pIdx} OR h.name ILIKE $${pIdx})`
+        `(stu.registration_no ILIKE $${pIdx} OR stu.roll_no ILIKE $${pIdx} OR COALESCE(stu.name, info.data->>'name', '') ILIKE $${pIdx} OR COALESCE(stu.email, info.data->>'email', '') ILIKE $${pIdx} OR COALESCE(stu.number, info.data->>'number', '') ILIKE $${pIdx} OR r.room_number ILIKE $${pIdx} OR h.name ILIKE $${pIdx})`
       );
       values.push(`%${search}%`);
       pIdx++;
@@ -52,8 +52,11 @@ export async function GET(request, context) {
               r.room_number, r.floor_number, r.room_type, r.rent_monthly,
               s.seat_number,
               stu.registration_no, stu.roll_no, stu.class_id,
-              info.name AS student_name, info.email AS student_email, info.number AS student_number,
-              info.gender AS student_gender, info.blood_group,
+              COALESCE(stu.name, info.data->>'name') AS student_name,
+              COALESCE(stu.email, info.data->>'email') AS student_email,
+              COALESCE(stu.number, info.data->>'number') AS student_number,
+              COALESCE(stu.gender, info.data->>'gender') AS student_gender,
+              COALESCE(stu.blood_group, info.data->>'blood_group') AS blood_group,
               cls.name AS class_name,
               p.image_url AS student_photo_url
        FROM website_hall_seat_allocations a
@@ -153,7 +156,7 @@ export async function POST(request, context) {
 
     // 2. Verify student exists and belongs to this website
     const stuRes = await queryDb(
-      `SELECT s.id, s.registration_no, info.name
+      `SELECT s.id, s.registration_no, COALESCE(s.name, info.data->>'name') AS name
        FROM website_students s
        LEFT JOIN website_student_info info ON s.id = info.student_id
        WHERE s.website_id = $1 AND s.id = $2

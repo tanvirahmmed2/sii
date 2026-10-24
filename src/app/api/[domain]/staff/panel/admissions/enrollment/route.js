@@ -4,6 +4,8 @@ import { queryDb } from 'src/lib/database/db.js';
 import { verifyStaffPaymentAccess } from 'src/lib/database/paymentGateways.js';
 import { hashPassword } from 'src/lib/middleware/students.js';
 import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
+import { buildStudentSetupUrl } from 'src/lib/student/urls.js';
 
 /**
  * GET /api/[domain]/staff/panel/admissions/enrollment
@@ -124,7 +126,7 @@ export async function POST(request, context) {
              img.photo_public_id,
              img.signature_url,
              img.signature_public_id,
-             adm.class_id AS circular_class_id, adm.session_id AS circular_session_id
+             adm.class_id AS circular_class_id, adm.session_id AS circular_session_id, adm.department_id AS circular_department_id
       FROM website_admission_applicants a
       JOIN website_admissions adm ON adm.id = a.admission_id
       LEFT JOIN website_admission_applicant_info inf ON inf.applicant_id = a.id
@@ -155,23 +157,25 @@ export async function POST(request, context) {
     }
 
     const year = new Date().getFullYear();
-    const finalRegNo = registration_no?.trim() || `REG-${year}-${String(appId).padStart(4, '0')}`;
+    // Do not add REG- prefix in registration number; cleanly strip it if provided
+    const cleanReg = registration_no?.trim() ? registration_no.trim().replace(/^REG-?/i, '') : '';
+    const finalRegNo = cleanReg || `${year}-${String(appId).padStart(4, '0')}`;
     const studentUniqueId = `STU-${Date.now().toString().slice(-6)}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
     const finalRoll = roll_no?.trim() || candidate.roll_no || String(appId).slice(-3);
     const finalClassId = class_id ? parseInt(class_id, 10) : candidate.circular_class_id;
     const finalSessionId = session_id ? parseInt(session_id, 10) : candidate.circular_session_id;
     const finalSectionId = section_id ? parseInt(section_id, 10) : null;
 
-    // Check uniqueness of registration_no
+    // Check uniqueness of registration_no per website
     const regCheck = await queryDb(`
       SELECT id FROM website_students
-      WHERE website_id = $1 AND registration_no = $2
+      WHERE website_id = $1 AND LOWER(TRIM(registration_no)) = LOWER(TRIM($2))
     `, [auth.website.id, finalRegNo]);
 
     if (regCheck.rows.length > 0) {
       return NextResponse.json({
         success: false,
-        error: `Registration number '${finalRegNo}' is already taken. Please specify a unique registration number.`
+        error: `Registration number '${finalRegNo}' is already taken in this institution. Please specify a unique registration number.`
       }, { status: 400 });
     }
 
@@ -190,121 +194,80 @@ export async function POST(request, context) {
     }
 
 
-    // 2. Insert into website_students with email
-    const studentRes = await queryDb(`
-      INSERT INTO website_students (
-        website_id, registration_no, class_id, section_id, session_id,
-        roll_no, email, student_unique_id, is_active
-      ) VALUES (
-        $1, $2, $3, $4, $5,
-        $6, $7, $8, FALSE
-      ) RETURNING *
-    `, [
-      auth.website.id,
-      finalRegNo,
-      finalClassId,
-      finalSectionId,
-      finalSessionId,
-      finalRoll,
-      candidate.email.toLowerCase().trim(),
-      studentUniqueId
-    ]);
+    // 2. Perform atomic in-database enrollment via RPC
+    const setupToken = crypto.randomBytes(32).toString('hex');
+    const enrollResult = await queryDb(
+      `SELECT fn_enroll_admission_applicant($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) AS new_student_id`,
+      [
+        appId,
+        finalClassId,
+        finalSessionId,
+        finalSectionId,
+        candidate.circular_department_id || null,
+        finalRegNo,
+        studentUniqueId,
+        finalRoll,
+        null, // temp_password_hash (student sets password via setup token)
+        setupToken
+      ]
+    );
 
-    const student = studentRes.rows[0];
+    const newStudentId = enrollResult.rows[0]?.new_student_id;
+    if (!newStudentId) {
+      throw new Error('Enrollment RPC failed to return a student ID.');
+    }
 
-    // 3. Create modular website_student_info with candidate data
-    const studentInfoData = {
-      name: candidate.applicant_name,
+    const student = {
+      id: newStudentId,
+      registration_no: finalRegNo,
+      roll_no: finalRoll,
       email: candidate.email.toLowerCase().trim(),
-      phone: candidate.phone,
-      ...(candidate.info_data || {})
+      student_unique_id: studentUniqueId
     };
 
-    await queryDb(`
-      INSERT INTO website_student_info (
-        website_id, student_id, data, verification_status, is_registered,
-        verification_notes, updated_at
-      ) VALUES (
-        $1, $2, $3, 'pending_setup', FALSE,
-        $4, CURRENT_TIMESTAMP
-      )
-      ON CONFLICT (student_id) DO UPDATE SET
-        data = website_student_info.data || EXCLUDED.data,
-        updated_at = CURRENT_TIMESTAMP
-    `, [
-      auth.website.id,
-      student.id,
-      JSON.stringify(studentInfoData),
-      `Manually enrolled from admission application #${candidate.application_no}`
-    ]);
+    // 8. Generate full student setup URL and send official setup email
+    let setupUrl = `/auth/student/setup?email=${encodeURIComponent(candidateEmail || '')}`;
+    if (candidateEmail) {
+      try {
+        setupUrl = buildStudentSetupUrl(auth.website, null, request, candidateEmail);
+        const instName = auth.website.name || 'Campus Student Portal';
 
-    // 4. Copy modular address info
-    const studentAddrData = {
-      ...(candidate.address_data || {})
-    };
-    await queryDb(`
-      INSERT INTO website_student_addresses (
-        website_id, student_id, data, updated_at
-      ) VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-      ON CONFLICT (student_id) DO UPDATE SET
-        data = website_student_addresses.data || EXCLUDED.data,
-        updated_at = CURRENT_TIMESTAMP
-    `, [
-      auth.website.id,
-      student.id,
-      JSON.stringify(studentAddrData)
-    ]);
+        const emailHtml = buildStyledEmail({
+          title: `Welcome to ${instName}`,
+          subtitle: 'Admission Enrollment & Portal Account Setup',
+          recipientName: candidate.applicant_name || 'Student',
+          bodyParagraphs: [
+            `Congratulations! Your admission application (<strong>#${candidate.application_no}</strong>) has been finalized, and you have been officially enrolled into the student body at <strong>${instName}</strong>.`,
+            `Please keep your institutional credentials safe:`,
+            `<div style="margin: 12px 0; padding: 14px 18px; background-color: #f1f5f9; border-left: 4px solid #4f46e5; border-radius: 4px; font-size: 13px; color: #1e293b;">
+              <div style="margin-bottom: 6px;"><strong>Registration No:</strong> <code style="font-family: monospace; font-size: 14px; font-weight: 700; color: #4338ca;">${student.registration_no}</code></div>
+              <div style="margin-bottom: 6px;"><strong>Student Unique ID:</strong> <code style="font-family: monospace; font-size: 13px; color: #0f172a;">${student.student_unique_id}</code></div>
+              ${student.roll_no ? `<div style="margin-bottom: 6px;"><strong>Roll No:</strong> ${student.roll_no}</div>` : ''}
+              <div><strong>Registered Email:</strong> <code style="font-family: monospace; font-size: 13px; color: #0f172a;">${candidateEmail}</code></div>
+            </div>`,
+            `To access the student portal (gradesheets, notice boards, class schedule, and ID card), please click the button below to complete your one-time email verification and configure your personal account password:`,
+          ],
+          actionText: 'Activate & Set Up Student Account →',
+          actionUrl: setupUrl,
+          footerNote: `If you have questions regarding your enrollment, please contact the ${instName} admissions and administration office.`
+        });
 
-    // 5. Copy modular guardian info
-    const studentGuardData = {
-      ...(candidate.guardian_data || {})
-    };
-    await queryDb(`
-      INSERT INTO website_student_guardians (
-        website_id, student_id, data, updated_at
-      ) VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-      ON CONFLICT (student_id) DO UPDATE SET
-        data = website_student_guardians.data || EXCLUDED.data,
-        updated_at = CURRENT_TIMESTAMP
-    `, [
-      auth.website.id,
-      student.id,
-      JSON.stringify(studentGuardData)
-    ]);
-
-    // 6. Copy photo and signature if uploaded
-    if (candidate.photo_url) {
-      await queryDb(`
-        INSERT INTO website_student_pictures (
-          website_id, student_id, image_url, image_id
-        ) VALUES ($1, $2, $3, $4)
-      `, [auth.website.id, student.id, candidate.photo_url, candidate.photo_id || null]);
+        await sendEmail({
+          to: candidateEmail,
+          toName: candidate.applicant_name || 'Student',
+          subject: `Enrollment Confirmation & Portal Setup - ${instName}`,
+          html: emailHtml,
+          websiteId: auth.website.id
+        });
+      } catch (mailErr) {
+        console.warn('Mail dispatch warning on admission enrollment:', mailErr.message);
+      }
     }
-
-    if (candidate.signature_url) {
-      await queryDb(`
-        INSERT INTO website_student_signatures (
-          website_id, student_id, signature_url, signature_id
-        ) VALUES ($1, $2, $3, $4)
-        ON CONFLICT (student_id) DO UPDATE SET
-          signature_url = EXCLUDED.signature_url,
-          updated_at = CURRENT_TIMESTAMP
-      `, [auth.website.id, student.id, candidate.signature_url, candidate.signature_id || null]);
-    }
-
-    // 7. Update candidate status to 'enrolled'
-    await queryDb(`
-      UPDATE website_admission_applicants
-      SET status = 'enrolled',
-          enrolled_at = CURRENT_TIMESTAMP,
-          enrolled_student_id = $1,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = $2 AND website_id = $3
-    `, [student.id, appId, auth.website.id]);
 
     return NextResponse.json({
       success: true,
       message: `Candidate '${candidate.applicant_name}' enrolled successfully into student portal!`,
+      setup_url: setupUrl,
       student: {
         id: student.id,
         registration_no: student.registration_no,

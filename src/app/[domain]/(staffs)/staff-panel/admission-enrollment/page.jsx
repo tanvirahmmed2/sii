@@ -67,10 +67,10 @@ function EnrollmentContent() {
   }, [selectedCircularId, apiBase]);
   const openEnrollModal = cand => {
     setEnrollingCandidate(cand);
-    // Generate suggested registration number: REG-2026-xxxx
+    // Generate suggested registration number without REG- prefix: 2026-xxxx
     const randSuffix = Math.floor(1000 + Math.random() * 9000);
     setEnrollForm({
-      registration_no: `REG-${new Date().getFullYear()}-${randSuffix}`,
+      registration_no: `${new Date().getFullYear()}-${randSuffix}`,
       roll_no: cand.roll_no || String(cand.merit_rank || randSuffix),
       class_id: '',
       section_id: '',
@@ -89,7 +89,7 @@ function EnrollmentContent() {
         },
         body: JSON.stringify({
           applicant_id: enrollingCandidate.id,
-          registration_no: enrollForm.registration_no.trim(),
+          registration_no: enrollForm.registration_no.trim().replace(/^REG-?/i, ''),
           roll_no: enrollForm.roll_no.trim(),
           class_id: enrollForm.class_id || null,
           section_id: enrollForm.section_id || null,
@@ -302,10 +302,17 @@ function EnrollmentContent() {
                 <label className="block text-slate-600 dark:text-slate-400 font-medium mb-1">
                   Registration Number * (Unique Student Identity)
                 </label>
-                <input type="text" required value={enrollForm.registration_no} onChange={e => setEnrollForm({
-              ...enrollForm,
-              registration_no: e.target.value
-            })} className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono" />
+                <input
+                  type="text"
+                  required
+                  placeholder={`e.g. ${new Date().getFullYear()}-1001`}
+                  value={enrollForm.registration_no}
+                  onChange={e => setEnrollForm({
+                    ...enrollForm,
+                    registration_no: e.target.value.replace(/^REG-?/i, '')
+                  })}
+                  className="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+                />
               </div>
 
               <div>

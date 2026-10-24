@@ -20,22 +20,25 @@ export async function GET(request, context) {
 
     // Fetch complete student record with joined academic and profile information
     const studentRes = await queryDb(
-      `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
+      `SELECT s.id, s.website_id,
+              COALESCE(s.registration_no, s.student_unique_id, i.data->>'registration_no', i.data->>'registration_number') AS registration_no,
+              s.roll_no, s.student_unique_id,
               s.class_id, s.section_id, s.session_id, s.is_active,
               s.created_at, s.updated_at,
-              COALESCE(s.name, i.data->>'name') AS name,
+              COALESCE(s.name, i.data->>'name', 'Student') AS name,
               COALESCE(s.email, i.data->>'email') AS email,
               COALESCE(s.number, i.data->>'number') AS number,
               COALESCE(s.gender, i.data->>'gender') AS gender,
               COALESCE(s.blood_group, i.data->>'blood_group') AS blood_group,
-              COALESCE(s.date_of_birth, (i.data->>'date_of_birth')::date) AS date_of_birth,
+              COALESCE(s.date_of_birth, CASE WHEN i.data->>'date_of_birth' ~ '^\\d{4}-\\d{2}-\\d{2}$' THEN (i.data->>'date_of_birth')::date ELSE NULL END) AS date_of_birth,
               COALESCE(s.religion, i.data->>'religion') AS religion,
-              COALESCE(s.admission_date, (i.data->>'admission_date')::date) AS admission_date,
+              COALESCE(s.admission_date, CASE WHEN i.data->>'admission_date' ~ '^\\d{4}-\\d{2}-\\d{2}$' THEN (i.data->>'admission_date')::date ELSE NULL END) AS admission_date,
               COALESCE(i.is_registered, s.is_registered) AS is_registered,
               s.is_verified,
               COALESCE(i.verification_status, s.verification_status) AS verification_status,
               i.data AS info_data,
-              c.name AS class_name, c.code AS class_code,
+              COALESCE(c.name, i.data->>'class_name', 'General Enrollment') AS class_name,
+              c.code AS class_code,
               sec.name AS section_name,
               ses.name AS session_name
        FROM website_students s
@@ -55,10 +58,10 @@ export async function GET(request, context) {
     const student = studentRes.rows[0];
 
     const [addrRes, guardRes, picRes, sigRes] = await Promise.all([
-      queryDb(`SELECT * FROM website_student_addresses WHERE student_id = $1 LIMIT 1`, [student.id]),
-      queryDb(`SELECT * FROM website_student_guardians WHERE student_id = $1 LIMIT 1`, [student.id]),
-      queryDb(`SELECT * FROM website_student_pictures WHERE student_id = $1 ORDER BY is_primary DESC, id DESC LIMIT 1`, [student.id]),
-      queryDb(`SELECT * FROM website_student_signatures WHERE student_id = $1 LIMIT 1`, [student.id]),
+      queryDb(`SELECT * FROM website_student_addresses WHERE student_id = $1 LIMIT 1`, [student.id]).catch(() => ({ rows: [] })),
+      queryDb(`SELECT * FROM website_student_guardians WHERE student_id = $1 LIMIT 1`, [student.id]).catch(() => ({ rows: [] })),
+      queryDb(`SELECT * FROM website_student_pictures WHERE student_id = $1 ORDER BY is_primary DESC, id DESC LIMIT 1`, [student.id]).catch(() => ({ rows: [] })),
+      queryDb(`SELECT * FROM website_student_signatures WHERE student_id = $1 LIMIT 1`, [student.id]).catch(() => ({ rows: [] })),
     ]);
 
     const address = addrRes.rows[0] ? { ...addrRes.rows[0], ...(addrRes.rows[0].data || {}) } : null;
@@ -69,7 +72,9 @@ export async function GET(request, context) {
     // Harmonize student fields with both modern and legacy portal keys
     const enrichedStudent = {
       ...student,
-      registration_number: student.registration_no,
+      registration_number: student.registration_no || student.student_unique_id || 'N/A',
+      registration_no: student.registration_no || student.student_unique_id || 'N/A',
+      class_name: student.class_name || 'General Enrollment',
       roll: student.roll_no,
       phone: student.number,
       address: address?.present_address || '',
@@ -93,10 +98,14 @@ export async function GET(request, context) {
 
     return NextResponse.json({
       success: true,
+      student: enrichedStudent,
       payload: responsePayload,
+      paylod: responsePayload,
     });
   } catch (error) {
     console.error('Error fetching student profile:', error);
     return NextResponse.json({ success: false, error: 'Internal server error.' }, { status: 500 });
   }
 }
+
+export { PUT } from '../profile/route.js';

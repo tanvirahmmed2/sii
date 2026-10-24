@@ -246,53 +246,14 @@ export async function GET(request, context) {
     const admissionIdParam = searchParams.get('admission_id') || searchParams.get('circular_id');
     const admId = admissionIdParam ? parseInt(admissionIdParam, 10) : null;
 
-    // 1. Fetch custom columns configured for the student table (master blueprint)
-    const stuFieldsRes = await queryDb(`
-      SELECT * FROM website_student_form_fields
+    // Fetch unified modular fields for the institution
+    const fieldsRes = await queryDb(`
+      SELECT * FROM website_form_fields
       WHERE website_id = $1 AND is_active = TRUE
       ORDER BY sort_order ASC, id ASC
     `, [website.id]);
 
-    let fields = [];
-
-    if (stuFieldsRes.rows.length > 0) {
-      fields = stuFieldsRes.rows;
-
-      // Also check if any circular-specific fields exist in website_admission_form_fields
-      if (admId) {
-        const admFieldsRes = await queryDb(`
-          SELECT * FROM website_admission_form_fields
-          WHERE website_id = $1 AND admission_id = $2 AND is_active = TRUE
-          ORDER BY sort_order ASC, id ASC
-        `, [website.id, admId]);
-
-        const existingKeys = new Set(fields.map((f) => f.field_key));
-        for (const af of admFieldsRes.rows) {
-          if (!existingKeys.has(af.field_key)) {
-            fields.push(af);
-            existingKeys.add(af.field_key);
-          }
-        }
-      }
-    } else {
-      // Check website_admission_form_fields
-      let admFieldsRes;
-      if (admId) {
-        admFieldsRes = await queryDb(`
-          SELECT * FROM website_admission_form_fields
-          WHERE website_id = $1 AND (admission_id = $2 OR admission_id IS NULL) AND is_active = TRUE
-          ORDER BY sort_order ASC, id ASC
-        `, [website.id, admId]);
-      } else {
-        admFieldsRes = await queryDb(`
-          SELECT * FROM website_admission_form_fields
-          WHERE website_id = $1 AND is_active = TRUE
-          ORDER BY sort_order ASC, id ASC
-        `, [website.id]);
-      }
-
-      fields = admFieldsRes.rows.length > 0 ? admFieldsRes.rows : DEFAULT_ADMISSION_FIELDS;
-    }
+    const fields = fieldsRes.rows.length > 0 ? fieldsRes.rows : DEFAULT_ADMISSION_FIELDS;
 
     // Group fields by section for seamless client rendering
     const sections = {};
@@ -306,7 +267,7 @@ export async function GET(request, context) {
       success: true,
       fields,
       sections,
-      is_customized: stuFieldsRes.rows.length > 0 || fields !== DEFAULT_ADMISSION_FIELDS
+      is_customized: fieldsRes.rows.length > 0
     });
   } catch (error) {
     console.error('Error fetching admission form fields:', error);

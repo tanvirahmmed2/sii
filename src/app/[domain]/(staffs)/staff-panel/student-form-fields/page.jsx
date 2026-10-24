@@ -14,7 +14,8 @@ import {
   FiRefreshCw,
   FiEye,
   FiLayers,
-  FiActivity
+  FiActivity,
+  FiEdit3
 } from 'react-icons/fi';
 
 function StudentFormFieldsContent() {
@@ -27,6 +28,8 @@ function StudentFormFieldsContent() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingField, setEditingField] = useState(null);
   const [previewMode, setPreviewMode] = useState(false);
 
   // New field modal state
@@ -163,6 +166,66 @@ function StudentFormFieldsContent() {
     }
   };
 
+  // Open Edit Modal with selected field data
+  const handleStartEdit = (field) => {
+    setEditingField({
+      ...field,
+      options: Array.isArray(field.options) ? field.options.join(', ') : (field.options || '')
+    });
+    setShowEditModal(true);
+  };
+
+  // Submit field updates
+  const handleUpdateField = async (e) => {
+    e.preventDefault();
+    if (!editingField?.label?.trim()) {
+      toast.error('Field label is required.');
+      return;
+    }
+
+    const optsArray =
+      editingField.field_type === 'select'
+        ? (typeof editingField.options === 'string'
+            ? editingField.options.split(',').map((o) => o.trim()).filter(Boolean)
+            : editingField.options || [])
+        : [];
+
+    setSavingId(editingField.id || editingField.field_key);
+    try {
+      const res = await fetch(`${apiBase}/staff/panel/students/fields`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingField.id && editingField.id !== 'undefined' ? editingField.id : undefined,
+          field_key: editingField.field_key,
+          label: editingField.label.trim(),
+          field_type: editingField.field_type,
+          options: optsArray,
+          section: editingField.section,
+          placeholder: editingField.placeholder || '',
+          help_text: editingField.help_text || '',
+          validation_regex: editingField.validation_regex || null,
+          is_required: Boolean(editingField.is_required),
+          is_shown_in_id_card: Boolean(editingField.is_shown_in_id_card),
+          is_active: Boolean(editingField.is_active !== false)
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(`Field '${editingField.label}' updated successfully!`);
+        setShowEditModal(false);
+        setEditingField(null);
+        await fetchFields();
+      } else {
+        toast.error(data.error || 'Failed to update field.');
+      }
+    } catch {
+      toast.error('Network error updating field.');
+    } finally {
+      setSavingId(null);
+    }
+  };
 
   // Initialize or reset defaults
   const handleInitializeDefaults = async () => {
@@ -470,13 +533,22 @@ function StudentFormFieldsContent() {
                       </button>
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => handleDeleteField(field)}
-                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition cursor-pointer"
-                        title="Delete Field"
-                      >
-                        <FiTrash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => handleStartEdit(field)}
+                          className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition cursor-pointer"
+                          title="Edit Field Configuration"
+                        >
+                          <FiEdit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteField(field)}
+                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition cursor-pointer"
+                          title="Delete Field"
+                        >
+                          <FiTrash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -628,6 +700,194 @@ function StudentFormFieldsContent() {
                   className="px-5 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl font-semibold shadow-xs cursor-pointer"
                 >
                   Save Modular Field
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Field Modal */}
+      {showEditModal && editingField && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-5 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-primary/10 text-primary rounded-xl">
+                  <FiEdit3 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-lg font-semibold text-slate-900 dark:text-white">
+                    Edit Modular Field
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Modifying unified field for both applicant admission &amp; student records
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingField(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 text-lg cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateField} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Target Section *
+                </label>
+                <select
+                  value={editingField.section || 'personal'}
+                  onChange={(e) => setEditingField({ ...editingField, section: e.target.value })}
+                  className="input-style w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                >
+                  <option value="personal">1. Personal Profile (Applicant / Student Info)</option>
+                  <option value="guardian">2. Guardians Info (Father / Mother / Guardian)</option>
+                  <option value="address">3. Address (Present / Permanent)</option>
+                  <option value="academic">4. Academic Background</option>
+                  <option value="other">5. Other / General Attributes</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Field Label *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Emergency Contact Relation"
+                  value={editingField.label}
+                  onChange={(e) => setEditingField({ ...editingField, label: e.target.value })}
+                  className="input-style w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Field Type *
+                  </label>
+                  <select
+                    value={editingField.field_type}
+                    onChange={(e) => setEditingField({ ...editingField, field_type: e.target.value })}
+                    className="input-style w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                  >
+                    <option value="text">Text (Single Line)</option>
+                    <option value="textarea">Textarea (Multi-Line)</option>
+                    <option value="number">Number</option>
+                    <option value="date">Date</option>
+                    <option value="select">Dropdown Select</option>
+                    <option value="boolean">Boolean Switch</option>
+                    <option value="file">File Upload</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Placeholder
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter placeholder..."
+                    value={editingField.placeholder || ''}
+                    onChange={(e) => setEditingField({ ...editingField, placeholder: e.target.value })}
+                    className="input-style w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                  />
+                </div>
+              </div>
+
+              {editingField.field_type === 'select' && (
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Dropdown Options (comma separated) *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Option 1, Option 2, Option 3"
+                    value={editingField.options || ''}
+                    onChange={(e) => setEditingField({ ...editingField, options: e.target.value })}
+                    className="input-style w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Help Text / Description
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. As shown on original certificate"
+                  value={editingField.help_text || ''}
+                  onChange={(e) => setEditingField({ ...editingField, help_text: e.target.value })}
+                  className="input-style w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                />
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="stu_edit_req_checkbox"
+                    checked={Boolean(editingField.is_required)}
+                    onChange={(e) => setEditingField({ ...editingField, is_required: e.target.checked })}
+                    className="rounded border-slate-300 text-primary w-4 h-4 cursor-pointer"
+                  />
+                  <label htmlFor="stu_edit_req_checkbox" className="font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">
+                    Mandate as REQUIRED field during student registration &amp; admissions
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="stu_edit_id_card_checkbox"
+                    checked={Boolean(editingField.is_shown_in_id_card)}
+                    onChange={(e) => setEditingField({ ...editingField, is_shown_in_id_card: e.target.checked })}
+                    className="rounded border-slate-300 text-primary w-4 h-4 cursor-pointer"
+                  />
+                  <label htmlFor="stu_edit_id_card_checkbox" className="font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">
+                    Show this field on Student ID Card templates
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="stu_edit_active_checkbox"
+                    checked={editingField.is_active !== false}
+                    onChange={(e) => setEditingField({ ...editingField, is_active: e.target.checked })}
+                    className="rounded border-slate-300 text-primary w-4 h-4 cursor-pointer"
+                  />
+                  <label htmlFor="stu_edit_active_checkbox" className="font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">
+                    Field is ACTIVE (visible on application and student profiles)
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-4 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingField(null);
+                  }}
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-300 font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingId !== null}
+                  className="px-5 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl font-semibold shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  {savingId ? 'Updating...' : 'Save Changes'}
                 </button>
               </div>
             </form>

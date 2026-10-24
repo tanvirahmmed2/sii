@@ -51,14 +51,15 @@ export async function GET(request, context) {
     const membersRes = await queryDb(
       `SELECT scm.id, scm.student_id, scm.role, scm.can_access_chat,
               s.registration_no, s.roll_no,
-              i.name AS student_name, i.gender,
+              COALESCE(s.name, i.data->>'name') AS student_name,
+              COALESCE(s.gender, i.data->>'gender') AS gender,
               cl.name AS class_name
        FROM website_student_club_members scm
        JOIN website_students s ON s.id = scm.student_id
        LEFT JOIN website_student_info i ON i.student_id = s.id
        LEFT JOIN website_classes cl ON cl.id = s.class_id
        WHERE scm.club_id = $1 AND scm.website_id = $2 AND scm.status = 'active'
-       ORDER BY scm.can_access_chat DESC, i.name ASC`,
+       ORDER BY scm.can_access_chat DESC, COALESCE(s.name, i.data->>'name') ASC`,
       [clubId, website.id]
     );
 

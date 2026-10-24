@@ -5,10 +5,6 @@ import { toast } from 'react-hot-toast';
 import TenantLoader from 'src/component/tenant/TenantLoader';
 import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 import { exportElementAsJpeg, exportElementAsPdf } from 'src/lib/export/documentExporter';
-import { 
-  FiFileText, FiPrinter, FiDownload, FiCheckCircle, 
-  FiDollarSign, FiClock, FiEye, FiArrowLeft, FiHash 
-} from 'react-icons/fi';
 
 export default function StudentReceiptsPage() {
   const { website, getApiEndpoint } = useTenantWebsite();
@@ -50,6 +46,8 @@ export default function StudentReceiptsPage() {
     return <TenantLoader fullScreen={false} />;
   }
 
+  const currencySymbol = website?.currency === 'USD' ? '$' : '৳';
+
   // Compile active template with selected receipt details
   const compileReceiptHtml = (rec) => {
     if (!rec) return null;
@@ -61,20 +59,20 @@ export default function StudentReceiptsPage() {
       '{{invoice_no}}': rec.receipt_no || `REC-${rec.id}`,
       '{{payment_date}}': rec.payment_date ? new Date(rec.payment_date).toLocaleDateString('en-GB') : '—',
       '{{student_name}}': student?.name || 'Student Name',
-      '{{registration_no}}': student?.registration_no || 'REG-0001',
+      '{{registration_no}}': student?.registration_no || student?.registration_number || 'REG-0001',
       '{{roll_no}}': student?.roll_no || '—',
       '{{class_name}}': student?.class_name || 'Class',
       '{{section_name}}': student?.section_name || 'Section',
       '{{fee_month}}': rec.fee_month || 'Current Month',
       '{{fee_title}}': rec.title || 'Tuition Fee',
-      '{{total_amount}}': `$${parseFloat(rec.total_amount || 0).toFixed(2)}`,
-      '{{discount}}': '$0.00',
-      '{{paid_amount}}': `$${parseFloat(rec.paid_amount || 0).toFixed(2)}`,
-      '{{due_balance}}': `$${parseFloat(rec.due_balance || 0).toFixed(2)}`,
+      '{{total_amount}}': `${currencySymbol}${parseFloat(rec.total_amount || 0).toFixed(2)}`,
+      '{{discount}}': `${currencySymbol}0.00`,
+      '{{paid_amount}}': `${currencySymbol}${parseFloat(rec.paid_amount || 0).toFixed(2)}`,
+      '{{due_balance}}': `${currencySymbol}${parseFloat(rec.due_balance || 0).toFixed(2)}`,
       '{{payment_method}}': rec.payment_method || 'Online / Gateway',
       '{{transaction_id}}': rec.transaction_id || 'TRX-DEFAULT',
       '{{school_name}}': website?.name || 'Educational Institution',
-      '{{school_logo}}': website?.logo_url || '/school-logo.png',
+      '{{school_logo}}': website?.logo_url || website?.logo || '',
       '{{school_phone}}': website?.phone || '+880 1700-000000',
       '{{school_address}}': website?.address || 'Campus Address',
     };
@@ -93,12 +91,12 @@ export default function StudentReceiptsPage() {
   const handleDownloadJpeg = async () => {
     if (!receiptRef.current) return;
     setIsExporting(true);
-    toast.loading('Exporting Payment Receipt JPEG...', { id: 'rec-export' });
+    toast.loading('Exporting receipt JPEG...', { id: 'rec-export' });
     try {
       await exportElementAsJpeg(receiptRef.current, `Receipt_${selectedReceipt?.receipt_no || 'fee'}`);
       toast.success('Receipt JPEG downloaded successfully!', { id: 'rec-export' });
     } catch {
-      toast.error('Failed to export JPEG.', { id: 'rec-export' });
+      toast.error('Failed to export image.', { id: 'rec-export' });
     } finally {
       setIsExporting(false);
     }
@@ -107,13 +105,10 @@ export default function StudentReceiptsPage() {
   const handleDownloadPdf = async () => {
     if (!receiptRef.current) return;
     setIsExporting(true);
-    toast.loading('Generating Official Receipt PDF...', { id: 'rec-export' });
+    toast.loading('Exporting receipt PDF...', { id: 'rec-export' });
     try {
-      await exportElementAsPdf(receiptRef.current, `Receipt_${selectedReceipt?.receipt_no || 'fee'}`, {
-        widthMm: 210,
-        heightMm: 148,
-      });
-      toast.success('Official Receipt PDF downloaded!', { id: 'rec-export' });
+      await exportElementAsPdf(receiptRef.current, `Receipt_${selectedReceipt?.receipt_no || 'fee'}`);
+      toast.success('Receipt PDF downloaded successfully!', { id: 'rec-export' });
     } catch {
       toast.error('Failed to export PDF.', { id: 'rec-export' });
     } finally {
@@ -121,171 +116,111 @@ export default function StudentReceiptsPage() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
-    <div className="flex flex-col gap-6 w-full pb-12 animate-fade-up">
+    <div className="w-full space-y-4 pb-8">
       {/* Header */}
-      <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/70 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800 gap-2">
         <div>
-          <div className="flex items-center gap-2 text-indigo-600 text-xs font-bold uppercase tracking-wider mb-1">
-            <FiFileText /> Finance &amp; Fee Receipts
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Payment Receipts</h1>
-          <p className="text-slate-500 text-xs sm:text-sm font-normal mt-1">
-            Access verified institutional transaction records and official payment vouchers for all settled invoices.
+          <h1 className="text-base font-semibold text-slate-900 dark:text-white">
+            Official Tuition Payment Receipts
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Verified institutional vouchers generated using official templates.
           </p>
         </div>
-
         {selectedReceipt && (
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2">
             <button
+              type="button"
+              disabled={isExporting}
+              onClick={() => window.print()}
+              className="px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition cursor-pointer"
+            >
+              Print
+            </button>
+            <button
+              type="button"
+              disabled={isExporting}
               onClick={handleDownloadJpeg}
-              disabled={isExporting}
-              className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50"
+              className="px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium transition cursor-pointer"
             >
-              <FiDownload className="text-xs" /> JPEG
+              JPEG
             </button>
             <button
+              type="button"
+              disabled={isExporting}
               onClick={handleDownloadPdf}
-              disabled={isExporting}
-              className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50"
+              className="px-3.5 py-1.5 rounded-md bg-primary hover:bg-primary-dark text-white text-xs font-medium cursor-pointer shadow-xs transition disabled:opacity-50"
             >
-              <FiDownload className="text-xs" /> PDF
-            </button>
-            <button
-              onClick={handlePrint}
-              className="flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
-            >
-              <FiPrinter className="text-xs" /> Print
+              Download PDF
             </button>
           </div>
         )}
       </div>
 
       {receipts.length === 0 ? (
-        <div className="bg-white border border-slate-200/70 rounded-3xl p-12 text-center flex flex-col items-center justify-center shadow-xs space-y-3">
-          <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-400">
-            <FiDollarSign className="text-3xl" />
-          </div>
-          <h3 className="font-bold text-slate-800 text-base">No Settled Payment Receipts Found</h3>
-          <p className="text-slate-400 text-xs max-w-sm">
-            You do not have any paid invoices or settled fees recorded in the portal yet.
+        <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-8 text-center space-y-1">
+          <p className="text-xs font-medium text-slate-700 dark:text-slate-300">No Payment Receipts Available</p>
+          <p className="text-xs text-slate-400">
+            You do not have any completed fee transactions with issued receipts yet.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* Receipts Sidebar List */}
-          <div className="lg:col-span-5 bg-white border border-slate-200/70 rounded-3xl p-4 shadow-xs space-y-2">
-            <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Settled Invoices ({receipts.length})
+          <div className="lg:col-span-4 space-y-2">
+            <div className="pb-1">
+              <span className="text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                Payment Transactions ({receipts.length})
               </span>
-              <span className="text-[11px] text-slate-400">Click to preview</span>
             </div>
 
-            <div className="space-y-1.5 max-h-[600px] overflow-y-auto">
+            <div className="space-y-1.5">
               {receipts.map((rec) => {
                 const isSelected = selectedReceipt?.id === rec.id;
-                const recDate = rec.payment_date ? new Date(rec.payment_date).toLocaleDateString('en-GB') : '—';
-
                 return (
-                  <div
+                  <button
                     key={rec.id}
+                    type="button"
                     onClick={() => setSelectedReceipt(rec)}
-                    className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                    className={`w-full text-left p-3 rounded-md border transition cursor-pointer flex flex-col space-y-1 ${
                       isSelected
-                        ? 'border-indigo-600 bg-indigo-50/50 shadow-xs ring-1 ring-indigo-500'
-                        : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'
+                        ? 'bg-primary/10 border-primary/30 text-slate-900 dark:text-white'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60'
                     }`}
                   >
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono font-bold text-xs text-slate-900">
-                          {rec.receipt_no || `REC-${rec.id}`}
-                        </span>
-                        <span className="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.2 rounded font-semibold">
-                          Paid
-                        </span>
-                      </div>
-                      <p className="text-xs font-medium text-slate-700 truncate max-w-[200px]">
-                        {rec.title} ({rec.fee_month || 'Fee'})
-                      </p>
-                      <span className="text-[10px] text-slate-400 block font-mono">
-                        Paid on: {recDate}
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-mono font-medium text-slate-900 dark:text-white">
+                        {rec.receipt_no || `REC-${rec.id}`}
+                      </span>
+                      <span className="font-mono font-semibold text-primary">
+                        {currencySymbol}{parseFloat(rec.paid_amount || 0).toFixed(2)}
                       </span>
                     </div>
-
-                    <div className="text-right shrink-0">
-                      <span className="text-xs font-bold text-slate-900 block">
-                        ${parseFloat(rec.paid_amount || 0).toFixed(2)}
-                      </span>
-                      <span className="text-[10px] text-slate-400 capitalize">
-                        {rec.payment_method || 'Online'}
-                      </span>
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                      <span>{rec.title}</span>
+                      <span>{rec.payment_date ? new Date(rec.payment_date).toLocaleDateString('en-GB') : '—'}</span>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Live Receipt Document Viewer */}
-          <div className="lg:col-span-7 bg-white border border-slate-200/70 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col items-center space-y-4">
-            <div className="flex items-center justify-between w-full border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Official Payment Voucher Preview
-                </h3>
-                <span className="text-[11px] text-slate-400 font-mono">
-                  Receipt: {selectedReceipt?.receipt_no || `REC-${selectedReceipt?.id}`}
-                </span>
-              </div>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                <FiCheckCircle className="text-xs" /> Certified Settled
-              </span>
-            </div>
-
-            {/* Render Template Canvas */}
-            {compiled && (
-              <div className="w-full flex justify-center overflow-x-auto p-4 bg-slate-50 rounded-2xl">
+          {/* Receipt Document Preview Stage */}
+          <div className="lg:col-span-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 flex flex-col items-center">
+            {selectedReceipt && compiled ? (
+              <div className="w-full flex flex-col items-center overflow-x-auto">
                 <style dangerouslySetInnerHTML={{ __html: compiled.css }} />
                 <div
                   ref={receiptRef}
-                  className="bg-white shadow-md border border-slate-200 rounded p-6 max-w-2xl w-full"
-                >
-                  {compiled.html ? (
-                    <div dangerouslySetInnerHTML={{ __html: compiled.html }} />
-                  ) : (
-                    /* Fallback Clean Voucher Layout */
-                    <div className="space-y-4 text-xs">
-                      <div className="text-center border-b pb-4">
-                        <h2 className="text-lg font-bold text-slate-900">{website?.name || 'Educational Institution'}</h2>
-                        <p className="text-slate-500">{website?.address || 'Campus Academic Office'}</p>
-                        <p className="font-semibold uppercase tracking-wider text-indigo-600 mt-1">Official Money Receipt</p>
-                      </div>
-
-                      <div className="flex justify-between border-b pb-2 font-mono">
-                        <span>Receipt No: <strong>{selectedReceipt.receipt_no}</strong></span>
-                        <span>Date: <strong>{new Date().toLocaleDateString('en-GB')}</strong></span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 border-b pb-3">
-                        <div>Student Name: <strong>{student?.name}</strong></div>
-                        <div>Reg No: <strong>{student?.registration_no}</strong></div>
-                        <div>Class: <strong>{student?.class_name}</strong></div>
-                        <div>Month: <strong>{selectedReceipt.fee_month}</strong></div>
-                      </div>
-
-                      <div className="flex justify-between pt-2 text-sm font-bold">
-                        <span>Total Settled Amount:</span>
-                        <span className="text-emerald-700 font-mono">${parseFloat(selectedReceipt.paid_amount || 0).toFixed(2)}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                  className="bg-white text-slate-900 shadow-xs border border-slate-200 rounded p-4 max-w-full print:shadow-none print:border-none"
+                  dangerouslySetInnerHTML={{ __html: compiled.html }}
+                />
+              </div>
+            ) : (
+              <div className="py-12 text-center text-xs text-slate-400">
+                Select a receipt transaction from the left list to review document preview.
               </div>
             )}
           </div>

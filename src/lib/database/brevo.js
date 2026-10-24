@@ -81,14 +81,23 @@ export function buildStyledEmail({
   title,
   subtitle,
   recipientName,
-  bodyParagraphs = [],
+  bodyParagraphs,
+  paragraphs,
   code,
   codeLabel = 'Security Code',
   actionUrl,
+  buttonUrl,
   actionText,
+  buttonText,
   footerNote,
   extraHtml = '',
 }) {
+  const resolvedParagraphs = (Array.isArray(bodyParagraphs) && bodyParagraphs.length > 0)
+    ? bodyParagraphs
+    : (Array.isArray(paragraphs) ? paragraphs : []);
+  const resolvedActionUrl = actionUrl || buttonUrl;
+  const resolvedActionText = actionText || buttonText;
+
   const codeSection = code
     ? `
       <div style="margin: 20px 0; padding: 14px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; text-align: center;">
@@ -98,20 +107,20 @@ export function buildStyledEmail({
     `
     : '';
 
-  const buttonSection = actionUrl && actionText
+  const buttonSection = resolvedActionUrl && resolvedActionText
     ? `
       <div style="margin: 24px 0; text-align: center;">
-        <a href="${actionUrl}" style="display: inline-block; background-color: #0f172a; color: #ffffff; font-size: 12px; font-weight: 500; text-decoration: none; padding: 10px 20px; border-radius: 4px;">
-          ${actionText}
+        <a href="${resolvedActionUrl}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; font-size: 13px; font-weight: 600; text-decoration: none; padding: 12px 24px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          ${resolvedActionText}
         </a>
         <div style="margin-top: 12px; font-size: 11px; color: #94a3b8; word-break: break-all;">
-          Direct link: <a href="${actionUrl}" style="color: #475569; text-decoration: underline;">${actionUrl}</a>
+          Direct link: <a href="${resolvedActionUrl}" style="color: #4f46e5; text-decoration: underline;">${resolvedActionUrl}</a>
         </div>
       </div>
     `
     : '';
 
-  const paragraphsHtml = bodyParagraphs
+  const paragraphsHtml = resolvedParagraphs
     .map(
       (p) =>
         `<p style="margin: 0 0 12px 0; font-size: 13px; line-height: 1.6; color: #334155; font-weight: 400;">${p}</p>`

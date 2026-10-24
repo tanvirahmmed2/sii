@@ -28,7 +28,7 @@ const Navbar = () => {
         const response = await fetch(getApiEndpoint('student/me'));
         if (response.ok) {
           const data = await response.json();
-          setStudent(data.payload?.student || data.paylod?.student);
+          setStudent(data.payload?.student || data.paylod?.student || data.student || null);
         }
       } catch (error) {
         console.error('Failed to fetch student profile:', error);

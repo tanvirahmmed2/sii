@@ -4,8 +4,8 @@ import { verifyStaffPaymentAccess } from 'src/lib/database/paymentGateways.js';
 import { DEFAULT_ADMISSION_FIELDS } from 'src/lib/constants/admissionFields.js';
 
 /**
- * GET /api/[domain]/staff/panel/admissions/fields?admission_id=...
- * Staff endpoint to list all modular form fields configured for a circular or institution.
+ * GET /api/[domain]/staff/panel/admissions/fields
+ * Staff endpoint to list all unified modular form fields for admissions & student intake.
  */
 export async function GET(request, context) {
   try {
@@ -14,45 +14,29 @@ export async function GET(request, context) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
 
-    const { searchParams } = new URL(request.url);
-    const admissionIdParam = searchParams.get('admission_id');
-    const admId = admissionIdParam ? parseInt(admissionIdParam, 10) : null;
-
     let sql = `
-      SELECT * FROM website_admission_form_fields
+      SELECT * FROM website_form_fields
       WHERE website_id = $1
+      ORDER BY sort_order ASC, id ASC
     `;
     const params = [auth.website.id];
 
-    if (admId) {
-      sql += ` AND (admission_id = $2 OR admission_id IS NULL)`;
-      params.push(admId);
-    }
-    sql += ` ORDER BY sort_order ASC, id ASC`;
-
     let res = await queryDb(sql, params);
 
-    // Auto-seed persistent records if none exist so all fields have valid database IDs
+    // Auto-seed unified records if none exist
     if (res.rows.length === 0) {
-      const stuRes = await queryDb(`
-        SELECT * FROM website_student_form_fields
-        WHERE website_id = $1
-        ORDER BY sort_order ASC, id ASC
-      `, [auth.website.id]);
-
-      const sourceList = stuRes.rows.length > 0 ? stuRes.rows : DEFAULT_ADMISSION_FIELDS;
-      for (let i = 0; i < sourceList.length; i++) {
-        const f = sourceList[i];
+      for (let i = 0; i < DEFAULT_ADMISSION_FIELDS.length; i++) {
+        const f = DEFAULT_ADMISSION_FIELDS[i];
         try {
           await queryDb(`
-            INSERT INTO website_admission_form_fields (
-              website_id, admission_id, field_key, label, field_type,
+            INSERT INTO website_form_fields (
+              website_id, field_key, label, field_type,
               options, is_required, is_unique, validation_regex, placeholder,
               help_text, section, is_shown_in_id_card, sort_order, is_active
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            ON CONFLICT (website_id, field_key) DO NOTHING
           `, [
             auth.website.id,
-            admId,
             f.field_key?.trim() || `field_${Date.now()}_${i}`,
             f.label?.trim() || f.field_key,
             f.field_type || 'text',
@@ -62,13 +46,13 @@ export async function GET(request, context) {
             f.validation_regex || null,
             f.placeholder || '',
             f.help_text || '',
-            f.section || 'general',
+            f.section || 'personal',
             Boolean(f.is_shown_in_id_card),
             f.sort_order !== undefined ? f.sort_order : i + 1,
             Boolean(f.is_active !== false)
           ]);
         } catch {
-          // ignore duplicate or non-fatal insert error
+          // ignore duplicate
         }
       }
 
@@ -112,7 +96,7 @@ export async function GET(request, context) {
 
 /**
  * POST /api/[domain]/staff/panel/admissions/fields
- * Creates a new modular field or initializes defaults for a circular.
+ * Creates a new modular field or initializes defaults in unified table.
  */
 export async function POST(request, context) {
   try {
@@ -123,7 +107,6 @@ export async function POST(request, context) {
 
     const body = await request.json().catch(() => ({}));
     const {
-      admission_id,
       action,
       fields: bulkFields,
       field_key,
@@ -141,8 +124,6 @@ export async function POST(request, context) {
       is_active = true
     } = body;
 
-    const admId = admission_id ? parseInt(admission_id, 10) : null;
-
     // Bulk initialization from defaults or template
     if (action === 'initialize_defaults' || Array.isArray(bulkFields)) {
       const fieldsToInsert = Array.isArray(bulkFields) ? bulkFields : DEFAULT_ADMISSION_FIELDS;
@@ -151,15 +132,28 @@ export async function POST(request, context) {
       for (let i = 0; i < fieldsToInsert.length; i++) {
         const f = fieldsToInsert[i];
         const res = await queryDb(`
-          INSERT INTO website_admission_form_fields (
-            website_id, admission_id, field_key, label, field_type,
+          INSERT INTO website_form_fields (
+            website_id, field_key, label, field_type,
             options, is_required, is_unique, validation_regex, placeholder,
             help_text, section, is_shown_in_id_card, sort_order, is_active
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          ON CONFLICT (website_id, field_key) DO UPDATE SET
+            label = EXCLUDED.label,
+            field_type = EXCLUDED.field_type,
+            options = EXCLUDED.options,
+            is_required = EXCLUDED.is_required,
+            is_unique = EXCLUDED.is_unique,
+            validation_regex = EXCLUDED.validation_regex,
+            placeholder = EXCLUDED.placeholder,
+            help_text = EXCLUDED.help_text,
+            section = EXCLUDED.section,
+            is_shown_in_id_card = EXCLUDED.is_shown_in_id_card,
+            sort_order = EXCLUDED.sort_order,
+            is_active = EXCLUDED.is_active,
+            updated_at = CURRENT_TIMESTAMP
           RETURNING *
         `, [
           auth.website.id,
-          admId,
           f.field_key.trim(),
           f.label.trim(),
           f.field_type || 'text',
@@ -172,39 +166,57 @@ export async function POST(request, context) {
           f.section || 'general',
           Boolean(f.is_shown_in_id_card),
           f.sort_order !== undefined ? f.sort_order : i + 1,
-          f.is_active !== undefined ? Boolean(f.is_active) : true
+          Boolean(f.is_active !== false)
         ]);
-        inserted.push(res.rows[0]);
+        if (res.rows[0]) inserted.push(res.rows[0]);
       }
 
       return NextResponse.json({
         success: true,
-        message: `Successfully initialized ${inserted.length} modular form fields.`,
+        message: 'Unified admission form fields initialized successfully.',
+        count: inserted.length,
         fields: inserted
       });
     }
 
-    // Single field insertion
-    if (!field_key?.trim() || !label?.trim()) {
-      return NextResponse.json({ success: false, error: 'Field key and label are required.' }, { status: 400 });
+    if (!label || !label.trim()) {
+      return NextResponse.json({ success: false, error: 'Field label is required.' }, { status: 400 });
     }
 
-    const cleanKey = field_key.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    // Auto-generate slug field_key if not provided
+    const safeKey = (field_key || label)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 50);
 
     const res = await queryDb(`
-      INSERT INTO website_admission_form_fields (
-        website_id, admission_id, field_key, label, field_type,
+      INSERT INTO website_form_fields (
+        website_id, field_key, label, field_type,
         options, is_required, is_unique, validation_regex, placeholder,
         help_text, section, is_shown_in_id_card, sort_order, is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      ON CONFLICT (website_id, field_key) DO UPDATE SET
+        label = EXCLUDED.label,
+        field_type = EXCLUDED.field_type,
+        options = EXCLUDED.options,
+        is_required = EXCLUDED.is_required,
+        is_unique = EXCLUDED.is_unique,
+        validation_regex = EXCLUDED.validation_regex,
+        placeholder = EXCLUDED.placeholder,
+        help_text = EXCLUDED.help_text,
+        section = EXCLUDED.section,
+        is_shown_in_id_card = EXCLUDED.is_shown_in_id_card,
+        sort_order = EXCLUDED.sort_order,
+        is_active = EXCLUDED.is_active,
+        updated_at = CURRENT_TIMESTAMP
       RETURNING *
     `, [
       auth.website.id,
-      admId,
-      cleanKey,
+      safeKey,
       label.trim(),
       field_type,
-      JSON.stringify(options || []),
+      JSON.stringify(Array.isArray(options) ? options : []),
       Boolean(is_required),
       Boolean(is_unique),
       validation_regex || null,
@@ -218,7 +230,7 @@ export async function POST(request, context) {
 
     return NextResponse.json({
       success: true,
-      message: 'Modular admission form field created successfully.',
+      message: 'Unified admission form field saved successfully.',
       field: res.rows[0]
     });
   } catch (error) {
@@ -229,7 +241,7 @@ export async function POST(request, context) {
 
 /**
  * PUT /api/[domain]/staff/panel/admissions/fields
- * Updates an existing modular field.
+ * Update existing field attributes or toggle required status.
  */
 export async function PUT(request, context) {
   try {
@@ -252,7 +264,7 @@ export async function PUT(request, context) {
     let res;
     if (parsedId) {
       res = await queryDb(`
-        UPDATE website_admission_form_fields
+        UPDATE website_form_fields
         SET label = COALESCE($1, label),
             field_type = COALESCE($2, field_type),
             options = COALESCE($3, options),
@@ -286,7 +298,7 @@ export async function PUT(request, context) {
       ]);
     } else {
       res = await queryDb(`
-        UPDATE website_admission_form_fields
+        UPDATE website_form_fields
         SET label = COALESCE($1, label),
             field_type = COALESCE($2, field_type),
             options = COALESCE($3, options),
@@ -321,18 +333,31 @@ export async function PUT(request, context) {
     }
 
     if (res.rows.length === 0) {
-      // If field was not yet saved in DB, insert it now with specified values
       const targetKey = (field_key || label || 'custom_field')
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '_')
         .replace(/^_+|_+$/g, '');
 
       const insertRes = await queryDb(`
-        INSERT INTO website_admission_form_fields (
+        INSERT INTO website_form_fields (
           website_id, field_key, label, field_type, options, is_required,
           is_unique, validation_regex, placeholder, help_text, section,
           is_shown_in_id_card, sort_order, is_active
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        ON CONFLICT (website_id, field_key) DO UPDATE
+        SET label = EXCLUDED.label,
+            field_type = EXCLUDED.field_type,
+            options = EXCLUDED.options,
+            is_required = EXCLUDED.is_required,
+            is_unique = EXCLUDED.is_unique,
+            validation_regex = EXCLUDED.validation_regex,
+            placeholder = EXCLUDED.placeholder,
+            help_text = EXCLUDED.help_text,
+            section = EXCLUDED.section,
+            is_shown_in_id_card = EXCLUDED.is_shown_in_id_card,
+            sort_order = EXCLUDED.sort_order,
+            is_active = EXCLUDED.is_active,
+            updated_at = CURRENT_TIMESTAMP
         RETURNING *
       `, [
         auth.website.id,
@@ -389,16 +414,15 @@ export async function DELETE(request, context) {
 
     if (parsedId) {
       await queryDb(`
-        DELETE FROM website_admission_form_fields
+        DELETE FROM website_form_fields
         WHERE id = $1 AND website_id = $2
       `, [parsedId, auth.website.id]);
     } else if (fieldKey && fieldKey !== 'undefined' && fieldKey !== 'null') {
       await queryDb(`
-        DELETE FROM website_admission_form_fields
+        DELETE FROM website_form_fields
         WHERE field_key = $1 AND website_id = $2
       `, [fieldKey.trim(), auth.website.id]);
     } else {
-      // Default field that has not been saved into DB yet
       return NextResponse.json({
         success: true,
         message: 'Field removed successfully.'
@@ -414,4 +438,3 @@ export async function DELETE(request, context) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
-

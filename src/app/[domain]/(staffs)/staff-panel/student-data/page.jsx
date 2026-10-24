@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
+import { FiEdit3 } from 'react-icons/fi';
 import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 import StudentFilterBar from 'src/component/staff/StudentFilterBar';
 import StudentFilterEmptyState from 'src/component/staff/StudentFilterEmptyState';
@@ -22,7 +23,14 @@ export default function StudentDataPage() {
   const [customColumns, setCustomColumns] = useState([]);
   const [loadingColumns, setLoadingColumns] = useState(false);
   const [showColumnModal, setShowColumnModal] = useState(false);
+  const [showEditColumnModal, setShowEditColumnModal] = useState(false);
+  const [editingColumn, setEditingColumn] = useState(null);
   const [savingColumn, setSavingColumn] = useState(false);
+
+  // Student Edit State
+  const [editingStudent, setEditingStudent] = useState(null);
+  const [showEditStudentModal, setShowEditStudentModal] = useState(false);
+  const [savingStudent, setSavingStudent] = useState(false);
 
   // New custom column form
   const [newColumn, setNewColumn] = useState({
@@ -203,6 +211,139 @@ export default function StudentDataPage() {
       }
     } catch {
       toast.error('Network error updating requirement.');
+    }
+  };
+
+  // Open Edit Column Modal
+  const handleStartEditColumn = (col) => {
+    setEditingColumn({
+      ...col,
+      options: Array.isArray(col.options) ? col.options.join(', ') : (col.options || '')
+    });
+    setShowEditColumnModal(true);
+  };
+
+  // Submit Column Edit
+  const handleUpdateColumn = async (e) => {
+    e.preventDefault();
+    if (!editingColumn?.label?.trim()) {
+      toast.error('Column label is required.');
+      return;
+    }
+
+    const optsArray =
+      editingColumn.field_type === 'select'
+        ? (typeof editingColumn.options === 'string'
+            ? editingColumn.options.split(',').map((o) => o.trim()).filter(Boolean)
+            : editingColumn.options || [])
+        : [];
+
+    try {
+      const res = await fetch(getApiEndpoint('staff/panel/students/fields'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingColumn.id && editingColumn.id !== 'undefined' ? editingColumn.id : undefined,
+          field_key: editingColumn.field_key,
+          label: editingColumn.label.trim(),
+          field_type: editingColumn.field_type,
+          options: optsArray,
+          section: editingColumn.section || 'personal',
+          placeholder: editingColumn.placeholder || '',
+          help_text: editingColumn.help_text || '',
+          is_required: Boolean(editingColumn.is_required),
+          is_shown_in_id_card: Boolean(editingColumn.is_shown_in_id_card),
+          is_active: Boolean(editingColumn.is_active !== false)
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(`Column '${editingColumn.label}' updated! Synced with admissions.`);
+        setShowEditColumnModal(false);
+        setEditingColumn(null);
+        await fetchCustomColumns();
+      } else {
+        toast.error(data.error || 'Failed to update column.');
+      }
+    } catch {
+      toast.error('Network error updating column.');
+    }
+  };
+
+  // Open Edit Student Modal
+  const handleStartEditStudent = (student) => {
+    setEditingStudent({
+      id: student.id,
+      registration_no: (student.registration_no || '').replace(/^REG-?/i, ''),
+      roll_no: student.roll_no || '',
+      name: student.name || '',
+      email: student.email || '',
+      is_active: student.is_active !== false,
+      student_unique_id: student.student_unique_id
+    });
+    setShowEditStudentModal(true);
+  };
+
+  // Submit Student Edit
+  const handleUpdateStudent = async (e) => {
+    e.preventDefault();
+    if (!editingStudent?.registration_no?.trim()) {
+      toast.error('Registration Number is required.');
+      return;
+    }
+
+    const cleanReg = editingStudent.registration_no.trim().replace(/^REG-?/i, '');
+    setSavingStudent(true);
+    try {
+      const res = await fetch(getApiEndpoint('staff/panel/students'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingStudent.id,
+          registration_no: cleanReg,
+          roll_no: editingStudent.roll_no?.trim() || null,
+          name: editingStudent.name?.trim() || null,
+          email: editingStudent.email?.trim() || null,
+          is_active: Boolean(editingStudent.is_active)
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(`Student '${cleanReg}' updated successfully!`);
+        setShowEditStudentModal(false);
+        setStudents((prev) =>
+          prev.map((s) =>
+            s.id === editingStudent.id
+              ? {
+                  ...s,
+                  registration_no: cleanReg,
+                  roll_no: editingStudent.roll_no?.trim() || null,
+                  name: editingStudent.name?.trim() || null,
+                  email: editingStudent.email?.trim() || null,
+                  is_active: Boolean(editingStudent.is_active)
+                }
+              : s
+          )
+        );
+        if (selectedStudent?.id === editingStudent.id) {
+          setSelectedStudent((prev) => ({
+            ...prev,
+            registration_no: cleanReg,
+            roll_no: editingStudent.roll_no?.trim() || null,
+            name: editingStudent.name?.trim() || null,
+            email: editingStudent.email?.trim() || null,
+            is_active: Boolean(editingStudent.is_active)
+          }));
+        }
+        setEditingStudent(null);
+      } else {
+        toast.error(data.error || 'Failed to update student.');
+      }
+    } catch {
+      toast.error('Network error updating student.');
+    } finally {
+      setSavingStudent(false);
     }
   };
 
@@ -506,21 +647,32 @@ export default function StudentDataPage() {
                         </span>
                       </td>
                       <td className="px-3 py-2 text-right">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            selectedStudent?.id === s.id
-                              ? setSelectedStudent(null)
-                              : handleViewDetails(s)
-                          }
-                          className={`px-2.5 py-1 text-[11px] font-medium rounded border cursor-pointer transition ${
-                            selectedStudent?.id === s.id
-                              ? 'border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400'
-                              : 'border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
-                          }`}
-                        >
-                          {selectedStudent?.id === s.id ? '✕ Close Details' : 'View Details'}
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditStudent(s)}
+                            className="px-2 py-1 text-[11px] font-semibold rounded border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition cursor-pointer flex items-center gap-1"
+                            title="Edit Student Info"
+                          >
+                            <FiEdit3 className="w-3 h-3" />
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              selectedStudent?.id === s.id
+                                ? setSelectedStudent(null)
+                                : handleViewDetails(s)
+                            }
+                            className={`px-2.5 py-1 text-[11px] font-medium rounded border cursor-pointer transition ${
+                              selectedStudent?.id === s.id
+                                ? 'border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400'
+                                : 'border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                            }`}
+                          >
+                            {selectedStudent?.id === s.id ? '✕ Close' : 'View'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -672,17 +824,22 @@ export default function StudentDataPage() {
                     <div>
                       <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
                         <span>{col.label}</span>
-                        <span className="font-mono text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
-                          {col.field_key}
-                        </span>
-                        <span className="text-[10px] text-slate-500 uppercase font-medium">
-                          ({col.section || 'personal'} • {col.field_type})
+                        <span className="text-[10px] text-slate-500 uppercase font-medium bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                          {col.section || 'personal'} • {col.field_type}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500">{col.placeholder || col.help_text || 'Active in students & admission form'}</p>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleStartEditColumn(col)}
+                        className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg cursor-pointer transition"
+                        title="Edit Column Attributes"
+                      >
+                        <FiEdit3 className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleToggleRequirement(col)}
@@ -709,6 +866,306 @@ export default function StudentDataPage() {
                 Done
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Custom Column Modal */}
+      {showEditColumnModal && editingColumn && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-5 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-primary/10 text-primary rounded-xl">
+                  <FiEdit3 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-lg font-semibold text-slate-900 dark:text-white">
+                    Edit Student Column
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Modifying unified column synced with admission applications
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditColumnModal(false);
+                  setEditingColumn(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 text-lg cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateColumn} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Target Section *
+                </label>
+                <select
+                  value={editingColumn.section || 'personal'}
+                  onChange={(e) => setEditingColumn({ ...editingColumn, section: e.target.value })}
+                  className="input-style w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                >
+                  <option value="personal">1. Personal Profile (Applicant / Student Info)</option>
+                  <option value="guardian">2. Guardians Info (Father / Mother / Guardian)</option>
+                  <option value="address">3. Address (Present / Permanent)</option>
+                  <option value="academic">4. Academic Background</option>
+                  <option value="general">5. General / Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Column Label *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Student Blood Group"
+                  value={editingColumn.label}
+                  onChange={(e) => setEditingColumn({ ...editingColumn, label: e.target.value })}
+                  className="input-style w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Field Type *
+                  </label>
+                  <select
+                    value={editingColumn.field_type}
+                    onChange={(e) => setEditingColumn({ ...editingColumn, field_type: e.target.value })}
+                    className="input-style w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                  >
+                    <option value="text">Text (Single Line)</option>
+                    <option value="textarea">Textarea (Multi-Line)</option>
+                    <option value="number">Number</option>
+                    <option value="date">Date</option>
+                    <option value="select">Dropdown Select</option>
+                    <option value="boolean">Boolean Switch</option>
+                    <option value="file">File Upload</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Placeholder
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter placeholder..."
+                    value={editingColumn.placeholder || ''}
+                    onChange={(e) => setEditingColumn({ ...editingColumn, placeholder: e.target.value })}
+                    className="input-style w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                  />
+                </div>
+              </div>
+
+              {editingColumn.field_type === 'select' && (
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Dropdown Options (comma separated) *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Option 1, Option 2, Option 3"
+                    value={editingColumn.options || ''}
+                    onChange={(e) => setEditingColumn({ ...editingColumn, options: e.target.value })}
+                    className="input-style w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Help Text / Description
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. As shown on certificate"
+                  value={editingColumn.help_text || ''}
+                  onChange={(e) => setEditingColumn({ ...editingColumn, help_text: e.target.value })}
+                  className="input-style w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                />
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="col_edit_req_checkbox"
+                    checked={Boolean(editingColumn.is_required)}
+                    onChange={(e) => setEditingColumn({ ...editingColumn, is_required: e.target.checked })}
+                    className="rounded border-slate-300 text-primary w-4 h-4 cursor-pointer"
+                  />
+                  <label htmlFor="col_edit_req_checkbox" className="font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">
+                    Mandate as REQUIRED (must be filled during student registration &amp; admissions)
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="col_edit_id_card_checkbox"
+                    checked={Boolean(editingColumn.is_shown_in_id_card)}
+                    onChange={(e) => setEditingColumn({ ...editingColumn, is_shown_in_id_card: e.target.checked })}
+                    className="rounded border-slate-300 text-primary w-4 h-4 cursor-pointer"
+                  />
+                  <label htmlFor="col_edit_id_card_checkbox" className="font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">
+                    Show this field on Student ID Card templates
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-4 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditColumnModal(false);
+                    setEditingColumn(null);
+                  }}
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-300 font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl font-semibold shadow-xs cursor-pointer"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT STUDENT RECORD MODAL */}
+      {showEditStudentModal && editingStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4 animate-in fade-in duration-150">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-lg">
+                  <FiEdit3 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                    Edit Student Profile
+                  </h3>
+                  <p className="text-[11px] text-slate-400 font-mono">
+                    ID #{editingStudent.id} • {editingStudent.student_unique_id}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditStudentModal(false);
+                  setEditingStudent(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white text-base cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateStudent} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Registration Number * <span className="text-[10px] text-slate-400 font-normal">(Saved without REG- prefix, unique per website)</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 2026-1001"
+                  value={editingStudent.registration_no}
+                  onChange={(e) => setEditingStudent({
+                    ...editingStudent,
+                    registration_no: e.target.value.replace(/^REG-?/i, '')
+                  })}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Roll Number
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 101"
+                    value={editingStudent.roll_no}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, roll_no: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Student Full Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. John Doe"
+                    value={editingStudent.name}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, name: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Student Email <span className="text-[10px] text-slate-400 font-normal">(Enforces institution-wide uniqueness)</span>
+                </label>
+                <input
+                  type="email"
+                  placeholder="e.g. student@institution.edu"
+                  value={editingStudent.email}
+                  onChange={(e) => setEditingStudent({ ...editingStudent, email: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+
+              <div className="pt-1">
+                <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-800 dark:text-slate-200">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editingStudent.is_active)}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, is_active: e.target.checked })}
+                    className="rounded border-slate-300 text-primary w-4 h-4 cursor-pointer"
+                  />
+                  <span>Active Student Account</span>
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditStudentModal(false);
+                    setEditingStudent(null);
+                  }}
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingStudent}
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  {savingStudent ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

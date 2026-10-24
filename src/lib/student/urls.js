@@ -32,9 +32,13 @@ export function getTenantBaseOrigin(website, request) {
   return `${protocol}://${cleanSub}.${baseDomain}${port}`;
 }
 
-export function buildStudentSetupUrl(website, token, request) {
+export function buildStudentSetupUrl(website, token, request, email) {
   const origin = getTenantBaseOrigin(website, request);
-  return `${origin}/auth/student/setup?token=${encodeURIComponent(token)}`;
+  const params = new URLSearchParams();
+  if (token) params.set('token', token);
+  if (email) params.set('email', email);
+  const q = params.toString();
+  return `${origin}/auth/student/setup${q ? `?${q}` : ''}`;
 }
 
 export function buildStudentRecoveryUrl(website, token, request) {

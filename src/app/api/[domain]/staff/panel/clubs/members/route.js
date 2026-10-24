@@ -28,8 +28,8 @@ export async function GET(request, context) {
                s.roll_no,
                s.department_id,
                s.class_id,
-               COALESCE(i.name, 'Student #' || s.id) AS name,
-               i.number AS phone,
+               COALESCE(s.name, i.data->>'name', 'Student #' || s.id) AS name,
+               COALESCE(s.number, i.data->>'number') AS phone,
                d.name AS department_name,
                cl.name AS class_name,
                EXISTS(
@@ -64,10 +64,10 @@ export async function GET(request, context) {
 
       if (candidateQuery) {
         candParams.push(`%${candidateQuery}%`);
-        candQuery += ` AND (i.name ILIKE $${candParams.length} OR s.registration_no ILIKE $${candParams.length} OR s.roll_no ILIKE $${candParams.length})`;
+        candQuery += ` AND (COALESCE(s.name, i.data->>'name', '') ILIKE $${candParams.length} OR s.registration_no ILIKE $${candParams.length} OR s.roll_no ILIKE $${candParams.length})`;
       }
 
-      candQuery += ` ORDER BY s.registration_no ASC, i.name ASC LIMIT 150`;
+      candQuery += ` ORDER BY s.registration_no ASC, COALESCE(s.name, i.data->>'name') ASC LIMIT 150`;
 
       const candRes = await queryDb(candQuery, candParams);
       return NextResponse.json({
@@ -99,9 +99,9 @@ export async function GET(request, context) {
              c.has_chat_box,
              s.registration_no,
              s.roll_no,
-             COALESCE(i.name, 'Student #' || s.id) AS student_name,
-             i.number AS student_phone,
-             i.gender AS student_gender,
+             COALESCE(s.name, i.data->>'name', 'Student #' || s.id) AS student_name,
+             COALESCE(s.number, i.data->>'number') AS student_phone,
+             COALESCE(s.gender, i.data->>'gender') AS student_gender,
              d.name AS department_name,
              cl.name AS class_name,
              sec.name AS section_name
@@ -123,7 +123,7 @@ export async function GET(request, context) {
 
     if (search) {
       params.push(`%${search}%`);
-      queryStr += ` AND (i.name ILIKE $${params.length} OR s.registration_no ILIKE $${params.length} OR c.name ILIKE $${params.length})`;
+      queryStr += ` AND (COALESCE(s.name, i.data->>'name', '') ILIKE $${params.length} OR s.registration_no ILIKE $${params.length} OR c.name ILIKE $${params.length})`;
     }
 
     if (role && role !== 'all') {
@@ -140,7 +140,7 @@ export async function GET(request, context) {
       queryStr += ` AND scm.can_access_chat = true`;
     }
 
-    queryStr += ` ORDER BY c.name ASC, scm.can_access_chat DESC, scm.role ASC, i.name ASC`;
+    queryStr += ` ORDER BY c.name ASC, scm.can_access_chat DESC, scm.role ASC, COALESCE(s.name, i.data->>'name') ASC`;
 
     const result = await queryDb(queryStr, params);
 
@@ -169,8 +169,8 @@ export async function GET(request, context) {
               s.roll_no,
               s.department_id,
               s.class_id,
-              COALESCE(i.name, 'Student #' || s.id) AS name,
-              i.number AS phone,
+              COALESCE(s.name, i.data->>'name', 'Student #' || s.id) AS name,
+              COALESCE(s.number, i.data->>'number') AS phone,
               d.name AS department_name,
               cl.name AS class_name
        FROM website_students s
@@ -178,7 +178,7 @@ export async function GET(request, context) {
        LEFT JOIN website_departments d ON d.id = s.department_id
        LEFT JOIN website_classes cl ON cl.id = s.class_id
        WHERE s.website_id = $1
-       ORDER BY s.registration_no ASC, i.name ASC 
+       ORDER BY s.registration_no ASC, COALESCE(s.name, i.data->>'name') ASC 
        LIMIT 100`,
       [website.id]
     );

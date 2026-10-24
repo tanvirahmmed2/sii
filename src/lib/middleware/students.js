@@ -139,20 +139,23 @@ export async function getStudentSession(request) {
 
     // Check website_students joined with website_student_info
     let res = await query(
-      `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
+      `SELECT s.id, s.website_id,
+              COALESCE(s.registration_no, s.student_unique_id, i.data->>'registration_no', i.data->>'registration_number') AS registration_no,
+              s.roll_no, s.student_unique_id,
               s.class_id, s.section_id, s.session_id, s.is_active,
-              COALESCE(s.name, i.data->>'name') AS name,
+              COALESCE(s.name, i.data->>'name', 'Student') AS name,
               COALESCE(s.email, i.data->>'email') AS email,
               COALESCE(s.number, i.data->>'number') AS number,
               COALESCE(s.gender, i.data->>'gender') AS gender,
               COALESCE(s.blood_group, i.data->>'blood_group') AS blood_group,
-              COALESCE(s.date_of_birth, (i.data->>'date_of_birth')::date) AS date_of_birth,
+              COALESCE(s.date_of_birth, CASE WHEN i.data->>'date_of_birth' ~ '^\\d{4}-\\d{2}-\\d{2}$' THEN (i.data->>'date_of_birth')::date ELSE NULL END) AS date_of_birth,
               COALESCE(s.religion, i.data->>'religion') AS religion,
-              COALESCE(s.admission_date, (i.data->>'admission_date')::date) AS admission_date,
+              COALESCE(s.admission_date, CASE WHEN i.data->>'admission_date' ~ '^\\d{4}-\\d{2}-\\d{2}$' THEN (i.data->>'admission_date')::date ELSE NULL END) AS admission_date,
               COALESCE(i.is_registered, s.is_registered, FALSE) AS is_registered,
               COALESCE(s.is_verified, FALSE) AS is_verified,
               COALESCE(i.verification_status, s.verification_status, 'pending_setup') AS verification_status,
-              c.name AS class_name, sec.name AS section_name, ses.name AS session_name
+              COALESCE(c.name, i.data->>'class_name', 'General Enrollment') AS class_name,
+              sec.name AS section_name, ses.name AS session_name
        FROM website_students s
        LEFT JOIN website_student_info i ON s.id = i.student_id
        LEFT JOIN website_classes c ON s.class_id = c.id

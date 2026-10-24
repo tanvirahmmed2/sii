@@ -1,16 +1,12 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
-import { 
-  FiCalendar, FiMapPin, FiClock, FiCheckCircle, 
-  FiUserPlus, FiUserMinus, FiImage, FiSearch, FiInfo, FiUsers, FiStar
-} from 'react-icons/fi';
-import Loader from 'src/component/common/Loader';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
 const StudentEventsPage = () => {
+  const { getApiEndpoint } = useTenantWebsite();
   const [events, setEvents] = useState([]);
   const [joinedEventIds, setJoinedEventIds] = useState([]);
   const [interestedEventIds, setInterestedEventIds] = useState([]);
@@ -20,33 +16,19 @@ const StudentEventsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'interested' | 'registered'
 
-  const fetchEvents = useCallback(async () => {
-    try {
-      const res = await axios.get('/api/student/events');
-      if (res.data?.success) {
-        const payload = res.data.payload || res.data.paylod || {};
-        setEvents(payload.events || res.data.events || []);
-        setJoinedEventIds(payload.joinedEventIds || res.data.joinedEventIds || []);
-        setInterestedEventIds(payload.interestedEventIds || res.data.interestedEventIds || []);
-      }
-    } catch (err) {
-      console.error('Error fetching student events:', err);
-      toast.error('Failed to load campus events.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     let ignore = false;
     const load = async () => {
       try {
-        const res = await axios.get('/api/student/events');
-        if (!ignore && res.data?.success) {
-          const payload = res.data.payload || res.data.paylod || {};
-          setEvents(payload.events || res.data.events || []);
-          setJoinedEventIds(payload.joinedEventIds || res.data.joinedEventIds || []);
-          setInterestedEventIds(payload.interestedEventIds || res.data.interestedEventIds || []);
+        const res = await fetch(getApiEndpoint('student/events'));
+        if (res.ok) {
+          const resData = await res.json();
+          if (!ignore && resData?.success) {
+            const payload = resData.payload || resData.paylod || {};
+            setEvents(payload.events || resData.events || []);
+            setJoinedEventIds(payload.joinedEventIds || resData.joinedEventIds || []);
+            setInterestedEventIds(payload.interestedEventIds || resData.interestedEventIds || []);
+          }
         }
       } catch (err) {
         console.error('Error loading events:', err);
@@ -60,7 +42,7 @@ const StudentEventsPage = () => {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [getApiEndpoint]);
 
   // Toggle Interested
   const handleToggleInterest = async (eventId, isInterested) => {
@@ -68,15 +50,20 @@ const StudentEventsPage = () => {
     const action = isInterested ? 'uninterest' : 'interest';
 
     try {
-      const res = await axios.post('/api/student/events', {
-        event_id: eventId,
-        action,
+      const res = await fetch(getApiEndpoint('student/events'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_id: eventId,
+          action,
+        }),
       });
 
-      if (res.data?.success) {
-        const nextInterested = Boolean(res.data.is_interested);
-        const nextCount = parseInt(res.data.interested_count, 10) || 0;
-        const msg = res.data.payload?.message || res.data.paylod?.message || (nextInterested ? 'Marked as interested!' : 'Interest removed.');
+      const resData = await res.json();
+      if (res.ok && resData?.success) {
+        const nextInterested = Boolean(resData.is_interested);
+        const nextCount = parseInt(resData.interested_count, 10) || 0;
+        const msg = resData.payload?.message || resData.paylod?.message || (nextInterested ? 'Marked as interested!' : 'Interest removed.');
         toast.success(msg);
 
         if (nextInterested) {
@@ -93,9 +80,8 @@ const StudentEventsPage = () => {
           )
         );
       }
-    } catch (err) {
-      console.error('Error updating interest:', err);
-      toast.error(err.response?.data?.error || err.response?.data?.message || 'Failed to update event interest.');
+    } catch {
+      toast.error('Failed to update event interest.');
     } finally {
       setInterestActionLoading(null);
     }
@@ -107,13 +93,18 @@ const StudentEventsPage = () => {
     const action = isJoined ? 'leave' : 'join';
 
     try {
-      const res = await axios.post('/api/student/events', {
-        event_id: eventId,
-        action,
+      const res = await fetch(getApiEndpoint('student/events'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_id: eventId,
+          action,
+        }),
       });
 
-      if (res.data?.success) {
-        const msg = res.data.payload?.message || res.data.paylod?.message || (isJoined ? 'Event registration cancelled.' : 'Event registration successful!');
+      const resData = await res.json();
+      if (res.ok && resData?.success) {
+        const msg = resData.payload?.message || resData.paylod?.message || (isJoined ? 'Event registration cancelled.' : 'Event registration successful!');
         toast.success(msg);
         if (isJoined) {
           setJoinedEventIds((prev) => prev.filter((id) => String(id) !== String(eventId)));
@@ -135,9 +126,8 @@ const StudentEventsPage = () => {
           );
         }
       }
-    } catch (err) {
-      console.error('Error updating participation:', err);
-      toast.error(err.response?.data?.error || err.response?.data?.message || 'Failed to update event registration.');
+    } catch {
+      toast.error('Failed to update event registration.');
     } finally {
       setActionLoading(null);
     }
@@ -161,43 +151,43 @@ const StudentEventsPage = () => {
   }, [events, searchTerm, activeTab, interestedEventIds, joinedEventIds]);
 
   return (
-    <div className="flex flex-col gap-6 w-full pb-8">
+    <div className="w-full space-y-4">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+      <div className="w-full pb-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2 text-emerald-600 text-xs font-bold uppercase tracking-wider mb-1">
-            <FiCalendar /> Campus Life &amp; Student Desk
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">
+          <span className="text-[10px] font-semibold text-primary uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 border border-primary/20 inline-block mb-1">
+            Campus Life &amp; Student Desk
+          </span>
+          <h1 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">
             Campus Events &amp; Seminars
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-normal mt-0.5">
-            Discover upcoming events, click interested to follow, and register your participation if applicable.
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Discover upcoming events, click interested to follow, and register your participation.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
-            <span className="text-slate-400 font-medium">Interested:</span>{' '}
-            <span className="font-bold text-amber-500">{interestedEventIds.length}</span>
+        <div className="flex items-center gap-2">
+          <div className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
+            <span className="text-slate-500 dark:text-slate-400">Interested:</span>{' '}
+            <span className="font-semibold text-amber-600 dark:text-amber-400 font-mono">{interestedEventIds.length}</span>
           </div>
-          <div className="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
-            <span className="text-slate-400 font-medium">Registered:</span>{' '}
-            <span className="font-bold text-emerald-600">{joinedEventIds.length}</span>
+          <div className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
+            <span className="text-slate-500 dark:text-slate-400">Registered:</span>{' '}
+            <span className="font-semibold text-primary font-mono">{joinedEventIds.length}</span>
           </div>
         </div>
       </div>
 
       {/* Filter Tabs & Search */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => setActiveTab('all')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
               activeTab === 'all'
-                ? 'bg-slate-900 text-white dark:bg-emerald-600 dark:text-white shadow-xs'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50'
+                ? 'bg-primary text-white shadow-xs'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
             All Events ({events.length})
@@ -205,50 +195,44 @@ const StudentEventsPage = () => {
           <button
             type="button"
             onClick={() => setActiveTab('interested')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
               activeTab === 'interested'
-                ? 'bg-slate-900 text-white dark:bg-emerald-600 dark:text-white shadow-xs'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50'
+                ? 'bg-primary text-white shadow-xs'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
-            <FiStar className="text-amber-400" />
-            <span>Interested ({interestedEventIds.length})</span>
+            Interested ({interestedEventIds.length})
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('registered')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
               activeTab === 'registered'
-                ? 'bg-slate-900 text-white dark:bg-emerald-600 dark:text-white shadow-xs'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50'
+                ? 'bg-primary text-white shadow-xs'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
-            <FiCheckCircle className="text-emerald-500" />
-            <span>Registered ({joinedEventIds.length})</span>
+            Registered ({joinedEventIds.length})
           </button>
         </div>
 
         {/* Search Input */}
-        <div className="relative w-full sm:w-80">
-          <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
-          <input
-            type="text"
-            placeholder="Search events by title, venue, or description..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs sm:text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20"
-          />
-        </div>
+        <input
+          type="text"
+          placeholder="Search by title, location, or overview..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full sm:w-72 px-3 py-1.5 bg-white dark:bg-slate-900 rounded-md border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-primary"
+        />
       </div>
 
       {/* Events Listing */}
       {loading ? (
-        <div className="min-h-64 flex flex-col items-center justify-center p-12 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-          <Loader size="md" />
-          <p className="text-xs text-slate-500 mt-3 font-medium">Loading campus events...</p>
+        <div className="py-12 text-center text-slate-400 text-xs font-medium bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800">
+          Loading campus events...
         </div>
       ) : filteredEvents.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredEvents.map((item) => {
             const isJoined = joinedEventIds.includes(String(item.id));
             const isInterested = interestedEventIds.includes(String(item.id));
@@ -259,83 +243,67 @@ const StudentEventsPage = () => {
             return (
               <div
                 key={item.id}
-                className={`bg-white dark:bg-slate-900 rounded-2xl border ${
+                className={`bg-white dark:bg-slate-900 rounded-md border ${
                   isJoined
-                    ? 'border-emerald-500 ring-2 ring-emerald-500/10'
+                    ? 'border-primary'
                     : isInterested
-                    ? 'border-amber-400/80 ring-2 ring-amber-500/10'
-                    : 'border-slate-200/80 dark:border-slate-800'
-                } shadow-xs overflow-hidden flex flex-col justify-between hover:shadow-md transition-all duration-200 group`}
+                    ? 'border-amber-400 dark:border-amber-700'
+                    : 'border-slate-200 dark:border-slate-800'
+                } overflow-hidden flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition-colors`}
               >
-                {/* Event Poster Image */}
-                <div className="relative w-full h-48 sm:h-52 bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                  {item.image ? (
+                {/* Event Image Banner if present */}
+                {item.image && (
+                  <div className="relative w-full h-44 bg-slate-100 dark:bg-slate-800 overflow-hidden border-b border-slate-100 dark:border-slate-800">
                     <img
                       src={item.image}
                       alt={item.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover"
                     />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-50 dark:bg-slate-800/50">
-                      <FiImage className="text-4xl text-slate-300 dark:text-slate-600" />
-                      <span className="text-xs font-medium mt-1">Campus Event</span>
+                    <div className="absolute top-2.5 left-2.5 bg-slate-900/80 text-white px-2.5 py-0.5 rounded text-[11px] font-mono shadow-xs">
+                      {eventDate.toLocaleDateString('en-GB')}
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-semibold shadow-xs flex items-center gap-1.5 border border-white/20">
-                    <FiCalendar className="text-emerald-400" />
-                    <span>
-                      {eventDate.toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
-                    </span>
+                {/* Event Content Details */}
+                <div className="p-4 space-y-2 flex-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      {!item.image && (
+                        <span className="text-[10px] font-mono font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                          {eventDate.toLocaleDateString('en-GB')}
+                        </span>
+                      )}
+                      {isInterested && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800 uppercase">
+                          Interested
+                        </span>
+                      )}
+                      {isJoined && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800 uppercase">
+                          Registered
+                        </span>
+                      )}
+                      {!isApplicable && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 uppercase">
+                          Notice Only
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="absolute top-3 right-3 flex items-center gap-1.5">
-                    {isInterested && (
-                      <div className="bg-amber-500 text-white px-2.5 py-1 rounded-full text-[11px] font-bold shadow-xs flex items-center gap-1">
-                        <FiStar className="fill-white" />
-                        <span>Interested</span>
-                      </div>
-                    )}
+                  <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {item.title}
+                  </h2>
 
-                    {isJoined && (
-                      <div className="bg-emerald-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-xs flex items-center gap-1">
-                        <FiCheckCircle />
-                        <span>Registered</span>
-                      </div>
-                    )}
-
-                    {!isApplicable && (
-                      <div className="bg-slate-800/80 backdrop-blur-xs text-slate-200 px-2.5 py-1 rounded-full text-[11px] font-semibold border border-white/10 flex items-center gap-1">
-                        <FiInfo className="text-amber-400" />
-                        <span>Info Only</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Details */}
-                <div className="p-5 flex flex-col gap-2.5 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 transition-colors">
-                      {item.title}
-                    </h2>
-                  </div>
-
-                  <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm leading-relaxed line-clamp-3">
-                    {item.description || 'No description provided for this event.'}
+                  <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed line-clamp-3">
+                    {item.description || 'No description provided for this campus event.'}
                   </p>
 
-                  <div className="flex flex-wrap gap-4 items-center border-t border-slate-100 dark:border-slate-800 pt-3.5 mt-auto text-xs text-slate-600 dark:text-slate-400 font-medium">
-                    <span className="flex items-center gap-1.5">
-                      <FiMapPin className="text-emerald-600 text-sm" />
-                      {item.location || 'Campus Auditorium'}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <FiClock className="text-emerald-600 text-sm" />
+                  <div className="flex flex-wrap gap-3 items-center border-t border-slate-100 dark:border-slate-800 pt-2.5 mt-auto text-xs text-slate-600 dark:text-slate-400">
+                    <span>Venue: <strong className="font-medium text-slate-800 dark:text-slate-200">{item.location || 'Auditorium'}</strong></span>
+                    <span>•</span>
+                    <span className="font-mono">
                       {eventDate.toLocaleTimeString('en-US', {
                         hour: 'numeric',
                         minute: '2-digit',
@@ -343,66 +311,51 @@ const StudentEventsPage = () => {
                       })}
                     </span>
 
-                    {/* Interested & Registered counts */}
-                    <div className="flex items-center gap-3 ml-auto">
-                      <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-semibold text-[11px]">
-                        <FiStar className="text-xs" />
-                        <span>{interestedCount} interested</span>
-                      </span>
-
-                      <span className="flex items-center gap-1 text-slate-400 text-[11px]">
-                        <FiUsers className="text-xs" />
-                        <span>{item.total_applicants || 0} registered</span>
-                      </span>
+                    <div className="flex items-center gap-2 ml-auto text-[11px] font-mono">
+                      <span className="text-amber-600 dark:text-amber-400 font-medium">{interestedCount} interested</span>
+                      <span>•</span>
+                      <span className="text-slate-500">{item.total_applicants || 0} registered</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Actions Bar */}
-                <div className="p-4 bg-slate-50/70 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
-                  {/* Interested button */}
+                {/* Actions Strip */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
                   <button
                     type="button"
                     onClick={() => handleToggleInterest(item.id, isInterested)}
                     disabled={interestActionLoading === item.id}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                       isInterested
                         ? 'bg-amber-500 text-white shadow-xs'
-                        : 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 border border-amber-300 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/40'
+                        : 'border border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-400 bg-white dark:bg-slate-900 hover:bg-amber-50 dark:hover:bg-amber-950/40'
                     } disabled:opacity-50`}
                   >
-                    <FiStar className={`text-xs ${isInterested ? 'fill-white' : ''}`} />
-                    <span>{interestActionLoading === item.id ? 'Saving...' : isInterested ? 'Interested' : 'Mark Interested'}</span>
+                    {interestActionLoading === item.id ? 'Saving...' : isInterested ? 'Following Interest' : 'Mark Interested'}
                   </button>
 
-                  {/* Participation button based on is_applicable */}
                   {isApplicable ? (
                     <button
+                      type="button"
                       onClick={() => handleToggleParticipation(item.id, isJoined)}
                       disabled={actionLoading === item.id}
-                      className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                      className={`px-3.5 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                         isJoined
-                          ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/60 dark:border-rose-900'
-                          : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                          ? 'border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-400 bg-white dark:bg-slate-900 hover:bg-rose-50 dark:hover:bg-rose-950/40'
+                          : 'bg-primary hover:bg-primary-dark text-white shadow-xs'
                       } disabled:opacity-50`}
                     >
                       {actionLoading === item.id ? (
-                        <span>Processing...</span>
+                        'Processing...'
                       ) : isJoined ? (
-                        <>
-                          <FiUserMinus />
-                          <span>Cancel Registration</span>
-                        </>
+                        'Cancel Registration'
                       ) : (
-                        <>
-                          <FiUserPlus />
-                          <span>Register Attendance</span>
-                        </>
+                        'Register Attendance'
                       )}
                     </button>
                   ) : (
-                    <span className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 text-xs font-medium">
-                      Information Only
+                    <span className="px-2.5 py-1 rounded text-[11px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800">
+                      Open Event
                     </span>
                   )}
                 </div>
@@ -411,10 +364,9 @@ const StudentEventsPage = () => {
           })}
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 p-12 text-center rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-          <FiCalendar className="text-4xl text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-          <h3 className="font-bold text-slate-800 dark:text-white text-base">No Events Found</h3>
-          <p className="text-slate-400 text-xs mt-1">
+        <div className="bg-white dark:bg-slate-900 p-10 text-center rounded-md border border-slate-200 dark:border-slate-800">
+          <h3 className="font-semibold text-slate-800 dark:text-white text-xs uppercase tracking-wider">No Events Found</h3>
+          <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">
             {activeTab === 'interested'
               ? 'You have not marked any events as interested yet.'
               : activeTab === 'registered'

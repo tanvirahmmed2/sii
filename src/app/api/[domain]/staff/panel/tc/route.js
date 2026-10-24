@@ -82,7 +82,7 @@ export async function GET(request, context) {
       conditions.push(`(
         s.registration_no ILIKE $${pIdx} OR
         s.roll_no ILIKE $${pIdx} OR
-        i.name ILIKE $${pIdx} OR
+        COALESCE(s.name, i.data->>'name', '') ILIKE $${pIdx} OR
         tc.tc_number ILIKE $${pIdx} OR
         tc.destination_school ILIKE $${pIdx}
       )`);
@@ -171,7 +171,7 @@ export async function POST(request, context) {
     // Verify student exists and belongs to tenant
     const stuRes = await client.query(
       `SELECT s.id, s.class_id, s.section_id, s.session_id, s.registration_no,
-              i.admission_date AS stu_admission_date, c.name AS class_name
+              COALESCE(s.admission_date, (i.data->>'admission_date')::date) AS stu_admission_date, c.name AS class_name
        FROM website_students s
        LEFT JOIN website_student_info i ON s.id = i.student_id
        LEFT JOIN website_classes c ON s.class_id = c.id
