@@ -4615,3 +4615,1211 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+
+
+-- ============================================================================
+-- SECTION 13: EXTENDED SYSTEM MODULES
+-- Added per Enterprise Multi-Tenant Architecture Specifications
+-- 47 Tables across 8 Critical Functional Areas
+-- ============================================================================
+
+-- ============================================================================
+-- SUBSECTION 13.1: TENANT ROUTING & STORAGE QUOTAS
+-- Maps custom domains (*.edu.bd), tracks storage / SMS usage per package,
+-- and toggles beta feature flags per tenant.
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 1. WEBSITE DOMAINS TABLE
+-- Custom domain mappings (e.g. *.edu.bd, *.ac.bd, custom branded domains)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_domains (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    domain VARCHAR(255) NOT NULL UNIQUE,
+    is_primary BOOLEAN DEFAULT FALSE,
+    ssl_status VARCHAR(50) DEFAULT 'pending' CHECK (ssl_status IN ('pending', 'active', 'failed', 'expired')),
+    verification_token VARCHAR(255),
+    is_verified BOOLEAN DEFAULT FALSE,
+    verified_at TIMESTAMPTZ,
+    dns_records JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_domains_updated_at ON website_domains;
+CREATE TRIGGER update_website_domains_updated_at
+    BEFORE UPDATE ON website_domains
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_domains_website_id ON website_domains(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_domains_domain ON website_domains(domain);
+
+
+-- ----------------------------------------------------------------------------
+-- 2. WEBSITE STORAGE USAGES TABLE
+-- Tracks storage usage across media, documents, videos, and backups
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_storage_usages (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    storage_type VARCHAR(50) NOT NULL DEFAULT 'media' CHECK (storage_type IN ('media', 'documents', 'video', 'backups', 'database')),
+    bytes_used BIGINT DEFAULT 0,
+    file_count INT DEFAULT 0,
+    last_calculated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_website_storage_type UNIQUE (website_id, storage_type)
+);
+
+DROP TRIGGER IF EXISTS update_website_storage_usages_updated_at ON website_storage_usages;
+CREATE TRIGGER update_website_storage_usages_updated_at
+    BEFORE UPDATE ON website_storage_usages
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_storage_usages_website_id ON website_storage_usages(website_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 3. WEBSITE USAGE QUOTAS TABLE
+-- Tenant limits based on purchased SaaS package (storage, SMS, emails, seats)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_usage_quotas (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    max_storage_bytes BIGINT DEFAULT 5368709120,
+    sms_credits_total INT DEFAULT 0,
+    sms_credits_used INT DEFAULT 0,
+    email_credits_total INT DEFAULT 0,
+    email_credits_used INT DEFAULT 0,
+    max_students INT DEFAULT 500,
+    max_staff INT DEFAULT 50,
+    max_custom_domains INT DEFAULT 1,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_website_usage_quotas UNIQUE (website_id)
+);
+
+DROP TRIGGER IF EXISTS update_website_usage_quotas_updated_at ON website_usage_quotas;
+CREATE TRIGGER update_website_usage_quotas_updated_at
+    BEFORE UPDATE ON website_usage_quotas
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_usage_quotas_website_id ON website_usage_quotas(website_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 4. WEBSITE FEATURE FLAGS TABLE
+-- Per-tenant feature toggling (e.g. beta CBT proctoring, biometric sync)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_feature_flags (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    feature_key VARCHAR(100) NOT NULL,
+    is_enabled BOOLEAN DEFAULT FALSE,
+    description TEXT,
+    config JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_website_feature_flag UNIQUE (website_id, feature_key)
+);
+
+DROP TRIGGER IF EXISTS update_website_feature_flags_updated_at ON website_feature_flags;
+CREATE TRIGGER update_website_feature_flags_updated_at
+    BEFORE UPDATE ON website_feature_flags
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_feature_flags_website_id ON website_feature_flags(website_id);
+
+
+-- ============================================================================
+-- SUBSECTION 13.2: DRAG & DROP PAGE BUILDER & CMS
+-- Stores JSONB component trees, revision history, reusable blocks, menus & media
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 5. SYSTEM THEMES TABLE (Global system-wide visual presets)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS system_themes (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    preview_image VARCHAR(500),
+    description TEXT,
+    config JSONB DEFAULT '{}'::jsonb,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_system_themes_updated_at ON system_themes;
+CREATE TRIGGER update_system_themes_updated_at
+    BEFORE UPDATE ON system_themes
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+-- ----------------------------------------------------------------------------
+-- 6. WEBSITE THEMES TABLE (Tenant custom theme & style configuration)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_themes (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    system_theme_id BIGINT REFERENCES system_themes(id) ON DELETE SET NULL,
+    name VARCHAR(100) NOT NULL DEFAULT 'Default Theme',
+    is_active BOOLEAN DEFAULT TRUE,
+    colors JSONB DEFAULT '{"primary": "#2563eb", "secondary": "#475569", "accent": "#f59e0b"}'::jsonb,
+    fonts JSONB DEFAULT '{"body": "Inter", "heading": "Inter"}'::jsonb,
+    custom_css TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_themes_updated_at ON website_themes;
+CREATE TRIGGER update_website_themes_updated_at
+    BEFORE UPDATE ON website_themes
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_themes_website_id ON website_themes(website_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 7. WEBSITE PAGES TABLE (Page builder pages with JSONB component trees)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_pages (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL,
+    content JSONB DEFAULT '[]'::jsonb,
+    meta_title VARCHAR(255),
+    meta_description TEXT,
+    og_image VARCHAR(500),
+    is_published BOOLEAN DEFAULT FALSE,
+    is_homepage BOOLEAN DEFAULT FALSE,
+    template VARCHAR(50) DEFAULT 'default',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_website_pages_slug UNIQUE (website_id, slug)
+);
+
+DROP TRIGGER IF EXISTS update_website_pages_updated_at ON website_pages;
+CREATE TRIGGER update_website_pages_updated_at
+    BEFORE UPDATE ON website_pages
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_pages_website_id ON website_pages(website_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 8. WEBSITE PAGE VERSIONS TABLE (Undo/redo & full version history)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_page_versions (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    page_id BIGINT NOT NULL REFERENCES website_pages(id) ON DELETE CASCADE,
+    version_number INT NOT NULL,
+    content JSONB NOT NULL DEFAULT '[]'::jsonb,
+    change_summary VARCHAR(255),
+    created_by BIGINT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_website_page_version UNIQUE (page_id, version_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_page_versions_page_id ON website_page_versions(page_id);
+CREATE INDEX IF NOT EXISTS idx_website_page_versions_website_id ON website_page_versions(website_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 9. WEBSITE GLOBAL BLOCKS TABLE (Reusable headers, footers, CTAs, widgets)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_global_blocks (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    block_type VARCHAR(50) NOT NULL CHECK (block_type IN ('header', 'footer', 'announcement_bar', 'sidebar', 'custom_html', 'cta')),
+    content JSONB DEFAULT '{}'::jsonb,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_global_blocks_updated_at ON website_global_blocks;
+CREATE TRIGGER update_website_global_blocks_updated_at
+    BEFORE UPDATE ON website_global_blocks
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_global_blocks_website_id ON website_global_blocks(website_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 10. WEBSITE MENUS TABLE (Navigation menus & dropdown hierarchies)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_menus (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    location VARCHAR(50) DEFAULT 'primary' CHECK (location IN ('primary', 'footer', 'top_bar', 'mobile', 'sidebar')),
+    items JSONB DEFAULT '[]'::jsonb,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_menus_updated_at ON website_menus;
+CREATE TRIGGER update_website_menus_updated_at
+    BEFORE UPDATE ON website_menus
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_menus_website_id ON website_menus(website_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 11. WEBSITE MEDIA FILES TABLE (Tenant media library assets)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_media_files (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    file_name VARCHAR(255) NOT NULL,
+    file_url VARCHAR(500) NOT NULL,
+    file_id VARCHAR(255),
+    mime_type VARCHAR(100),
+    file_size_bytes BIGINT DEFAULT 0,
+    width INT,
+    height INT,
+    folder VARCHAR(100) DEFAULT 'uploads',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_media_files_updated_at ON website_media_files;
+CREATE TRIGGER update_website_media_files_updated_at
+    BEFORE UPDATE ON website_media_files
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_media_files_website_id ON website_media_files(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_media_files_folder ON website_media_files(website_id, folder);
+
+
+-- ============================================================================
+-- SUBSECTION 13.3: ONLINE EXAM (CBT) & PROCTORING
+-- Question banks, LaTeX formulas, exam papers, attempts, tab/camera violations
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 12. WEBSITE QUESTION BANKS TABLE
+-- Subject-wise question repositories
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_question_banks (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    subject_id BIGINT REFERENCES website_subjects(id) ON DELETE SET NULL,
+    class_id BIGINT REFERENCES website_classes(id) ON DELETE SET NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_question_banks_updated_at ON website_question_banks;
+CREATE TRIGGER update_website_question_banks_updated_at
+    BEFORE UPDATE ON website_question_banks
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_question_banks_website_id ON website_question_banks(website_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 13. WEBSITE QUESTIONS TABLE
+-- Questions supporting MCQ, negative marking & LaTeX formulas
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_questions (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    bank_id BIGINT NOT NULL REFERENCES website_question_banks(id) ON DELETE CASCADE,
+    question_text TEXT NOT NULL,
+    latex_formula TEXT,
+    question_type VARCHAR(50) DEFAULT 'mcq' CHECK (question_type IN ('mcq', 'multiple_select', 'true_false', 'short_answer', 'essay')),
+    marks NUMERIC(6,2) DEFAULT 1.00,
+    negative_marks NUMERIC(6,2) DEFAULT 0.00,
+    explanation TEXT,
+    difficulty VARCHAR(20) DEFAULT 'medium' CHECK (difficulty IN ('easy', 'medium', 'hard')),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_questions_updated_at ON website_questions;
+CREATE TRIGGER update_website_questions_updated_at
+    BEFORE UPDATE ON website_questions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_questions_website_id ON website_questions(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_questions_bank_id ON website_questions(bank_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 14. WEBSITE QUESTION OPTIONS TABLE
+-- Multiple-choice answer options with LaTeX math support
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_question_options (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    question_id BIGINT NOT NULL REFERENCES website_questions(id) ON DELETE CASCADE,
+    option_text TEXT NOT NULL,
+    latex_formula TEXT,
+    is_correct BOOLEAN DEFAULT FALSE,
+    order_no INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_question_options_question_id ON website_question_options(question_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 15. WEBSITE EXAM PAPERS TABLE
+-- Online CBT exam schedules, randomized shuffling & proctoring controls
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_exam_papers (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    exam_id BIGINT REFERENCES website_exams(id) ON DELETE SET NULL,
+    class_id BIGINT REFERENCES website_classes(id) ON DELETE SET NULL,
+    subject_id BIGINT REFERENCES website_subjects(id) ON DELETE SET NULL,
+    duration_minutes INT NOT NULL DEFAULT 60,
+    total_marks NUMERIC(6,2) NOT NULL DEFAULT 100.00,
+    pass_marks NUMERIC(6,2) NOT NULL DEFAULT 40.00,
+    randomize_questions BOOLEAN DEFAULT TRUE,
+    randomize_options BOOLEAN DEFAULT TRUE,
+    proctoring_enabled BOOLEAN DEFAULT FALSE,
+    start_time TIMESTAMPTZ,
+    end_time TIMESTAMPTZ,
+    status VARCHAR(50) DEFAULT 'draft' CHECK (status IN ('draft', 'scheduled', 'ongoing', 'completed', 'cancelled')),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_exam_papers_updated_at ON website_exam_papers;
+CREATE TRIGGER update_website_exam_papers_updated_at
+    BEFORE UPDATE ON website_exam_papers
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_exam_papers_website_id ON website_exam_papers(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_exam_papers_status ON website_exam_papers(status);
+
+
+-- ----------------------------------------------------------------------------
+-- 16. WEBSITE EXAM ATTEMPTS TABLE
+-- Student online exam submission records & computed marks
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_exam_attempts (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    paper_id BIGINT NOT NULL REFERENCES website_exam_papers(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    started_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    submitted_at TIMESTAMPTZ,
+    score_obtained NUMERIC(6,2) DEFAULT 0.00,
+    total_correct INT DEFAULT 0,
+    total_wrong INT DEFAULT 0,
+    total_unanswered INT DEFAULT 0,
+    status VARCHAR(50) DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'submitted', 'evaluated', 'terminated')),
+    answers JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_exam_attempts_updated_at ON website_exam_attempts;
+CREATE TRIGGER update_website_exam_attempts_updated_at
+    BEFORE UPDATE ON website_exam_attempts
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_exam_attempts_paper_id ON website_exam_attempts(paper_id);
+CREATE INDEX IF NOT EXISTS idx_website_exam_attempts_student_id ON website_exam_attempts(student_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 17. WEBSITE EXAM PROCTOR LOGS TABLE
+-- Tab-switch, window blur, webcam & violation audit logs
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_exam_proctor_logs (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    attempt_id BIGINT NOT NULL REFERENCES website_exam_attempts(id) ON DELETE CASCADE,
+    violation_type VARCHAR(100) NOT NULL CHECK (violation_type IN ('tab_switch', 'window_blur', 'face_not_detected', 'multiple_faces', 'audio_detected', 'screenshot_attempt', 'fullscreen_exit')),
+    severity VARCHAR(20) DEFAULT 'medium' CHECK (severity IN ('low', 'medium', 'high', 'critical')),
+    snapshot_url VARCHAR(500),
+    details JSONB DEFAULT '{}'::jsonb,
+    logged_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_exam_proctor_logs_attempt_id ON website_exam_proctor_logs(attempt_id);
+CREATE INDEX IF NOT EXISTS idx_website_exam_proctor_logs_website_id ON website_exam_proctor_logs(website_id);
+
+
+-- ============================================================================
+-- SUBSECTION 13.4: DOUBLE-ENTRY FEE & ACCOUNTING
+-- Fee heads, structures, waivers, invoices, line items, student ledgers & wallets
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 18. WEBSITE FEE HEADS TABLE
+-- Chart of fee accounts (Tuition, Lab, Transport, Admission, Hostel, Fines)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_fee_heads (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    code VARCHAR(50),
+    category VARCHAR(50) DEFAULT 'academic' CHECK (category IN ('academic', 'admission', 'exam', 'transport', 'hostel', 'library', 'fines', 'other')),
+    is_taxable BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_fee_heads_updated_at ON website_fee_heads;
+CREATE TRIGGER update_website_fee_heads_updated_at
+    BEFORE UPDATE ON website_fee_heads
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_fee_heads_website_id ON website_fee_heads(website_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 19. WEBSITE FEE STRUCTURES TABLE
+-- Fee pricing rules, class/session amounts, due dates & auto-fine schedules
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_fee_structures (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    head_id BIGINT NOT NULL REFERENCES website_fee_heads(id) ON DELETE CASCADE,
+    class_id BIGINT REFERENCES website_classes(id) ON DELETE CASCADE,
+    session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
+    amount NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    frequency VARCHAR(50) DEFAULT 'monthly' CHECK (frequency IN ('one_time', 'monthly', 'quarterly', 'term', 'yearly')),
+    due_day INT DEFAULT 10,
+    fine_rule JSONB DEFAULT '{"grace_days": 5, "fine_per_day": 10, "max_fine": 500}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_fee_structures_updated_at ON website_fee_structures;
+CREATE TRIGGER update_website_fee_structures_updated_at
+    BEFORE UPDATE ON website_fee_structures
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_fee_structures_website_id ON website_fee_structures(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_fee_structures_class_id ON website_fee_structures(class_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 20. WEBSITE FEE WAIVERS TABLE
+-- Sibling discounts, merit scholarships & financial aid concessions
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_fee_waivers (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    head_id BIGINT REFERENCES website_fee_heads(id) ON DELETE CASCADE,
+    waiver_type VARCHAR(50) DEFAULT 'percentage' CHECK (waiver_type IN ('percentage', 'fixed_amount')),
+    waiver_value NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+    reason VARCHAR(255),
+    is_active BOOLEAN DEFAULT TRUE,
+    approved_by BIGINT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_fee_waivers_updated_at ON website_fee_waivers;
+CREATE TRIGGER update_website_fee_waivers_updated_at
+    BEFORE UPDATE ON website_fee_waivers
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_fee_waivers_student_id ON website_fee_waivers(student_id);
+CREATE INDEX IF NOT EXISTS idx_website_fee_waivers_website_id ON website_fee_waivers(website_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 21. WEBSITE STUDENT INVOICES TABLE
+-- Monthly/term generated billing statements with subtotal, fines & balance
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_student_invoices (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    invoice_no VARCHAR(100) NOT NULL UNIQUE,
+    session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
+    month VARCHAR(20),
+    subtotal NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    waiver_total NUMERIC(12,2) DEFAULT 0.00,
+    fine_total NUMERIC(12,2) DEFAULT 0.00,
+    total_amount NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    paid_amount NUMERIC(12,2) DEFAULT 0.00,
+    due_amount NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    due_date DATE NOT NULL,
+    status VARCHAR(50) DEFAULT 'unpaid' CHECK (status IN ('unpaid', 'partially_paid', 'paid', 'overdue', 'cancelled')),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_student_invoices_updated_at ON website_student_invoices;
+CREATE TRIGGER update_website_student_invoices_updated_at
+    BEFORE UPDATE ON website_student_invoices
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_student_invoices_website_id ON website_student_invoices(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_student_invoices_student_id ON website_student_invoices(student_id);
+CREATE INDEX IF NOT EXISTS idx_website_student_invoices_status ON website_student_invoices(status);
+
+
+-- ----------------------------------------------------------------------------
+-- 22. WEBSITE STUDENT INVOICE ITEMS TABLE
+-- Individual itemized fee breakdown for each invoice
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_student_invoice_items (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    invoice_id BIGINT NOT NULL REFERENCES website_student_invoices(id) ON DELETE CASCADE,
+    head_id BIGINT REFERENCES website_fee_heads(id) ON DELETE SET NULL,
+    title VARCHAR(255) NOT NULL,
+    amount NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    waiver_amount NUMERIC(12,2) DEFAULT 0.00,
+    fine_amount NUMERIC(12,2) DEFAULT 0.00,
+    net_amount NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_student_invoice_items_invoice_id ON website_student_invoice_items(invoice_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 23. WEBSITE STUDENT LEDGERS TABLE
+-- Immutable financial audit trail with double-entry debit / credit journal
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_student_ledgers (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    entry_type VARCHAR(50) NOT NULL CHECK (entry_type IN ('debit', 'credit')),
+    account_category VARCHAR(50) NOT NULL DEFAULT 'fee',
+    amount NUMERIC(12,2) NOT NULL,
+    balance_after NUMERIC(12,2) NOT NULL,
+    reference_id VARCHAR(100),
+    description TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_student_ledgers_student_id ON website_student_ledgers(student_id);
+CREATE INDEX IF NOT EXISTS idx_website_student_ledgers_website_id ON website_student_ledgers(website_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 24. WEBSITE STUDENT WALLETS TABLE
+-- Advance fee deposits, student wallet credits & prepaid balances
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_student_wallets (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL UNIQUE REFERENCES website_students(id) ON DELETE CASCADE,
+    balance NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    last_deposited_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_student_wallets_updated_at ON website_student_wallets;
+CREATE TRIGGER update_website_student_wallets_updated_at
+    BEFORE UPDATE ON website_student_wallets
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_student_wallets_website_id ON website_student_wallets(website_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 25. WEBSITE REFUND REQUESTS TABLE
+-- Student excess payment refund workflow & approvals
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_refund_requests (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    amount NUMERIC(12,2) NOT NULL,
+    reason TEXT NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'disbursed')),
+    approved_by BIGINT,
+    transaction_reference VARCHAR(100),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_refund_requests_updated_at ON website_refund_requests;
+CREATE TRIGGER update_website_refund_requests_updated_at
+    BEFORE UPDATE ON website_refund_requests
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_refund_requests_website_id ON website_refund_requests(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_refund_requests_student_id ON website_refund_requests(student_id);
+
+
+-- ============================================================================
+-- SUBSECTION 13.5: ACADEMIC PROGRESSION & ALUMNI
+-- Year-over-year class roll promotions, elective choices, RFID/fingerprint sync
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 26. WEBSITE STUDENT PROMOTIONS TABLE
+-- Annual academic progression tracking without overwriting historical rolls
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_student_promotions (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    from_session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
+    to_session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
+    from_class_id BIGINT REFERENCES website_classes(id) ON DELETE SET NULL,
+    to_class_id BIGINT REFERENCES website_classes(id) ON DELETE SET NULL,
+    from_section_id BIGINT REFERENCES website_sections(id) ON DELETE SET NULL,
+    to_section_id BIGINT REFERENCES website_sections(id) ON DELETE SET NULL,
+    previous_roll VARCHAR(50),
+    new_roll VARCHAR(50),
+    promotion_status VARCHAR(50) DEFAULT 'promoted' CHECK (promotion_status IN ('promoted', 'retained', 'graduated', 'transferred')),
+    remarks TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_student_promotions_student_id ON website_student_promotions(student_id);
+CREATE INDEX IF NOT EXISTS idx_website_student_promotions_website_id ON website_student_promotions(website_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 27. WEBSITE SUBJECT REGISTRATIONS TABLE
+-- Student elective, core & 4th-subject selection per academic year
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_subject_registrations (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
+    class_id BIGINT REFERENCES website_classes(id) ON DELETE SET NULL,
+    subject_id BIGINT NOT NULL REFERENCES website_subjects(id) ON DELETE CASCADE,
+    is_optional BOOLEAN DEFAULT FALSE,
+    is_4th_subject BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_student_subject_session UNIQUE (student_id, session_id, subject_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_subject_registrations_student_id ON website_subject_registrations(student_id);
+CREATE INDEX IF NOT EXISTS idx_website_subject_registrations_subject_id ON website_subject_registrations(subject_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 28. WEBSITE ATTENDANCE DEVICES TABLE
+-- Hardware biometric terminals (ZKTeco, Hikvision, Dahua, RFID readers)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_attendance_devices (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    device_name VARCHAR(100) NOT NULL,
+    device_ip VARCHAR(50),
+    device_port INT DEFAULT 4370,
+    serial_number VARCHAR(100),
+    device_type VARCHAR(50) DEFAULT 'zkteco' CHECK (device_type IN ('zkteco', 'hikvision', 'dahua', 'anviz', 'rfid_usb', 'generic_api')),
+    location VARCHAR(100),
+    status VARCHAR(50) DEFAULT 'online' CHECK (status IN ('online', 'offline', 'error')),
+    last_sync_at TIMESTAMPTZ,
+    api_secret VARCHAR(255),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_attendance_devices_updated_at ON website_attendance_devices;
+CREATE TRIGGER update_website_attendance_devices_updated_at
+    BEFORE UPDATE ON website_attendance_devices
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_attendance_devices_website_id ON website_attendance_devices(website_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 29. WEBSITE BIOMETRIC LOGS TABLE
+-- Raw punches & timestamp captures from hardware devices
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_biometric_logs (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    device_id BIGINT REFERENCES website_attendance_devices(id) ON DELETE SET NULL,
+    user_id_on_device VARCHAR(100) NOT NULL,
+    user_type VARCHAR(50) DEFAULT 'student' CHECK (user_type IN ('student', 'teacher', 'officer', 'staff')),
+    entity_id BIGINT,
+    punch_time TIMESTAMPTZ NOT NULL,
+    punch_state VARCHAR(20) DEFAULT 'check_in' CHECK (punch_state IN ('check_in', 'check_out', 'break_out', 'break_in', 'overtime_in', 'overtime_out')),
+    verification_mode VARCHAR(50) DEFAULT 'fingerprint' CHECK (verification_mode IN ('fingerprint', 'rfid', 'face', 'password', 'palm')),
+    is_processed BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_biometric_logs_website_id ON website_biometric_logs(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_biometric_logs_punch_time ON website_biometric_logs(punch_time);
+CREATE INDEX IF NOT EXISTS idx_website_biometric_logs_is_processed ON website_biometric_logs(is_processed);
+
+
+-- ----------------------------------------------------------------------------
+-- 30. WEBSITE ALUMNI RECORDS TABLE
+-- Graduated student profiles, career achievements & networking database
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_alumni_records (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    student_id BIGINT REFERENCES website_students(id) ON DELETE SET NULL,
+    name VARCHAR(255) NOT NULL,
+    graduation_year INT NOT NULL,
+    passing_class VARCHAR(100),
+    email VARCHAR(255),
+    phone VARCHAR(50),
+    current_profession VARCHAR(255),
+    company_name VARCHAR(255),
+    higher_study_institute VARCHAR(255),
+    achievements TEXT,
+    photo_url VARCHAR(500),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_alumni_records_updated_at ON website_alumni_records;
+CREATE TRIGGER update_website_alumni_records_updated_at
+    BEFORE UPDATE ON website_alumni_records
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_alumni_records_website_id ON website_alumni_records(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_alumni_records_year ON website_alumni_records(graduation_year);
+
+
+-- ============================================================================
+-- SUBSECTION 13.6: TRUE LMS & LIVE CLASSES
+-- Courses, modules, video assets, Zoom/Meet live classes, student progress
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 31. WEBSITE COURSES TABLE
+-- Comprehensive online courses & curricula
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_courses (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL,
+    subject_id BIGINT REFERENCES website_subjects(id) ON DELETE SET NULL,
+    class_id BIGINT REFERENCES website_classes(id) ON DELETE SET NULL,
+    instructor_id BIGINT REFERENCES website_teachers(id) ON DELETE SET NULL,
+    description TEXT,
+    thumbnail_url VARCHAR(500),
+    is_published BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_website_courses_slug UNIQUE (website_id, slug)
+);
+
+DROP TRIGGER IF EXISTS update_website_courses_updated_at ON website_courses;
+CREATE TRIGGER update_website_courses_updated_at
+    BEFORE UPDATE ON website_courses
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_courses_website_id ON website_courses(website_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 32. WEBSITE COURSE MODULES TABLE
+-- Chapters / sections within an online course
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_course_modules (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    course_id BIGINT NOT NULL REFERENCES website_courses(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    order_no INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_course_modules_updated_at ON website_course_modules;
+CREATE TRIGGER update_website_course_modules_updated_at
+    BEFORE UPDATE ON website_course_modules
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_course_modules_course_id ON website_course_modules(course_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 33. WEBSITE COURSE LESSONS TABLE
+-- Video, text & quiz lectures inside course chapters
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_course_lessons (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    module_id BIGINT NOT NULL REFERENCES website_course_modules(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    lesson_type VARCHAR(50) DEFAULT 'video' CHECK (lesson_type IN ('video', 'article', 'quiz', 'attachment')),
+    content TEXT,
+    duration_seconds INT DEFAULT 0,
+    order_no INT DEFAULT 0,
+    is_preview BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_course_lessons_updated_at ON website_course_lessons;
+CREATE TRIGGER update_website_course_lessons_updated_at
+    BEFORE UPDATE ON website_course_lessons
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_course_lessons_module_id ON website_course_lessons(module_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 34. WEBSITE VIDEO ASSETS TABLE
+-- HLS streaming metadata, Cloudinary & CDN encoded media
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_video_assets (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    lesson_id BIGINT REFERENCES website_course_lessons(id) ON DELETE SET NULL,
+    title VARCHAR(255) NOT NULL,
+    video_provider VARCHAR(50) DEFAULT 'cloudinary' CHECK (video_provider IN ('cloudinary', 'youtube', 'vimeo', 's3_hls', 'cloudflare_stream')),
+    video_url VARCHAR(500) NOT NULL,
+    hls_stream_url VARCHAR(500),
+    duration_seconds INT DEFAULT 0,
+    status VARCHAR(50) DEFAULT 'ready' CHECK (status IN ('uploading', 'processing', 'ready', 'failed')),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_video_assets_website_id ON website_video_assets(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_video_assets_lesson_id ON website_video_assets(lesson_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 35. WEBSITE LIVE CLASSES TABLE
+-- Zoom, Google Meet & Agora interactive video sessions
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_live_classes (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    course_id BIGINT REFERENCES website_courses(id) ON DELETE SET NULL,
+    class_id BIGINT REFERENCES website_classes(id) ON DELETE SET NULL,
+    teacher_id BIGINT REFERENCES website_teachers(id) ON DELETE SET NULL,
+    title VARCHAR(255) NOT NULL,
+    provider VARCHAR(50) DEFAULT 'zoom' CHECK (provider IN ('zoom', 'google_meet', 'agora', 'jitsi')),
+    meeting_id VARCHAR(255),
+    meeting_password VARCHAR(255),
+    join_url VARCHAR(500) NOT NULL,
+    start_time TIMESTAMPTZ NOT NULL,
+    duration_minutes INT DEFAULT 45,
+    status VARCHAR(50) DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'live', 'ended', 'cancelled')),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_live_classes_updated_at ON website_live_classes;
+CREATE TRIGGER update_website_live_classes_updated_at
+    BEFORE UPDATE ON website_live_classes
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_live_classes_website_id ON website_live_classes(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_live_classes_status ON website_live_classes(status);
+
+
+-- ----------------------------------------------------------------------------
+-- 36. WEBSITE LESSON PROGRESS TABLE
+-- Student course completion & playback progress tracking
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_lesson_progress (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    lesson_id BIGINT NOT NULL REFERENCES website_course_lessons(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    is_completed BOOLEAN DEFAULT FALSE,
+    watch_duration_seconds INT DEFAULT 0,
+    last_watched_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_student_lesson_progress UNIQUE (lesson_id, student_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_lesson_progress_student_id ON website_lesson_progress(student_id);
+CREATE INDEX IF NOT EXISTS idx_website_lesson_progress_lesson_id ON website_lesson_progress(lesson_id);
+
+
+-- ============================================================================
+-- SUBSECTION 13.7: PARENT PORTAL & TRANSPORT/INVENTORY
+-- Multi-sibling parent logins, school bus routes/vehicles, inventory & stock
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 37. WEBSITE PARENTS TABLE
+-- Parent user accounts for multi-student family portal
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_parents (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    phone VARCHAR(50) NOT NULL,
+    password_hash VARCHAR(255),
+    occupation VARCHAR(100),
+    nid_number VARCHAR(100),
+    photo_url VARCHAR(500),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_parents_updated_at ON website_parents;
+CREATE TRIGGER update_website_parents_updated_at
+    BEFORE UPDATE ON website_parents
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_parents_website_id ON website_parents(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_parents_phone ON website_parents(phone);
+
+
+-- ----------------------------------------------------------------------------
+-- 38. WEBSITE PARENT STUDENT LINKS TABLE
+-- Connects a single parent to multiple siblings across different classes
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_parent_student_links (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    parent_id BIGINT NOT NULL REFERENCES website_parents(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    relation VARCHAR(50) DEFAULT 'father' CHECK (relation IN ('father', 'mother', 'legal_guardian', 'other')),
+    is_primary_contact BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_parent_student_link UNIQUE (parent_id, student_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_parent_student_links_parent_id ON website_parent_student_links(parent_id);
+CREATE INDEX IF NOT EXISTS idx_website_parent_student_links_student_id ON website_parent_student_links(student_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 39. WEBSITE TRANSPORT ROUTES TABLE
+-- School transit routes, stops & fare structures
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_transport_routes (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    route_name VARCHAR(100) NOT NULL,
+    start_location VARCHAR(255) NOT NULL,
+    end_location VARCHAR(255) NOT NULL,
+    fare_amount NUMERIC(10,2) DEFAULT 0.00,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_transport_routes_updated_at ON website_transport_routes;
+CREATE TRIGGER update_website_transport_routes_updated_at
+    BEFORE UPDATE ON website_transport_routes
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_transport_routes_website_id ON website_transport_routes(website_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 40. WEBSITE TRANSPORT VEHICLES TABLE
+-- School buses, vans, driver assignments & capacity
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_transport_vehicles (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    route_id BIGINT REFERENCES website_transport_routes(id) ON DELETE SET NULL,
+    vehicle_no VARCHAR(100) NOT NULL,
+    capacity INT DEFAULT 30,
+    driver_name VARCHAR(100),
+    driver_phone VARCHAR(50),
+    license_number VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_transport_vehicles_updated_at ON website_transport_vehicles;
+CREATE TRIGGER update_website_transport_vehicles_updated_at
+    BEFORE UPDATE ON website_transport_vehicles
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_transport_vehicles_website_id ON website_transport_vehicles(website_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 41. WEBSITE TRANSPORT ALLOCATIONS TABLE
+-- Student seat assignments & monthly transit fees
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_transport_allocations (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    route_id BIGINT NOT NULL REFERENCES website_transport_routes(id) ON DELETE CASCADE,
+    vehicle_id BIGINT REFERENCES website_transport_vehicles(id) ON DELETE SET NULL,
+    pickup_point VARCHAR(255),
+    monthly_fare NUMERIC(10,2) DEFAULT 0.00,
+    status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'paused', 'cancelled')),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_transport_allocations_updated_at ON website_transport_allocations;
+CREATE TRIGGER update_website_transport_allocations_updated_at
+    BEFORE UPDATE ON website_transport_allocations
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_transport_allocations_student_id ON website_transport_allocations(student_id);
+CREATE INDEX IF NOT EXISTS idx_website_transport_allocations_route_id ON website_transport_allocations(route_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 42. WEBSITE INVENTORY ITEMS TABLE
+-- Stationery, lab equipment, furniture & uniform catalog
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_inventory_items (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    item_code VARCHAR(100),
+    category VARCHAR(100) DEFAULT 'stationery' CHECK (category IN ('stationery', 'electronics', 'furniture', 'sports', 'laboratory', 'uniform', 'books', 'other')),
+    unit VARCHAR(50) DEFAULT 'pcs',
+    unit_price NUMERIC(12,2) DEFAULT 0.00,
+    min_stock_alert INT DEFAULT 5,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_inventory_items_updated_at ON website_inventory_items;
+CREATE TRIGGER update_website_inventory_items_updated_at
+    BEFORE UPDATE ON website_inventory_items
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_inventory_items_website_id ON website_inventory_items(website_id);
+
+
+-- ----------------------------------------------------------------------------
+-- 43. WEBSITE INVENTORY STOCKS TABLE
+-- Stock in/out transactions, departmental distribution & inventory audits
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_inventory_stocks (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    item_id BIGINT NOT NULL REFERENCES website_inventory_items(id) ON DELETE CASCADE,
+    transaction_type VARCHAR(50) NOT NULL CHECK (transaction_type IN ('purchase_in', 'issue_out', 'damage_loss', 'adjustment_return')),
+    quantity INT NOT NULL,
+    unit_cost NUMERIC(12,2) DEFAULT 0.00,
+    total_cost NUMERIC(12,2) DEFAULT 0.00,
+    issued_to_type VARCHAR(50),
+    issued_to_id BIGINT,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_inventory_stocks_item_id ON website_inventory_stocks(item_id);
+CREATE INDEX IF NOT EXISTS idx_website_inventory_stocks_website_id ON website_inventory_stocks(website_id);
+
+
+-- ============================================================================
+-- SUBSECTION 13.8: SECURITY, WEBHOOKS & AUDIT
+-- Change tracking diffs, tenant API keys, idempotent webhooks & async jobs
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 44. WEBSITE AUDIT LOGS TABLE
+-- Detailed before/after diffs for marks, financial invoices & sensitive actions
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_audit_logs (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    actor_type VARCHAR(50) NOT NULL CHECK (actor_type IN ('staff', 'teacher', 'officer', 'student', 'developer', 'creator', 'system')),
+    actor_id BIGINT,
+    action VARCHAR(100) NOT NULL,
+    table_name VARCHAR(100),
+    record_id BIGINT,
+    old_value JSONB DEFAULT '{}'::jsonb,
+    new_value JSONB DEFAULT '{}'::jsonb,
+    ip_address VARCHAR(50),
+    user_agent TEXT,
+    logged_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_audit_logs_website_id ON website_audit_logs(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_audit_logs_action ON website_audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_website_audit_logs_logged_at ON website_audit_logs(logged_at);
+
+
+-- ----------------------------------------------------------------------------
+-- 45. WEBSITE API KEYS TABLE
+-- Scoped API credentials for external biometric hardware & third-party tools
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_api_keys (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    key_hash VARCHAR(255) NOT NULL UNIQUE,
+    key_prefix VARCHAR(16) NOT NULL,
+    permissions JSONB DEFAULT '["read", "write"]'::jsonb,
+    is_active BOOLEAN DEFAULT TRUE,
+    expires_at TIMESTAMPTZ,
+    last_used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_website_api_keys_updated_at ON website_api_keys;
+CREATE TRIGGER update_website_api_keys_updated_at
+    BEFORE UPDATE ON website_api_keys
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_website_api_keys_website_id ON website_api_keys(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_api_keys_key_prefix ON website_api_keys(key_prefix);
+
+
+-- ----------------------------------------------------------------------------
+-- 46. WEBSITE WEBHOOK EVENTS TABLE
+-- Inbound/outbound webhook event log with idempotency guarantee
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_webhook_events (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    event_type VARCHAR(100) NOT NULL,
+    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    idempotency_key VARCHAR(255) UNIQUE,
+    status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'processed', 'failed', 'retrying')),
+    retry_count INT DEFAULT 0,
+    response_status INT,
+    error_message TEXT,
+    processed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_webhook_events_website_id ON website_webhook_events(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_webhook_events_event_type ON website_webhook_events(event_type);
+
+
+-- ----------------------------------------------------------------------------
+-- 47. WEBSITE BACKGROUND JOBS TABLE
+-- Asynchronous queue for bulk SMS, result generation & large report exports
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_background_jobs (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    job_type VARCHAR(100) NOT NULL,
+    payload JSONB DEFAULT '{}'::jsonb,
+    status VARCHAR(50) DEFAULT 'queued' CHECK (status IN ('queued', 'running', 'completed', 'failed')),
+    attempts INT DEFAULT 0,
+    max_attempts INT DEFAULT 3,
+    last_error TEXT,
+    scheduled_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    started_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_background_jobs_website_id ON website_background_jobs(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_background_jobs_status_scheduled ON website_background_jobs(status, scheduled_at);

@@ -1171,6 +1171,52 @@ export const staffNavData = [
     ]
   },
   {
+    "title": "Enterprise Modules",
+    "module": null,
+    "children": [
+      {
+        "title": "Tenant Routing & Quotas",
+        "module": null,
+        "path": "/tenant-quotas"
+      },
+      {
+        "title": "Page Builder & CMS",
+        "module": null,
+        "path": "/page-builder"
+      },
+      {
+        "title": "Online Exam (CBT) & Proctoring",
+        "module": null,
+        "path": "/cbt-exams"
+      },
+      {
+        "title": "Double-Entry Fee Accounting",
+        "module": null,
+        "path": "/fee-accounting"
+      },
+      {
+        "title": "Progression & Biometrics",
+        "module": null,
+        "path": "/academic-progression"
+      },
+      {
+        "title": "True LMS & Live Classes",
+        "module": null,
+        "path": "/lms-courses"
+      },
+      {
+        "title": "Parent, Transport & Inventory",
+        "module": null,
+        "path": "/parent-transport-inventory"
+      },
+      {
+        "title": "Security, Webhooks & Audit",
+        "module": null,
+        "path": "/security-audit"
+      }
+    ]
+  },
+  {
     "title": "Configuration",
     "module": "settings",
     "children": [
