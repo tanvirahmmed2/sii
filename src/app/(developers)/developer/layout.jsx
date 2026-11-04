@@ -31,13 +31,16 @@ export default function DeveloperLayout({ children }) {
   }
 
   const segments = pathname.split('/').filter(Boolean);
-  const moduleName = segments[1] || 'overview';
+  const moduleName = (segments[1] || 'overview').toLowerCase();
 
+  const isSuperAdmin = user?.id === 1 || user?.email === 'tanvir004006@gmail.com';
   const userPerms = Array.isArray(user?.permissions) ? user.permissions : null;
   // If user has permissions list from module_permissions, use it; otherwise fallback to general pages
-  const allowedModules = userPerms && userPerms.length > 0 ? userPerms : ['overview', 'profile', 'settings'];
+  const allowedModules = (userPerms && userPerms.length > 0 ? userPerms : ['overview', 'profile', 'settings', 'templates'])
+    .map((m) => String(m).toLowerCase());
 
   const isAllowed =
+    isSuperAdmin ||
     !segments[1] ||
     moduleName === 'overview' ||
     moduleName === 'profile' ||

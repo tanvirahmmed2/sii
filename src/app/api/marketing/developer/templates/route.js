@@ -16,6 +16,11 @@ function generateSlug(text) {
 // GET: List templates from separate task tables with category & search filters
 export async function GET(request) {
   try {
+    const auth = await hasModulePermission(request, 'templates');
+    if (!auth.success) {
+      return NextResponse.json({ success: false, error: auth.message || 'Unauthorized' }, { status: auth.status || 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category') || searchParams.get('task');
     const search = searchParams.get('search')?.trim();

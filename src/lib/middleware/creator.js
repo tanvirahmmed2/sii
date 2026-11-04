@@ -144,6 +144,8 @@ export async function getCreatorSession(request) {
       institution: c.institution || null,
       bio: c.bio || null,
       avatarUrl: c.avatar_url || null,
+      authProvider: c.auth_provider || 'local',
+      googleId: c.google_id || null,
       isActive: c.is_active,
       isVerified: c.is_verified || c.email_verified || false,
       createdAt: c.created_at,
@@ -179,8 +181,21 @@ export async function authenticateCreator(email, password, { ip = '127.0.0.1', u
     throw err;
   }
 
+  if (!creator.password && (creator.auth_provider === 'google' || creator.google_id)) {
+    const err = new Error('This account was registered using Google. Please log in with Google.');
+    err.status = 400;
+    err.googleAuth = true;
+    throw err;
+  }
+
   const isMatch = await comparePassword(password, creator.password);
   if (!isMatch) {
+    if (creator.auth_provider === 'google') {
+      const err = new Error('This account was registered using Google. Please log in with Google.');
+      err.status = 400;
+      err.googleAuth = true;
+      throw err;
+    }
     throw new Error('Incorrect email or password.');
   }
 

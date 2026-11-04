@@ -231,7 +231,10 @@ CREATE TABLE IF NOT EXISTS creators (
     country VARCHAR(100),
     city VARCHAR(100),
     address TEXT,
-    password VARCHAR(255) NOT NULL,
+    password VARCHAR(255), -- Nullable for OAuth / Google sign-in
+    google_id VARCHAR(255),
+    auth_provider VARCHAR(50) DEFAULT 'local',
+    avatar_url TEXT,
     email_verified BOOLEAN DEFAULT FALSE,
     verification_token VARCHAR(255),
     verification_token_expires TIMESTAMPTZ,
@@ -244,6 +247,7 @@ CREATE TABLE IF NOT EXISTS creators (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_creators_google_id ON creators(google_id) WHERE google_id IS NOT NULL;
 
 DROP TRIGGER IF EXISTS update_creators_updated_at ON creators;
 CREATE TRIGGER update_creators_updated_at

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { authenticateStaff } from 'src/lib/middleware/developer';
+import { hasModulePermission } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
 // ============================================================================
@@ -7,9 +7,9 @@ import { queryDb } from 'src/lib/database/db';
 // ============================================================================
 export async function GET(request, { params }) {
   try {
-    const auth = await authenticateStaff(request);
+    const auth = await hasModulePermission(request, 'tasks');
     if (!auth.success) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, error: auth.message || 'Unauthorized' }, { status: auth.status || 401 });
     }
 
     const { id } = await params;
@@ -36,12 +36,12 @@ export async function GET(request, { params }) {
 // ============================================================================
 export async function POST(request, { params }) {
   try {
-    const auth = await authenticateStaff(request);
+    const auth = await hasModulePermission(request, 'tasks');
     if (!auth.success) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, error: auth.message || 'Unauthorized' }, { status: auth.status || 401 });
     }
 
-    const currentStaff = auth.user || auth.staff;
+    const currentStaff = auth.developer || auth.user || auth.staff;
     const currentStaffId = currentStaff?.id;
     const { id } = await params;
     const body = await request.json();

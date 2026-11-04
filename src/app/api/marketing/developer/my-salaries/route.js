@@ -1,19 +1,19 @@
 import { NextResponse } from 'next/server';
-import { authenticateStaff } from 'src/lib/middleware/developer';
+import { hasModulePermission } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
 // ============================================================================
 // GET: Fetch personal salary records & payouts for the logged-in developer
-// Accessible to ALL developer roles
+// Accessible to developers with 'my-salaries' permission
 // ============================================================================
 export async function GET(request) {
   try {
-    const auth = await authenticateStaff(request);
+    const auth = await hasModulePermission(request, 'my-salaries');
     if (!auth.success) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, error: auth.message || 'Unauthorized' }, { status: auth.status || 401 });
     }
 
-    const currentDevId = auth.user?.id || auth.staff?.id;
+    const currentDevId = auth.developer?.id || auth.user?.id || auth.staff?.id;
     if (!currentDevId) {
       return NextResponse.json({ success: false, error: 'User identifier not found.' }, { status: 401 });
     }

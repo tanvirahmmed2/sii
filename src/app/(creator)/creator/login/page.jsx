@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import CreatorAuthLayout from 'src/component/marketing/creator/CreatorAuthLayout';
 import LoadingScreen from 'src/component/common/LoadingScreen';
+import GoogleAuthButton from 'src/component/marketing/creator/GoogleAuthButton';
 
 function CreatorLoginForm() {
   const router = useRouter();
@@ -142,7 +143,7 @@ function CreatorLoginForm() {
   }
 
   return (
-    <div className="w-full bg-white border border-slate-200 rounded p-5 space-y-4 text-xs text-slate-800 h-screen flex items-center justify-center">
+    <div className="w-full bg-white border border-slate-200 rounded p-5 space-y-4 text-xs text-slate-800">
       <div>
         <h1 className="text-base font-semibold text-slate-900">Creator Login</h1>
         <p className="text-slate-500 text-xs mt-0.5">
@@ -151,8 +152,18 @@ function CreatorLoginForm() {
       </div>
 
       {error && (
-        <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 font-medium">
-          {error}
+        <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 font-medium text-xs space-y-1">
+          <div>{error}</div>
+          {(error.toLowerCase().includes('register') || error.toLowerCase().includes('no creator account')) && (
+            <div className="pt-0.5">
+              <Link
+                href="/creator/register"
+                className="font-semibold text-rose-900 underline hover:text-rose-950 text-[11px]"
+              >
+                Create a new Creator account &rarr;
+              </Link>
+            </div>
+          )}
         </div>
       )}
 
@@ -185,7 +196,22 @@ function CreatorLoginForm() {
           </div>
         </div>
       ) : (
-        <form onSubmit={handleLogin} className="space-y-3">
+        <div className="space-y-4">
+          <GoogleAuthButton
+            mode="login"
+            redirectUrl={redirectParam}
+            onError={(msg) => setError(msg)}
+          />
+
+          <div className="relative flex items-center justify-center">
+            <div className="border-t border-slate-200 w-full"></div>
+            <span className="bg-white px-2 text-[10px] uppercase tracking-wider text-slate-400 font-medium shrink-0">
+              or sign in with password
+            </span>
+            <div className="border-t border-slate-200 w-full"></div>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-3">
           <div>
             <label className="block text-[11px] font-medium text-slate-700 mb-1">
               Email Address *
@@ -248,14 +274,15 @@ function CreatorLoginForm() {
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2 px-3 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50"
-          >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2 px-3 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50"
+            >
+              {loading ? 'Logging in...' : 'Login'}
+            </button>
+          </form>
+        </div>
       )}
 
       <div className="pt-2 border-t border-slate-100 text-center text-slate-500 text-[11px]">

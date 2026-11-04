@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import CreatorAuthLayout from 'src/component/marketing/creator/CreatorAuthLayout';
+import GoogleAuthButton from 'src/component/marketing/creator/GoogleAuthButton';
 
 export default function CreatorRegisterPage() {
   const router = useRouter();
@@ -102,8 +103,18 @@ export default function CreatorRegisterPage() {
         </div>
 
         {error && (
-          <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 font-medium">
-            {error}
+          <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 font-medium text-xs space-y-1">
+            <div>{error}</div>
+            {(error.toLowerCase().includes('already exists') || error.toLowerCase().includes('log in')) && (
+              <div className="pt-0.5">
+                <Link
+                  href="/creator/login"
+                  className="font-semibold text-rose-900 underline hover:text-rose-950 text-[11px]"
+                >
+                  Go to Login page &rarr;
+                </Link>
+              </div>
+            )}
           </div>
         )}
 
@@ -136,7 +147,21 @@ export default function CreatorRegisterPage() {
             </div>
           </div>
         ) : (
-          <form onSubmit={handleRegister} className="space-y-3">
+          <div className="space-y-4">
+            <GoogleAuthButton
+              mode="register"
+              onError={(msg) => setError(msg)}
+            />
+
+            <div className="relative flex items-center justify-center">
+              <div className="border-t border-slate-200 w-full"></div>
+              <span className="bg-white px-2 text-[10px] uppercase tracking-wider text-slate-400 font-medium shrink-0">
+                or sign up with email
+              </span>
+              <div className="border-t border-slate-200 w-full"></div>
+            </div>
+
+            <form onSubmit={handleRegister} className="space-y-3">
             <div>
               <label className="block text-[11px] font-medium text-slate-700 mb-1">
                 Full Name *
@@ -225,6 +250,7 @@ export default function CreatorRegisterPage() {
               {loading ? 'Creating Account...' : 'Create Account'}
             </button>
           </form>
+        </div>
         )}
 
         <div className="pt-2 border-t border-slate-100 text-center text-slate-500 text-[11px]">

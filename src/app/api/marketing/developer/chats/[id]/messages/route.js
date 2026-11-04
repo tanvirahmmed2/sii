@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { authenticateStaff } from 'src/lib/middleware/developer';
+import { hasModulePermission } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
 // ============================================================================
@@ -7,13 +7,13 @@ import { queryDb } from 'src/lib/database/db';
 // ============================================================================
 export async function GET(request, { params }) {
   try {
-    const auth = await authenticateStaff(request);
+    const auth = await hasModulePermission(request, 'chats');
     if (!auth.success) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, error: auth.message || 'Unauthorized' }, { status: auth.status || 401 });
     }
 
     const { id } = await params;
-    const currentDevId = auth.staff.id;
+    const currentDevId = auth.developer?.id || auth.user?.id || auth.staff?.id;
 
     // Verify user is a participant
     const partCheck = await queryDb(
@@ -42,8 +42,8 @@ export async function GET(request, { params }) {
         d.id AS sender_id,
         d.name AS sender_name,
         d.email AS sender_email,
-        COALESCE(r.slug, 'developer') AS sender_role,
-        COALESCE(r.name, 'Developer') AS sender_role_name,
+        'developer' AS sender_role,
+        COALESCE(d.designation, 'Developer') AS sender_role_name,
         COALESCE(
           json_agg(
             json_build_object(
@@ -59,7 +59,7 @@ export async function GET(request, { params }) {
       JOIN developers d ON m.sender_developer_id = d.id
       LEFT JOIN chat_images ci ON m.id = ci.message_id
       WHERE m.chat_id = $1
-      GROUP BY m.id, m.chat_id, m.message, m.is_system, m.created_at, d.id, d.name, d.email
+      GROUP BY m.id, m.chat_id, m.message, m.is_system, m.created_at, d.id, d.name, d.email, d.designation
       ORDER BY m.created_at ASC
       LIMIT 200
     `, [id]);
@@ -79,13 +79,14 @@ export async function GET(request, { params }) {
 // ============================================================================
 export async function POST(request, { params }) {
   try {
-    const auth = await authenticateStaff(request);
+    const auth = await hasModulePermission(request, 'chats');
     if (!auth.success) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, error: auth.message || 'Unauthorized' }, { status: auth.status || 401 });
     }
 
     const { id } = await params;
-    const currentDevId = auth.staff.id;
+    const currentDev = auth.developer || auth.user || auth.staff;
+    const currentDevId = currentDev?.id;
     const body = await request.json();
     const { message, images = [] } = body;
 
@@ -134,10 +135,10 @@ export async function POST(request, { params }) {
       success: true,
       message: {
         ...newMsg,
-        sender_id: auth.staff.id,
-        sender_name: auth.staff.name,
-        sender_email: auth.staff.email,
-        sender_role: auth.staff.role,
+        sender_id: currentDev.id,
+        sender_name: currentDev.name,
+        sender_email: currentDev.email,
+        sender_role: 'developer',
         images: savedImages,
       },
     });

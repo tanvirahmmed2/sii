@@ -99,13 +99,16 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
   const pathname = usePathname();
   const router = useRouter();
 
+  const isSuperAdmin = currentUser?.id === 1 || currentUser?.email === 'tanvir004006@gmail.com';
   const userPerms = Array.isArray(currentUser?.permissions) ? currentUser.permissions : null;
-  const allowedModules = userPerms && userPerms.length > 0 ? userPerms : ['overview', 'profile', 'settings', 'templates'];
+  const allowedModules = (userPerms && userPerms.length > 0 ? userPerms : ['overview', 'profile', 'settings', 'templates'])
+    .map(m => String(m).toLowerCase());
 
   const isLinkAllowed = (link) => {
+    if (isSuperAdmin) return true;
     const rawPath = link.href.split('?')[0];
     const segments = rawPath.split('/').filter(Boolean);
-    const moduleName = segments[1] || 'overview';
+    const moduleName = (segments[1] || 'overview').toLowerCase();
     return (
       moduleName === 'overview' ||
       moduleName === 'profile' ||
