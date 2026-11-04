@@ -46,6 +46,59 @@ CREATE TRIGGER update_website_modules_updated_at
     BEFORE UPDATE ON website_modules
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- ----------------------------------------------------------------------------
+-- 1B. WEBSITE HOME MODULES TABLE (Public Institutional Website Pages & Features)
+-- e.g. /about, /admission, /alumni, /awards, /classes, /clubs, /notices, /events
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_home_modules (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    path VARCHAR(255) NOT NULL,
+    category VARCHAR(100) DEFAULT 'General',
+    description TEXT,
+    icon VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
+    display_order INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_home_modules_slug ON website_home_modules(slug);
+CREATE INDEX IF NOT EXISTS idx_website_home_modules_active ON website_home_modules(is_active);
+
+DROP TRIGGER IF EXISTS update_website_home_modules_updated_at ON website_home_modules;
+CREATE TRIGGER update_website_home_modules_updated_at
+    BEFORE UPDATE ON website_home_modules
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 1C. WEBSITE CONTROL MODULES TABLE (Administrative Staff Panel & Portal Workstations)
+-- e.g. /staff-panel/student-registration, /staff-panel/exam-mark-input, etc.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_control_modules (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    path VARCHAR(255) NOT NULL,
+    category VARCHAR(100) DEFAULT 'General Management',
+    description TEXT,
+    icon VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
+    display_order INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_control_modules_slug ON website_control_modules(slug);
+CREATE INDEX IF NOT EXISTS idx_website_control_modules_category ON website_control_modules(category);
+CREATE INDEX IF NOT EXISTS idx_website_control_modules_active ON website_control_modules(is_active);
+
+DROP TRIGGER IF EXISTS update_website_control_modules_updated_at ON website_control_modules;
+CREATE TRIGGER update_website_control_modules_updated_at
+    BEFORE UPDATE ON website_control_modules
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 
 -- ============================================================================
 -- SECTION 2: STAFF TABLES
@@ -1334,10 +1387,7 @@ CREATE INDEX IF NOT EXISTS idx_ws_students_session ON website_students(website_i
 CREATE INDEX IF NOT EXISTS idx_ws_students_active ON website_students(website_id, is_active);
 CREATE INDEX IF NOT EXISTS idx_ws_student_info_student ON website_student_info(student_id);
 CREATE INDEX IF NOT EXISTS idx_ws_student_info_website ON website_student_info(website_id);
-CREATE INDEX IF NOT EXISTS idx_ws_student_info_email ON website_student_info(website_id, email);
-CREATE INDEX IF NOT EXISTS idx_ws_student_info_vtoken ON website_student_info(verification_token);
-CREATE INDEX IF NOT EXISTS idx_ws_student_info_rtoken ON website_student_info(recovery_token);
-CREATE INDEX IF NOT EXISTS idx_ws_student_info_status ON website_student_info(website_id, verification_status, is_verified);
+CREATE INDEX IF NOT EXISTS idx_ws_student_info_status ON website_student_info(website_id, verification_status);
 CREATE INDEX IF NOT EXISTS idx_ws_student_addr_student ON website_student_addresses(student_id);
 CREATE INDEX IF NOT EXISTS idx_ws_student_guard_student ON website_student_guardians(student_id);
 CREATE INDEX IF NOT EXISTS idx_ws_student_pics_student ON website_student_pictures(student_id);
@@ -2657,6 +2707,18 @@ CREATE INDEX IF NOT EXISTS idx_ws_adm_exam_sub_adm ON website_admission_exam_sub
 -- ----------------------------------------------------------------------------
 -- The unified table `website_form_fields` (Section 38c) serves as the single source of truth 
 -- for modular fields across both student rosters and applicant intake.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+          AND table_name = 'website_admission_form_fields' 
+          AND table_type = 'BASE TABLE'
+    ) THEN
+        DROP TABLE website_admission_form_fields CASCADE;
+    END IF;
+END $$;
+
 CREATE OR REPLACE VIEW website_admission_form_fields AS
     SELECT * FROM website_form_fields;
 

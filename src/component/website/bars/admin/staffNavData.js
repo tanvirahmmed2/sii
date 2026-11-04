@@ -1243,6 +1243,11 @@ export const staffNavData = [
     ]
   },
   {
+    "title": "Modules Directory",
+    "module": "settings",
+    "path": "/modules"
+  },
+  {
     "title": "Settings",
     "module": "settings",
     "path": "/settings"

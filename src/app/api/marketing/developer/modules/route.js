@@ -82,6 +82,8 @@ function formatTableToModuleTitle(tableName) {
     user_roles: 'User Role Assignments',
     settings: 'Settings & Custom Domain',
     modules: 'Website Modules',
+    home_modules: 'Tenant Home Modules (Public Frontend)',
+    control_modules: 'Tenant Control Modules (Staff Panel Workstations)',
 
     // Platform Core modules
     packages: 'Subscription Packages',
@@ -340,6 +342,15 @@ export async function GET(request) {
       filteredModules = legacyModules;
     }
 
+    // Fetch Home Modules and Control Modules lists for quick developer introspection
+    const [homeRes, ctrlRes] = await Promise.all([
+      queryDb('SELECT * FROM website_home_modules ORDER BY display_order ASC, id ASC').catch(() => ({ rows: [] })),
+      queryDb('SELECT * FROM website_control_modules ORDER BY category ASC, display_order ASC, id ASC').catch(() => ({ rows: [] })),
+    ]);
+
+    const homeModulesList = homeRes.rows || [];
+    const controlModulesList = ctrlRes.rows || [];
+
     return NextResponse.json({
       success: true,
       total_tables: allTables.length,
@@ -348,10 +359,14 @@ export async function GET(request) {
         website: websiteModules.length,
         platform: platformModules.length,
         legacy: legacyModules.length,
+        home_modules: homeModulesList.length,
+        control_modules: controlModulesList.length,
       },
       filter,
       modules: filteredModules,
       available_modules: selectableModules,
+      home_modules: homeModulesList,
+      control_modules: controlModulesList,
     });
   } catch (error) {
     console.error('Error querying database modules:', error);
