@@ -22,7 +22,7 @@ export async function GET(request) {
              pu.period_end AS current_period_end,
              c.name AS creator_name,
              c.email AS creator_email,
-             c.institution AS creator_institution,
+             w.institution_name AS creator_institution,
              p.name AS package_name,
              p.slug AS package_slug,
              p.is_public AS package_is_public,

@@ -16,7 +16,7 @@ export async function GET(request) {
     if (emailParam) {
       const cleanEmail = emailParam.trim().toLowerCase();
       const checkRes = await queryDb(
-        `SELECT c.id, c.name, c.email, c.phone, c.institution, c.country, c.city, c.is_active, c.email_verified AS is_verified
+        `SELECT c.id, c.name, c.email, c.phone, c.country, c.city, c.is_active, c.email_verified AS is_verified
          FROM creators c
          WHERE LOWER(TRIM(c.email)) = $1
          LIMIT 1`,
@@ -51,8 +51,8 @@ export async function GET(request) {
     }
 
     const res = await queryDb(`
-      SELECT c.id, c.name, c.email, c.phone, c.institution, c.country, c.city, c.address,
-             c.institution AS bio, c.is_active, c.email_verified AS is_verified,
+      SELECT c.id, c.name, c.email, c.phone, c.country, c.city, c.address,
+             c.is_active, c.email_verified AS is_verified,
              (CASE WHEN c.two_factor_code IS NOT NULL THEN true ELSE false END) AS two_factor_enabled,
              c.last_login_at, c.created_at,
              COUNT(DISTINCT w.id)::int AS websites_count,

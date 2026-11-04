@@ -227,7 +227,6 @@ CREATE TABLE IF NOT EXISTS creators (
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     phone VARCHAR(50),
-    institution VARCHAR(255),
     country VARCHAR(100),
     city VARCHAR(100),
     address TEXT,

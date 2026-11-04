@@ -219,7 +219,7 @@ function CreatorLoginForm() {
             <input
               type="email"
               required
-              placeholder="you@institution.com"
+              placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"

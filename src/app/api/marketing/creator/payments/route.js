@@ -73,7 +73,7 @@ export async function GET(request) {
                 c.name AS creator_name,
                 c.email AS creator_email,
                 c.phone AS creator_phone,
-                c.institution AS creator_institution,
+                COALESCE(c.city, '') AS creator_institution,
                 c.address AS creator_address,
                 c.city AS creator_city,
                 c.country AS creator_country

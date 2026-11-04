@@ -48,22 +48,20 @@ export async function handleAuthAction(body, request) {
 
     const hashedPassword = await hashPassword(d.password);
     const verificationCode = generateAlphanumericToken(6);
-    const institution = (d.institution || d.company || '').trim() || null;
     const phone = (d.phone || '').trim() || null;
     const country = (d.country || '').trim() || null;
     const city = (d.city || '').trim() || null;
     const address = (d.address || '').trim() || null;
 
     const res = await queryDb(
-      `INSERT INTO creators (name, email, password, phone, institution, country, city, address, auth_provider, email_verified, verification_token, verification_token_expires, is_active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'local', FALSE, $9, CURRENT_TIMESTAMP + INTERVAL '24 hours', TRUE)
-       RETURNING id, name, email, phone, institution, auth_provider, email_verified, is_active, created_at`,
+      `INSERT INTO creators (name, email, password, phone, country, city, address, auth_provider, email_verified, verification_token, verification_token_expires, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'local', FALSE, $8, CURRENT_TIMESTAMP + INTERVAL '24 hours', TRUE)
+       RETURNING id, name, email, phone, auth_provider, email_verified, is_active, created_at`,
       [
         d.name.trim(),
         cleanEmail,
         hashedPassword,
         phone,
-        institution,
         country,
         city,
         address,
@@ -108,7 +106,6 @@ export async function handleAuthAction(body, request) {
         id: newCreator.id,
         name: newCreator.name,
         email: newCreator.email,
-        institution: newCreator.institution,
         emailVerified: false,
       },
     });
@@ -153,7 +150,7 @@ export async function handleAuthAction(body, request) {
 
     // Check for existing account with this email or google_id
     const existingRes = await queryDb(
-      `SELECT id, name, email, phone, institution, auth_provider, google_id, avatar_url, is_active, email_verified, password
+      `SELECT id, name, email, phone, auth_provider, google_id, avatar_url, is_active, email_verified, password
        FROM creators
        WHERE LOWER(email) = LOWER($1) OR (google_id IS NOT NULL AND google_id = $2)
        LIMIT 1`,
@@ -189,7 +186,7 @@ export async function handleAuthAction(body, request) {
            email_verified, is_active, password
          )
          VALUES ($1, $2, $3, 'google', $4, TRUE, TRUE, $5)
-         RETURNING id, name, email, phone, institution, auth_provider, avatar_url, email_verified, is_active, created_at`,
+         RETURNING id, name, email, phone, auth_provider, avatar_url, email_verified, is_active, created_at`,
         [googleName || googleEmail.split('@')[0], googleEmail, googleId || null, googlePicture, hashedFallbackPassword]
       );
       const newCreator = insertRes.rows[0];
@@ -215,7 +212,6 @@ export async function handleAuthAction(body, request) {
           id: Number(newCreator.id),
           name: newCreator.name,
           email: newCreator.email,
-          institution: newCreator.institution,
           avatarUrl: newCreator.avatar_url,
           authProvider: 'google',
           emailVerified: true,
@@ -274,7 +270,6 @@ export async function handleAuthAction(body, request) {
         id: Number(existingCreator.id),
         name: existingCreator.name,
         email: existingCreator.email,
-        institution: existingCreator.institution,
         avatarUrl: existingCreator.avatar_url,
         authProvider: existingCreator.auth_provider || 'google',
         emailVerified: true,
@@ -298,7 +293,7 @@ export async function handleAuthAction(body, request) {
 
     const cleanEmail = String(email).trim().toLowerCase();
     const res = await queryDb(
-      `SELECT id, name, email, institution, email_verified, verification_token, verification_token_expires 
+      `SELECT id, name, email, email_verified, verification_token, verification_token_expires 
        FROM creators WHERE LOWER(email) = $1 LIMIT 1`,
       [cleanEmail]
     );
@@ -317,7 +312,6 @@ export async function handleAuthAction(body, request) {
           id: creator.id,
           name: creator.name,
           email: creator.email,
-          institution: creator.institution,
           emailVerified: true,
         },
       });
@@ -360,7 +354,6 @@ export async function handleAuthAction(body, request) {
         id: Number(creator.id),
         name: creator.name,
         email: creator.email,
-        institution: creator.institution,
         emailVerified: true,
         isVerified: true,
       },

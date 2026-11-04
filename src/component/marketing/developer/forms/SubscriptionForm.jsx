@@ -455,9 +455,9 @@ export default function SubscriptionForm({
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Institution</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Location</span>
                   <span className="text-slate-800 dark:text-slate-200 truncate block">
-                    {creatorFound.institution || 'Individual Creator'}
+                    {creatorFound.city || creatorFound.country || 'Individual Creator'}
                   </span>
                 </div>
                 <div>

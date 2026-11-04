@@ -319,7 +319,7 @@ export async function POST(request) {
     const { action } = body;
 
     // 1. Auth Actions (creators table)
-    const authActions = ['register', 'verify', 'resend_verification', 'login', 'logout', 'me', 'recover', 'reset_password'];
+    const authActions = ['register', 'google_auth', 'verify', 'resend_verification', 'login', 'logout', 'me', 'recover', 'reset_password'];
     if (authActions.includes(action)) {
       return await handleAuthAction(body, request);
     }

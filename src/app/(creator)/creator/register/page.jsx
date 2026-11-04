@@ -13,7 +13,6 @@ export default function CreatorRegisterPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [phone, setPhone] = useState('');
-  const [institution, setInstitution] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -44,7 +43,6 @@ export default function CreatorRegisterPage() {
             email: email.trim().toLowerCase(),
             password,
             phone: phone.trim() || undefined,
-            institution: institution.trim() || undefined,
           },
         }),
       });
@@ -214,32 +212,17 @@ export default function CreatorRegisterPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                  Institution Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="Greenwood Academy"
-                  value={institution}
-                  onChange={(e) => setInstitution(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  placeholder="+8801XXXXXXXXX"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
-                />
-              </div>
+            <div>
+              <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                Phone Number (Optional)
+              </label>
+              <input
+                type="tel"
+                placeholder="+8801XXXXXXXXX"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
+              />
             </div>
 
             <button

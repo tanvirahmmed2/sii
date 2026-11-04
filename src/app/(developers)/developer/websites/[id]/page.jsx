@@ -140,7 +140,6 @@ export default function WebsiteDetailsPage({ params }) {
           setCreatorForm({
             name: c.name || '',
             phone: c.phone || '',
-            institution: c.institution || '',
             country: c.country || '',
             city: c.city || '',
             address: c.address || '',
@@ -200,7 +199,6 @@ export default function WebsiteDetailsPage({ params }) {
               setCreatorForm({
                 name: c.name || '',
                 phone: c.phone || '',
-                institution: c.institution || '',
                 country: c.country || '',
                 city: c.city || '',
                 address: c.address || '',
@@ -838,11 +836,6 @@ export default function WebsiteDetailsPage({ params }) {
                   </div>
 
                   <div>
-                    <span className="text-[10px] uppercase font-semibold text-slate-400 block">Institution</span>
-                    <div className="text-slate-700 dark:text-slate-300">{creator.institution || 'Unassigned'}</div>
-                  </div>
-
-                  <div>
                     <span className="text-[10px] uppercase font-semibold text-slate-400 block">Location</span>
                     <div className="text-slate-700 dark:text-slate-300">
                       {[creator.city, creator.country].filter(Boolean).join(', ') || 'Global'}
@@ -1327,7 +1320,7 @@ export default function WebsiteDetailsPage({ params }) {
                 >
                   {creators.map((c) => (
                     <option key={c.id} value={c.id}>
-                      #{c.id} {c.name} &bull; {c.email} ({c.institution || 'No org'})
+                      #{c.id} {c.name} &bull; {c.email} ({c.city || 'Creator'})
                     </option>
                   ))}
                 </select>

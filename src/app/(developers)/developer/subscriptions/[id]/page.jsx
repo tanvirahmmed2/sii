@@ -544,7 +544,7 @@ export default function SubscriptionDetailsPage({ params }) {
               {pkg?.name || 'Educational Plan'} &bull; {creator?.name || 'Creator Account'}
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Institution: <span className="font-medium text-slate-700 dark:text-slate-300">{creator?.institution || 'Unassigned'}</span> &bull; Client: {creator?.email}
+              Client: <span className="font-medium text-slate-700 dark:text-slate-300">{creator?.name}</span> &bull; {creator?.email}
             </p>
           </div>
 
@@ -1106,11 +1106,6 @@ export default function SubscriptionDetailsPage({ params }) {
                 <div>
                   <span className="text-[10px] uppercase font-semibold text-slate-400 block">Phone</span>
                   <div className="font-mono text-slate-700 dark:text-slate-300">{creator?.phone || 'Not provided'}</div>
-                </div>
-
-                <div>
-                  <span className="text-[10px] uppercase font-semibold text-slate-400 block">Institution / Organization</span>
-                  <div className="text-slate-700 dark:text-slate-300">{creator?.institution || 'Unassigned'}</div>
                 </div>
 
                 <div>

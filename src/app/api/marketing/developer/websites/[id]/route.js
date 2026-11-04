@@ -13,7 +13,7 @@ async function fetchFullWebsite(websiteId) {
             c.name AS creator_name,
             c.email AS creator_email,
             c.phone AS creator_phone,
-            c.institution AS creator_institution,
+            w.institution_name AS creator_institution,
             c.country AS creator_country,
             c.city AS creator_city,
             c.address AS creator_address,

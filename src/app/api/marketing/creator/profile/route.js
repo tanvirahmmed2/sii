@@ -23,8 +23,8 @@ export async function GET(request) {
     }
 
     const res = await queryDb(
-      `SELECT id, name, email, phone, institution, country, city, address,
-              institution AS bio, is_active, email_verified AS is_verified,
+      `SELECT id, name, email, phone, country, city, address,
+              is_active, email_verified AS is_verified,
               (CASE WHEN two_factor_code IS NOT NULL THEN true ELSE false END) AS two_factor_enabled,
               last_login_at, created_at, updated_at
        FROM creators WHERE id = $1 LIMIT 1`,
@@ -60,17 +60,15 @@ export async function handleProfileAction(body, sessionCreator) {
       `UPDATE creators 
        SET name = COALESCE($1, name),
            phone = COALESCE($2, phone),
-           institution = COALESCE($3, institution),
-           country = COALESCE($4, country),
-           city = COALESCE($5, city),
-           address = COALESCE($6, address),
+           country = COALESCE($3, country),
+           city = COALESCE($4, city),
+           address = COALESCE($5, address),
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $7
-       RETURNING id, name, email, phone, institution, country, city, address, institution AS bio, is_active, email_verified AS is_verified, updated_at`,
+       WHERE id = $6
+       RETURNING id, name, email, phone, country, city, address, is_active, email_verified AS is_verified, updated_at`,
       [
         body.name?.trim() || null,
         body.phone?.trim() || null,
-        (body.institution || body.bio)?.trim() || null,
         body.country?.trim() || null,
         body.city?.trim() || null,
         body.address?.trim() || null,

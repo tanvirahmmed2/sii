@@ -14,8 +14,6 @@ export async function GET(request) {
         name: current.name,
         email: current.email,
         phone: current.phone,
-        institution: current.institution || current.bio || null,
-        bio: current.institution || current.bio || null,
         isActive: current.isActive,
         isVerified: current.isVerified,
       },

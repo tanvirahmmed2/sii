@@ -20,8 +20,8 @@ export async function GET(request, { params }) {
 
     // 1. Fetch creator profile
     const creatorRes = await queryDb(
-      `SELECT id, name, email, phone, institution, country, city, address,
-              institution AS bio, is_active, email_verified AS is_verified,
+      `SELECT id, name, email, phone, country, city, address,
+              is_active, email_verified AS is_verified,
               (CASE WHEN two_factor_code IS NOT NULL THEN true ELSE false END) AS two_factor_enabled,
               last_login_at, created_at, updated_at
        FROM creators 
@@ -186,12 +186,10 @@ export async function PUT(request, { params }) {
       data.email_verified = data.is_verified;
       delete data.is_verified;
     }
-    if (data.bio !== undefined && data.institution === undefined) {
-      data.institution = data.bio;
-      delete data.bio;
-    }
+    delete data.bio;
+    delete data.institution;
 
-    const allowedKeys = ['name', 'phone', 'institution', 'country', 'city', 'address', 'is_active', 'email_verified'];
+    const allowedKeys = ['name', 'phone', 'country', 'city', 'address', 'is_active', 'email_verified'];
     const keys = Object.keys(data).filter((k) => allowedKeys.includes(k));
     if (keys.length === 0) {
       return NextResponse.json({ success: true, message: 'No valid fields provided to update' });
@@ -203,8 +201,8 @@ export async function PUT(request, { params }) {
 
     const res = await queryDb(
       `UPDATE creators SET ${setClauses.join(', ')} WHERE id = $${values.length} 
-       RETURNING id, name, email, phone, institution, country, city, address,
-                 institution AS bio, is_active, email_verified AS is_verified,
+       RETURNING id, name, email, phone, country, city, address,
+                 is_active, email_verified AS is_verified,
                  (CASE WHEN two_factor_code IS NOT NULL THEN true ELSE false END) AS two_factor_enabled,
                  updated_at`,
       values
