@@ -1,5 +1,3 @@
-
-
 export const CLOUDINARY_NAME = process.env.CLOUDINARY_NAME;
 export const CLOUDINARY_API = process.env.CLOUDINARY_API;
 export const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
@@ -7,9 +5,9 @@ export const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
 export const JWT_SECRET = process.env.JWT_SECRET;
 export const NODE_ENV = process.env.NODE_ENV || 'development';
 
-const cleanEnv = (val) =>
+export const cleanEnv = (val) =>
   typeof val === 'string'
-    ? val.replace(/\r/g, '').trim().replace(/^['"]|['"]$/g, '').trim()
+    ? val.replace(/\r\n/g, '').replace(/\r/g, '').trim().replace(/^['"]|['"]$/g, '').trim()
     : val;
 
 export const PG_USER = cleanEnv(process.env.PG_USER);
@@ -22,7 +20,7 @@ export const BREVO_SENDER_EMAIL = cleanEnv(process.env.BREVO_SENDER_EMAIL);
 export const BREVO_SENDER_NAME = cleanEnv(process.env.BREVO_SENDER_NAME);
 export const BREVO_API_KEY = cleanEnv(process.env.BREVO_API_KEY);
 
-export const SCHOOL_NAME = "website.name"
+export const SCHOOL_NAME = "website.name";
 export const LOGO_URL = '/icon.png';
 export const META_TITLE = "Sky International Institute - Academic Excellence & Growth";
 export const META_DESCRIPTION = 'Manage student enrollments, exam records, gradesheets, timetables, and billing files dynamically.';
@@ -36,49 +34,132 @@ export const SITE_ADDRESS = 'Tech Innovation District, 100 Enterprise Way, Suite
 export const COMPANY_NAME = 'EduCraft Technologies Inc.';
 export const COMPANY_URL = process.env.COMPANY_URL || 'https://educraft.io';
 
-export const getBaseUrl = (request) => {
-  if (!request) return '';
-  try {
-    if (typeof request === 'string') {
-      return new URL(request).origin;
-    }
-    if (request.nextUrl?.origin) {
-      return request.nextUrl.origin;
-    }
-    const host = request.headers?.get?.('x-forwarded-host') || request.headers?.get?.('host');
-    if (host) {
-      const proto = request.headers?.get?.('x-forwarded-proto') || (request.url?.startsWith('https') ? 'https' : 'http');
-      return `${proto}://${host.split(',')[0].trim()}`;
-    }
-    if (request.url) {
-      return new URL(request.url).origin;
-    }
-  } catch { }
-  return '';
-};
+// Base URL configured in .env (e.g. 'localhost:3000' or 'educraft.io' or 'https://educraft.io')
+export const BASE_URL = cleanEnv(process.env.BASE_URL) || 'localhost:3000';
 
-export const BASE_URL = '';
-
+/**
+ * Normalizes and extracts base domain (with port if present, e.g. 'localhost:3000' or 'educraft.io')
+ */
 export const extractBaseDomain = (url = '') => {
-  if (!url) return '';
+  const target = cleanEnv(url) || cleanEnv(BASE_URL) || 'localhost:3000';
   try {
-    const raw = String(url).trim();
-    const parsed = new URL(raw.startsWith('http://') || raw.startsWith('https://') ? raw : `https://${raw}`);
-    return parsed.host || parsed.hostname || '';
+    const raw = String(target).trim();
+    const hasProto = raw.startsWith('http://') || raw.startsWith('https://');
+    const parsed = new URL(hasProto ? raw : `http://${raw}`);
+    return (parsed.host || parsed.hostname || raw).toLowerCase();
   } catch {
-    return String(url).replace(/^https?:\/\//, '').split('/')[0] || '';
+    return String(target).replace(/^https?:\/\//, '').split('/')[0].toLowerCase();
   }
 };
 
-export const BASE_DOMAIN = '';
+// Configured base domain (host:port, e.g. 'localhost:3000' or 'educraft.io')
+export const BASE_DOMAIN = extractBaseDomain(BASE_URL);
 
-export const DEVELOPER_TOKEN = 'hiesci-dev'
-export const CREATOR_TOKEN = 'hiesci-creator'
-export const TEACHER_TOKEN = 'hiesci-teacher'
-export const STAFF_TOKEN = 'hiesci-staff'
-export const OFFICER_TOKEN = 'hiesci-officer'
-export const STUDENT_TOKEN = 'hiesci-student'
-export const LIVE_CHAT_TOKEN = 'hiesci-live'
+// Base hostname without port (e.g. 'localhost' or 'educraft.io')
+export const BASE_HOST = BASE_DOMAIN.split(':')[0].toLowerCase();
+
+/**
+ * Returns the fully qualified base URL for the main website.
+ * Directly uses BASE_URL from .env / secret.js.
+ */
+export const getBaseUrl = (request = null) => {
+  const raw = String(BASE_URL).trim();
+  if (raw.startsWith('http://') || raw.startsWith('https://')) {
+    return raw.replace(/\/+$/, '');
+  }
+
+  // Determine protocol: if localhost/127.0.0.1 => http, otherwise https or request proto
+  let proto = 'https';
+  if (BASE_HOST === 'localhost' || BASE_HOST === '127.0.0.1') {
+    proto = 'http';
+  } else if (request?.headers?.get?.('x-forwarded-proto')) {
+    proto = request.headers.get('x-forwarded-proto');
+  } else if (typeof window !== 'undefined' && window.location?.protocol) {
+    proto = window.location.protocol.replace(':', '');
+  }
+
+  return `${proto}://${raw.replace(/\/+$/, '')}`;
+};
+
+export const getBaseDomain = (request = null) => BASE_DOMAIN;
+
+/**
+ * Extracts tenant identifier (subdomain or custom domain) from incoming request or host.
+ * Returns null if the request is on the main SaaS platform.
+ * Subdomain is fetched by matching subdomain.base_url.
+ */
+export const getWebsiteDomain = (request) => {
+  if (!request) return null;
+
+  let rawHost = '';
+  if (typeof request === 'string') {
+    rawHost = request;
+  } else {
+    rawHost =
+      request.headers?.get?.('x-forwarded-host') ||
+      request.headers?.get?.('host') ||
+      request.nextUrl?.host ||
+      (request.url ? new URL(request.url).host : '') ||
+      '';
+  }
+
+  if (!rawHost) return null;
+
+  // Split multiple comma-separated proxy hosts
+  const cleanHostWithPort = rawHost.split(',')[0].trim().toLowerCase();
+  const cleanHost = cleanHostWithPort.split(':')[0]; // strip port
+
+  const baseDomain = BASE_DOMAIN.toLowerCase();
+  const baseHost = BASE_HOST.toLowerCase();
+
+  // 1. MAIN WEBSITE:
+  // If host directly matches baseDomain, baseHost, www.baseHost, or localhost/127.0.0.1 => MAIN WEBSITE
+  if (
+    !cleanHost ||
+    cleanHost === baseHost ||
+    cleanHost === `www.${baseHost}` ||
+    cleanHostWithPort === baseDomain ||
+    ((baseHost === 'localhost' || baseHost === '127.0.0.1') && (cleanHost === 'localhost' || cleanHost === '127.0.0.1'))
+  ) {
+    return null;
+  }
+
+  // 2. SUBDOMAIN: fetched by subdomain.base_url
+  // Check against full baseDomain with port (e.g. afit.localhost:3000 -> afit)
+  if (baseDomain && cleanHostWithPort.endsWith(`.${baseDomain}`)) {
+    const sub = cleanHostWithPort.slice(0, -(baseDomain.length + 1)).trim();
+    if (sub && sub !== 'www') {
+      return sub;
+    }
+  }
+
+  // Check against baseHost without port (e.g. afit.localhost or afit.educraft.io -> afit)
+  if (baseHost && cleanHost.endsWith(`.${baseHost}`)) {
+    const sub = cleanHost.slice(0, -(baseHost.length + 1)).trim();
+    if (sub && sub !== 'www') {
+      return sub;
+    }
+  }
+
+  // Also support .localhost when base_url is localhost
+  if (cleanHost.endsWith('.localhost')) {
+    const sub = cleanHost.replace('.localhost', '').trim();
+    if (sub && sub !== 'www') {
+      return sub;
+    }
+  }
+
+  // 3. STANDALONE CUSTOM DOMAIN (e.g. oxfordschool.edu.bd)
+  return cleanHost;
+};
+
+export const DEVELOPER_TOKEN = 'hiesci-dev';
+export const CREATOR_TOKEN = 'hiesci-creator';
+export const TEACHER_TOKEN = 'hiesci-teacher';
+export const STAFF_TOKEN = 'hiesci-staff';
+export const OFFICER_TOKEN = 'hiesci-officer';
+export const STUDENT_TOKEN = 'hiesci-student';
+export const LIVE_CHAT_TOKEN = 'hiesci-live';
 
 // Meta Graph API (Facebook Messenger, Instagram Direct & WhatsApp Cloud API)
 export const META_APP_ID = process.env.META_APP_ID || '';

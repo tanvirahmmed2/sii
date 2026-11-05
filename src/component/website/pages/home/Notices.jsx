@@ -17,7 +17,7 @@ const Notices = () => {
         const res = await fetch(getApiEndpoint('notices?home=true'));
         if (res.ok) {
           const data = await res.json();
-          setNotices(data.payload?.notices || data.paylod?.notices || []);
+          setNotices(data.payload?.notices || data.paylod?.notices || data.notices || []);
         }
       } catch (err) {
         console.error('Error fetching home notices:', err);

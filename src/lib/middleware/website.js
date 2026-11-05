@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server.js';
 import { queryDb } from '../database/db.js';
-import { BASE_DOMAIN, BASE_URL } from '../database/secret.js';
+import {
+  BASE_DOMAIN,
+  BASE_HOST,
+  BASE_URL,
+  getBaseUrl,
+  getBaseDomain,
+  getWebsiteDomain,
+} from '../database/secret.js';
 import {
   resolveWebsiteFromRequest,
   resolveWebsite,
@@ -25,80 +32,10 @@ export {
   generateWebsiteToken,
   verifyWebsiteToken,
   WEBSITE_AUTH_COOKIE,
+  getBaseDomain,
+  getWebsiteDomain,
+  getBaseUrl,
 };
-
-/**
- * Extracts the base host configured for the SaaS platform.
- */
-export function getBaseDomain(request = null) {
-  if (BASE_DOMAIN && BASE_DOMAIN.trim() !== '') {
-    return BASE_DOMAIN.trim().toLowerCase();
-  }
-  if (typeof window !== 'undefined' && window.location?.host) {
-    const h = window.location.host.toLowerCase();
-    if (h.includes('localhost') || h.includes('127.0.0.1')) {
-      return h;
-    }
-  }
-  if (request) {
-    const forwardedHost = request.headers?.get?.('x-forwarded-host');
-    const host = request.headers?.get?.('host');
-    const incoming = (forwardedHost ? forwardedHost.split(',')[0] : host || '').trim().toLowerCase();
-    if (incoming.includes('.localhost')) {
-      const port = incoming.split(':')[1];
-      return port ? `localhost:${port}` : 'localhost';
-    }
-    if (incoming.includes('localhost') || incoming.includes('127.0.0.1')) {
-      return incoming;
-    }
-  }
-  return 'localhost:3000';
-}
-
-/**
- * Extracts the tenant website domain/subdomain from request host or pathname.
- * Returns null if the request is on the main SaaS platform.
- */
-export function getWebsiteDomain(request) {
-  if (!request) return null;
-
-  const url = request.nextUrl || (request.url ? new URL(request.url) : null);
-  const rawHost = request.headers?.get?.('x-forwarded-host') || request.headers?.get?.('host') || url?.host || '';
-  const cleanHostWithPort = rawHost.split(',')[0].trim().toLowerCase();
-  const cleanHost = cleanHostWithPort.split(':')[0]; // strip port
-
-  const baseHostWithPort = getBaseDomain(request);
-  const baseHost = baseHostWithPort.split(':')[0]; // strip port
-
-  // 1. If host matches the main platform host => this is the main SaaS website
-  if (
-    !cleanHost ||
-    cleanHost === baseHost ||
-    cleanHost === `www.${baseHost}` ||
-    ((baseHost === 'localhost' || baseHost === '127.0.0.1') && (cleanHost === 'localhost' || cleanHost === '127.0.0.1'))
-  ) {
-    return null;
-  }
-
-  // 2. Subdomain of production base domain (e.g. oxford.educraft.io)
-  if (baseHost !== 'localhost' && baseHost !== '127.0.0.1' && cleanHost.endsWith(`.${baseHost}`)) {
-    const sub = cleanHost.slice(0, -(baseHost.length + 1)).trim();
-    if (sub && sub !== 'www') {
-      return sub;
-    }
-  }
-
-  // 3. Subdomain of localhost (e.g. oxford.localhost or oxford.localhost:3000)
-  if (cleanHost.endsWith('.localhost')) {
-    const sub = cleanHost.replace('.localhost', '').trim();
-    if (sub && sub !== 'www') {
-      return sub;
-    }
-  }
-
-  // 4. Standalone Custom Domain (e.g. oxfordschool.edu, myacademy.org)
-  return cleanHost;
-}
 
 /**
  * Fetches website record using dedicated resolver with in-memory caching and coalescing.

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server.js';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 
@@ -20,11 +20,21 @@ export async function GET(request, context) {
 
     const result = await queryDb(
       `SELECT id,
+              website_id,
               title,
               slug,
+              pdf_url,
+              pdf_id,
+              file_name,
+              file_size,
               drive_url,
+              COALESCE(pdf_url, drive_url) AS file_url,
               description,
+              target_audience,
+              is_pinned,
               published_date,
+              expiry_date,
+              views_count,
               is_active,
               created_at,
               updated_at
@@ -39,6 +49,9 @@ export async function GET(request, context) {
     }
 
     const notice = result.rows[0];
+
+    // Increment views count asynchronously
+    queryDb(`UPDATE website_notices SET views_count = COALESCE(views_count, 0) + 1 WHERE id = $1`, [notice.id]).catch(() => {});
 
     return NextResponse.json({
       success: true,

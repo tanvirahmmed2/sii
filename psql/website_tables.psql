@@ -765,14 +765,33 @@ CREATE TABLE IF NOT EXISTS website_notices (
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
     slug VARCHAR(255) NOT NULL,
-    drive_url TEXT NOT NULL,
+    pdf_url TEXT,
+    pdf_id VARCHAR(255),
+    file_name VARCHAR(255),
+    file_size BIGINT DEFAULT 0,
+    drive_url TEXT,
     description TEXT,
+    target_audience VARCHAR(100) DEFAULT 'All',
+    is_pinned BOOLEAN DEFAULT FALSE,
+    target_audience VARCHAR(100) DEFAULT 'All',
+    is_pinned BOOLEAN DEFAULT FALSE,
     published_date DATE DEFAULT CURRENT_DATE,
+    expiry_date DATE,
+    views_count INT DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
+    created_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(website_id, slug)
 );
+
+CREATE INDEX IF NOT EXISTS idx_ws_notices_website ON website_notices(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_notices_active ON website_notices(website_id, is_active, published_date DESC);
+CREATE INDEX IF NOT EXISTS idx_ws_notices_pinned ON website_notices(website_id, is_pinned DESC, published_date DESC);
+
+CREATE INDEX IF NOT EXISTS idx_ws_notices_website ON website_notices(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_notices_active ON website_notices(website_id, is_active, published_date DESC);
+CREATE INDEX IF NOT EXISTS idx_ws_notices_pinned ON website_notices(website_id, is_pinned DESC, published_date DESC);
 
 DROP TRIGGER IF EXISTS update_website_notices_updated_at ON website_notices;
 CREATE TRIGGER update_website_notices_updated_at

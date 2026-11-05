@@ -3,7 +3,7 @@ import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession, hashPassword } from 'src/lib/middleware/creator';
 import { revokeAllStaffSessions } from 'src/lib/middleware/staff';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
-import { getBaseUrl } from 'src/lib/database/secret';
+import { getBaseUrl, BASE_DOMAIN, BASE_HOST } from 'src/lib/database/secret';
 import { generateToken } from 'src/lib/utils/random';
 import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness';
 
@@ -28,27 +28,20 @@ async function verifyWebsiteOwnership(websiteId, sessionCreator, creatorIdParam)
  * Constructs the staff verification link to custom domain if exists, or subdomain /auth/access/staff/verify
  */
 function buildStaffVerificationUrl(website, token, request) {
-  const reqHost = request?.headers?.get?.('x-forwarded-host') || request?.headers?.get?.('host') || '';
-  const baseHost = (reqHost ? reqHost.split(',')[0].trim() : '') || 'localhost:3000';
-  const protocol = request?.headers?.get?.('x-forwarded-proto') || (baseHost.includes('localhost') ? 'http' : 'https');
-
-  // Check if website has a custom domain
+  // Check if website has a verified custom domain
   const rawCustom = (website.custom_domain || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-  if (rawCustom) {
+  if (rawCustom && website.custom_domain_verified) {
     const customProto = rawCustom.includes('localhost') ? 'http' : 'https';
     return `${customProto}://${rawCustom}/auth/access/staff/verify?token=${encodeURIComponent(token)}`;
   }
 
-  // Otherwise route to the subdomain
+  // Otherwise route to subdomain.base_url
   const rawSub = (website.subdomain || website.slug || '').trim().toLowerCase();
   const cleanSub = rawSub.includes('.') ? rawSub.split('.')[0] : rawSub;
+  const baseDomain = BASE_DOMAIN || 'localhost:3000';
+  const protocol = BASE_HOST === 'localhost' || BASE_HOST === '127.0.0.1' ? 'http' : 'https';
 
-  if (baseHost.includes('localhost')) {
-    const port = baseHost.includes(':') ? `:${baseHost.split(':')[1]}` : '';
-    return `${protocol}://${cleanSub}.localhost${port}/auth/access/staff/verify?token=${encodeURIComponent(token)}`;
-  }
-
-  return `${protocol}://${cleanSub}.${baseHost}/auth/access/staff/verify?token=${encodeURIComponent(token)}`;
+  return `${protocol}://${cleanSub}.${baseDomain}/auth/access/staff/verify?token=${encodeURIComponent(token)}`;
 }
 
 // GET: Fetch staff roster, module permissions matrix, active session counts, and modules

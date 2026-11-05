@@ -206,8 +206,7 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
   }
 
-  const reqHost = request?.headers?.get?.('x-forwarded-host') || request?.headers?.get?.('host');
-  const baseDomain = (reqHost ? reqHost.split(',')[0].trim() : '') || BASE_DOMAIN || 'localhost:3000';
+  const baseDomain = BASE_DOMAIN || 'localhost:3000';
 
   // 1. Create or Setup Website
   if (action === 'create_website' || action === 'setup_website' || !action) {

@@ -33,6 +33,7 @@ export default function SubscriptionDetailsPage({ params }) {
   const router = useRouter();
   const routeParams = useParams();
   const subId = routeParams?.id || (params ? (typeof params.then === 'function' ? use(params)?.id : params.id) : null);
+  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'localhost:3000';
 
   const { user } = useContext(Context);
   const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
@@ -837,7 +838,7 @@ export default function SubscriptionDetailsPage({ params }) {
                             className="w-full bg-slate-50 dark:bg-slate-800 border border-r-0 border-slate-300 dark:border-slate-700 rounded-l px-3 py-1.5 text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
                           />
                           <span className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-700 rounded-r text-[11px] text-slate-500 font-mono">
-                            .educraft.io
+                            .{baseDomain}
                           </span>
                         </div>
                       </div>
@@ -992,7 +993,7 @@ export default function SubscriptionDetailsPage({ params }) {
                       <div className="p-3 rounded border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
                         <span className="text-[10px] uppercase font-semibold text-slate-400 block">Subdomain</span>
                         <div className="text-xs font-mono font-medium text-slate-800 dark:text-slate-200 truncate">
-                          {website.subdomain}.educraft.io
+                          {website.subdomain}.{baseDomain}
                         </div>
                       </div>
 

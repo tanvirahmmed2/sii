@@ -47,25 +47,34 @@ const TENANT_DIRECT_PREFIXES = [
 
 export function isTenantScope(pathname = '') {
   if (typeof window !== 'undefined') {
-    const rawHost = window.location.host.toLowerCase().split(':')[0];
+    const rawHostWithPort = window.location.host.toLowerCase();
+    const rawHost = rawHostWithPort.split(':')[0];
+    const baseDomain = (process.env.NEXT_PUBLIC_BASE_DOMAIN || 'localhost:3000').toLowerCase().trim();
+    const baseHost = baseDomain.split(':')[0];
 
-    // Subdomain of localhost (e.g. afit.localhost)
+    // Subdomain of baseDomain or baseHost (e.g. afit.localhost:3000, afit.localhost, afit.educraft.io)
+    if (rawHostWithPort.endsWith(`.${baseDomain}`)) {
+      const sub = rawHostWithPort.slice(0, -(baseDomain.length + 1)).trim();
+      if (sub && sub !== 'www') return true;
+    }
+    if (rawHost.endsWith(`.${baseHost}`)) {
+      const sub = rawHost.slice(0, -(baseHost.length + 1)).trim();
+      if (sub && sub !== 'www') return true;
+    }
     if (rawHost.endsWith('.localhost')) {
       const sub = rawHost.replace('.localhost', '').trim();
       if (sub && sub !== 'www') return true;
     }
 
-    // Subdomain or custom domain when host is not raw localhost / 127.0.0.1
-    if (rawHost && rawHost !== 'localhost' && rawHost !== '127.0.0.1') {
-      const baseDomain = (process.env.NEXT_PUBLIC_BASE_DOMAIN || '').toLowerCase().trim();
-      if (baseDomain) {
-        if (rawHost !== baseDomain && rawHost !== `www.${baseDomain}`) {
-          return true;
-        }
-      } else {
-        const parts = rawHost.split('.');
-        if (parts.length > 2) return true;
-      }
+    // Custom domain: when host does not match baseHost or localhost/127.0.0.1
+    if (
+      rawHost &&
+      rawHost !== baseHost &&
+      rawHost !== `www.${baseHost}` &&
+      rawHost !== 'localhost' &&
+      rawHost !== '127.0.0.1'
+    ) {
+      return true;
     }
   }
 

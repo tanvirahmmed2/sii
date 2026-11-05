@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server.js';
 import { queryDb } from '../../../../../../lib/database/db.js';
-import { getBaseUrl } from '../../../../../../lib/database/secret.js';
+import { BASE_DOMAIN, BASE_URL, getBaseUrl } from '../../../../../../lib/database/secret.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,8 +26,7 @@ export function extractRequestHost(request) {
 }
 
 export async function checkDomainAvailability(rawInput, websiteIdToExclude = null, request = null) {
-  const reqHost = extractRequestHost(request);
-  const baseDomain = reqHost || BASE_DOMAIN || 'localhost:3000';
+  const baseDomain = BASE_DOMAIN || 'localhost:3000';
 
   if (!rawInput || typeof rawInput !== 'string') {
     return {
@@ -165,8 +164,7 @@ export async function checkDomainAvailability(rawInput, websiteIdToExclude = nul
  * Checks availability and validity of external custom domains (e.g. schoolname.edu)
  */
 export async function checkCustomDomainAvailability(rawInput, websiteIdToExclude = null, request = null) {
-  const reqHost = extractRequestHost(request);
-  const baseDomain = reqHost || BASE_DOMAIN || 'localhost:3000';
+  const baseDomain = BASE_DOMAIN || 'localhost:3000';
   const cleanBase = baseDomain.split(':')[0].toLowerCase();
 
   if (!rawInput || typeof rawInput !== 'string') {

@@ -15,10 +15,20 @@ import {
   FiMinimize2,
   FiCheck,
   FiInfo,
+  FiEye,
+  FiPaperclip,
 } from 'react-icons/fi';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import { getDriveDetails, triggerDriveDownload } from 'src/lib/utils/drive';
 import NoticeCard from 'src/component/website/cards/NoticeCard';
+
+const formatBytes = (bytes) => {
+  if (!bytes || bytes === 0) return '';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+};
 
 const NoticeDetailPage = () => {
   const params = useParams();
@@ -40,7 +50,7 @@ const NoticeDetailPage = () => {
       try {
         const [singleRes, listRes] = await Promise.all([
           fetch(getApiEndpoint(`notices/${encodeURIComponent(slug)}`)),
-          fetch(getApiEndpoint('notices')),
+          fetch(getApiEndpoint('notices?limit=4')),
         ]);
 
         if (singleRes.ok) {
@@ -79,15 +89,35 @@ const NoticeDetailPage = () => {
     }
   };
 
+  const effectivePdfUrl = notice?.pdf_url || '';
   const effectiveDriveUrl = notice?.drive_url || notice?.link || '';
+  const isCloudinaryPdf = Boolean(effectivePdfUrl);
+  const hasDocument = Boolean(effectivePdfUrl || effectiveDriveUrl);
+
   const driveDetails = effectiveDriveUrl ? getDriveDetails(effectiveDriveUrl) : null;
-  const downloadUrl = driveDetails?.downloadUrl || effectiveDriveUrl;
-  const viewUrl = driveDetails?.viewUrl || effectiveDriveUrl;
+
+  // Compute view, download, and preview URLs
+  let viewUrl = '';
+  let downloadUrl = '';
+  let previewUrl = '';
+
+  if (isCloudinaryPdf) {
+    viewUrl = effectivePdfUrl;
+    downloadUrl = effectivePdfUrl.includes('cloudinary.com') && effectivePdfUrl.includes('/upload/')
+      ? effectivePdfUrl.replace('/upload/', '/upload/fl_attachment/')
+      : effectivePdfUrl;
+    // Google Docs Viewer renders Cloudinary PDFs reliably on all desktop & mobile browsers
+    previewUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(effectivePdfUrl)}&embedded=true`;
+  } else if (effectiveDriveUrl) {
+    viewUrl = driveDetails?.viewUrl || effectiveDriveUrl;
+    downloadUrl = driveDetails?.downloadUrl || effectiveDriveUrl;
+    previewUrl = driveDetails?.previewUrl || effectiveDriveUrl;
+  }
 
   const handleDownload = (e) => {
-    e?.preventDefault();
-    if (effectiveDriveUrl) {
-      triggerDriveDownload(effectiveDriveUrl, `${notice?.slug || 'notice'}.pdf`);
+    if (!isCloudinaryPdf && effectiveDriveUrl) {
+      e?.preventDefault();
+      triggerDriveDownload(effectiveDriveUrl, `${notice?.file_name || notice?.slug || 'notice'}.pdf`);
     }
   };
 
@@ -129,6 +159,7 @@ const NoticeDetailPage = () => {
 
   const dateValue = notice.published_date || notice.created_at;
   const noticeDate = dateValue ? new Date(dateValue) : null;
+  const isPinned = Boolean(notice.is_pinned);
 
   return (
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 sm:py-12 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
@@ -164,30 +195,30 @@ const NoticeDetailPage = () => {
               )}
             </button>
 
-            {effectiveDriveUrl && (
+            {hasDocument && (
               <>
                 <a
                   href={viewUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-primary hover:border-primary/40 transition-colors shadow-2xs"
-                  title="Open in Google Drive / external tab"
+                  title={isCloudinaryPdf ? 'Open PDF in new tab' : 'Open in Google Drive / external tab'}
                 >
                   <FiExternalLink className="w-3.5 h-3.5" />
-                  <span>Open Drive</span>
+                  <span>{isCloudinaryPdf ? 'Open PDF' : 'Open Link'}</span>
                 </a>
 
                 <a
                   href={downloadUrl}
-                  download={`${notice.slug || 'notice'}.pdf`}
+                  download={notice.file_name || `${notice.slug || 'notice'}.pdf`}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={handleDownload}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-primary hover:bg-primary-dark text-white shadow-xs hover:shadow-md hover:shadow-primary/20 transition-all cursor-pointer"
-                  title="Download attached document"
+                  title="Download attached official file"
                 >
                   <FiDownload className="w-3.5 h-3.5" />
-                  <span>Download File</span>
+                  <span>Download PDF</span>
                 </a>
               </>
             )}
@@ -202,12 +233,29 @@ const NoticeDetailPage = () => {
           className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 space-y-4 shadow-xs"
         >
           <div className="flex flex-wrap items-center gap-2.5">
+            {isPinned && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full border bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800 uppercase tracking-wider">
+                Pinned Circular
+              </span>
+            )}
             <span className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full border bg-primary/10 text-primary border-primary/20 uppercase tracking-wider">
               <FiFileText className="w-3 h-3" />
               Official Circular
             </span>
+            {notice.target_audience && notice.target_audience !== 'All' && (
+              <span className="text-[11px] font-medium px-3 py-1 rounded-full border bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800">
+                For {notice.target_audience}
+              </span>
+            )}
+            {isCloudinaryPdf && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-3 py-1 rounded-full border bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800">
+                <FiPaperclip className="w-3 h-3" />
+                <span>PDF Document</span>
+                {notice.file_size > 0 && <span>({formatBytes(notice.file_size)})</span>}
+              </span>
+            )}
             {noticeDate && (
-              <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
+              <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium ml-auto">
                 <FiCalendar className="w-3.5 h-3.5 text-slate-400" />
                 Published:{' '}
                 {noticeDate.toLocaleDateString(undefined, {
@@ -215,6 +263,12 @@ const NoticeDetailPage = () => {
                   month: 'long',
                   day: 'numeric',
                 })}
+              </span>
+            )}
+            {notice.views_count > 0 && (
+              <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+                <FiEye className="w-3.5 h-3.5" />
+                <span>{notice.views_count} views</span>
               </span>
             )}
           </div>
@@ -233,7 +287,7 @@ const NoticeDetailPage = () => {
           )}
         </motion.div>
 
-        {/* DRIVE DATA VIEWER SECTION */}
+        {/* DOCUMENT VIEWER SECTION */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -250,11 +304,15 @@ const NoticeDetailPage = () => {
               <span className="text-xs uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400">
                 Document Viewer
               </span>
-              {driveDetails?.isGoogleDrive && (
+              {isCloudinaryPdf ? (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                  Cloudinary CDN PDF
+                </span>
+              ) : driveDetails?.isGoogleDrive ? (
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                   Google Drive
                 </span>
-              )}
+              ) : null}
             </div>
 
             <div className="flex items-center gap-2">
@@ -277,10 +335,10 @@ const NoticeDetailPage = () => {
                 )}
               </button>
 
-              {effectiveDriveUrl && (
+              {hasDocument && (
                 <a
                   href={downloadUrl}
-                  download={`${notice.slug || 'notice'}.pdf`}
+                  download={notice.file_name || `${notice.slug || 'notice'}.pdf`}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={handleDownload}
@@ -300,7 +358,7 @@ const NoticeDetailPage = () => {
               isFullscreen ? 'flex-1 h-full' : 'h-[620px] sm:h-[820px]'
             }`}
           >
-            {effectiveDriveUrl ? (
+            {hasDocument ? (
               <>
                 {iframeLoading && (
                   <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900/90 backdrop-blur-2xs gap-3">
@@ -312,7 +370,7 @@ const NoticeDetailPage = () => {
                 )}
 
                 <iframe
-                  src={driveDetails?.previewUrl || effectiveDriveUrl}
+                  src={previewUrl}
                   title={notice.title}
                   className="w-full h-full border-0 rounded-2xl"
                   allow="autoplay; encrypted-media"
@@ -326,18 +384,17 @@ const NoticeDetailPage = () => {
                   <FiInfo className="w-6 h-6" />
                 </div>
                 <h3 className="font-serif text-base text-slate-800 dark:text-slate-200">
-                  No Document Attachment
+                  Text-Only Notice
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm">
-                  This notice contains textual instructions above, and does not have an attached
-                  Google Drive file.
+                  This official circular has no attached PDF file. All guidelines and instructions are published above.
                 </p>
               </div>
             )}
           </div>
 
           {/* Viewer helper notice */}
-          {effectiveDriveUrl && (
+          {hasDocument && (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-2 text-[11px] text-slate-500 dark:text-slate-400">
               <span>
                 Trouble previewing? You can{' '}
@@ -347,43 +404,39 @@ const NoticeDetailPage = () => {
                   rel="noopener noreferrer"
                   className="text-primary hover:underline font-medium"
                 >
-                  open directly in Google Drive ↗
+                  open document directly in new tab ↗
                 </a>{' '}
                 or{' '}
                 <a
                   href={downloadUrl}
-                  download={`${notice.slug || 'notice'}.pdf`}
+                  download={notice.file_name || `${notice.slug || 'notice'}.pdf`}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={handleDownload}
                   className="text-primary hover:underline font-medium cursor-pointer"
                 >
-                  download the document file
+                  download offline copy
                 </a>
                 .
               </span>
+              {notice.file_name && (
+                <span className="font-mono text-[10px] text-slate-400">
+                  File: {notice.file_name}
+                </span>
+              )}
             </div>
           )}
         </motion.section>
 
-        {/* Other Recent Notices */}
+        {/* RECENT NOTICES SECTION */}
         {recentNotices.length > 0 && (
-          <div className="space-y-4 pt-6 border-t border-slate-200 dark:border-slate-800">
-            <div className="flex items-center justify-between">
-              <h2 className="font-serif text-lg font-medium text-slate-900 dark:text-slate-100">
-                Other Recent Notices
-              </h2>
-              <Link
-                href={tenantUrl ? tenantUrl('/notices') : '/notices'}
-                className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1"
-              >
-                View Bulletin &rarr;
-              </Link>
-            </div>
-
+          <div className="pt-8 border-t border-slate-200 dark:border-slate-800 space-y-4">
+            <h3 className="font-serif text-lg font-medium text-slate-900 dark:text-white">
+              Other Recent Circulars
+            </h3>
             <div className="space-y-3">
-              {recentNotices.map((recentNotice) => (
-                <NoticeCard key={recentNotice.id} notice={recentNotice} />
+              {recentNotices.map((n) => (
+                <NoticeCard key={n.id} notice={n} />
               ))}
             </div>
           </div>

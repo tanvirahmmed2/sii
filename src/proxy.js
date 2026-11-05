@@ -1,92 +1,26 @@
-import { NextResponse } from 'next/server';
-import { BASE_URL, BASE_DOMAIN, extractBaseDomain } from './lib/database/secret.js';
+import { NextResponse } from 'next/server.js';
+import {
+  BASE_URL,
+  BASE_DOMAIN,
+  BASE_HOST,
+  getBaseUrl,
+  getWebsiteDomain,
+} from './lib/database/secret.js';
 
-/**
- * Extracts the base host configured for the SaaS platform.
- * Edge runtime safe: dynamically fetched from secret.js.
- */
-function getPlatformBaseDomain(request) {
-  const configuredBase = (BASE_DOMAIN || extractBaseDomain(BASE_URL) || '').trim();
-  if (configuredBase) {
-    return configuredBase.toLowerCase();
-  }
-
-  if (request) {
-    const forwardedHost = request.headers.get('x-forwarded-host');
-    const host = request.headers.get('host');
-    const incoming = (forwardedHost ? forwardedHost.split(',')[0] : host || '').trim().toLowerCase();
-
-    if (incoming.includes('.localhost')) {
-      const port = incoming.split(':')[1];
-      return port ? `localhost:${port}` : 'localhost';
-    }
-    if (incoming.includes('localhost') || incoming.includes('127.0.0.1')) {
-      return incoming;
-    }
-    const clean = incoming.split(':')[0];
-    const parts = clean.split('.');
-    if (parts.length >= 2) {
-      return parts.slice(-2).join('.');
-    }
-    return clean;
-  }
-  return 'localhost:3000';
-}
-
-/**
- * Extracts tenant identifier (subdomain or custom domain) from request host.
- * Returns null if the request is on the main SaaS platform.
- */
-function getWebsiteDomain(request) {
-  if (!request) return null;
-
-  const url = request.nextUrl || (request.url ? new URL(request.url) : null);
-  const rawHost = request.headers.get('x-forwarded-host') || request.headers.get('host') || url?.host || '';
-  const cleanHostWithPort = rawHost.split(',')[0].trim().toLowerCase();
-  const cleanHost = cleanHostWithPort.split(':')[0]; // strip port
-
-  const baseHostWithPort = getPlatformBaseDomain(request);
-  const baseHost = baseHostWithPort.split(':')[0]; // strip port
-
-  // 1. If host matches the main platform host => this is the main SaaS website
-  if (
-    !cleanHost ||
-    cleanHost === baseHost ||
-    cleanHost === `www.${baseHost}` ||
-    ((baseHost === 'localhost' || baseHost === '127.0.0.1') && (cleanHost === 'localhost' || cleanHost === '127.0.0.1'))
-  ) {
-    return null;
-  }
-
-  // 2. Subdomain of configured base domain (e.g. oxford.baseurl.com)
-  if (baseHost !== 'localhost' && baseHost !== '127.0.0.1' && cleanHost.endsWith(`.${baseHost}`)) {
-    const sub = cleanHost.slice(0, -(baseHost.length + 1)).trim();
-    if (sub && sub !== 'www') {
-      return sub;
-    }
-  }
-
-  // 3. Subdomain of localhost (e.g. oxford.localhost or oxford.localhost:3000)
-  if (cleanHost.endsWith('.localhost')) {
-    const sub = cleanHost.replace('.localhost', '').trim();
-    if (sub && sub !== 'www') {
-      return sub;
-    }
-  }
-
-  // 4. Standalone Custom Domain (e.g. oxfordschool.edu, myacademy.org)
-  return cleanHost;
-}
+export { getWebsiteDomain };
 
 /**
  * Next.js Proxy (Next.js 16+ convention replacing middleware):
- * 1. Base URL request (baseurl.com or localhost:3000) -> serves main SaaS platform.
+ * 1. Base URL request (baseurl.com or localhost:3000) -> directly serves main SaaS platform.
  * 2. Tenant request (subdomain.baseurl.com or customdomain.com):
+ *    - Subdomain fetched by matching subdomain.base_url.
  *    - Frontend paths -> rewrites to app/[domain] frontend folder.
  *    - API paths -> rewrites to /api/[domain] routes.
  */
 export function proxy(request) {
-  const url = request.nextUrl.clone();
+  const url = typeof request.nextUrl?.clone === 'function'
+    ? request.nextUrl.clone()
+    : new URL(request.url || 'http://localhost');
   const pathname = url.pathname;
 
   // Ignore static assets and Next.js internal files
@@ -101,6 +35,8 @@ export function proxy(request) {
     return NextResponse.next();
   }
 
+  // Tenant identifier: subdomain (from subdomain.base_url) or custom domain
+  // Returns null for main SaaS website (base_url or localhost)
   const tenantDomain = getWebsiteDomain(request);
 
   const PLATFORM_RESERVED = new Set([
@@ -108,8 +44,7 @@ export function proxy(request) {
     'marketing', 'auth', 'admin', 'icon.png', 'favicon.ico', 'robots.txt',
     'sitemap.xml', 'about', 'blogs', 'careers', 'contact', 'faqs', 'packages',
     'policies', 'reviews', 'tutorials', 'updates', 'help', 'terms', 'privacy',
-    'login', 'register', 'staff-panel', 'teacher', 'student', 'student-verify',
-    'officer', 'officer-panel'
+    'login', 'register'
   ]);
 
   // Legacy admission payment redirect: /admission/payment/:id -> /pay/admission-fees/:id
@@ -131,114 +66,17 @@ export function proxy(request) {
   const apiAdmissionPaymentMatch = pathname.match(/^(?:\/api\/([^/]+)|\/api)\/admissions\/payment\/?$/i);
   if (apiAdmissionPaymentMatch) {
     const pathTenant = apiAdmissionPaymentMatch[1];
-    const resolvedTenant = pathTenant || tenantDomain || request.cookies.get('x-website-domain')?.value || 'afit';
-    const targetUrl = request.nextUrl.clone();
-    targetUrl.pathname = `/api/${resolvedTenant}/pay/admission-fees`;
-    return NextResponse.rewrite(targetUrl);
-  }
-
-  // Clean /staff-panel handling: if URL has /[tenant]/staff-panel, redirect to clean /staff-panel
-  const tenantStaffMatch = pathname.match(/^\/([^/]+)(\/staff-panel(?:\/.*)?)$/i);
-  if (tenantStaffMatch) {
-    const matchedSlug = tenantStaffMatch[1].toLowerCase();
-    const cleanStaffPath = tenantStaffMatch[2];
-    if (!PLATFORM_RESERVED.has(matchedSlug)) {
-      const redirectUrl = new URL(cleanStaffPath, request.url);
-      const response = NextResponse.redirect(redirectUrl);
-      response.cookies.set('x-website-domain', matchedSlug, { path: '/' });
-      return response;
+    const resolvedTenant = pathTenant || tenantDomain || request.cookies.get('x-website-domain')?.value;
+    if (resolvedTenant) {
+      const targetUrl = request.nextUrl.clone();
+      targetUrl.pathname = `/api/${resolvedTenant}/pay/admission-fees`;
+      return NextResponse.rewrite(targetUrl);
     }
   }
 
-  // Handle direct clean /staff-panel routes by rewriting internally to /[domain]/staff-panel
-  if (pathname === '/staff-panel' || pathname.startsWith('/staff-panel/')) {
-    const activeTenantCookie =
-      request.cookies.get('x-website-domain')?.value ||
-      request.cookies.get('x-domain')?.value;
-    const resolvedTenant = tenantDomain || activeTenantCookie || 'afit';
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-website-domain', resolvedTenant);
-    requestHeaders.set('x-domain', resolvedTenant);
-    url.pathname = `/${resolvedTenant}${pathname}`;
-    const response = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
-    if (!activeTenantCookie || activeTenantCookie !== resolvedTenant) {
-      response.cookies.set('x-website-domain', resolvedTenant, { path: '/' });
-    }
-    return response;
-  }
-
-  // Handle direct clean /student-verify routes by rewriting internally to /[domain]/staff-panel/student-verify
-  if (pathname === '/student-verify' || pathname.startsWith('/student-verify/')) {
-    const activeTenantCookie =
-      request.cookies.get('x-website-domain')?.value ||
-      request.cookies.get('x-domain')?.value;
-    const resolvedTenant = tenantDomain || activeTenantCookie || 'afit';
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-website-domain', resolvedTenant);
-    requestHeaders.set('x-domain', resolvedTenant);
-    url.pathname = `/${resolvedTenant}/staff-panel/student-verify`;
-    const response = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
-    if (!activeTenantCookie || activeTenantCookie !== resolvedTenant) {
-      response.cookies.set('x-website-domain', resolvedTenant, { path: '/' });
-    }
-    return response;
-  }
-
-  // Handle direct clean /student routes by rewriting internally to /[domain]/student
-  if (pathname === '/student' || pathname.startsWith('/student/')) {
-    const activeTenantCookie =
-      request.cookies.get('x-website-domain')?.value ||
-      request.cookies.get('x-domain')?.value;
-    const resolvedTenant = tenantDomain || activeTenantCookie || 'afit';
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-website-domain', resolvedTenant);
-    requestHeaders.set('x-domain', resolvedTenant);
-    url.pathname = `/${resolvedTenant}${pathname}`;
-    const response = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
-    if (!activeTenantCookie || activeTenantCookie !== resolvedTenant) {
-      response.cookies.set('x-website-domain', resolvedTenant, { path: '/' });
-    }
-    return response;
-  }
-
-  // Handle direct clean /teacher routes by rewriting internally to /[domain]/teacher
-  if (pathname === '/teacher' || pathname.startsWith('/teacher/')) {
-    const activeTenantCookie =
-      request.cookies.get('x-website-domain')?.value ||
-      request.cookies.get('x-domain')?.value;
-    const resolvedTenant = tenantDomain || activeTenantCookie || 'afit';
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-website-domain', resolvedTenant);
-    requestHeaders.set('x-domain', resolvedTenant);
-    url.pathname = `/${resolvedTenant}${pathname}`;
-    const response = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
-    if (!activeTenantCookie || activeTenantCookie !== resolvedTenant) {
-      response.cookies.set('x-website-domain', resolvedTenant, { path: '/' });
-    }
-    return response;
-  }
-
-  // Handle direct clean /officer routes by rewriting internally to /[domain]/officer
-  if (pathname === '/officer' || pathname.startsWith('/officer/') || pathname === '/officer-panel' || pathname.startsWith('/officer-panel/')) {
-    const activeTenantCookie =
-      request.cookies.get('x-website-domain')?.value ||
-      request.cookies.get('x-domain')?.value;
-    const resolvedTenant = tenantDomain || activeTenantCookie || 'afit';
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-website-domain', resolvedTenant);
-    requestHeaders.set('x-domain', resolvedTenant);
-    const targetPath = pathname.startsWith('/officer-panel')
-      ? pathname.replace('/officer-panel', '/officer')
-      : pathname;
-    url.pathname = `/${resolvedTenant}${targetPath}`;
-    const response = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
-    if (!activeTenantCookie || activeTenantCookie !== resolvedTenant) {
-      response.cookies.set('x-website-domain', resolvedTenant, { path: '/' });
-    }
-    return response;
-  }
-
-  // CASE 1: Main SaaS Platform request (baseurl.com or localhost)
+  // ============================================================================
+  // CASE 1: MAIN SAAS WEBSITE (base_url or localhost)
+  // ============================================================================
   if (!tenantDomain) {
     // 1A: If user accesses preview /websites/[domain] or /website/[domain] on base domain, rewrite to /[domain]
     const legacyMatch = pathname.match(/^\/(?:websites|website|webite)\/([^/?#]+)(.*)$/i);
@@ -298,19 +136,45 @@ export function proxy(request) {
       }
     }
 
-    // Otherwise allow normal main SaaS website routing
+    // 1D: Workstation panel access on base domain with active tenant cookie
+    const activeTenantCookie =
+      request.cookies.get('x-website-domain')?.value ||
+      request.cookies.get('x-domain')?.value;
+
+    if (
+      activeTenantCookie &&
+      (pathname === '/staff-panel' || pathname.startsWith('/staff-panel/') ||
+       pathname === '/student' || pathname.startsWith('/student/') ||
+       pathname === '/student-verify' || pathname.startsWith('/student-verify/') ||
+       pathname === '/teacher' || pathname.startsWith('/teacher/') ||
+       pathname === '/officer' || pathname.startsWith('/officer/') ||
+       pathname === '/officer-panel' || pathname.startsWith('/officer-panel/'))
+    ) {
+      const requestHeaders = new Headers(request.headers);
+      requestHeaders.set('x-website-domain', activeTenantCookie);
+      requestHeaders.set('x-domain', activeTenantCookie);
+      const targetPath = pathname.startsWith('/officer-panel')
+        ? pathname.replace('/officer-panel', '/officer')
+        : (pathname.startsWith('/student-verify') ? `/staff-panel/student-verify` : pathname);
+      url.pathname = `/${activeTenantCookie}${targetPath}`;
+      return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    }
+
+    // Directly use main website for all main platform routes!
     return NextResponse.next();
   }
 
-  // CASE 2: Tenant Website request (subdomain.baseurl.com or customdomain.com)
+  // ============================================================================
+  // CASE 2: TENANT WEBSITE (subdomain.base_url or custom domain)
+  // ============================================================================
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-website-domain', tenantDomain);
   requestHeaders.set('x-domain', tenantDomain);
 
   // 2A: Handle API routes for tenant
   if (pathname.startsWith('/api')) {
-    // Allow creator/marketing platform APIs to pass through if requested
-    if (pathname.startsWith('/api/marketing') || pathname.startsWith('/api/auth')) {
+    // Allow creator/marketing/developer platform APIs to pass through if requested
+    if (pathname.startsWith('/api/marketing') || pathname.startsWith('/api/auth') || pathname.startsWith('/api/seed')) {
       return NextResponse.next({ request: { headers: requestHeaders } });
     }
 
@@ -319,7 +183,7 @@ export function proxy(request) {
       return NextResponse.next({ request: { headers: requestHeaders } });
     }
 
-    // Rewrite /api/... to /api/[domain]/... (e.g. /api/notices -> /api/oxford/notices)
+    // Rewrite /api/... to /api/[domain]/... (e.g. /api/classes -> /api/afit/classes)
     const apiRest = pathname === '/api' ? '' : pathname.slice(4);
     url.pathname = `/api/${tenantDomain}${apiRest}`;
     return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
@@ -339,9 +203,24 @@ export function proxy(request) {
     return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
   }
 
-  // Rewrite root or internal path to /[domain] (e.g. / -> /oxford, /notices -> /oxford/notices)
+  // Officer panel path alias normalization
+  if (pathname === '/officer-panel' || pathname.startsWith('/officer-panel/')) {
+    const targetPath = pathname.replace('/officer-panel', '/officer');
+    url.pathname = `/${tenantDomain}${targetPath}`;
+    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+  }
+
+  // Student verify path alias normalization
+  if (pathname === '/student-verify' || pathname.startsWith('/student-verify/')) {
+    url.pathname = `/${tenantDomain}/staff-panel/student-verify`;
+    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+  }
+
+  // Rewrite root or internal path to /[domain] (e.g. / -> /afit, /about -> /afit/about, /staff-panel -> /afit/staff-panel)
   url.pathname = `/${tenantDomain}${pathname === '/' ? '' : pathname}`;
-  return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+  const response = NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+  response.cookies.set('x-website-domain', tenantDomain, { path: '/' });
+  return response;
 }
 
 export default proxy;

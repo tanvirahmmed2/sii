@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useContext, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { FiSearch, FiFileText, FiCalendar } from 'react-icons/fi';
+import { FiSearch, FiFileText } from 'react-icons/fi';
 import NoticeCard from 'src/component/website/cards/NoticeCard';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 
@@ -35,7 +35,8 @@ const NoticesPage = () => {
     return notices.filter(
       (n) =>
         (n.title && n.title.toLowerCase().includes(query)) ||
-        (n.description && n.description.toLowerCase().includes(query))
+        (n.description && n.description.toLowerCase().includes(query)) ||
+        (n.file_name && n.file_name.toLowerCase().includes(query))
     );
   }, [notices, searchQuery]);
 
@@ -54,10 +55,10 @@ const NoticesPage = () => {
               Registry Bulletin
             </div>
             <h1 className="font-serif font-normal text-3xl sm:text-4xl lg:text-5xl text-slate-900 dark:text-white tracking-tight">
-              Official Notices &amp; Announcements
+              Official Notices &amp; Circulars
             </h1>
             <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-2xl font-light">
-              Access the latest circulars, examination routines, schedules, and administrative directives.
+              Access the latest circulars, schedules, downloadable official documents, and administrative directives.
             </p>
           </div>
 
@@ -69,7 +70,7 @@ const NoticesPage = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search notices..."
+                placeholder="Search circulars..."
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs sm:text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-2xs"
               />
             </div>
@@ -99,7 +100,7 @@ const NoticesPage = () => {
           <div className="space-y-3 sm:space-y-4">
             <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1">
               <span>
-                Showing <strong className="text-slate-700 dark:text-slate-200">{filteredNotices.length}</strong> {filteredNotices.length === 1 ? 'notice' : 'notices'}
+                Showing <strong className="text-slate-700 dark:text-slate-200">{filteredNotices.length}</strong> {filteredNotices.length === 1 ? 'circular' : 'circulars'}
               </span>
               {searchQuery && (
                 <button
@@ -133,7 +134,7 @@ const NoticesPage = () => {
             </h3>
             <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm max-w-md mx-auto font-light">
               {searchQuery
-                ? `No notices matched your keyword "${searchQuery}". Try a different search term.`
+                ? `No notices matched your current search query. Try clearing search to view all circulars.`
                 : 'There are currently no active administrative notices on the bulletin.'}
             </p>
             {searchQuery && (

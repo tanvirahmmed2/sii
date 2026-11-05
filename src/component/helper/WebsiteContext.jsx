@@ -17,6 +17,31 @@ import { hexToRgb, mixColor, calculateColorShades } from 'src/lib/utils/colors';
 
 export { calculateColorShades };
 
+function extractBrowserTenant() {
+  if (typeof window === 'undefined') return '';
+  const hostWithPort = window.location.host.toLowerCase();
+  const host = hostWithPort.split(':')[0];
+  const baseDomain = (process.env.NEXT_PUBLIC_BASE_DOMAIN || 'localhost:3000').toLowerCase().trim();
+  const baseHost = baseDomain.split(':')[0];
+
+  if (hostWithPort.endsWith(`.${baseDomain}`)) {
+    const sub = hostWithPort.slice(0, -(baseDomain.length + 1)).trim();
+    if (sub && sub !== 'www') return sub;
+  }
+  if (host.endsWith(`.${baseHost}`)) {
+    const sub = host.slice(0, -(baseHost.length + 1)).trim();
+    if (sub && sub !== 'www') return sub;
+  }
+  if (host.endsWith('.localhost')) {
+    const sub = host.replace('.localhost', '').trim();
+    if (sub && sub !== 'www') return sub;
+  }
+  if (host && host !== baseHost && host !== `www.${baseHost}` && host !== 'localhost' && host !== '127.0.0.1') {
+    return host;
+  }
+  return '';
+}
+
 export function TenantWebsiteProvider({ children, initialWebsite = null, slug: propSlug }) {
   const params = useParams();
   const router = useRouter();
@@ -26,33 +51,13 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
     if (propSlug) return propSlug;
     if (params?.domain) return params.domain;
     if (params?.slug) return params.slug;
-    if (typeof window !== 'undefined') {
-      const host = window.location.host.toLowerCase().split(':')[0];
-      if (host && host !== 'localhost' && host !== '127.0.0.1') {
-        const base = (process.env.NEXT_PUBLIC_BASE_URL || '').replace(/^https?:\/\//, '').split(':')[0].toLowerCase();
-        if (base && host.endsWith(`.${base}`)) {
-          return host.replace(`.${base}`, '');
-        }
-        return host;
-      }
-    }
-    return '';
+    return extractBrowserTenant();
   });
 
   useEffect(() => {
-    const candidate = propSlug || params?.domain || params?.slug;
+    const candidate = propSlug || params?.domain || params?.slug || extractBrowserTenant();
     if (candidate) {
       setActiveSlug(candidate);
-    } else if (typeof window !== 'undefined') {
-      const host = window.location.host.toLowerCase().split(':')[0];
-      if (host && host !== 'localhost' && host !== '127.0.0.1') {
-        const base = (process.env.NEXT_PUBLIC_BASE_URL || '').replace(/^https?:\/\//, '').split(':')[0].toLowerCase();
-        if (base && host.endsWith(`.${base}`)) {
-          setActiveSlug(host.replace(`.${base}`, ''));
-        } else {
-          setActiveSlug(host);
-        }
-      }
     }
   }, [propSlug, params?.domain, params?.slug]);
 

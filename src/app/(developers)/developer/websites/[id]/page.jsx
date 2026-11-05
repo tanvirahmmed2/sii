@@ -35,6 +35,7 @@ export default function WebsiteDetailsPage({ params }) {
   const router = useRouter();
   const routeParams = useParams();
   const websiteId = routeParams?.id || (params ? (typeof params.then === 'function' ? use(params)?.id : params.id) : null);
+  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'localhost:3000';
 
   const { user } = useContext(Context);
   const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
@@ -488,7 +489,7 @@ export default function WebsiteDetailsPage({ params }) {
             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 font-mono">
               <span className="flex items-center gap-1">
                 <FiGlobe className="text-slate-400" />
-                {website.subdomain}.educraft.io
+                {website.subdomain}.{baseDomain}
               </span>
               {website.custom_domain && (
                 <span className="flex items-center gap-1 text-slate-700 dark:text-slate-300">
@@ -506,7 +507,7 @@ export default function WebsiteDetailsPage({ params }) {
           {/* Quick External Actions */}
           <div className="flex flex-wrap items-center gap-2">
             <a
-              href={`http://${website.subdomain}.localhost:3000`}
+              href={website.custom_domain && website.custom_domain_verified ? `https://${website.custom_domain}` : (baseDomain.includes('localhost') ? `http://${website.subdomain}.${baseDomain}` : `https://${website.subdomain}.${baseDomain}`)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-xs font-semibold shadow-xs transition-colors"
@@ -671,7 +672,7 @@ export default function WebsiteDetailsPage({ params }) {
 
                 <div>
                   <span className="text-[10px] uppercase font-semibold text-slate-400 block mb-0.5">Subdomain URL</span>
-                  <div className="font-mono text-slate-800 dark:text-slate-200">{website.subdomain}.educraft.io</div>
+                  <div className="font-mono text-slate-800 dark:text-slate-200">{website.subdomain}.{baseDomain}</div>
                 </div>
 
                 <div>
@@ -933,7 +934,7 @@ export default function WebsiteDetailsPage({ params }) {
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-l px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
                   />
                   <span className="bg-slate-100 dark:bg-slate-800/80 border border-l-0 border-slate-300 dark:border-slate-700 rounded-r px-2.5 py-2 text-xs font-mono text-slate-500">
-                    .educraft.io
+                    .{baseDomain}
                   </span>
                 </div>
               </div>

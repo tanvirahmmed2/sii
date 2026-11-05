@@ -1,5 +1,5 @@
 import { query, queryDb } from '../database/db.js';
-import { BASE_DOMAIN, BASE_URL, extractBaseDomain } from '../database/secret.js';
+import { BASE_DOMAIN, BASE_HOST, BASE_URL, extractBaseDomain, getWebsiteDomain } from '../database/secret.js';
 
 // Configuration
 const DEFAULT_CACHE_TTL_MS = 60 * 1000; // 60 seconds TTL for valid websites
@@ -43,7 +43,8 @@ function ensureWebsiteSchemaAsync() {
 export async function extractWebsiteIdentifier(request, context) {
   // 1. Direct string context (e.g. resolveWebsite('afit'))
   if (typeof context === 'string' && context.trim()) {
-    return context.trim().toLowerCase().split(':')[0];
+    const raw = context.trim().toLowerCase().split(':')[0];
+    return getWebsiteDomain(raw) || raw;
   }
 
   // 2. Route Context Params (handles both Promise params for Next.js 15+ and plain objects)
@@ -55,7 +56,8 @@ export async function extractWebsiteIdentifier(request, context) {
 
       const candidate = resolvedParams?.domain || resolvedParams?.slug || resolvedParams?.websiteId || resolvedParams?.tenant;
       if (candidate) {
-        return String(candidate).trim().toLowerCase().split(':')[0];
+        const raw = String(candidate).trim().toLowerCase().split(':')[0];
+        return getWebsiteDomain(raw) || raw;
       }
     } catch {}
   }
@@ -72,7 +74,8 @@ export async function extractWebsiteIdentifier(request, context) {
         url.searchParams.get('websiteId') ||
         url.searchParams.get('tenant');
       if (queryParam) {
-        return queryParam.trim().toLowerCase().split(':')[0];
+        const raw = queryParam.trim().toLowerCase().split(':')[0];
+        return getWebsiteDomain(raw) || raw;
       }
     }
 
@@ -81,7 +84,8 @@ export async function extractWebsiteIdentifier(request, context) {
       request.headers?.get?.('x-website-domain') ||
       request.headers?.get?.('x-domain');
     if (headerDomain) {
-      return headerDomain.trim().toLowerCase().split(':')[0];
+      const raw = headerDomain.trim().toLowerCase().split(':')[0];
+      return getWebsiteDomain(raw) || raw;
     }
 
     // Cookies
@@ -90,7 +94,8 @@ export async function extractWebsiteIdentifier(request, context) {
       request.cookies?.get?.('x-domain')?.value ||
       request.cookies?.get?.('website_slug')?.value;
     if (cookieDomain) {
-      return cookieDomain.trim().toLowerCase().split(':')[0];
+      const raw = cookieDomain.trim().toLowerCase().split(':')[0];
+      return getWebsiteDomain(raw) || raw;
     }
 
     // Referer Header (useful for client-side API fetches from /[domain]/...)
@@ -102,6 +107,10 @@ export async function extractWebsiteIdentifier(request, context) {
       }
       try {
         const refUrl = new URL(referer);
+        const refTenant = getWebsiteDomain(refUrl.host);
+        if (refTenant) {
+          return refTenant;
+        }
         const pathParts = refUrl.pathname.split('/').filter(Boolean);
         if (pathParts.length > 0) {
           const first = pathParts[0].toLowerCase();
@@ -113,22 +122,10 @@ export async function extractWebsiteIdentifier(request, context) {
       } catch {}
     }
 
-    // Host Header (e.g. subdomain.domain.com or custom domain)
-    const host =
-      request.headers?.get?.('x-forwarded-host') ||
-      request.headers?.get?.('host') ||
-      url?.host ||
-      '';
-    const cleanHost = host.split(':')[0].toLowerCase();
-    if (cleanHost && cleanHost !== 'localhost' && cleanHost !== '127.0.0.1') {
-      const base = (BASE_DOMAIN || extractBaseDomain(BASE_URL) || '').toLowerCase();
-      if (base && cleanHost.endsWith(`.${base}`)) {
-        return cleanHost.replace(`.${base}`, '').trim();
-      }
-      if (cleanHost.endsWith('.localhost')) {
-        return cleanHost.replace('.localhost', '').trim();
-      }
-      return cleanHost;
+    // Host Header: match subdomain.base_url or custom domain
+    const hostTenant = getWebsiteDomain(request);
+    if (hostTenant) {
+      return hostTenant;
     }
   }
 
@@ -145,6 +142,7 @@ export async function extractWebsiteIdentifier(request, context) {
 async function fetchWebsiteFromDb(cleanId) {
   const isNum = /^[0-9]+$/.test(cleanId);
   const noWww = cleanId.replace(/^www\./, '');
+  const subPrefix = cleanId.includes('.') ? cleanId.split('.')[0] : cleanId;
 
   const sql = `
     SELECT id, creator_id, subscription_id, name, slug, subdomain, subdomain AS domain, custom_domain,
@@ -159,10 +157,13 @@ async function fetchWebsiteFromDb(cleanId) {
     FROM websites 
     WHERE LOWER(slug) = $1 
        OR LOWER(slug) = $2
+       OR LOWER(slug) = $6
        OR LOWER(subdomain) = $1 
        OR LOWER(subdomain) = $2
+       OR LOWER(subdomain) = $6
        OR SPLIT_PART(LOWER(subdomain), '.', 1) = $1
        OR SPLIT_PART(LOWER(subdomain), '.', 1) = $2
+       OR SPLIT_PART(LOWER(subdomain), '.', 1) = $6
        OR LOWER(custom_domain) = $1 
        OR LOWER(custom_domain) = $2
        OR LOWER(custom_domain) = 'www.' || $2
@@ -171,7 +172,7 @@ async function fetchWebsiteFromDb(cleanId) {
        OR ($4 = true AND id = $5::bigint)
     LIMIT 1
   `;
-  const params = [cleanId, noWww, `${cleanId}.%`, isNum, isNum ? Number(cleanId) : -1];
+  const params = [cleanId, noWww, `${cleanId}.%`, isNum, isNum ? Number(cleanId) : -1, subPrefix];
 
   let timeoutId;
   const timeoutPromise = new Promise((_, reject) => {
@@ -205,7 +206,7 @@ async function fetchWebsiteFromDb(cleanId) {
     try {
       const pkgRes = await query(
         `SELECT p.id AS package_id, p.name AS package_name, p.slug AS package_slug,
-                p.max_students, p.max_teachers, p.max_staff, p.max_storage_mb, p.max_websites,
+                p.max_students, p.max_teachers, p.max_staff, p.max_storage_mb,
                 s.id AS subscription_id, s.status AS subscription_status,
                 COALESCE(
                   (
