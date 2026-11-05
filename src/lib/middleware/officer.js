@@ -224,19 +224,20 @@ export async function getOfficerSession(request) {
       [row.session_id]
     ).catch(() => {});
 
-    // 2. Fetch officer permissions (scoped to website modules available for this website's package)
+    // 2. Fetch officer permissions (scoped to control modules available for this website's package)
     const permsRes = await queryDb(
-      `SELECT wop.website_module_id, wop.can_view, wop.can_create, wop.can_edit, wop.can_delete,
-              wm.name AS module_name, wm.slug AS module_slug, wm.icon AS module_icon
+      `SELECT COALESCE(wop.control_module_id, wop.website_module_id) AS control_module_id,
+              wop.can_view, wop.can_create, wop.can_edit, wop.can_delete,
+              cm.name AS module_name, cm.slug AS module_slug, cm.icon AS module_icon
        FROM website_officer_permissions wop
-       JOIN website_modules wm ON wm.id = wop.website_module_id
+       JOIN website_control_modules cm ON cm.id = COALESCE(wop.control_module_id, wop.website_module_id)
        JOIN websites w ON w.id = wop.website_id
        LEFT JOIN subscriptions s ON (s.id = w.subscription_id OR s.website_id = w.id)
-       WHERE wop.officer_id = $1 AND wop.website_id = $2 AND wm.is_active = TRUE
+       WHERE wop.officer_id = $1 AND wop.website_id = $2 AND cm.is_active = TRUE
          AND (
            EXISTS (
-             SELECT 1 FROM package_modules pm 
-             WHERE pm.package_id = s.package_id AND pm.website_module_id = wm.id
+             SELECT 1 FROM package_control_modules pcm 
+             WHERE pcm.package_id = s.package_id AND pcm.control_module_id = cm.id
            )
            OR s.package_id IS NULL
          )`,

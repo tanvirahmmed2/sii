@@ -27,17 +27,28 @@ $$ LANGUAGE plpgsql;
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- 1. MODULES TABLE (Main SaaS Website System Modules for Platform)
+-- 1. MODULES TABLE (Main SaaS Website System Modules for Platform & Developer Panels)
+-- Records developer panels pages and their corresponding APIs
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS modules (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL,
     slug VARCHAR(100) UNIQUE NOT NULL,
+    page_path VARCHAR(255) NOT NULL DEFAULT '/developer',
+    api_path VARCHAR(255) DEFAULT '/api/marketing/developer',
     description TEXT,
+    icon VARCHAR(100) DEFAULT 'BiGridAlt',
     is_active BOOLEAN DEFAULT TRUE,
+    sort_order INT DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Idempotent column migrations for existing modules table
+ALTER TABLE modules ADD COLUMN IF NOT EXISTS page_path VARCHAR(255) NOT NULL DEFAULT '/developer';
+ALTER TABLE modules ADD COLUMN IF NOT EXISTS api_path VARCHAR(255) DEFAULT '/api/marketing/developer';
+ALTER TABLE modules ADD COLUMN IF NOT EXISTS icon VARCHAR(100) DEFAULT 'BiGridAlt';
+ALTER TABLE modules ADD COLUMN IF NOT EXISTS sort_order INT DEFAULT 0;
 
 DROP TRIGGER IF EXISTS update_modules_updated_at ON modules;
 CREATE TRIGGER update_modules_updated_at
@@ -45,10 +56,31 @@ CREATE TRIGGER update_modules_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 2. DEVELOPERS TABLE (SaaS Company Engineers, Admins & Staff)
+-- 2. DEVELOPER ROLES TABLE (Role-Based Access Control for Platform Engineering)
+-- e.g., Super Admin, Lead Developer, Support Specialist, Content Manager
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS developer_roles (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    is_system BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_developer_roles_updated_at ON developer_roles;
+CREATE TRIGGER update_developer_roles_updated_at
+    BEFORE UPDATE ON developer_roles
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 3. DEVELOPERS TABLE (SaaS Company Engineers, Admins & Staff)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS developers (
     id BIGSERIAL PRIMARY KEY,
+    role_id BIGINT REFERENCES developer_roles(id) ON DELETE SET NULL,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     phone VARCHAR(50),
@@ -72,18 +104,22 @@ CREATE TABLE IF NOT EXISTS developers (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE developers ADD COLUMN IF NOT EXISTS role_id BIGINT REFERENCES developer_roles(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_developers_role ON developers(role_id);
+
 DROP TRIGGER IF EXISTS update_developers_updated_at ON developers;
 CREATE TRIGGER update_developers_updated_at
     BEFORE UPDATE ON developers
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 3. MODULE PERMISSIONS TABLE (Combines Developers with Platform Modules)
--- Direct granular access control per developer - no intermediate role table needed
+-- 4. DEVELOPER ROLE PERMISSIONS TABLE (Granular Access Controls by Role)
+-- Maps developer_roles to modules with view, create, edit, delete privileges
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS module_permissions (
+CREATE TABLE IF NOT EXISTS developer_role_permissions (
     id BIGSERIAL PRIMARY KEY,
-    developer_id BIGINT NOT NULL REFERENCES developers(id) ON DELETE CASCADE,
+    role_id BIGINT NOT NULL REFERENCES developer_roles(id) ON DELETE CASCADE,
     module_id BIGINT NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
     can_view BOOLEAN DEFAULT TRUE,
     can_create BOOLEAN DEFAULT FALSE,
@@ -91,16 +127,41 @@ CREATE TABLE IF NOT EXISTS module_permissions (
     can_delete BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(developer_id, module_id)
+    UNIQUE(role_id, module_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_module_permissions_dev ON module_permissions(developer_id);
-CREATE INDEX IF NOT EXISTS idx_module_permissions_mod ON module_permissions(module_id);
+CREATE INDEX IF NOT EXISTS idx_dev_role_perms_role ON developer_role_permissions(role_id);
+CREATE INDEX IF NOT EXISTS idx_dev_role_perms_mod ON developer_role_permissions(module_id);
 
-DROP TRIGGER IF EXISTS update_module_permissions_updated_at ON module_permissions;
-CREATE TRIGGER update_module_permissions_updated_at
-    BEFORE UPDATE ON module_permissions
+DROP TRIGGER IF EXISTS update_developer_role_permissions_updated_at ON developer_role_permissions;
+CREATE TRIGGER update_developer_role_permissions_updated_at
+    BEFORE UPDATE ON developer_role_permissions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Compatibility view / table for legacy module_permissions query
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'module_permissions' AND table_type = 'BASE TABLE'
+    ) THEN
+        DROP TABLE module_permissions CASCADE;
+    END IF;
+END $$;
+
+CREATE OR REPLACE VIEW module_permissions AS
+SELECT 
+    drp.id,
+    d.id AS developer_id,
+    drp.module_id,
+    drp.can_view,
+    drp.can_create,
+    drp.can_edit,
+    drp.can_delete,
+    drp.created_at,
+    drp.updated_at
+FROM developers d
+JOIN developer_role_permissions drp ON d.role_id = drp.role_id;
 
 -- ----------------------------------------------------------------------------
 -- 6. DEVELOPER LOGIN ACTIVITIES TABLE (Developer Login Audit Trail)
@@ -144,8 +205,9 @@ CREATE TABLE IF NOT EXISTS packages (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL,
     slug VARCHAR(100) UNIQUE NOT NULL,
-    tagline VARCHAR(255),
+    short_description TEXT,
     description TEXT,
+    tagline VARCHAR(255),
     monthly_price_usd DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (monthly_price_usd >= 0.00),
     yearly_price_usd DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (yearly_price_usd >= 0.00),
     monthly_price_bdt DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (monthly_price_bdt >= 0.00),
@@ -156,8 +218,11 @@ CREATE TABLE IF NOT EXISTS packages (
     max_students INT DEFAULT 500,
     max_teachers INT DEFAULT 30,
     max_staff INT DEFAULT 20,
-    max_storage_mb INT DEFAULT 5120,
-    max_websites INT DEFAULT 1,
+    max_storage VARCHAR(50) DEFAULT '5 GB',
+    max_storage_mb BIGINT DEFAULT 5120,
+    is_available_student_panel BOOLEAN DEFAULT TRUE,
+    is_available_teacher_panel BOOLEAN DEFAULT TRUE,
+    is_available_custom_domain BOOLEAN DEFAULT FALSE,
     features JSONB DEFAULT '[]'::jsonb,
     is_popular BOOLEAN DEFAULT FALSE,
     is_public BOOLEAN DEFAULT TRUE,
@@ -169,11 +234,25 @@ CREATE TABLE IF NOT EXISTS packages (
 );
 
 -- Idempotent column migrations for existing packages table
+ALTER TABLE packages DROP COLUMN IF EXISTS max_websites;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS short_description TEXT;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS max_storage VARCHAR(50) DEFAULT '5 GB';
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS max_storage_mb BIGINT DEFAULT 5120;
+DO $$ BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' AND table_name = 'packages' AND column_name = 'max_storage' AND data_type != 'character varying'
+    ) THEN
+        ALTER TABLE packages ALTER COLUMN max_storage TYPE VARCHAR(50) USING max_storage::text;
+    END IF;
+END $$;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS is_available_student_panel BOOLEAN DEFAULT TRUE;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS is_available_teacher_panel BOOLEAN DEFAULT TRUE;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS is_available_custom_domain BOOLEAN DEFAULT FALSE;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS monthly_price_usd DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS yearly_price_usd DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS monthly_price_bdt DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS yearly_price_bdt DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
-ALTER TABLE packages ADD COLUMN IF NOT EXISTS max_websites INT DEFAULT 1;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT TRUE;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS grace_period INT DEFAULT 3;
 ALTER TABLE packages DROP COLUMN IF EXISTS trial_days;
@@ -186,38 +265,87 @@ CREATE TRIGGER update_packages_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 9. WEBSITE MODULES TABLE (Tenant Features / School System Modules Catalog)
--- e.g., Attendance, Exams, LMS, Hostel, Fees, Accounting, Inventory
+-- Deprecated website_modules table removed (superseded by website_home_modules and website_control_modules)
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_modules (
+DROP TABLE IF EXISTS website_modules CASCADE;
+
+-- ----------------------------------------------------------------------------
+-- 9B. WEBSITE HOME MODULES TABLE (Public Institutional Website Pages & Features)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_home_modules (
     id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL,
+    name VARCHAR(150) NOT NULL,
     slug VARCHAR(100) UNIQUE NOT NULL,
+    path VARCHAR(255) NOT NULL,
+    category VARCHAR(100) DEFAULT 'General',
     description TEXT,
     icon VARCHAR(100),
     is_active BOOLEAN DEFAULT TRUE,
+    display_order INT DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TRIGGER IF EXISTS update_website_modules_updated_at ON website_modules;
-CREATE TRIGGER update_website_modules_updated_at
-    BEFORE UPDATE ON website_modules
+CREATE INDEX IF NOT EXISTS idx_schema_home_modules_slug ON website_home_modules(slug);
+
+DROP TRIGGER IF EXISTS update_website_home_modules_updated_at ON website_home_modules;
+CREATE TRIGGER update_website_home_modules_updated_at
+    BEFORE UPDATE ON website_home_modules
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-
 -- ----------------------------------------------------------------------------
--- 10. PACKAGE MODULES TABLE (Combines Package with Website Modules)
+-- 9C. WEBSITE CONTROL MODULES TABLE (Administrative Staff Panel & Portal Workstations)
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS package_modules (
+CREATE TABLE IF NOT EXISTS website_control_modules (
     id BIGSERIAL PRIMARY KEY,
-    package_id BIGINT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
-    website_module_id BIGINT NOT NULL REFERENCES website_modules(id) ON DELETE CASCADE,
+    name VARCHAR(150) NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    path VARCHAR(255) NOT NULL,
+    category VARCHAR(100) DEFAULT 'General Management',
+    description TEXT,
+    icon VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
+    display_order INT DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(package_id, website_module_id)
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE OR REPLACE VIEW package_website_modules AS SELECT * FROM package_modules;
+CREATE INDEX IF NOT EXISTS idx_schema_control_modules_slug ON website_control_modules(slug);
+
+DROP TRIGGER IF EXISTS update_website_control_modules_updated_at ON website_control_modules;
+CREATE TRIGGER update_website_control_modules_updated_at
+    BEFORE UPDATE ON website_control_modules
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 10. REMOVE OBSOLETE PACKAGE_MODULES TABLE & CREATE SEPARATE TWO NEW
+-- ----------------------------------------------------------------------------
+DROP VIEW IF EXISTS package_website_modules CASCADE;
+DROP TABLE IF EXISTS package_modules CASCADE;
+
+-- 10A. PACKAGE HOME MODULES TABLE (Connects Package with Public Website Home Modules)
+CREATE TABLE IF NOT EXISTS package_home_modules (
+    id BIGSERIAL PRIMARY KEY,
+    package_id BIGINT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
+    home_module_id BIGINT NOT NULL REFERENCES website_home_modules(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(package_id, home_module_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pkg_home_mods_pkg ON package_home_modules(package_id);
+CREATE INDEX IF NOT EXISTS idx_pkg_home_mods_mod ON package_home_modules(home_module_id);
+
+-- 10B. PACKAGE CONTROL MODULES TABLE (Connects Package with Staff Workstation Control Modules)
+CREATE TABLE IF NOT EXISTS package_control_modules (
+    id BIGSERIAL PRIMARY KEY,
+    package_id BIGINT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
+    control_module_id BIGINT NOT NULL REFERENCES website_control_modules(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(package_id, control_module_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pkg_ctrl_mods_pkg ON package_control_modules(package_id);
+CREATE INDEX IF NOT EXISTS idx_pkg_ctrl_mods_mod ON package_control_modules(control_module_id);
 
 -- ----------------------------------------------------------------------------
 -- 11. CREATORS TABLE (Clients / Educational Institution Owners / Customers)

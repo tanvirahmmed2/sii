@@ -197,19 +197,20 @@ export async function getStaffSession(request) {
       [row.session_id]
     ).catch(() => {});
 
-    // 2. Fetch staff module permissions (scoped to website modules available for this website's package)
+    // 2. Fetch staff control module permissions (scoped to control modules available for this website's package)
     const permsRes = await queryDb(
-      `SELECT wmp.website_module_id, wmp.can_view, wmp.can_create, wmp.can_edit, wmp.can_delete,
-              wm.name AS module_name, wm.slug AS module_slug, wm.icon AS module_icon
+      `SELECT COALESCE(wmp.control_module_id, wmp.website_module_id) AS control_module_id,
+              wmp.can_view, wmp.can_create, wmp.can_edit, wmp.can_delete,
+              cm.name AS module_name, cm.slug AS module_slug, cm.icon AS module_icon
        FROM website_modules_permissions wmp
-       JOIN website_modules wm ON wm.id = wmp.website_module_id
+       JOIN website_control_modules cm ON cm.id = COALESCE(wmp.control_module_id, wmp.website_module_id)
        JOIN websites w ON w.id = wmp.website_id
        LEFT JOIN subscriptions s ON (s.id = w.subscription_id OR s.website_id = w.id)
-       WHERE wmp.staff_id = $1 AND wmp.website_id = $2 AND wm.is_active = TRUE
+       WHERE wmp.staff_id = $1 AND wmp.website_id = $2 AND cm.is_active = TRUE
          AND (
            EXISTS (
-             SELECT 1 FROM package_modules pm 
-             WHERE pm.package_id = s.package_id AND pm.website_module_id = wm.id
+             SELECT 1 FROM package_control_modules pcm 
+             WHERE pcm.package_id = s.package_id AND pcm.control_module_id = cm.id
            )
            OR s.package_id IS NULL
          )`,

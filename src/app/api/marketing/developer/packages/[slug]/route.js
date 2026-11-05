@@ -19,7 +19,7 @@ async function generateUniqueSlug(name, excludeId = null) {
   }
 }
 
-// Fetch package helper with full tenant_modules
+// Fetch package helper with home and control modules
 async function fetchFullPackageBySlugOrId(slugOrId) {
   const res = await queryDb(
     `SELECT p.*,
@@ -27,46 +27,58 @@ async function fetchFullPackageBySlugOrId(slugOrId) {
               (
                 SELECT json_agg(
                   json_build_object(
-                    'id', wm.id,
-                    'name', wm.name,
-                    'slug', wm.slug,
-                    'description', wm.description,
-                    'icon', wm.icon,
-                    'is_active', wm.is_active
-                  ) ORDER BY wm.id ASC
+                    'id', hm.id,
+                    'name', hm.name,
+                    'slug', hm.slug,
+                    'path', hm.path,
+                    'category', hm.category,
+                    'description', hm.description,
+                    'icon', hm.icon,
+                    'is_active', hm.is_active
+                  ) ORDER BY hm.display_order ASC, hm.id ASC
                 )
-                FROM package_modules pm
-                JOIN website_modules wm ON pm.website_module_id = wm.id
-                WHERE pm.package_id = p.id
+                FROM package_home_modules phm
+                JOIN website_home_modules hm ON phm.home_module_id = hm.id
+                WHERE phm.package_id = p.id
               ),
               '[]'::json
-            ) AS tenant_modules,
+            ) AS home_modules,
             COALESCE(
               (
-                SELECT json_agg(pm.website_module_id ORDER BY pm.website_module_id ASC)
-                FROM package_modules pm
-                WHERE pm.package_id = p.id
+                SELECT json_agg(phm.home_module_id ORDER BY phm.home_module_id ASC)
+                FROM package_home_modules phm
+                WHERE phm.package_id = p.id
               ),
               '[]'::json
-            ) AS tenant_module_ids,
+            ) AS home_module_ids,
             COALESCE(
-               (
-                 SELECT json_agg(DISTINCT wm.name ORDER BY wm.name ASC)
-                 FROM package_modules pm
-                 JOIN website_modules wm ON pm.website_module_id = wm.id
-                 WHERE pm.package_id = p.id
-               ),
-               '[]'::json
-             ) AS allowed_modules,
+              (
+                SELECT json_agg(
+                  json_build_object(
+                    'id', cm.id,
+                    'name', cm.name,
+                    'slug', cm.slug,
+                    'path', cm.path,
+                    'category', cm.category,
+                    'description', cm.description,
+                    'icon', cm.icon,
+                    'is_active', cm.is_active
+                  ) ORDER BY cm.category ASC, cm.display_order ASC, cm.id ASC
+                )
+                FROM package_control_modules pcm
+                JOIN website_control_modules cm ON pcm.control_module_id = cm.id
+                WHERE pcm.package_id = p.id
+              ),
+              '[]'::json
+            ) AS control_modules,
             COALESCE(
-               (
-                 SELECT json_agg(DISTINCT wm.slug ORDER BY wm.slug ASC)
-                 FROM package_modules pm
-                 JOIN website_modules wm ON pm.website_module_id = wm.id
-                 WHERE pm.package_id = p.id
-               ),
-               '[]'::json
-             ) AS allowed_module_slugs
+              (
+                SELECT json_agg(pcm.control_module_id ORDER BY pcm.control_module_id ASC)
+                FROM package_control_modules pcm
+                WHERE pcm.package_id = p.id
+              ),
+              '[]'::json
+            ) AS control_module_ids
      FROM packages p
      WHERE p.slug = $1 OR p.id::text = $1
      LIMIT 1`,
@@ -143,6 +155,7 @@ export async function PUT(request, { params }) {
       newSlug = await generateUniqueSlug(name, current.id);
     }
 
+    const shortDescription = data.short_description !== undefined ? data.short_description : current.short_description;
     const tagline = data.tagline !== undefined ? (data.tagline || '').trim() : (current.tagline || '');
     const description = data.description !== undefined ? data.description : current.description;
 
@@ -182,11 +195,21 @@ export async function PUT(request, { params }) {
       ? Math.max(100, Number(data.max_storage_mb))
       : (current.max_storage_mb || 5120);
 
-    const maxWebsites = data.max_websites !== undefined
-      ? Math.max(1, Number(data.max_websites))
-      : (data.max_portfolios !== undefined
-          ? Math.max(1, Number(data.max_portfolios))
-          : (current.max_websites ?? current.max_portfolios ?? 1));
+    const maxStorage = data.max_storage !== undefined
+      ? String(data.max_storage).trim()
+      : (current.max_storage || `${Math.round(maxStorageMb / 1024)} GB`);
+
+    const isAvailableStudentPanel = data.is_available_student_panel !== undefined
+      ? Boolean(data.is_available_student_panel)
+      : (current.is_available_student_panel !== undefined ? Boolean(current.is_available_student_panel) : true);
+
+    const isAvailableTeacherPanel = data.is_available_teacher_panel !== undefined
+      ? Boolean(data.is_available_teacher_panel)
+      : (current.is_available_teacher_panel !== undefined ? Boolean(current.is_available_teacher_panel) : true);
+
+    const isAvailableCustomDomain = data.is_available_custom_domain !== undefined
+      ? Boolean(data.is_available_custom_domain)
+      : (current.is_available_custom_domain !== undefined ? Boolean(current.is_available_custom_domain) : false);
 
     const isPopular = data.is_popular !== undefined ? Boolean(data.is_popular) : Boolean(current.is_popular);
     const isPublic = data.is_public !== undefined ? Boolean(data.is_public) : (current.is_public !== undefined ? Boolean(current.is_public) : true);
@@ -205,72 +228,84 @@ export async function PUT(request, { params }) {
       `UPDATE packages
        SET name = $1,
            slug = $2,
-           tagline = $3,
-           description = $4,
-           monthly_price_usd = $5,
-           yearly_price_usd = $6,
-           monthly_price_bdt = $7,
-           yearly_price_bdt = $8,
-           monthly_price = $9,
-           yearly_price = $10,
-           discount_percentage = $11,
-           max_students = $12,
-           max_teachers = $13,
-           max_staff = $14,
-           max_storage_mb = $15,
-           max_websites = $16,
-           features = $17::jsonb,
-           is_popular = $18,
-           is_public = $19,
-           is_active = $20,
-           grace_period = $21,
-           sort_order = $22,
+           short_description = $3,
+           tagline = $4,
+           description = $5,
+           monthly_price_usd = $6,
+           yearly_price_usd = $7,
+           monthly_price_bdt = $8,
+           yearly_price_bdt = $9,
+           monthly_price = $10,
+           yearly_price = $11,
+           discount_percentage = $12,
+           max_students = $13,
+           max_teachers = $14,
+           max_staff = $15,
+           max_storage = $16,
+           max_storage_mb = $17,
+           is_available_student_panel = $18,
+           is_available_teacher_panel = $19,
+           is_available_custom_domain = $20,
+           features = $21::jsonb,
+           is_popular = $22,
+           is_public = $23,
+           is_active = $24,
+           grace_period = $25,
+           sort_order = $26,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $23`,
+       WHERE id = $27`,
       [
-        name, newSlug, tagline, description,
+        name, newSlug, shortDescription, tagline, description,
         monthlyPriceUsd, yearlyPriceUsd, monthlyPriceBdt, yearlyPriceBdt,
         monthlyPriceUsd, yearlyPriceUsd, discountPercentage,
-        maxStudents, maxTeachers, maxStaff, maxStorageMb, maxWebsites,
+        maxStudents, maxTeachers, maxStaff, maxStorage, maxStorageMb,
+        isAvailableStudentPanel, isAvailableTeacherPanel, isAvailableCustomDomain,
         featuresJson, isPopular, isPublic, isActive, gracePeriod, sortOrder,
         current.id
       ]
     );
 
-    // Synchronize package_modules
-    let tenantModuleIds = null;
-    if (Array.isArray(data.tenant_module_ids)) {
-      tenantModuleIds = data.tenant_module_ids.map(Number).filter((n) => !isNaN(n) && n > 0);
-    } else if (Array.isArray(data.tenant_modules)) {
-      tenantModuleIds = data.tenant_modules
-        .map((m) => (typeof m === 'object' && m !== null ? Number(m.id) : Number(m)))
-        .filter((n) => !isNaN(n) && n > 0);
-    } else if (Array.isArray(data.allowed_modules) || Array.isArray(data.modules)) {
-      const rawNames = (data.allowed_modules || data.modules || []).map((x) =>
-        String(typeof x === 'object' && x !== null ? x.name || x.slug : x).trim().toLowerCase()
-      );
-      if (rawNames.length > 0) {
-        const resolved = await queryDb(
-          `SELECT id FROM website_modules WHERE LOWER(name) = ANY($1) OR LOWER(slug) = ANY($1)`,
-          [rawNames]
-        ).catch(() => ({ rows: [] }));
-        tenantModuleIds = resolved.rows.map((r) => r.id);
-      } else {
-        tenantModuleIds = [];
+    // Synchronize package_home_modules
+    if (data.home_module_ids !== undefined || data.home_modules !== undefined) {
+      let homeIds = [];
+      if (Array.isArray(data.home_module_ids)) {
+        homeIds = data.home_module_ids.map(Number).filter((n) => !isNaN(n) && n > 0);
+      } else if (Array.isArray(data.home_modules)) {
+        homeIds = data.home_modules
+          .map((m) => (typeof m === 'object' && m !== null ? Number(m.id) : Number(m)))
+          .filter((n) => !isNaN(n) && n > 0);
+      }
+
+      await queryDb('DELETE FROM package_home_modules WHERE package_id = $1', [current.id]).catch(() => {});
+      for (const hId of homeIds) {
+        await queryDb(
+          `INSERT INTO package_home_modules (package_id, home_module_id)
+           VALUES ($1, $2)
+           ON CONFLICT (package_id, home_module_id) DO NOTHING`,
+          [current.id, hId]
+        ).catch((e) => console.warn('Error syncing package_home_module:', e.message));
       }
     }
 
-    if (tenantModuleIds !== null) {
-      await queryDb('DELETE FROM package_modules WHERE package_id = $1', [current.id]).catch(() => {});
-      await queryDb('DELETE FROM allowed_modules WHERE package_id = $1', [current.id]).catch(() => {});
+    // Synchronize package_control_modules
+    if (data.control_module_ids !== undefined || data.control_modules !== undefined) {
+      let controlIds = [];
+      if (Array.isArray(data.control_module_ids)) {
+        controlIds = data.control_module_ids.map(Number).filter((n) => !isNaN(n) && n > 0);
+      } else if (Array.isArray(data.control_modules)) {
+        controlIds = data.control_modules
+          .map((m) => (typeof m === 'object' && m !== null ? Number(m.id) : Number(m)))
+          .filter((n) => !isNaN(n) && n > 0);
+      }
 
-      for (const modId of tenantModuleIds) {
+      await queryDb('DELETE FROM package_control_modules WHERE package_id = $1', [current.id]).catch(() => {});
+      for (const cId of controlIds) {
         await queryDb(
-          `INSERT INTO package_modules (package_id, website_module_id)
+          `INSERT INTO package_control_modules (package_id, control_module_id)
            VALUES ($1, $2)
-           ON CONFLICT (package_id, website_module_id) DO NOTHING`,
-          [current.id, modId]
-        ).catch((e) => console.warn('Error syncing package_module:', e.message));
+           ON CONFLICT (package_id, control_module_id) DO NOTHING`,
+          [current.id, cId]
+        ).catch((e) => console.warn('Error syncing package_control_module:', e.message));
       }
     }
 

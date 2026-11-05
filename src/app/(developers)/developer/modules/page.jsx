@@ -14,7 +14,7 @@ export default function AdminDatabaseModulesPage() {
 
   // Database tables state
   const [modules, setModules] = useState([]);
-  const [counts, setCounts] = useState({ total: 0, website: 0, platform: 0, legacy: 0, home_modules: 0, control_modules: 0 });
+  const [counts, setCounts] = useState({ total: 0, website: 0, platform: 0, legacy: 0, home_modules: 0, control_modules: 0, developer_modules: 0 });
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'website' | 'platform' | 'legacy'
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,6 +22,7 @@ export default function AdminDatabaseModulesPage() {
   // Tenant Home & Control Modules state
   const [homeModules, setHomeModules] = useState([]);
   const [controlModules, setControlModules] = useState([]);
+  const [developerModules, setDeveloperModules] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [togglingId, setTogglingId] = useState(null);
 
@@ -46,6 +47,9 @@ export default function AdminDatabaseModulesPage() {
         }
         if (Array.isArray(data.control_modules)) {
           setControlModules(data.control_modules);
+        }
+        if (Array.isArray(data.developer_modules)) {
+          setDeveloperModules(data.developer_modules);
         }
       }
     } catch (err) {
@@ -168,6 +172,21 @@ export default function AdminDatabaseModulesPage() {
     });
   }, [controlModules, searchTerm, selectedCategory]);
 
+  // Filtered Developer Modules
+  const filteredDeveloperModules = useMemo(() => {
+    return developerModules.filter((m) => {
+      const q = searchTerm.toLowerCase();
+      return (
+        !searchTerm.trim() ||
+        m.name?.toLowerCase().includes(q) ||
+        m.module_key?.toLowerCase().includes(q) ||
+        m.page_path?.toLowerCase().includes(q) ||
+        m.api_path?.toLowerCase().includes(q) ||
+        (m.description && m.description.toLowerCase().includes(q))
+      );
+    });
+  }, [developerModules, searchTerm]);
+
   // Metric counts
   const totalTables = modules.length;
   const websiteModules = modules.filter((m) => m.category === 'website').length;
@@ -175,6 +194,7 @@ export default function AdminDatabaseModulesPage() {
   const legacyTables = modules.filter((m) => m.category === 'legacy').length;
   const totalHomeCount = homeModules.length;
   const totalControlCount = controlModules.length;
+  const totalDevModules = developerModules.length;
 
   if (!isAdminUser) {
     return (
@@ -202,12 +222,15 @@ export default function AdminDatabaseModulesPage() {
             <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
               {totalHomeCount} Home Modules
             </span>
+            <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+              {totalDevModules} Developer Modules
+            </span>
             <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
               {totalTables} DB Tables
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Introspection and active status management across all tenant public frontend routes, staff workstation control panels, and underlying PostgreSQL tables.
+            Introspection and active status management across all tenant public frontend routes, staff workstation control panels, developer panel pages &amp; APIs, and underlying PostgreSQL tables.
           </p>
         </div>
 
@@ -223,7 +246,7 @@ export default function AdminDatabaseModulesPage() {
       </div>
 
       {/* Primary View Switcher Navigation */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 flex-wrap">
         <button
           type="button"
           onClick={() => {
@@ -259,6 +282,24 @@ export default function AdminDatabaseModulesPage() {
           <span>Home Modules (Public Website)</span>
           <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-700 text-white dark:bg-emerald-200 dark:text-emerald-800">
             {totalHomeCount}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setViewMode('developer');
+            setSearchTerm('');
+          }}
+          className={`px-4 py-2 rounded text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 ${
+            viewMode === 'developer'
+              ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
+              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+          }`}
+        >
+          <span>Developer Modules &amp; APIs</span>
+          <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-700 text-white dark:bg-amber-200 dark:text-amber-800">
+            {totalDevModules}
           </span>
         </button>
 
@@ -595,6 +636,148 @@ export default function AdminDatabaseModulesPage() {
                               ? 'Disable'
                               : 'Enable'}
                           </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* VIEW 2B: DEVELOPER PANEL MODULES & APIS (41 Platform Engineering Modules) */}
+      {/* ========================================================================= */}
+      {viewMode === 'developer' && (
+        <div className="space-y-4">
+          {/* KPI Stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-1">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                Platform Developer Modules
+              </span>
+              <div className="text-xl font-semibold text-slate-900 dark:text-white">{totalDevModules}</div>
+              <p className="text-[11px] text-slate-400">Stored in modules table</p>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-1">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                Developer Panel Pages
+              </span>
+              <div className="text-xl font-semibold text-amber-600 dark:text-amber-400">
+                {developerModules.filter((m) => m.page_path).length}
+              </div>
+              <p className="text-[11px] text-slate-400">Routes under /developer/*</p>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-1">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                Backend API Routes
+              </span>
+              <div className="text-xl font-semibold text-blue-600 dark:text-blue-400">
+                {developerModules.filter((m) => m.api_path).length}
+              </div>
+              <p className="text-[11px] text-slate-400">Secured via developer middleware</p>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-1">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                Filtered Modules
+              </span>
+              <div className="text-xl font-semibold text-slate-800 dark:text-slate-200">
+                {filteredDeveloperModules.length}
+              </div>
+              <p className="text-[11px] text-slate-400">Matching search criteria</p>
+            </div>
+          </div>
+
+          {/* Filter Bar & Search */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Platform developer panel pages and REST API routes assigned to developer roles via <span className="font-mono">developer_role_permissions</span>.
+            </p>
+
+            <div className="relative flex-1 max-w-md">
+              <input
+                type="text"
+                placeholder="Search module name, key, page route, or API..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Developer Modules Table */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-normal uppercase tracking-wider text-[10px]">
+                    <th className="px-4 py-3 whitespace-nowrap">#</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Module Name</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Module Key</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Developer Page Route</th>
+                    <th className="px-4 py-3 whitespace-nowrap">API Endpoint Path</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Description</th>
+                    <th className="px-4 py-3 text-right whitespace-nowrap">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={7} className="py-16 text-center">
+                        <LoadingScreen fullScreen={false} size="sm" label="Loading developer modules..." />
+                      </td>
+                    </tr>
+                  ) : filteredDeveloperModules.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-16 text-center text-slate-400">
+                        No developer modules match your search.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredDeveloperModules.map((mod, idx) => (
+                      <tr key={mod.id || mod.module_key} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                        <td className="px-4 py-3 text-slate-400 font-mono text-[11px]">{idx + 1}</td>
+                        <td className="px-4 py-3 font-medium text-slate-900 dark:text-white whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                            <span>{mod.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 font-mono text-[11px] text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                          {mod.module_key}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-[11px] text-amber-600 dark:text-amber-400 whitespace-nowrap">
+                          {mod.page_path ? (
+                            <a href={mod.page_path} className="hover:underline flex items-center gap-1">
+                              <span>{mod.page_path}</span>
+                              <span className="text-[10px] text-slate-400">↗</span>
+                            </a>
+                          ) : (
+                            <span className="text-slate-400 italic">No direct page</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-[11px] text-blue-600 dark:text-blue-400 whitespace-nowrap">
+                          {mod.api_path || '—'}
+                        </td>
+                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400 max-w-xs truncate text-[11px]" title={mod.description}>
+                          {mod.description || '—'}
+                        </td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                          {mod.page_path ? (
+                            <a
+                              href={mod.page_path}
+                              className="px-2.5 py-1 rounded text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer inline-block"
+                            >
+                              Open Panel
+                            </a>
+                          ) : (
+                            <span className="text-slate-400 text-xs italic">API Only</span>
+                          )}
                         </td>
                       </tr>
                     ))

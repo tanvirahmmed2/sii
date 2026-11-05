@@ -211,25 +211,27 @@ async function fetchWebsiteFromDb(cleanId) {
                   (
                     SELECT json_agg(
                       json_build_object(
-                        'id', wm.id,
-                        'name', wm.name,
-                        'slug', wm.slug,
-                        'description', wm.description,
-                        'icon', wm.icon
-                      ) ORDER BY wm.id ASC
+                        'id', cm.id,
+                        'name', cm.name,
+                        'slug', cm.slug,
+                        'path', cm.path,
+                        'category', cm.category,
+                        'description', cm.description,
+                        'icon', cm.icon
+                      ) ORDER BY cm.display_order ASC, cm.id ASC
                     )
-                    FROM package_modules pm
-                    JOIN website_modules wm ON wm.id = pm.website_module_id
-                    WHERE pm.package_id = p.id AND wm.is_active = TRUE
+                    FROM package_control_modules pcm
+                    JOIN website_control_modules cm ON cm.id = pcm.control_module_id
+                    WHERE pcm.package_id = p.id AND cm.is_active = TRUE
                   ),
                   '[]'::json
                 ) AS allowed_modules,
                 COALESCE(
                   (
-                    SELECT array_agg(DISTINCT wm.slug ORDER BY wm.slug ASC)
-                    FROM package_modules pm
-                    JOIN website_modules wm ON wm.id = pm.website_module_id
-                    WHERE pm.package_id = p.id AND wm.is_active = TRUE
+                    SELECT array_agg(DISTINCT cm.slug ORDER BY cm.slug ASC)
+                    FROM package_control_modules pcm
+                    JOIN website_control_modules cm ON cm.id = pcm.control_module_id
+                    WHERE pcm.package_id = p.id AND cm.is_active = TRUE
                   ),
                   ARRAY[]::varchar[]
                 ) AS allowed_module_slugs
@@ -258,9 +260,9 @@ async function fetchWebsiteFromDb(cleanId) {
         allowedModules = pRow.allowed_modules || [];
         allowedModuleSlugs = pRow.allowed_module_slugs || [];
       } else {
-        // Fallback: If no subscription is active, load active modules as default allowance
+        // Fallback: If no subscription is active, load active control modules as default allowance
         const fallbackMods = await query(
-          `SELECT id, name, slug, description, icon FROM website_modules WHERE is_active = TRUE ORDER BY id ASC`
+          `SELECT id, name, slug, path, category, description, icon FROM website_control_modules WHERE is_active = TRUE ORDER BY id ASC`
         ).catch(() => ({ rows: [] }));
         allowedModules = fallbackMods.rows || [];
         allowedModuleSlugs = allowedModules.map((m) => m.slug);

@@ -13,6 +13,7 @@ export default function PackageForm({
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     slug: initialData?.slug || '',
+    short_description: initialData?.short_description || '',
     tagline: initialData?.tagline || '',
     description: initialData?.description || '',
     monthly_price_usd:
@@ -42,8 +43,11 @@ export default function PackageForm({
     max_students: initialData?.max_students ?? 500,
     max_teachers: initialData?.max_teachers ?? 30,
     max_staff: initialData?.max_staff ?? 20,
+    max_storage: initialData?.max_storage || '5 GB',
     max_storage_mb: initialData?.max_storage_mb ?? 5120,
-    max_websites: initialData?.max_websites ?? initialData?.max_portfolios ?? 1,
+    is_available_student_panel: initialData?.is_available_student_panel !== false,
+    is_available_teacher_panel: initialData?.is_available_teacher_panel !== false,
+    is_available_custom_domain: Boolean(initialData?.is_available_custom_domain),
     grace_period: initialData?.grace_period !== undefined ? Number(initialData.grace_period) : 3,
     is_popular: Boolean(initialData?.is_popular),
     is_public: initialData?.is_public !== undefined ? Boolean(initialData.is_public) : true,
@@ -51,26 +55,32 @@ export default function PackageForm({
     sort_order: initialData?.sort_order ?? 0,
   });
 
-  const [tenantModules, setTenantModules] = useState([]);
-  const [selectedModuleIds, setSelectedModuleIds] = useState([]);
+  const [homeModules, setHomeModules] = useState([]);
+  const [controlModules, setControlModules] = useState([]);
+  const [selectedHomeIds, setSelectedHomeIds] = useState([]);
+  const [selectedControlIds, setSelectedControlIds] = useState([]);
+  const [activeModuleTab, setActiveModuleTab] = useState('control'); // 'control' | 'home'
   const [loadingModules, setLoadingModules] = useState(true);
-  const [moduleSearch, setModuleSearch] = useState('');
+  const [homeSearch, setHomeSearch] = useState('');
+  const [controlSearch, setControlSearch] = useState('');
+  const [controlCategoryFilter, setControlCategoryFilter] = useState('ALL');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Fetch available Tenant Modules catalog from API
+  // Fetch available Home and Control Modules
   useEffect(() => {
     let isMounted = true;
     setLoadingModules(true);
 
-    fetch('/api/marketing/developer/tenant-modules')
+    fetch('/api/marketing/developer/tenant-modules?type=all')
       .then((res) => res.json())
       .then((data) => {
         if (!isMounted) return;
-        if (Array.isArray(data.records)) {
-          setTenantModules(data.records);
-        } else if (Array.isArray(data.modules)) {
-          setTenantModules(data.modules);
+        if (Array.isArray(data.home_modules)) {
+          setHomeModules(data.home_modules);
+        }
+        if (Array.isArray(data.control_modules)) {
+          setControlModules(data.control_modules);
         }
       })
       .catch((err) => {
@@ -85,50 +95,75 @@ export default function PackageForm({
     };
   }, []);
 
-  // Sync initial tenant modules
+  // Sync initial module assignments
   useEffect(() => {
     if (initialData) {
-      if (Array.isArray(initialData.tenant_module_ids)) {
-        setSelectedModuleIds(initialData.tenant_module_ids.map(Number));
-      } else if (Array.isArray(initialData.tenant_modules)) {
-        const ids = initialData.tenant_modules.map((m) => Number(m.id || m)).filter(Boolean);
-        setSelectedModuleIds(ids);
-      } else if (Array.isArray(initialData.allowed_modules) && tenantModules.length > 0) {
-        const ids = tenantModules
-          .filter((tm) => initialData.allowed_modules.includes(tm.slug || tm.name))
-          .map((tm) => Number(tm.id));
-        setSelectedModuleIds(ids);
+      if (Array.isArray(initialData.home_module_ids)) {
+        setSelectedHomeIds(initialData.home_module_ids.map(Number));
+      } else if (Array.isArray(initialData.home_modules)) {
+        setSelectedHomeIds(initialData.home_modules.map((m) => Number(m.id || m)).filter(Boolean));
       }
-    } else if (!isEditing && tenantModules.length > 0 && selectedModuleIds.length === 0) {
-      setSelectedModuleIds(tenantModules.map((m) => Number(m.id)));
-    }
-  }, [initialData, tenantModules, isEditing]);
 
-  const toggleModule = (id) => {
-    const numId = Number(id);
-    setSelectedModuleIds((prev) =>
-      prev.includes(numId) ? prev.filter((mId) => mId !== numId) : [...prev, numId]
+      if (Array.isArray(initialData.control_module_ids)) {
+        setSelectedControlIds(initialData.control_module_ids.map(Number));
+      } else if (Array.isArray(initialData.control_modules)) {
+        setSelectedControlIds(initialData.control_modules.map((m) => Number(m.id || m)).filter(Boolean));
+      }
+    } else if (!isEditing) {
+      // Default new package: select all active modules
+      if (homeModules.length > 0 && selectedHomeIds.length === 0) {
+        setSelectedHomeIds(homeModules.filter((m) => m.is_active).map((m) => Number(m.id)));
+      }
+      if (controlModules.length > 0 && selectedControlIds.length === 0) {
+        setSelectedControlIds(controlModules.filter((m) => m.is_active).map((m) => Number(m.id)));
+      }
+    }
+  }, [initialData, homeModules, controlModules, isEditing]);
+
+  const toggleHomeModule = (id) => {
+    const num = Number(id);
+    setSelectedHomeIds((prev) =>
+      prev.includes(num) ? prev.filter((i) => i !== num) : [...prev, num]
     );
   };
 
-  const handleSelectAll = () => {
-    setSelectedModuleIds(tenantModules.map((m) => Number(m.id)));
+  const toggleControlModule = (id) => {
+    const num = Number(id);
+    setSelectedControlIds((prev) =>
+      prev.includes(num) ? prev.filter((i) => i !== num) : [...prev, num]
+    );
   };
 
-  const handleDeselectAll = () => {
-    setSelectedModuleIds([]);
-  };
+  const controlCategories = useMemo(() => {
+    return Array.from(new Set(controlModules.map((m) => m.category).filter(Boolean))).sort();
+  }, [controlModules]);
 
-  const filteredTenantModules = useMemo(() => {
-    if (!moduleSearch.trim()) return tenantModules;
-    const q = moduleSearch.toLowerCase();
-    return tenantModules.filter(
+  const filteredHomeModules = useMemo(() => {
+    if (!homeSearch.trim()) return homeModules;
+    const q = homeSearch.toLowerCase();
+    return homeModules.filter(
       (m) =>
         m.name?.toLowerCase().includes(q) ||
         m.slug?.toLowerCase().includes(q) ||
+        m.path?.toLowerCase().includes(q) ||
         m.description?.toLowerCase().includes(q)
     );
-  }, [tenantModules, moduleSearch]);
+  }, [homeModules, homeSearch]);
+
+  const filteredControlModules = useMemo(() => {
+    return controlModules.filter((m) => {
+      const matchesCategory =
+        controlCategoryFilter === 'ALL' || m.category === controlCategoryFilter;
+      const q = controlSearch.toLowerCase();
+      const matchesSearch =
+        !q ||
+        m.name?.toLowerCase().includes(q) ||
+        m.slug?.toLowerCase().includes(q) ||
+        m.path?.toLowerCase().includes(q) ||
+        m.description?.toLowerCase().includes(q);
+      return matchesCategory && matchesSearch;
+    });
+  }, [controlModules, controlSearch, controlCategoryFilter]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -145,9 +180,13 @@ export default function PackageForm({
     const yearlyUsd = Math.max(0, parseFloat(formData.yearly_price_usd) || 0);
     const monthlyBdt = Math.max(0, parseFloat(formData.monthly_price_bdt) || 0);
     const yearlyBdt = Math.max(0, parseFloat(formData.yearly_price_bdt) || 0);
+    const maxStorageMb = Math.max(100, parseInt(formData.max_storage_mb, 10) || 5120);
+    const maxStorage = formData.max_storage.trim() || `${Math.round(maxStorageMb / 1024)} GB`;
 
     const payload = {
       name: formData.name.trim(),
+      slug: formData.slug.trim(),
+      short_description: formData.short_description.trim(),
       tagline: formData.tagline.trim(),
       description: formData.description.trim(),
       monthly_price_usd: monthlyUsd,
@@ -160,14 +199,18 @@ export default function PackageForm({
       max_students: Math.max(1, parseInt(formData.max_students, 10) || 500),
       max_teachers: Math.max(1, parseInt(formData.max_teachers, 10) || 30),
       max_staff: Math.max(1, parseInt(formData.max_staff, 10) || 20),
-      max_storage_mb: Math.max(100, parseInt(formData.max_storage_mb, 10) || 5120),
-      max_websites: Math.max(1, parseInt(formData.max_websites, 10) || 1),
+      max_storage: maxStorage,
+      max_storage_mb: maxStorageMb,
+      is_available_student_panel: Boolean(formData.is_available_student_panel),
+      is_available_teacher_panel: Boolean(formData.is_available_teacher_panel),
+      is_available_custom_domain: Boolean(formData.is_available_custom_domain),
       grace_period: Math.max(0, parseInt(formData.grace_period, 10) || 3),
       sort_order: parseInt(formData.sort_order, 10) || 0,
       is_popular: Boolean(formData.is_popular),
       is_public: Boolean(formData.is_public),
       is_active: Boolean(formData.is_active),
-      tenant_module_ids: selectedModuleIds,
+      home_module_ids: selectedHomeIds,
+      control_module_ids: selectedControlIds,
     };
 
     try {
@@ -190,6 +233,7 @@ export default function PackageForm({
           setFormData({
             name: '',
             slug: '',
+            short_description: '',
             tagline: '',
             description: '',
             monthly_price_usd: '29.00',
@@ -200,15 +244,17 @@ export default function PackageForm({
             max_students: 500,
             max_teachers: 30,
             max_staff: 20,
+            max_storage: '5 GB',
             max_storage_mb: 5120,
-            max_websites: 1,
+            is_available_student_panel: true,
+            is_available_teacher_panel: true,
+            is_available_custom_domain: false,
             grace_period: 3,
             is_popular: false,
             is_public: true,
             is_active: true,
             sort_order: 0,
           });
-          setSelectedModuleIds(tenantModules.map((m) => Number(m.id)));
         }
         if (onSuccess) onSuccess(data.record || data.package);
       } else {
@@ -231,8 +277,8 @@ export default function PackageForm({
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {isEditing
-              ? `Updating package #${initialData.id} rates, institutional capacity, and included tenant modules.`
-              : 'Configure dual-currency BDT/USD subscription pricing, school quotas, and linked tenant modules.'}
+              ? `Updating package #${initialData.id} rates, institutional capacity, and linked modules.`
+              : 'Configure subscription pricing, capacity quotas, portal availability, and linked home & control modules.'}
           </p>
         </div>
         {onCancel && (
@@ -253,8 +299,8 @@ export default function PackageForm({
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* 1. BASIC INFORMATION */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* 1. BASIC INFORMATION & SHORT DESCRIPTION */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
               Package Name <span className="text-rose-500">*</span>
@@ -262,9 +308,22 @@ export default function PackageForm({
             <input
               type="text"
               required
-              placeholder="e.g. Standard School Tier, Campus Pro, Enterprise"
+              placeholder="e.g. Starter Academy, Pro School, Enterprise"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-slate-800"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Short Description
+            </label>
+            <input
+              type="text"
+              placeholder="Brief summary for checkout cards"
+              value={formData.short_description}
+              onChange={(e) => setFormData({ ...formData, short_description: e.target.value })}
               className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-slate-800"
             />
           </div>
@@ -275,7 +334,7 @@ export default function PackageForm({
             </label>
             <input
               type="text"
-              placeholder="e.g. Ideal for growing colleges & multi-branch institutes"
+              placeholder="e.g. Ideal for coaching centers & madrasahs"
               value={formData.tagline}
               onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
               className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-slate-800"
@@ -320,18 +379,16 @@ export default function PackageForm({
                   USD / mo
                 </span>
               </div>
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  required
-                  placeholder="29.00"
-                  value={formData.monthly_price_usd}
-                  onChange={(e) => setFormData({ ...formData, monthly_price_usd: e.target.value })}
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
-                />
-              </div>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                placeholder="29.00"
+                value={formData.monthly_price_usd}
+                onChange={(e) => setFormData({ ...formData, monthly_price_usd: e.target.value })}
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+              />
               <p className="text-[10px] text-slate-400 mt-1">Dollar rate per month</p>
             </div>
 
@@ -345,18 +402,16 @@ export default function PackageForm({
                   USD / yr
                 </span>
               </div>
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  required
-                  placeholder="290.00"
-                  value={formData.yearly_price_usd}
-                  onChange={(e) => setFormData({ ...formData, yearly_price_usd: e.target.value })}
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
-                />
-              </div>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                placeholder="290.00"
+                value={formData.yearly_price_usd}
+                onChange={(e) => setFormData({ ...formData, yearly_price_usd: e.target.value })}
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+              />
               <p className="text-[10px] text-slate-400 mt-1">Annual dollar billing</p>
             </div>
 
@@ -370,18 +425,16 @@ export default function PackageForm({
                   BDT / mo
                 </span>
               </div>
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  required
-                  placeholder="3500.00"
-                  value={formData.monthly_price_bdt}
-                  onChange={(e) => setFormData({ ...formData, monthly_price_bdt: e.target.value })}
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
-                />
-              </div>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                placeholder="3500.00"
+                value={formData.monthly_price_bdt}
+                onChange={(e) => setFormData({ ...formData, monthly_price_bdt: e.target.value })}
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+              />
               <p className="text-[10px] text-slate-400 mt-1">Taka rate per month</p>
             </div>
 
@@ -395,35 +448,33 @@ export default function PackageForm({
                   BDT / yr
                 </span>
               </div>
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  required
-                  placeholder="35000.00"
-                  value={formData.yearly_price_bdt}
-                  onChange={(e) => setFormData({ ...formData, yearly_price_bdt: e.target.value })}
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
-                />
-              </div>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                placeholder="35000.00"
+                value={formData.yearly_price_bdt}
+                onChange={(e) => setFormData({ ...formData, yearly_price_bdt: e.target.value })}
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+              />
               <p className="text-[10px] text-slate-400 mt-1">Annual Taka billing</p>
             </div>
           </div>
         </div>
 
-        {/* 3. INSTITUTION CAPACITY & QUOTAS */}
+        {/* 3. INSTITUTION CAPACITY & QUOTAS (NO MAX WEBSITES) */}
         <div className="p-4 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
           <div className="border-b border-slate-200 dark:border-slate-700 pb-2">
             <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
-              School Capacity Quotas &amp; Limits
+              School Capacity Quotas &amp; Storage Limits
             </h4>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-              Limits provisioned for client educational institutions subscribing to this tier.
+              Limits provisioned for client educational institutions subscribing to this package tier.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Max Students
@@ -471,130 +522,292 @@ export default function PackageForm({
 
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Storage (MB)
+                Max Storage Limit
               </label>
-              <input
-                type="number"
-                min={100}
-                required
-                value={formData.max_storage_mb}
-                onChange={(e) => setFormData({ ...formData, max_storage_mb: e.target.value })}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
-              />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">
-                {(Number(formData.max_storage_mb) / 1024).toFixed(1)} GB cloud storage
-              </span>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Websites / Domains
-              </label>
-              <input
-                type="number"
-                min={1}
-                required
-                value={formData.max_websites}
-                onChange={(e) => setFormData({ ...formData, max_websites: e.target.value })}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
-              />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Web portal allowance</span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="e.g. 5 GB, 25 GB"
+                  value={formData.max_storage}
+                  onChange={(e) => setFormData({ ...formData, max_storage: e.target.value })}
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+                />
+              </div>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Cloud media &amp; asset storage</span>
             </div>
           </div>
         </div>
 
-        {/* 4. LINKED TENANT MODULES */}
+        {/* 4. PLATFORM PANELS & CUSTOM DOMAIN ENTITLEMENTS */}
+        <div className="p-4 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
+          <div className="border-b border-slate-200 dark:border-slate-700 pb-2">
+            <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
+              Feature Availability &amp; Access Controls
+            </h4>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Dedicated portals and custom branding options provisioned with this package tier.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <label className="flex items-start gap-2.5 p-3 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.is_available_student_panel}
+                onChange={(e) => setFormData({ ...formData, is_available_student_panel: e.target.checked })}
+                className="mt-0.5 rounded border-slate-300 cursor-pointer"
+              />
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold text-slate-900 dark:text-white">
+                  Student Portal Access
+                </span>
+                <span className="text-[10px] text-slate-400 mt-0.5">
+                  Allows students and parents to view attendance, report cards, fees, and take CBT online exams.
+                </span>
+              </div>
+            </label>
+
+            <label className="flex items-start gap-2.5 p-3 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.is_available_teacher_panel}
+                onChange={(e) => setFormData({ ...formData, is_available_teacher_panel: e.target.checked })}
+                className="mt-0.5 rounded border-slate-300 cursor-pointer"
+              />
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold text-slate-900 dark:text-white">
+                  Teacher Faculty Panel
+                </span>
+                <span className="text-[10px] text-slate-400 mt-0.5">
+                  Enables dedicated teacher portal for syllabus entry, marks submission, lesson plans, and homework.
+                </span>
+              </div>
+            </label>
+
+            <label className="flex items-start gap-2.5 p-3 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.is_available_custom_domain}
+                onChange={(e) => setFormData({ ...formData, is_available_custom_domain: e.target.checked })}
+                className="mt-0.5 rounded border-slate-300 cursor-pointer"
+              />
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold text-slate-900 dark:text-white">
+                  Custom Domain (*.edu.bd)
+                </span>
+                <span className="text-[10px] text-slate-400 mt-0.5">
+                  Permits mapping institutional domain (school.edu.bd / .com) with automatic SSL certificates.
+                </span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        {/* 5. LINKED HOME & CONTROL MODULES (TWO SEPARATE TABS / SECTIONS) */}
         <div className="p-4 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200 dark:border-slate-700">
             <div>
-              <div className="flex items-center gap-2">
-                <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
-                  Linked Tenant System Modules
-                </h4>
-                <span className="text-[9px] font-medium px-1.5 py-0.2 rounded border bg-slate-100 text-slate-600 border-slate-200">
-                  {selectedModuleIds.length} of {tenantModules.length} enabled
-                </span>
-              </div>
+              <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
+                Package Module Entitlements
+              </h4>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                School system modules unlocked for clients subscribing to this package tier (stored in package_modules).
+                Connect public frontend routes (package_home_modules) and staff control workstations (package_control_modules).
               </p>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <input
-                type="text"
-                placeholder="Filter modules..."
-                value={moduleSearch}
-                onChange={(e) => setModuleSearch(e.target.value)}
-                className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-slate-800 w-36 sm:w-44"
-              />
+            {/* Tab switchers */}
+            <div className="flex items-center gap-1.5 p-1 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700">
               <button
                 type="button"
-                onClick={handleSelectAll}
-                className="px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 transition-colors cursor-pointer"
+                onClick={() => setActiveModuleTab('control')}
+                className={`px-3 py-1 rounded text-xs font-medium cursor-pointer transition-colors ${
+                  activeModuleTab === 'control'
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
               >
-                Select All
+                Control Modules ({selectedControlIds.length}/{controlModules.length})
               </button>
               <button
                 type="button"
-                onClick={handleDeselectAll}
-                className="px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 transition-colors cursor-pointer"
+                onClick={() => setActiveModuleTab('home')}
+                className={`px-3 py-1 rounded text-xs font-medium cursor-pointer transition-colors ${
+                  activeModuleTab === 'home'
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
               >
-                Clear All
+                Home Modules ({selectedHomeIds.length}/{homeModules.length})
               </button>
             </div>
           </div>
 
-          {loadingModules ? (
-            <div className="py-8 flex justify-center items-center">
-              <div className="loader loader-sm" />
-            </div>
-          ) : filteredTenantModules.length === 0 ? (
-            <div className="p-4 text-center text-slate-400 text-xs">
-              No tenant modules found matching &ldquo;{moduleSearch}&rdquo;.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              {filteredTenantModules.map((mod) => {
-                const isSelected = selectedModuleIds.includes(Number(mod.id));
-                return (
-                  <button
-                    key={mod.id}
-                    type="button"
-                    onClick={() => toggleModule(mod.id)}
-                    className={`flex items-start justify-between p-3 rounded border text-left transition-colors cursor-pointer ${
-                      isSelected
-                        ? 'bg-white dark:bg-slate-900 border-slate-900 dark:border-white text-slate-900 dark:text-white'
-                        : 'bg-white/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300'
-                    }`}
+          {/* TAB 1: CONTROL MODULES */}
+          {activeModuleTab === 'control' && (
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <select
+                    value={controlCategoryFilter}
+                    onChange={(e) => setControlCategoryFilter(e.target.value)}
+                    className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200"
                   >
-                    <div className="min-w-0 flex-1 pr-2">
-                      <div className="font-medium text-xs truncate">
-                        {mod.name}
-                      </div>
-                      {mod.description && (
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500 line-clamp-2 mt-0.5 leading-relaxed font-normal">
-                          {mod.description}
-                        </p>
-                      )}
-                    </div>
-                    <span
-                      className={`text-[9px] font-medium px-1.5 py-0.2 rounded border shrink-0 ${
-                        isSelected
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : 'bg-slate-100 text-slate-600 border-slate-200'
-                      }`}
-                    >
-                      {isSelected ? 'Included' : 'Add'}
-                    </span>
+                    <option value="ALL">All Categories ({controlCategories.length})</option>
+                    {controlCategories.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Search control modules..."
+                    value={controlSearch}
+                    onChange={(e) => setControlSearch(e.target.value)}
+                    className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 w-44"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedControlIds(controlModules.map((m) => Number(m.id)))}
+                    className="px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 transition-colors cursor-pointer"
+                  >
+                    Select All
                   </button>
-                );
-              })}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedControlIds([])}
+                    className="px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 transition-colors cursor-pointer"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+
+              {loadingModules ? (
+                <div className="py-8 text-center text-xs text-slate-400">Loading control modules...</div>
+              ) : filteredControlModules.length === 0 ? (
+                <div className="py-6 text-center text-xs text-slate-400">No control modules matched.</div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-80 overflow-y-auto p-1">
+                  {filteredControlModules.map((mod) => {
+                    const isSelected = selectedControlIds.includes(Number(mod.id));
+                    return (
+                      <button
+                        key={mod.id}
+                        type="button"
+                        onClick={() => toggleControlModule(mod.id)}
+                        className={`flex items-start justify-between p-2.5 rounded border text-left transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'bg-white dark:bg-slate-900 border-slate-900 dark:border-white text-slate-900 dark:text-white'
+                            : 'bg-white/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1 pr-2">
+                          <div className="font-medium text-xs truncate flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>
+                            <span>{mod.name}</span>
+                          </div>
+                          <span className="text-[9px] font-mono text-slate-400 block mt-0.5 truncate">
+                            {mod.path}
+                          </span>
+                        </div>
+                        <span
+                          className={`text-[9px] font-medium px-1.5 py-0.2 rounded border shrink-0 ${
+                            isSelected
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}
+                        >
+                          {isSelected ? 'Included' : 'Add'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 2: HOME MODULES */}
+          {activeModuleTab === 'home' && (
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <input
+                  type="text"
+                  placeholder="Search home modules..."
+                  value={homeSearch}
+                  onChange={(e) => setHomeSearch(e.target.value)}
+                  className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 w-48"
+                />
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedHomeIds(homeModules.map((m) => Number(m.id)))}
+                    className="px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 transition-colors cursor-pointer"
+                  >
+                    Select All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedHomeIds([])}
+                    className="px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 transition-colors cursor-pointer"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+
+              {loadingModules ? (
+                <div className="py-8 text-center text-xs text-slate-400">Loading home modules...</div>
+              ) : filteredHomeModules.length === 0 ? (
+                <div className="py-6 text-center text-xs text-slate-400">No home modules matched.</div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-80 overflow-y-auto p-1">
+                  {filteredHomeModules.map((mod) => {
+                    const isSelected = selectedHomeIds.includes(Number(mod.id));
+                    return (
+                      <button
+                        key={mod.id}
+                        type="button"
+                        onClick={() => toggleHomeModule(mod.id)}
+                        className={`flex items-start justify-between p-2.5 rounded border text-left transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'bg-white dark:bg-slate-900 border-slate-900 dark:border-white text-slate-900 dark:text-white'
+                            : 'bg-white/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1 pr-2">
+                          <div className="font-medium text-xs truncate flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                            <span>{mod.name}</span>
+                          </div>
+                          <span className="text-[9px] font-mono text-slate-400 block mt-0.5 truncate">
+                            {mod.path}
+                          </span>
+                        </div>
+                        <span
+                          className={`text-[9px] font-medium px-1.5 py-0.2 rounded border shrink-0 ${
+                            isSelected
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}
+                        >
+                          {isSelected ? 'Included' : 'Add'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {/* 5. DESCRIPTION, GRACE PERIOD & TOGGLES */}
+        {/* 6. EXTENDED DESCRIPTION, GRACE PERIOD & METADATA */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="sm:col-span-2 space-y-1">
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -681,7 +894,7 @@ export default function PackageForm({
           </div>
         </div>
 
-        {/* 6. ACTION BUTTONS */}
+        {/* 7. ACTION BUTTONS */}
         <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
           {onCancel && (
             <button

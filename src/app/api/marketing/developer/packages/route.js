@@ -3,8 +3,6 @@ import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import slugify from 'slugify';
 
-
-
 // Generate unique slug for packages
 async function generateUniqueSlug(name, excludeId = null) {
   const baseSlug = slugify(name || 'package', { lower: true, strict: true, trim: true }) || 'package';
@@ -22,7 +20,7 @@ async function generateUniqueSlug(name, excludeId = null) {
   }
 }
 
-// Helper to query package with full tenant_modules and legacy allowed_modules
+// Helper to query package with connected home and control modules
 async function fetchPackageById(id) {
   const res = await queryDb(
     `SELECT p.*,
@@ -30,46 +28,58 @@ async function fetchPackageById(id) {
               (
                 SELECT json_agg(
                   json_build_object(
-                    'id', tm.id,
-                    'name', tm.name,
-                    'slug', tm.slug,
-                    'description', tm.description,
-                    'icon', tm.icon,
-                    'is_active', tm.is_active
-                  ) ORDER BY tm.id ASC
+                    'id', hm.id,
+                    'name', hm.name,
+                    'slug', hm.slug,
+                    'path', hm.path,
+                    'category', hm.category,
+                    'description', hm.description,
+                    'icon', hm.icon,
+                    'is_active', hm.is_active
+                  ) ORDER BY hm.display_order ASC, hm.id ASC
                 )
-                FROM package_modules pm
-                JOIN website_modules tm ON pm.website_module_id = tm.id
-                WHERE pm.package_id = p.id
+                FROM package_home_modules phm
+                JOIN website_home_modules hm ON phm.home_module_id = hm.id
+                WHERE phm.package_id = p.id
               ),
               '[]'::json
-            ) AS tenant_modules,
+            ) AS home_modules,
             COALESCE(
               (
-                SELECT json_agg(pm.website_module_id ORDER BY pm.website_module_id ASC)
-                FROM package_modules pm
-                WHERE pm.package_id = p.id
+                SELECT json_agg(phm.home_module_id ORDER BY phm.home_module_id ASC)
+                FROM package_home_modules phm
+                WHERE phm.package_id = p.id
               ),
               '[]'::json
-            ) AS tenant_module_ids,
+            ) AS home_module_ids,
             COALESCE(
-               (
-                 SELECT json_agg(DISTINCT tm.name ORDER BY tm.name ASC)
-                 FROM package_modules pm
-                 JOIN website_modules tm ON pm.website_module_id = tm.id
-                 WHERE pm.package_id = p.id
-               ),
-               '[]'::json
-             ) AS allowed_modules,
+              (
+                SELECT json_agg(
+                  json_build_object(
+                    'id', cm.id,
+                    'name', cm.name,
+                    'slug', cm.slug,
+                    'path', cm.path,
+                    'category', cm.category,
+                    'description', cm.description,
+                    'icon', cm.icon,
+                    'is_active', cm.is_active
+                  ) ORDER BY cm.category ASC, cm.display_order ASC, cm.id ASC
+                )
+                FROM package_control_modules pcm
+                JOIN website_control_modules cm ON pcm.control_module_id = cm.id
+                WHERE pcm.package_id = p.id
+              ),
+              '[]'::json
+            ) AS control_modules,
             COALESCE(
-               (
-                 SELECT json_agg(DISTINCT tm.slug ORDER BY tm.slug ASC)
-                 FROM package_modules pm
-                 JOIN website_modules tm ON pm.website_module_id = tm.id
-                 WHERE pm.package_id = p.id
-               ),
-               '[]'::json
-             ) AS allowed_module_slugs
+              (
+                SELECT json_agg(pcm.control_module_id ORDER BY pcm.control_module_id ASC)
+                FROM package_control_modules pcm
+                WHERE pcm.package_id = p.id
+              ),
+              '[]'::json
+            ) AS control_module_ids
      FROM packages p
      WHERE p.id = $1
      LIMIT 1`,
@@ -84,10 +94,11 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
-    // Also fetch all available website modules for quick UI consumption
-    const allTenantMods = await queryDb(
-      'SELECT * FROM website_modules WHERE is_active = TRUE ORDER BY id ASC'
-    ).catch(() => ({ rows: [] }));
+    // Fetch available home & control modules for UI selection
+    const [homeModsRes, controlModsRes] = await Promise.all([
+      queryDb('SELECT * FROM website_home_modules WHERE is_active = TRUE ORDER BY display_order ASC, id ASC').catch(() => ({ rows: [] })),
+      queryDb('SELECT * FROM website_control_modules WHERE is_active = TRUE ORDER BY category ASC, display_order ASC, id ASC').catch(() => ({ rows: [] })),
+    ]);
 
     if (id) {
       const record = await fetchPackageById(id);
@@ -98,7 +109,8 @@ export async function GET(request) {
         success: true,
         record,
         package: record,
-        available_tenant_modules: allTenantMods.rows,
+        available_home_modules: homeModsRes.rows,
+        available_control_modules: controlModsRes.rows,
       });
     }
 
@@ -108,55 +120,68 @@ export async function GET(request) {
                 (
                   SELECT json_agg(
                     json_build_object(
-                      'id', tm.id,
-                      'name', tm.name,
-                      'slug', tm.slug,
-                      'description', tm.description,
-                      'icon', tm.icon,
-                      'is_active', tm.is_active
-                    ) ORDER BY tm.id ASC
+                      'id', hm.id,
+                      'name', hm.name,
+                      'slug', hm.slug,
+                      'path', hm.path,
+                      'category', hm.category,
+                      'description', hm.description,
+                      'icon', hm.icon,
+                      'is_active', hm.is_active
+                    ) ORDER BY hm.display_order ASC, hm.id ASC
                   )
-                  FROM package_modules pm
-                  JOIN website_modules tm ON pm.website_module_id = tm.id
-                  WHERE pm.package_id = p.id
+                  FROM package_home_modules phm
+                  JOIN website_home_modules hm ON phm.home_module_id = hm.id
+                  WHERE phm.package_id = p.id
                 ),
                 '[]'::json
-              ) AS tenant_modules,
+              ) AS home_modules,
               COALESCE(
                 (
-                  SELECT json_agg(pm.website_module_id ORDER BY pm.website_module_id ASC)
-                  FROM package_modules pm
-                  WHERE pm.package_id = p.id
+                  SELECT json_agg(phm.home_module_id ORDER BY phm.home_module_id ASC)
+                  FROM package_home_modules phm
+                  WHERE phm.package_id = p.id
                 ),
                 '[]'::json
-              ) AS tenant_module_ids,
+              ) AS home_module_ids,
               COALESCE(
-               (
-                 SELECT json_agg(DISTINCT tm.name ORDER BY tm.name ASC)
-                 FROM package_modules pm
-                 JOIN website_modules tm ON pm.website_module_id = tm.id
-                 WHERE pm.package_id = p.id
-               ),
-               '[]'::json
-             ) AS allowed_modules,
-             COALESCE(
-               (
-                 SELECT json_agg(DISTINCT tm.slug ORDER BY tm.slug ASC)
-                 FROM package_modules pm
-                 JOIN website_modules tm ON pm.website_module_id = tm.id
-                 WHERE pm.package_id = p.id
-               ),
-               '[]'::json
-             ) AS allowed_module_slugs
+                (
+                  SELECT json_agg(
+                    json_build_object(
+                      'id', cm.id,
+                      'name', cm.name,
+                      'slug', cm.slug,
+                      'path', cm.path,
+                      'category', cm.category,
+                      'description', cm.description,
+                      'icon', cm.icon,
+                      'is_active', cm.is_active
+                    ) ORDER BY cm.category ASC, cm.display_order ASC, cm.id ASC
+                  )
+                  FROM package_control_modules pcm
+                  JOIN website_control_modules cm ON pcm.control_module_id = cm.id
+                  WHERE pcm.package_id = p.id
+                ),
+                '[]'::json
+              ) AS control_modules,
+              COALESCE(
+                (
+                  SELECT json_agg(pcm.control_module_id ORDER BY pcm.control_module_id ASC)
+                  FROM package_control_modules pcm
+                  WHERE pcm.package_id = p.id
+                ),
+                '[]'::json
+              ) AS control_module_ids
        FROM packages p
-       ORDER BY COALESCE(p.monthly_price_usd, p.monthly_price, 0) ASC, p.id ASC`
+       ORDER BY p.sort_order ASC, COALESCE(p.monthly_price_usd, p.monthly_price, 0) ASC, p.id ASC`
     ).catch(() => ({ rows: [] }));
 
     return NextResponse.json({
       success: true,
       table: 'packages',
       records: res.rows,
-      available_tenant_modules: allTenantMods.rows,
+      available_home_modules: homeModsRes.rows,
+      available_control_modules: controlModsRes.rows,
     });
   } catch (error) {
     console.error('Error fetching packages:', error);
@@ -179,10 +204,11 @@ export async function POST(request) {
     const name = (data.name || '').trim() || 'Untitled Package';
 
     const slug = await generateUniqueSlug(name);
+    const shortDescription = (data.short_description || '').trim();
     const tagline = (data.tagline || '').trim();
     const description = (data.description || '').trim();
 
-    // 4 Distinct Pricing Fields: USD & BDT (Monthly & Yearly)
+    // Dual Currency Pricing Fields
     const monthlyPriceUsd = Math.max(
       0,
       Number(
@@ -204,14 +230,17 @@ export async function POST(request) {
 
     const discountPercentage = Math.min(100, Math.max(0, Number(data.discount_percentage) || 0));
 
-    // Capacity quotas & limits
+    // Capacity quotas & limits (no max_websites)
     const maxStudents = data.max_students !== undefined ? Math.max(1, Number(data.max_students)) : 500;
     const maxTeachers = data.max_teachers !== undefined ? Math.max(1, Number(data.max_teachers)) : 30;
     const maxStaff = data.max_staff !== undefined ? Math.max(1, Number(data.max_staff)) : 20;
     const maxStorageMb = data.max_storage_mb !== undefined ? Math.max(100, Number(data.max_storage_mb)) : 5120;
-    const maxWebsites = data.max_websites !== undefined
-      ? Math.max(1, Number(data.max_websites))
-      : (data.max_portfolios !== undefined ? Math.max(1, Number(data.max_portfolios)) : 1);
+    const maxStorage = data.max_storage ? String(data.max_storage).trim() : `${Math.round(maxStorageMb / 1024)} GB`;
+
+    // Panel & domain feature availability
+    const isAvailableStudentPanel = data.is_available_student_panel !== undefined ? Boolean(data.is_available_student_panel) : true;
+    const isAvailableTeacherPanel = data.is_available_teacher_panel !== undefined ? Boolean(data.is_available_teacher_panel) : true;
+    const isAvailableCustomDomain = data.is_available_custom_domain !== undefined ? Boolean(data.is_available_custom_domain) : false;
 
     const isPopular = Boolean(data.is_popular);
     const isPublic = data.is_public !== undefined ? Boolean(data.is_public) : true;
@@ -222,80 +251,71 @@ export async function POST(request) {
       ? JSON.stringify(data.features)
       : (typeof data.features === 'object' && data.features !== null ? JSON.stringify(data.features) : '[]');
 
-    // Optional app_id for backward compatibility
-    const appId = data.app_id ? Number(data.app_id) : null;
-
     const res = await queryDb(
       `INSERT INTO packages (
-        name, slug, tagline, description,
+        name, slug, short_description, tagline, description,
         monthly_price_usd, yearly_price_usd, monthly_price_bdt, yearly_price_bdt,
         monthly_price, yearly_price, discount_percentage,
-        max_students, max_teachers, max_staff, max_storage_mb, max_websites,
+        max_students, max_teachers, max_staff, max_storage, max_storage_mb,
+        is_available_student_panel, is_available_teacher_panel, is_available_custom_domain,
         features, is_popular, is_public, is_active, grace_period, sort_order
       ) VALUES (
-        $1, $2, $3, $4,
-        $5, $6, $7, $8,
-        $9, $10, $11,
-        $12, $13, $14, $15, $16,
-        $17::jsonb, $18, $19, $20, $21, $22
+        $1, $2, $3, $4, $5,
+        $6, $7, $8, $9,
+        $10, $11, $12,
+        $13, $14, $15, $16, $17,
+        $18, $19, $20,
+        $21::jsonb, $22, $23, $24, $25, $26
       )
       RETURNING *`,
       [
-        name, slug, tagline, description,
+        name, slug, shortDescription, tagline, description,
         monthlyPriceUsd, yearlyPriceUsd, monthlyPriceBdt, yearlyPriceBdt,
         monthlyPriceUsd, yearlyPriceUsd, discountPercentage,
-        maxStudents, maxTeachers, maxStaff, maxStorageMb, maxWebsites,
+        maxStudents, maxTeachers, maxStaff, maxStorage, maxStorageMb,
+        isAvailableStudentPanel, isAvailableTeacherPanel, isAvailableCustomDomain,
         features, isPopular, isPublic, isActive, gracePeriod, sortOrder
       ]
     );
 
     const newPackage = res.rows[0];
 
-    // Link Tenant Modules in package_modules table
-    let tenantModuleIds = [];
-    if (Array.isArray(data.tenant_module_ids)) {
-      tenantModuleIds = data.tenant_module_ids.map(Number).filter((n) => !isNaN(n) && n > 0);
-    } else if (Array.isArray(data.tenant_modules)) {
-      tenantModuleIds = data.tenant_modules
+    // Link Home Modules into package_home_modules
+    let homeModuleIds = [];
+    if (Array.isArray(data.home_module_ids)) {
+      homeModuleIds = data.home_module_ids.map(Number).filter((n) => !isNaN(n) && n > 0);
+    } else if (Array.isArray(data.home_modules)) {
+      homeModuleIds = data.home_modules
         .map((m) => (typeof m === 'object' && m !== null ? Number(m.id) : Number(m)))
         .filter((n) => !isNaN(n) && n > 0);
-    } else if (Array.isArray(data.allowed_modules) || Array.isArray(data.modules)) {
-      // Resolve string titles or slugs to tenant_modules IDs
-      const rawNames = (data.allowed_modules || data.modules || []).map((x) =>
-        String(typeof x === 'object' && x !== null ? x.name || x.slug : x).trim().toLowerCase()
-      );
-      if (rawNames.length > 0) {
-        const resolved = await queryDb(
-          `SELECT id FROM website_modules WHERE LOWER(name) = ANY($1) OR LOWER(slug) = ANY($1)`,
-          [rawNames]
-        ).catch(() => ({ rows: [] }));
-        tenantModuleIds = resolved.rows.map((r) => r.id);
-      }
     }
 
-    // Insert into package_modules
-    for (const modId of tenantModuleIds) {
+    for (const hId of homeModuleIds) {
       await queryDb(
-        `INSERT INTO package_modules (package_id, website_module_id)
+        `INSERT INTO package_home_modules (package_id, home_module_id)
          VALUES ($1, $2)
-         ON CONFLICT (package_id, website_module_id) DO NOTHING`,
-        [newPackage.id, modId]
-      ).catch((e) => console.warn('Error linking package_module:', e.message));
+         ON CONFLICT (package_id, home_module_id) DO NOTHING`,
+        [newPackage.id, hId]
+      ).catch((e) => console.warn('Error linking package_home_module:', e.message));
     }
 
-    // Sync legacy allowed_modules table for backward compatibility
-    if (tenantModuleIds.length > 0) {
-      const linkedMods = await queryDb(
-        `SELECT name FROM tenant_modules WHERE id = ANY($1)`,
-        [tenantModuleIds]
-      ).catch(() => ({ rows: [] }));
+    // Link Control Modules into package_control_modules
+    let controlModuleIds = [];
+    if (Array.isArray(data.control_module_ids)) {
+      controlModuleIds = data.control_module_ids.map(Number).filter((n) => !isNaN(n) && n > 0);
+    } else if (Array.isArray(data.control_modules)) {
+      controlModuleIds = data.control_modules
+        .map((m) => (typeof m === 'object' && m !== null ? Number(m.id) : Number(m)))
+        .filter((n) => !isNaN(n) && n > 0);
+    }
 
-      for (const row of linkedMods.rows) {
-        await queryDb(
-          // Legacy allowed_modules skipped (catalog table)
-          [newPackage.id, row.name]
-        ).catch(() => {});
-      }
+    for (const cId of controlModuleIds) {
+      await queryDb(
+        `INSERT INTO package_control_modules (package_id, control_module_id)
+         VALUES ($1, $2)
+         ON CONFLICT (package_id, control_module_id) DO NOTHING`,
+        [newPackage.id, cId]
+      ).catch((e) => console.warn('Error linking package_control_module:', e.message));
     }
 
     const fullPackage = await fetchPackageById(newPackage.id);
@@ -347,6 +367,7 @@ export async function PUT(request) {
       slug = await generateUniqueSlug(name, Number(id));
     }
 
+    const shortDescription = data.short_description !== undefined ? data.short_description : current.short_description;
     const tagline = data.tagline !== undefined ? (data.tagline || '').trim() : (current.tagline || '');
     const description = data.description !== undefined ? data.description : current.description;
 
@@ -386,11 +407,21 @@ export async function PUT(request) {
       ? Math.max(100, Number(data.max_storage_mb))
       : (current.max_storage_mb || 5120);
 
-    const maxWebsites = data.max_websites !== undefined
-      ? Math.max(1, Number(data.max_websites))
-      : (data.max_portfolios !== undefined
-          ? Math.max(1, Number(data.max_portfolios))
-          : (current.max_websites ?? current.max_portfolios ?? 1));
+    const maxStorage = data.max_storage !== undefined
+      ? String(data.max_storage).trim()
+      : (current.max_storage || `${Math.round(maxStorageMb / 1024)} GB`);
+
+    const isAvailableStudentPanel = data.is_available_student_panel !== undefined
+      ? Boolean(data.is_available_student_panel)
+      : (current.is_available_student_panel !== undefined ? Boolean(current.is_available_student_panel) : true);
+
+    const isAvailableTeacherPanel = data.is_available_teacher_panel !== undefined
+      ? Boolean(data.is_available_teacher_panel)
+      : (current.is_available_teacher_panel !== undefined ? Boolean(current.is_available_teacher_panel) : true);
+
+    const isAvailableCustomDomain = data.is_available_custom_domain !== undefined
+      ? Boolean(data.is_available_custom_domain)
+      : (current.is_available_custom_domain !== undefined ? Boolean(current.is_available_custom_domain) : false);
 
     const isPopular = data.is_popular !== undefined ? Boolean(data.is_popular) : Boolean(current.is_popular);
     const isPublic = data.is_public !== undefined ? Boolean(data.is_public) : (current.is_public !== undefined ? Boolean(current.is_public) : true);
@@ -409,86 +440,84 @@ export async function PUT(request) {
       `UPDATE packages
        SET name = $1,
            slug = $2,
-           tagline = $3,
-           description = $4,
-           monthly_price_usd = $5,
-           yearly_price_usd = $6,
-           monthly_price_bdt = $7,
-           yearly_price_bdt = $8,
-           monthly_price = $9,
-           yearly_price = $10,
-           discount_percentage = $11,
-           max_students = $12,
-           max_teachers = $13,
-           max_staff = $14,
-           max_storage_mb = $15,
-           max_websites = $16,
-           features = $17::jsonb,
-           is_popular = $18,
-           is_public = $19,
-           is_active = $20,
-           grace_period = $21,
-           sort_order = $22,
+           short_description = $3,
+           tagline = $4,
+           description = $5,
+           monthly_price_usd = $6,
+           yearly_price_usd = $7,
+           monthly_price_bdt = $8,
+           yearly_price_bdt = $9,
+           monthly_price = $10,
+           yearly_price = $11,
+           discount_percentage = $12,
+           max_students = $13,
+           max_teachers = $14,
+           max_staff = $15,
+           max_storage = $16,
+           max_storage_mb = $17,
+           is_available_student_panel = $18,
+           is_available_teacher_panel = $19,
+           is_available_custom_domain = $20,
+           features = $21::jsonb,
+           is_popular = $22,
+           is_public = $23,
+           is_active = $24,
+           grace_period = $25,
+           sort_order = $26,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $23`,
+       WHERE id = $27`,
       [
-        name, slug, tagline, description,
+        name, slug, shortDescription, tagline, description,
         monthlyPriceUsd, yearlyPriceUsd, monthlyPriceBdt, yearlyPriceBdt,
         monthlyPriceUsd, yearlyPriceUsd, discountPercentage,
-        maxStudents, maxTeachers, maxStaff, maxStorageMb, maxWebsites,
+        maxStudents, maxTeachers, maxStaff, maxStorage, maxStorageMb,
+        isAvailableStudentPanel, isAvailableTeacherPanel, isAvailableCustomDomain,
         featuresJson, isPopular, isPublic, isActive, gracePeriod, sortOrder,
         Number(id)
       ]
     );
 
-    // Synchronize package_modules if tenant_module_ids provided
-    let tenantModuleIds = null;
-    if (Array.isArray(data.tenant_module_ids)) {
-      tenantModuleIds = data.tenant_module_ids.map(Number).filter((n) => !isNaN(n) && n > 0);
-    } else if (Array.isArray(data.tenant_modules)) {
-      tenantModuleIds = data.tenant_modules
-        .map((m) => (typeof m === 'object' && m !== null ? Number(m.id) : Number(m)))
-        .filter((n) => !isNaN(n) && n > 0);
-    } else if (Array.isArray(data.allowed_modules) || Array.isArray(data.modules)) {
-      const rawNames = (data.allowed_modules || data.modules || []).map((x) =>
-        String(typeof x === 'object' && x !== null ? x.name || x.slug : x).trim().toLowerCase()
-      );
-      if (rawNames.length > 0) {
-        const resolved = await queryDb(
-          `SELECT id FROM website_modules WHERE LOWER(name) = ANY($1) OR LOWER(slug) = ANY($1)`,
-          [rawNames]
-        ).catch(() => ({ rows: [] }));
-        tenantModuleIds = resolved.rows.map((r) => r.id);
-      } else {
-        tenantModuleIds = [];
+    // Sync package_home_modules if home_module_ids provided
+    if (data.home_module_ids !== undefined || data.home_modules !== undefined) {
+      let homeIds = [];
+      if (Array.isArray(data.home_module_ids)) {
+        homeIds = data.home_module_ids.map(Number).filter((n) => !isNaN(n) && n > 0);
+      } else if (Array.isArray(data.home_modules)) {
+        homeIds = data.home_modules
+          .map((m) => (typeof m === 'object' && m !== null ? Number(m.id) : Number(m)))
+          .filter((n) => !isNaN(n) && n > 0);
+      }
+
+      await queryDb('DELETE FROM package_home_modules WHERE package_id = $1', [Number(id)]).catch(() => {});
+      for (const hId of homeIds) {
+        await queryDb(
+          `INSERT INTO package_home_modules (package_id, home_module_id)
+           VALUES ($1, $2)
+           ON CONFLICT (package_id, home_module_id) DO NOTHING`,
+          [Number(id), hId]
+        ).catch((e) => console.warn('Error syncing package_home_module:', e.message));
       }
     }
 
-    if (tenantModuleIds !== null) {
-      await queryDb('DELETE FROM package_modules WHERE package_id = $1', [Number(id)]).catch(() => {});
-      await queryDb('DELETE FROM allowed_modules WHERE package_id = $1', [Number(id)]).catch(() => {});
-
-      for (const modId of tenantModuleIds) {
-        await queryDb(
-          `INSERT INTO package_modules (package_id, website_module_id)
-           VALUES ($1, $2)
-           ON CONFLICT (package_id, website_module_id) DO NOTHING`,
-          [Number(id), modId]
-        ).catch((e) => console.warn('Error syncing package_module:', e.message));
+    // Sync package_control_modules if control_module_ids provided
+    if (data.control_module_ids !== undefined || data.control_modules !== undefined) {
+      let controlIds = [];
+      if (Array.isArray(data.control_module_ids)) {
+        controlIds = data.control_module_ids.map(Number).filter((n) => !isNaN(n) && n > 0);
+      } else if (Array.isArray(data.control_modules)) {
+        controlIds = data.control_modules
+          .map((m) => (typeof m === 'object' && m !== null ? Number(m.id) : Number(m)))
+          .filter((n) => !isNaN(n) && n > 0);
       }
 
-      if (tenantModuleIds.length > 0) {
-        const linkedMods = await queryDb(
-          `SELECT name FROM tenant_modules WHERE id = ANY($1)`,
-          [tenantModuleIds]
-        ).catch(() => ({ rows: [] }));
-
-        for (const row of linkedMods.rows) {
-          await queryDb(
-            // Legacy allowed_modules skipped (catalog table)
-            [Number(id), row.name]
-          ).catch(() => {});
-        }
+      await queryDb('DELETE FROM package_control_modules WHERE package_id = $1', [Number(id)]).catch(() => {});
+      for (const cId of controlIds) {
+        await queryDb(
+          `INSERT INTO package_control_modules (package_id, control_module_id)
+           VALUES ($1, $2)
+           ON CONFLICT (package_id, control_module_id) DO NOTHING`,
+          [Number(id), cId]
+        ).catch((e) => console.warn('Error syncing package_control_module:', e.message));
       }
     }
 

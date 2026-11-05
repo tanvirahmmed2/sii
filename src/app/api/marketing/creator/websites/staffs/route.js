@@ -85,11 +85,11 @@ export async function GET(request) {
 
     // 2. Fetch permissions for all staffs of this website
     const permsRes = await queryDb(
-      `SELECT wmp.staff_id, wm.slug AS module_slug, wmp.website_module_id,
+      `SELECT wmp.staff_id, cm.slug AS module_slug, COALESCE(wmp.control_module_id, wmp.website_module_id) AS website_module_id,
               wmp.can_view, wmp.can_create, wmp.can_edit, wmp.can_delete,
-              wm.name AS module_name, wm.icon AS module_icon
+              cm.name AS module_name, cm.icon AS module_icon
        FROM website_modules_permissions wmp
-       JOIN website_modules wm ON wm.id = wmp.website_module_id
+       JOIN website_control_modules cm ON cm.id = COALESCE(wmp.control_module_id, wmp.website_module_id)
        WHERE wmp.website_id = $1`,
       [websiteId]
     );
@@ -130,13 +130,13 @@ export async function GET(request) {
 
     // 4. Fetch website modules allowed for this website by its subscription package
     let modulesRes = await queryDb(
-      `SELECT DISTINCT wm.id, wm.name, wm.slug, wm.description, wm.icon, wm.is_active
-       FROM website_modules wm
-       JOIN package_modules pm ON pm.website_module_id = wm.id
-       JOIN subscriptions s ON s.package_id = pm.package_id
+      `SELECT DISTINCT cm.id, cm.name, cm.slug, cm.description, cm.icon, cm.is_active
+       FROM website_control_modules cm
+       JOIN package_control_modules pcm ON pcm.control_module_id = cm.id
+       JOIN subscriptions s ON s.package_id = pcm.package_id
        JOIN websites w ON (w.subscription_id = s.id OR s.website_id = w.id)
-       WHERE w.id = $1 AND wm.is_active = TRUE
-       ORDER BY wm.id ASC`,
+       WHERE w.id = $1 AND cm.is_active = TRUE
+       ORDER BY cm.id ASC`,
       [websiteId]
     );
 
@@ -144,7 +144,7 @@ export async function GET(request) {
     if (modulesRes.rows.length === 0) {
       modulesRes = await queryDb(
         `SELECT id, name, slug, description, icon, is_active
-         FROM website_modules
+         FROM website_control_modules
          WHERE is_active = TRUE
          ORDER BY id ASC`
       );
@@ -256,7 +256,7 @@ export async function POST(request) {
 
     // Insert permissions into website_modules_permissions
     if (permissions && typeof permissions === 'object') {
-      const allModulesRes = await queryDb(`SELECT id, slug FROM website_modules WHERE is_active = TRUE`);
+      const allModulesRes = await queryDb(`SELECT id, slug FROM website_control_modules WHERE is_active = TRUE`);
       const modIdMap = {};
       allModulesRes.rows.forEach((m) => {
         modIdMap[m.slug] = m.id;
@@ -265,16 +265,17 @@ export async function POST(request) {
 
       for (const [moduleKey, perm] of Object.entries(permissions)) {
         if (!perm) continue;
-        const websiteModuleId = modIdMap[moduleKey] || (Number.isInteger(Number(moduleKey)) ? moduleKey : null);
-        if (!websiteModuleId) continue;
+        const controlModuleId = modIdMap[moduleKey] || (Number.isInteger(Number(moduleKey)) ? moduleKey : null);
+        if (!controlModuleId) continue;
 
         await queryDb(
           `INSERT INTO website_modules_permissions (
-            website_id, staff_id, website_module_id,
+            website_id, staff_id, control_module_id, website_module_id,
             can_view, can_create, can_edit, can_delete
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
-          ON CONFLICT (staff_id, website_module_id) DO UPDATE SET
+          VALUES ($1, $2, $3, $3, $4, $5, $6, $7)
+          ON CONFLICT (staff_id, control_module_id) DO UPDATE SET
+            website_module_id = EXCLUDED.website_module_id,
             can_view = EXCLUDED.can_view,
             can_create = EXCLUDED.can_create,
             can_edit = EXCLUDED.can_edit,
@@ -283,7 +284,7 @@ export async function POST(request) {
           [
             websiteId,
             newStaff.id,
-            websiteModuleId,
+            controlModuleId,
             Boolean(perm.can_view ?? perm.view),
             Boolean(perm.can_create ?? perm.create),
             Boolean(perm.can_edit ?? perm.edit),
@@ -449,7 +450,7 @@ export async function PUT(request) {
         return NextResponse.json({ success: false, error: 'Permissions matrix is required.' }, { status: 400 });
       }
 
-      const allModulesRes = await queryDb(`SELECT id, slug FROM website_modules WHERE is_active = TRUE`);
+      const allModulesRes = await queryDb(`SELECT id, slug FROM website_control_modules WHERE is_active = TRUE`);
       const modIdMap = {};
       allModulesRes.rows.forEach((m) => {
         modIdMap[m.slug] = m.id;
@@ -458,16 +459,17 @@ export async function PUT(request) {
 
       for (const [moduleKey, perm] of Object.entries(permissions)) {
         if (!perm) continue;
-        const websiteModuleId = modIdMap[moduleKey] || (Number.isInteger(Number(moduleKey)) ? moduleKey : null);
-        if (!websiteModuleId) continue;
+        const controlModuleId = modIdMap[moduleKey] || (Number.isInteger(Number(moduleKey)) ? moduleKey : null);
+        if (!controlModuleId) continue;
 
         await queryDb(
           `INSERT INTO website_modules_permissions (
-            website_id, staff_id, website_module_id,
+            website_id, staff_id, control_module_id, website_module_id,
             can_view, can_create, can_edit, can_delete
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
-          ON CONFLICT (staff_id, website_module_id) DO UPDATE SET
+          VALUES ($1, $2, $3, $3, $4, $5, $6, $7)
+          ON CONFLICT (staff_id, control_module_id) DO UPDATE SET
+            website_module_id = EXCLUDED.website_module_id,
             can_view = EXCLUDED.can_view,
             can_create = EXCLUDED.can_create,
             can_edit = EXCLUDED.can_edit,
@@ -476,7 +478,7 @@ export async function PUT(request) {
           [
             websiteId,
             staffId,
-            websiteModuleId,
+            controlModuleId,
             Boolean(perm.can_view ?? perm.view),
             Boolean(perm.can_create ?? perm.create),
             Boolean(perm.can_edit ?? perm.edit),

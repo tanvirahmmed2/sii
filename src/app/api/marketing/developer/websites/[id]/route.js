@@ -88,25 +88,25 @@ export async function GET(request, { params }) {
     // 6. Subscriptions of this creator for linking
     const [modulesRes, allTenantModsRes, packagesRes, purchasesRes, creatorsRes, subscriptionsRes] = await Promise.all([
       queryDb(
-        `SELECT wm.id AS website_module_id,
-                wm.id,
-                wm.name AS module_name,
-                wm.slug AS module_slug,
-                wm.description AS module_description,
-                wm.icon AS module_icon,
-                wm.is_active,
+        `SELECT cm.id AS website_module_id,
+                cm.id,
+                cm.name AS module_name,
+                cm.slug AS module_slug,
+                cm.description AS module_description,
+                cm.icon AS module_icon,
+                cm.is_active,
                 TRUE AS is_enabled
-         FROM website_modules wm
-         JOIN package_modules pm ON pm.website_module_id = wm.id
-         JOIN subscriptions s ON s.package_id = pm.package_id
+         FROM website_control_modules cm
+         JOIN package_control_modules pcm ON pcm.control_module_id = cm.id
+         JOIN subscriptions s ON s.package_id = pcm.package_id
          JOIN websites w ON (w.subscription_id = s.id OR s.website_id = w.id)
-         WHERE w.id = $1 AND wm.is_active = TRUE
-         ORDER BY wm.id ASC`,
+         WHERE w.id = $1 AND cm.is_active = TRUE
+         ORDER BY cm.id ASC`,
         [websiteId]
       ).catch(() => ({ rows: [] })),
 
       queryDb(
-        `SELECT id, name, slug, description, icon, is_active FROM website_modules WHERE is_active = TRUE ORDER BY id ASC`
+        `SELECT id, name, slug, description, icon, is_active FROM website_control_modules WHERE is_active = TRUE ORDER BY id ASC`
       ).catch(() => ({ rows: [] })),
 
       queryDb(
@@ -268,33 +268,7 @@ export async function PUT(request, { params }) {
       }
     }
 
-    // ------------------------------------------------------------------------
-    // 2. TOGGLE OR SYNC WEBSITE MODULES (IF PROVIDED)
-    // ------------------------------------------------------------------------
-    if (rawData.toggle_module_id !== undefined) {
-      const modId = Number(rawData.toggle_module_id);
-      const isEnabled = rawData.is_enabled !== undefined ? Boolean(rawData.is_enabled) : true;
-
-      await queryDb(
-        `INSERT INTO website_modules (website_id, tenant_module_id, is_enabled, enabled_at)
-         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-         ON CONFLICT (website_id, tenant_module_id)
-         DO UPDATE SET is_enabled = $3, enabled_at = CURRENT_TIMESTAMP`,
-        [websiteId, modId, isEnabled]
-      );
-    } else if (Array.isArray(rawData.module_ids)) {
-      // Sync list of active modules
-      const modIds = rawData.module_ids.map(Number).filter((n) => !isNaN(n));
-      await queryDb('DELETE FROM website_modules WHERE website_id = $1', [websiteId]);
-      for (const mId of modIds) {
-        await queryDb(
-          `INSERT INTO website_modules (website_id, tenant_module_id, is_enabled)
-           VALUES ($1, $2, TRUE)
-           ON CONFLICT (website_id, tenant_module_id) DO UPDATE SET is_enabled = TRUE`,
-          [websiteId, mId]
-        ).catch(() => {});
-      }
-    }
+    // Note: website control and home modules are governed by subscription package (package_control_modules / package_home_modules)
 
     // ------------------------------------------------------------------------
     // 3. UPDATE WEBSITE DATA
@@ -398,7 +372,6 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ success: false, error: 'Invalid Website ID' }, { status: 400 });
     }
 
-    await queryDb('DELETE FROM website_modules WHERE website_id = $1', [websiteId]).catch(() => {});
     await queryDb('DELETE FROM websites WHERE id = $1', [websiteId]);
 
     return NextResponse.json({ success: true, message: 'Website deleted successfully.' });

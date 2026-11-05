@@ -27,24 +27,9 @@ $$ LANGUAGE plpgsql;
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- 1. WEBSITE MODULES TABLE (Tenant Features / School System Modules Catalog)
--- e.g., Attendance, Exams, LMS, Hostel, Fees, Accounting, Inventory
+-- Deprecated website_modules table removed (superseded by website_home_modules and website_control_modules)
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_modules (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL,
-    slug VARCHAR(100) UNIQUE NOT NULL,
-    description TEXT,
-    icon VARCHAR(100),
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_modules_updated_at ON website_modules;
-CREATE TRIGGER update_website_modules_updated_at
-    BEFORE UPDATE ON website_modules
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TABLE IF EXISTS website_modules CASCADE;
 
 -- ----------------------------------------------------------------------------
 -- 1B. WEBSITE HOME MODULES TABLE (Public Institutional Website Pages & Features)
@@ -98,6 +83,34 @@ DROP TRIGGER IF EXISTS update_website_control_modules_updated_at ON website_cont
 CREATE TRIGGER update_website_control_modules_updated_at
     BEFORE UPDATE ON website_control_modules
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 1D. PACKAGE HOME MODULES TABLE (Links Packages to Public Website Home Modules)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS package_home_modules (
+    id BIGSERIAL PRIMARY KEY,
+    package_id BIGINT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
+    home_module_id BIGINT NOT NULL REFERENCES website_home_modules(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(package_id, home_module_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pkg_home_mods_pkg ON package_home_modules(package_id);
+CREATE INDEX IF NOT EXISTS idx_pkg_home_mods_mod ON package_home_modules(home_module_id);
+
+-- ----------------------------------------------------------------------------
+-- 1E. PACKAGE CONTROL MODULES TABLE (Links Packages to Staff Control Modules)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS package_control_modules (
+    id BIGSERIAL PRIMARY KEY,
+    package_id BIGINT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
+    control_module_id BIGINT NOT NULL REFERENCES website_control_modules(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(package_id, control_module_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pkg_ctrl_mods_pkg ON package_control_modules(package_id);
+CREATE INDEX IF NOT EXISTS idx_pkg_ctrl_mods_mod ON package_control_modules(control_module_id);
 
 
 -- ============================================================================
@@ -193,19 +206,38 @@ CREATE TABLE IF NOT EXISTS website_modules_permissions (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     staff_id BIGINT NOT NULL REFERENCES website_staffs(id) ON DELETE CASCADE,
-    website_module_id BIGINT NOT NULL REFERENCES website_modules(id) ON DELETE CASCADE,
+    control_module_id BIGINT NOT NULL REFERENCES website_control_modules(id) ON DELETE CASCADE,
+    website_module_id BIGINT REFERENCES website_control_modules(id) ON DELETE CASCADE,
     can_view BOOLEAN DEFAULT TRUE,
     can_create BOOLEAN DEFAULT FALSE,
     can_edit BOOLEAN DEFAULT FALSE,
     can_delete BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(staff_id, website_module_id)
+    UNIQUE(staff_id, control_module_id)
 );
+
+DO $$
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'website_modules_permissions' AND column_name = 'control_module_id'
+    ) THEN
+        ALTER TABLE website_modules_permissions ADD COLUMN control_module_id BIGINT REFERENCES website_control_modules(id) ON DELETE CASCADE;
+        UPDATE website_modules_permissions SET control_module_id = website_module_id WHERE control_module_id IS NULL;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'website_modules_permissions' AND column_name = 'website_module_id'
+    ) THEN
+        ALTER TABLE website_modules_permissions ADD COLUMN website_module_id BIGINT REFERENCES website_control_modules(id) ON DELETE CASCADE;
+        UPDATE website_modules_permissions SET website_module_id = control_module_id WHERE website_module_id IS NULL;
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_website_modules_permissions_staff_id ON website_modules_permissions(staff_id);
 CREATE INDEX IF NOT EXISTS idx_website_modules_permissions_website_id ON website_modules_permissions(website_id);
-CREATE INDEX IF NOT EXISTS idx_website_modules_permissions_module_id ON website_modules_permissions(website_module_id);
+CREATE INDEX IF NOT EXISTS idx_website_modules_permissions_ctrl_id ON website_modules_permissions(control_module_id);
 
 DROP TRIGGER IF EXISTS update_website_modules_permissions_updated_at ON website_modules_permissions;
 CREATE TRIGGER update_website_modules_permissions_updated_at
@@ -1056,15 +1088,34 @@ CREATE TABLE IF NOT EXISTS website_officer_permissions (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     officer_id BIGINT NOT NULL REFERENCES website_officers(id) ON DELETE CASCADE,
-    website_module_id BIGINT NOT NULL REFERENCES website_modules(id) ON DELETE CASCADE,
+    control_module_id BIGINT NOT NULL REFERENCES website_control_modules(id) ON DELETE CASCADE,
+    website_module_id BIGINT REFERENCES website_control_modules(id) ON DELETE CASCADE,
     can_view BOOLEAN DEFAULT TRUE,
     can_create BOOLEAN DEFAULT FALSE,
     can_edit BOOLEAN DEFAULT FALSE,
     can_delete BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(officer_id, website_module_id)
+    UNIQUE(officer_id, control_module_id)
 );
+
+DO $$
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'website_officer_permissions' AND column_name = 'control_module_id'
+    ) THEN
+        ALTER TABLE website_officer_permissions ADD COLUMN control_module_id BIGINT REFERENCES website_control_modules(id) ON DELETE CASCADE;
+        UPDATE website_officer_permissions SET control_module_id = website_module_id WHERE control_module_id IS NULL;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'website_officer_permissions' AND column_name = 'website_module_id'
+    ) THEN
+        ALTER TABLE website_officer_permissions ADD COLUMN website_module_id BIGINT REFERENCES website_control_modules(id) ON DELETE CASCADE;
+        UPDATE website_officer_permissions SET website_module_id = control_module_id WHERE website_module_id IS NULL;
+    END IF;
+END $$;
 
 DROP TRIGGER IF EXISTS update_website_officer_permissions_updated_at ON website_officer_permissions;
 CREATE TRIGGER update_website_officer_permissions_updated_at
@@ -1559,96 +1610,8 @@ CREATE OR REPLACE VIEW websites_hall_fee_payments AS SELECT * FROM website_hall_
 CREATE OR REPLACE VIEW website_residential_fee_payments AS SELECT * FROM website_hall_fee_payments;
 
 -- ============================================================================
--- SECTION 14: OFFICERS & PERMISSIONS
+-- SECTION 14: OFFICERS & PERMISSIONS (Defined in Section 3B: lines 1017-1146)
 -- ============================================================================
-
-CREATE TABLE IF NOT EXISTS website_officers (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    phone VARCHAR(50) NOT NULL,
-    department VARCHAR(100) DEFAULT 'General' CHECK (department IN ('Hall', 'Library', 'Club', 'Accounts', 'Administration', 'General', 'Hostel', 'Inventory')),
-    designation VARCHAR(100) DEFAULT 'Officer',
-    nid_number VARCHAR(100),
-    gender VARCHAR(20) DEFAULT 'male' CHECK (gender IN ('male', 'female', 'other')),
-    blood_group VARCHAR(10),
-    date_of_birth DATE,
-    religion VARCHAR(50),
-    address TEXT,
-    permanent_address TEXT,
-    joining_date DATE DEFAULT CURRENT_DATE,
-    salary NUMERIC(12, 2) DEFAULT 0.00 CHECK (salary >= 0.00),
-    photo_url TEXT,
-    photo_id VARCHAR(255),
-    password VARCHAR(255) NOT NULL,
-    recovery_token VARCHAR(255),
-    recovery_token_expires TIMESTAMPTZ,
-    two_factor_code VARCHAR(10),
-    two_factor_expires TIMESTAMPTZ,
-    is_active BOOLEAN DEFAULT TRUE,
-    is_registered BOOLEAN DEFAULT FALSE,
-    is_two_factor_enabled BOOLEAN DEFAULT FALSE,
-    verification_token VARCHAR(255),
-    verification_token_expires TIMESTAMPTZ,
-    bio TEXT,
-    username VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, email),
-    UNIQUE(website_id, username)
-);
-
-DROP TRIGGER IF EXISTS update_website_officers_updated_at ON website_officers;
-CREATE TRIGGER update_website_officers_updated_at
-    BEFORE UPDATE ON website_officers
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TABLE IF NOT EXISTS website_officer_permissions (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    officer_id BIGINT NOT NULL REFERENCES website_officers(id) ON DELETE CASCADE,
-    website_module_id BIGINT NOT NULL REFERENCES website_modules(id) ON DELETE CASCADE,
-    can_view BOOLEAN DEFAULT TRUE,
-    can_create BOOLEAN DEFAULT FALSE,
-    can_edit BOOLEAN DEFAULT FALSE,
-    can_delete BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(officer_id, website_module_id)
-);
-
-DROP TRIGGER IF EXISTS update_website_officer_permissions_updated_at ON website_officer_permissions;
-CREATE TRIGGER update_website_officer_permissions_updated_at
-    BEFORE UPDATE ON website_officer_permissions
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TABLE IF NOT EXISTS website_officer_login_sessions (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    officer_id BIGINT NOT NULL REFERENCES website_officers(id) ON DELETE CASCADE,
-    token TEXT UNIQUE NOT NULL,
-    ip_address VARCHAR(45),
-    user_agent TEXT,
-    device_info TEXT,
-    is_active BOOLEAN DEFAULT TRUE,
-    expires_at TIMESTAMPTZ NOT NULL,
-    last_active_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_officer_login_sessions_updated_at ON website_officer_login_sessions;
-CREATE TRIGGER update_website_officer_login_sessions_updated_at
-    BEFORE UPDATE ON website_officer_login_sessions
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE INDEX IF NOT EXISTS idx_ws_officers_website ON website_officers(website_id);
-CREATE INDEX IF NOT EXISTS idx_ws_officers_email ON website_officers(website_id, email);
-CREATE INDEX IF NOT EXISTS idx_ws_officers_vtoken ON website_officers(verification_token);
-CREATE INDEX IF NOT EXISTS idx_ws_officers_rtoken ON website_officers(recovery_token);
-CREATE INDEX IF NOT EXISTS idx_ws_officer_perms_officer ON website_officer_permissions(officer_id);
-CREATE INDEX IF NOT EXISTS idx_ws_officer_sessions_token ON website_officer_login_sessions(token);
 
 -- ============================================================================
 -- SECTION 15: TEACHER & OFFICER PAYROLL, SALARY & PAYMENT SUBSYSTEM

@@ -32,16 +32,16 @@ function formatPackageRecord(p) {
   ) || 0;
 
   const monthlyBdt = Number(p.monthly_price_bdt ?? 0);
-
   const yearlyBdt = Number(p.yearly_price_bdt ?? (monthlyBdt ? Math.round(monthlyBdt * 10) : 0));
-
-  const maxWebsites = Number(p.max_websites ?? p.max_portfolios ?? 1);
+  const maxStorageMb = Number(p.max_storage_mb ?? 5120);
+  const maxStorage = p.max_storage || `${Math.round(maxStorageMb / 1024)} GB`;
 
   return {
     ...p,
     id: Number(p.id),
     name: p.name || 'Standard Package',
     slug: p.slug || `package-${p.id}`,
+    short_description: p.short_description || '',
     tagline: p.tagline || '',
     description: p.description || '',
     monthly_price_usd: monthlyUsd,
@@ -54,18 +54,21 @@ function formatPackageRecord(p) {
     max_students: Number(p.max_students ?? 500),
     max_teachers: Number(p.max_teachers ?? 30),
     max_staff: Number(p.max_staff ?? 20),
-    max_storage_mb: Number(p.max_storage_mb ?? 5120),
-    max_websites: maxWebsites,
-    max_portfolios: maxWebsites,
+    max_storage: maxStorage,
+    max_storage_mb: maxStorageMb,
+    is_available_student_panel: p.is_available_student_panel !== false,
+    is_available_teacher_panel: p.is_available_teacher_panel !== false,
+    is_available_custom_domain: Boolean(p.is_available_custom_domain),
     is_popular: Boolean(p.is_popular),
     is_public: p.is_public !== false,
     is_active: Boolean(p.is_active),
     grace_period: Number(p.grace_period ?? 3),
     sort_order: Number(p.sort_order ?? 0),
     features,
-    tenant_modules: Array.isArray(p.tenant_modules) ? p.tenant_modules : [],
-    tenant_module_ids: Array.isArray(p.tenant_module_ids) ? p.tenant_module_ids : [],
-    allowed_modules: Array.isArray(p.allowed_modules) ? p.allowed_modules : [],
+    home_modules: Array.isArray(p.home_modules) ? p.home_modules : [],
+    home_module_ids: Array.isArray(p.home_module_ids) ? p.home_module_ids : [],
+    control_modules: Array.isArray(p.control_modules) ? p.control_modules : [],
+    control_module_ids: Array.isArray(p.control_module_ids) ? p.control_module_ids : [],
   };
 }
 
@@ -75,43 +78,64 @@ export async function GET(request) {
     const id = searchParams.get('id');
     const slug = searchParams.get('slug');
 
-    let baseQuery = `
+    const baseQuery = `
       SELECT p.*,
              COALESCE(
                (
                  SELECT json_agg(
                    json_build_object(
-                     'id', wm.id,
-                     'name', wm.name,
-                     'slug', wm.slug,
-                     'description', wm.description,
-                     'icon', wm.icon,
-                     'is_active', wm.is_active
-                   ) ORDER BY wm.id ASC
+                     'id', hm.id,
+                     'name', hm.name,
+                     'slug', hm.slug,
+                     'path', hm.path,
+                     'category', hm.category,
+                     'description', hm.description,
+                     'icon', hm.icon,
+                     'is_active', hm.is_active
+                   ) ORDER BY hm.display_order ASC, hm.id ASC
                  )
-                 FROM package_modules pm
-                 JOIN website_modules wm ON pm.website_module_id = wm.id
-                 WHERE pm.package_id = p.id
+                 FROM package_home_modules phm
+                 JOIN website_home_modules hm ON phm.home_module_id = hm.id
+                 WHERE phm.package_id = p.id
                ),
                '[]'::json
-             ) AS tenant_modules,
+             ) AS home_modules,
              COALESCE(
                (
-                 SELECT json_agg(pm.website_module_id ORDER BY pm.website_module_id ASC)
-                 FROM package_modules pm
-                 WHERE pm.package_id = p.id
+                 SELECT json_agg(phm.home_module_id ORDER BY phm.home_module_id ASC)
+                 FROM package_home_modules phm
+                 WHERE phm.package_id = p.id
                ),
                '[]'::json
-             ) AS tenant_module_ids,
+             ) AS home_module_ids,
              COALESCE(
                (
-                 SELECT json_agg(DISTINCT wm.name ORDER BY wm.name ASC)
-                 FROM package_modules pm
-                 JOIN website_modules wm ON pm.website_module_id = wm.id
-                 WHERE pm.package_id = p.id
+                 SELECT json_agg(
+                   json_build_object(
+                     'id', cm.id,
+                     'name', cm.name,
+                     'slug', cm.slug,
+                     'path', cm.path,
+                     'category', cm.category,
+                     'description', cm.description,
+                     'icon', cm.icon,
+                     'is_active', cm.is_active
+                   ) ORDER BY cm.category ASC, cm.display_order ASC, cm.id ASC
+                 )
+                 FROM package_control_modules pcm
+                 JOIN website_control_modules cm ON pcm.control_module_id = cm.id
+                 WHERE pcm.package_id = p.id
                ),
                '[]'::json
-             ) AS allowed_modules
+             ) AS control_modules,
+             COALESCE(
+               (
+                 SELECT json_agg(pcm.control_module_id ORDER BY pcm.control_module_id ASC)
+                 FROM package_control_modules pcm
+                 WHERE pcm.package_id = p.id
+               ),
+               '[]'::json
+             ) AS control_module_ids
       FROM packages p
     `;
 

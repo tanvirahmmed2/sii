@@ -14,11 +14,10 @@ export async function GET(request) {
       return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
     }
 
-    const [tablesRes, devsRes, modsRes, wmodsRes, hmodsRes, cmodsRes] = await Promise.all([
+    const [tablesRes, devsRes, modsRes, hmodsRes, cmodsRes] = await Promise.all([
       queryDb("SELECT count(*)::int as count FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'").catch(() => ({ rows: [{ count: 0 }] })),
       queryDb('SELECT count(*)::int as count FROM developers').catch(() => ({ rows: [{ count: 0 }] })),
       queryDb('SELECT count(*)::int as count FROM modules').catch(() => ({ rows: [{ count: 0 }] })),
-      queryDb('SELECT count(*)::int as count FROM website_modules').catch(() => ({ rows: [{ count: 0 }] })),
       queryDb('SELECT count(*)::int as count FROM website_home_modules').catch(() => ({ rows: [{ count: 0 }] })),
       queryDb('SELECT count(*)::int as count FROM website_control_modules').catch(() => ({ rows: [{ count: 0 }] })),
     ]);
@@ -29,7 +28,6 @@ export async function GET(request) {
         total_tables: tablesRes.rows[0]?.count || 0,
         developers: devsRes.rows[0]?.count || 0,
         platform_modules: modsRes.rows[0]?.count || 0,
-        website_modules: wmodsRes.rows[0]?.count || 0,
         home_modules: hmodsRes.rows[0]?.count || 0,
         control_modules: cmodsRes.rows[0]?.count || 0,
       },

@@ -347,7 +347,8 @@ export default function AdminPackagesPage() {
                 <th className="pb-2 whitespace-nowrap">Package Tier</th>
                 <th className="pb-2 whitespace-nowrap">USD Pricing ($)</th>
                 <th className="pb-2 whitespace-nowrap">BDT Pricing (৳)</th>
-                <th className="pb-2 whitespace-nowrap">Capacity</th>
+                <th className="pb-2 whitespace-nowrap">Capacity &amp; Storage</th>
+                <th className="pb-2 whitespace-nowrap">Panels &amp; Domain</th>
                 <th className="pb-2 whitespace-nowrap">Linked Modules</th>
                 <th className="pb-2 whitespace-nowrap">Status</th>
                 <th className="pb-2 whitespace-nowrap">Created</th>
@@ -357,13 +358,13 @@ export default function AdminPackagesPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center">
+                  <td colSpan={10} className="py-12 text-center">
                     <LoadingScreen fullScreen={false} size="sm" label="Loading packages from database..." />
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400 text-xs font-normal">
+                  <td colSpan={10} className="py-12 text-center text-slate-400 text-xs font-normal">
                     No packages found matching your criteria.
                   </td>
                 </tr>
@@ -371,12 +372,8 @@ export default function AdminPackagesPage() {
                 filtered.map((pkg) => {
                   const isRowActive = pkg.is_active !== false;
 
-                  const modulesList =
-                    Array.isArray(pkg.tenant_modules) && pkg.tenant_modules.length > 0
-                      ? pkg.tenant_modules.map((m) => m.name || m)
-                      : Array.isArray(pkg.allowed_modules)
-                      ? pkg.allowed_modules
-                      : [];
+                  const homeCount = Array.isArray(pkg.home_modules) ? pkg.home_modules.length : 0;
+                  const controlCount = Array.isArray(pkg.control_modules) ? pkg.control_modules.length : 0;
 
                   const monthlyUsd = Number(pkg.monthly_price_usd ?? pkg.monthly_price ?? 0);
                   const yearlyUsd = Number(pkg.yearly_price_usd ?? pkg.yearly_price ?? 0);
@@ -414,7 +411,11 @@ export default function AdminPackagesPage() {
                             </span>
                           )}
                         </div>
-                        {pkg.tagline ? (
+                        {pkg.short_description ? (
+                          <div className="text-[11px] text-slate-500 line-clamp-1 max-w-xs mt-0.5">
+                            {pkg.short_description}
+                          </div>
+                        ) : pkg.tagline ? (
                           <div className="text-[11px] text-slate-500 line-clamp-1 max-w-xs mt-0.5">
                             {pkg.tagline}
                           </div>
@@ -445,37 +446,53 @@ export default function AdminPackagesPage() {
 
                       <td className="py-2.5">
                         <div className="font-medium text-slate-800 dark:text-slate-200">
-                          {pkg.max_students || 500} Students
+                          {pkg.max_students || 500} Students &bull; {pkg.max_storage || '5 GB'}
                         </div>
                         <div className="text-[10px] text-slate-400">
-                          {pkg.max_teachers || 30} Teachers &bull; {pkg.max_storage_mb || 5120} MB &bull; {pkg.grace_period ?? 3}d Grace
+                          {pkg.max_teachers || 30} Teachers &bull; {pkg.max_staff || 20} Staff &bull; {pkg.grace_period ?? 3}d Grace
                         </div>
                       </td>
 
                       <td className="py-2.5">
                         <div className="flex flex-wrap items-center gap-1 max-w-xs">
-                          {modulesList.length > 0 ? (
-                            <>
-                              {modulesList.slice(0, 2).map((mod) => (
-                                <span
-                                  key={mod}
-                                  className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
-                                >
-                                  {mod}
-                                </span>
-                              ))}
-                              {modulesList.length > 2 && (
-                                <span
-                                  className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                                  title={modulesList.slice(2).join(', ')}
-                                >
-                                  +{modulesList.length - 2} more
-                                </span>
-                              )}
-                            </>
-                          ) : (
-                            <span className="text-[11px] text-slate-400 italic">No modules linked</span>
-                          )}
+                          <span
+                            className={`px-1.5 py-0.2 rounded text-[9px] font-medium border ${
+                              pkg.is_available_student_panel !== false
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : 'bg-slate-100 text-slate-400 border-slate-200'
+                            }`}
+                          >
+                            Student
+                          </span>
+                          <span
+                            className={`px-1.5 py-0.2 rounded text-[9px] font-medium border ${
+                              pkg.is_available_teacher_panel !== false
+                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                : 'bg-slate-100 text-slate-400 border-slate-200'
+                            }`}
+                          >
+                            Teacher
+                          </span>
+                          <span
+                            className={`px-1.5 py-0.2 rounded text-[9px] font-medium border ${
+                              pkg.is_available_custom_domain
+                                ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                : 'bg-slate-100 text-slate-400 border-slate-200'
+                            }`}
+                          >
+                            Custom Domain
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="py-2.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                            {controlCount} Control
+                          </span>
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                            {homeCount} Home
+                          </span>
                         </div>
                       </td>
 

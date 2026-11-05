@@ -18,8 +18,8 @@ export async function GET(request) {
 
     if (id) {
       const res = await queryDb(
-        `SELECT tm.id, tm.name, tm.slug AS key, tm.slug, tm.description, tm.icon, tm.is_active,
-                COUNT(pm.package_id)::int AS packages_count,
+        `SELECT cm.id, cm.name, cm.slug AS key, cm.slug, cm.path, cm.category, cm.description, cm.icon, cm.is_active,
+                COUNT(pcm.package_id)::int AS packages_count,
                 COALESCE(
                   json_agg(
                     json_build_object(
@@ -29,16 +29,14 @@ export async function GET(request) {
                   ) FILTER (WHERE p.id IS NOT NULL),
                   '[]'::json
                 ) AS packages
-         FROM website_modules tm
-         LEFT JOIN package_modules pm ON tm.id = pm.website_module_id
-         LEFT JOIN packages p ON pm.package_id = p.id
-         WHERE tm.id = $1
-         GROUP BY tm.id
+         FROM website_control_modules cm
+         LEFT JOIN package_control_modules pcm ON cm.id = pcm.control_module_id
+         LEFT JOIN packages p ON pcm.package_id = p.id
+         WHERE cm.id = $1
+         GROUP BY cm.id
          LIMIT 1`,
         [Number(id)]
-      ).catch(async () => {
-        return await queryDb('SELECT id, name, key, description FROM feature WHERE id = $1', [Number(id)]).catch(() => ({ rows: [] }));
-      });
+      );
 
       if (res.rows.length === 0) {
         return NextResponse.json({ success: false, error: 'Feature not found' }, { status: 404 });
@@ -47,17 +45,15 @@ export async function GET(request) {
     }
 
     const res = await queryDb(
-      `SELECT tm.id, tm.name, tm.slug AS key, tm.slug, tm.description, tm.icon, tm.is_active,
-              COUNT(pm.package_id)::int AS packages_count
-       FROM website_modules tm
-       LEFT JOIN package_modules pm ON tm.id = pm.website_module_id
-       GROUP BY tm.id
-       ORDER BY tm.id ASC`
-    ).catch(async () => {
-      return await queryDb('SELECT id, name, key, description FROM feature ORDER BY id ASC').catch(() => ({ rows: [] }));
-    });
+      `SELECT cm.id, cm.name, cm.slug AS key, cm.slug, cm.path, cm.category, cm.description, cm.icon, cm.is_active,
+              COUNT(pcm.package_id)::int AS packages_count
+       FROM website_control_modules cm
+       LEFT JOIN package_control_modules pcm ON cm.id = pcm.control_module_id
+       GROUP BY cm.id
+       ORDER BY cm.category ASC, cm.display_order ASC, cm.id ASC`
+    );
 
-    return NextResponse.json({ success: true, table: 'website_modules', records: res.rows });
+    return NextResponse.json({ success: true, table: 'website_control_modules', records: res.rows });
   } catch (error) {
     console.error('Error fetching features:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -85,19 +81,21 @@ export async function POST(request) {
     if (!slug) slug = `feat-${Date.now()}`;
 
     // Ensure unique slug
-    const keyCheck = await queryDb('SELECT id FROM website_modules WHERE LOWER(slug) = LOWER($1) LIMIT 1', [slug]);
+    const keyCheck = await queryDb('SELECT id FROM website_control_modules WHERE LOWER(slug) = LOWER($1) LIMIT 1', [slug]);
     if (keyCheck.rows.length > 0) {
       slug = `${slug}-${Date.now().toString().slice(-4)}`;
     }
 
     const description = data.description || '';
     const icon = data.icon || 'BiCube';
+    const category = data.category || 'General Management';
+    const path = data.path || `/staff-panel/${slug}`;
 
     const res = await queryDb(
-      `INSERT INTO website_modules (name, slug, description, icon, is_active)
-       VALUES ($1, $2, $3, $4, TRUE)
-       RETURNING id, name, slug AS key, slug, description, icon, is_active`,
-      [name, slug, description, icon]
+      `INSERT INTO website_control_modules (name, slug, path, category, description, icon, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, TRUE)
+       RETURNING id, name, slug AS key, slug, path, category, description, icon, is_active`,
+      [name, slug, path, category, description, icon]
     );
 
     return NextResponse.json(
@@ -132,7 +130,7 @@ export async function PUT(request) {
       return NextResponse.json({ success: false, error: 'Feature ID is required' }, { status: 400 });
     }
 
-    const existingRes = await queryDb('SELECT * FROM website_modules WHERE id = $1', [Number(id)]);
+    const existingRes = await queryDb('SELECT * FROM website_control_modules WHERE id = $1', [Number(id)]);
     if (existingRes.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Feature not found' }, { status: 404 });
     }
@@ -149,7 +147,7 @@ export async function PUT(request) {
       slug = generateFeatureKey(name) || `feat-${Date.now()}`;
     }
 
-    const keyConflict = await queryDb('SELECT id FROM website_modules WHERE LOWER(slug) = LOWER($1) AND id != $2 LIMIT 1', [slug, Number(id)]);
+    const keyConflict = await queryDb('SELECT id FROM website_control_modules WHERE LOWER(slug) = LOWER($1) AND id != $2 LIMIT 1', [slug, Number(id)]);
     if (keyConflict.rows.length > 0) {
       return NextResponse.json(
         { success: false, error: `Feature slug/key "${slug}" is already in use by another feature.` },
@@ -159,13 +157,15 @@ export async function PUT(request) {
 
     const description = data.description !== undefined ? data.description : current.description;
     const icon = data.icon !== undefined ? data.icon : current.icon;
+    const category = data.category !== undefined ? data.category : current.category;
+    const path = data.path !== undefined ? data.path : current.path;
 
     const res = await queryDb(
-      `UPDATE website_modules
-       SET name = $1, slug = $2, description = $3, icon = $4, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $5
-       RETURNING id, name, slug AS key, slug, description, icon, is_active`,
-      [name, slug, description, icon, Number(id)]
+      `UPDATE website_control_modules
+       SET name = $1, slug = $2, path = $3, category = $4, description = $5, icon = $6, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $7
+       RETURNING id, name, slug AS key, slug, path, category, description, icon, is_active`,
+      [name, slug, path, category, description, icon, Number(id)]
     );
 
     return NextResponse.json({
@@ -199,7 +199,7 @@ export async function DELETE(request) {
       return NextResponse.json({ success: false, error: 'Feature ID is required' }, { status: 400 });
     }
 
-    const res = await queryDb('DELETE FROM website_modules WHERE id = $1 RETURNING id, name, slug AS key, slug', [Number(id)]);
+    const res = await queryDb('DELETE FROM website_control_modules WHERE id = $1 RETURNING id, name, slug AS key, slug', [Number(id)]);
     if (res.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Feature not found or already deleted' }, { status: 404 });
     }

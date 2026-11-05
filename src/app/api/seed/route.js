@@ -9,11 +9,10 @@ import { runAllSeeds } from 'seed/index';
  */
 export async function GET() {
   try {
-    const [tablesRes, devsRes, modsRes, wmodsRes, hmodsRes, cmodsRes] = await Promise.all([
+    const [tablesRes, devsRes, modsRes, hmodsRes, cmodsRes] = await Promise.all([
       queryDb("SELECT count(*)::int as count FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'").catch(() => ({ rows: [{ count: 0 }] })),
       queryDb('SELECT count(*)::int as count FROM developers').catch(() => ({ rows: [{ count: 0 }] })),
       queryDb('SELECT count(*)::int as count FROM modules').catch(() => ({ rows: [{ count: 0 }] })),
-      queryDb('SELECT count(*)::int as count FROM website_modules').catch(() => ({ rows: [{ count: 0 }] })),
       queryDb('SELECT count(*)::int as count FROM website_home_modules').catch(() => ({ rows: [{ count: 0 }] })),
       queryDb('SELECT count(*)::int as count FROM website_control_modules').catch(() => ({ rows: [{ count: 0 }] })),
     ]);
@@ -21,7 +20,6 @@ export async function GET() {
     const totalTables = tablesRes.rows[0]?.count || 0;
     const developersCount = devsRes.rows[0]?.count || 0;
     const platformModulesCount = modsRes.rows[0]?.count || 0;
-    const websiteModulesCount = wmodsRes.rows[0]?.count || 0;
     const homeModulesCount = hmodsRes.rows[0]?.count || 0;
     const controlModulesCount = cmodsRes.rows[0]?.count || 0;
 
@@ -29,7 +27,6 @@ export async function GET() {
       totalTables >= 200 &&
       developersCount >= 1 &&
       platformModulesCount >= 30 &&
-      websiteModulesCount >= 15 &&
       homeModulesCount >= 20 &&
       controlModulesCount >= 150;
 
@@ -40,7 +37,6 @@ export async function GET() {
         total_tables: totalTables,
         developers: developersCount,
         platform_modules: platformModulesCount,
-        website_modules: websiteModulesCount,
         home_modules: homeModulesCount,
         control_modules: controlModulesCount,
       },

@@ -16,8 +16,98 @@ function toTitleCase(slug) {
 }
 
 // Category and metadata resolver for Control Modules
-function resolveControlMetadata(slug) {
+function resolveControlMetadata(slug, panelType = 'staff') {
   const s = slug.toLowerCase();
+
+  // 1. Teacher Panel specific metadata
+  if (panelType === 'teacher') {
+    const teacherDescriptions = {
+      'teacher-dashboard': 'Teacher faculty workstation dashboard, daily routine, and quick actions',
+      'teacher-assignments': 'Create, distribute, and grade classroom homework assignments',
+      'teacher-attendance': 'Daily student period and classroom attendance marking',
+      'teacher-classrooms': 'Virtual lecture rooms, lesson announcements, and student interaction',
+      'teacher-clubs': 'Extracurricular student club leadership and moderation',
+      'teacher-exams': 'Exam scheduling, question drafting, and paper supervision',
+      'teacher-id-card': 'Digital teacher faculty identity card and QR credentials',
+      'teacher-leaves': 'Submit and track faculty leave of absence applications',
+      'teacher-lessons': 'Syllabus lesson planning, chapter milestones, and teaching notes',
+      'teacher-marks': 'Input and review term exam scores and continuous assessments',
+      'teacher-materials': 'Upload lecture slides, reading PDFs, and reference resources',
+      'teacher-profile': 'Personal faculty credentials, subject assignments, and bio',
+      'teacher-salary': 'View monthly salary statements, allowances, and pay slips',
+      'teacher-schedule': 'Weekly timetable matrix, periods, and room assignments',
+      'teacher-subjects': 'Curriculum syllabus and enrolled student lists for taught subjects',
+    };
+
+    const cleanName = slug.replace(/^teacher-?/, '').trim() || 'Dashboard';
+    const name = `Teacher ${toTitleCase(cleanName)}`;
+    return {
+      name,
+      category: 'Teacher Panel',
+      icon: 'BiUserCheck',
+      description: teacherDescriptions[slug] || `Teacher workstation for ${toTitleCase(cleanName).toLowerCase()}`,
+    };
+  }
+
+  // 2. Student Panel specific metadata
+  if (panelType === 'student') {
+    const studentDescriptions = {
+      'student-dashboard': "Student personal portal overview, today's schedule, and announcements",
+      'student-assignments': 'View assigned tasks, submit coursework, and check teacher feedback',
+      'student-attendance': 'Personal daily presence, absence logs, and attendance percentages',
+      'student-cards': 'Download term exam admit cards, seat roll, and hall instructions',
+      'student-certificates': 'Digital academic achievement certificates and diplomas',
+      'student-classrooms': 'Access subject classrooms, lesson notes, and live lectures',
+      'student-clubs': 'Explore and join institutional science, sports, and cultural clubs',
+      'student-events': 'Upcoming school celebrations, sports day, and academic events',
+      'student-exams': 'Take scheduled computer-based tests, quizzes, and view exam instructions',
+      'student-fees': 'Review fee invoices, dues breakdown, and pay tuition fees online',
+      'student-id-card': 'Official student digital identification card with verification QR',
+      'student-materials': 'Download lesson slides, practice sheets, and reference books',
+      'student-profile': 'Personal bio, guardian contact details, and enrollment info',
+      'student-receipts': 'Print money receipts and payment transaction records',
+      'student-residence': 'Dormitory room allocation, hostel dues, and dining details',
+      'student-results': 'View GPA, CGPA, subject-wise marks, and term grade sheets',
+      'student-routine': 'Personal weekly class schedule, room numbers, and teachers',
+      'student-subjects': 'List of compulsory and elective/4th subjects with syllabus',
+      'student-tc': 'Apply for clearance, institutional migration, and track TC status',
+      'student-testimonial': 'Official institutional testimonial and conduct certificates',
+    };
+
+    const cleanName = slug.replace(/^student-?/, '').trim() || 'Dashboard';
+    const name = `Student ${toTitleCase(cleanName)}`;
+    return {
+      name,
+      category: 'Student Panel',
+      icon: 'BiUser',
+      description: studentDescriptions[slug] || `Student portal for ${toTitleCase(cleanName).toLowerCase()}`,
+    };
+  }
+
+  // 3. Officer Panel specific metadata
+  if (panelType === 'officer') {
+    const officerDescriptions = {
+      'officer-dashboard': 'Administrative officer workstation and departmental overview',
+      'officer-club': 'Club approvals, event coordination, and officer supervision',
+      'officer-events': 'Campus event scheduling, guest permits, and coordination',
+      'officer-id-card': 'Officer and staff institutional identity card printing',
+      'officer-library': 'Library shelves, book catalog, and circulation ledger',
+      'officer-profile': 'Designation credentials, department, and officer preferences',
+      'officer-residential': 'Staff and officer residential quarter allocations',
+      'officer-settings': 'Administrative officer workstation preferences',
+    };
+
+    const cleanName = slug.replace(/^officer-?/, '').trim() || 'Dashboard';
+    const name = `Officer ${toTitleCase(cleanName)}`;
+    return {
+      name,
+      category: 'Officer Panel',
+      icon: 'BiShieldQuarter',
+      description: officerDescriptions[slug] || `Officer workstation for ${toTitleCase(cleanName).toLowerCase()}`,
+    };
+  }
+
+  // 4. Staff Panel specific metadata
   let category = 'General Management';
   let icon = 'BiGridAlt';
 
@@ -92,7 +182,6 @@ function resolveControlMetadata(slug) {
     icon = 'BiCog';
   }
 
-  // Specialized descriptions for core school operations
   const customDescriptions = {
     'admission-applicants': 'Review and verify prospective student online admission applications',
     'admission-circulars': 'Create and manage seasonal student admission circulars and intake quotas',
@@ -120,26 +209,128 @@ function resolveControlMetadata(slug) {
 
 async function seedControlModules() {
   console.log('\n======================================================');
-  console.log('5. SEEDING WEBSITE CONTROL MODULES (Staff Workstations)');
+  console.log('5. SEEDING WEBSITE CONTROL MODULES');
+  console.log('   (Control Panel, Teacher Panel, Student Panel & Officer Panel)');
   console.log('======================================================');
 
+  const allModulesToInsert = [];
+
+  // 1. Staff Panel Workstations from [domain]/(staffs)/staff-panel/*
   const staffPanelDir = path.resolve(process.cwd(), 'src/app/[domain]/(staffs)/staff-panel');
-  if (!fs.existsSync(staffPanelDir)) {
-    throw new Error(`staff-panel directory not found at: ${staffPanelDir}`);
+  if (fs.existsSync(staffPanelDir)) {
+    const entries = fs.readdirSync(staffPanelDir, { withFileTypes: true });
+    const subDirs = entries.filter((e) => e.isDirectory()).map((e) => e.name);
+    const staffSlugs = Array.from(new Set([...subDirs, 'modules'])).sort();
+
+    for (const slug of staffSlugs) {
+      const meta = resolveControlMetadata(slug, 'staff');
+      allModulesToInsert.push({
+        slug,
+        name: meta.name,
+        path: `/staff-panel/${slug}`,
+        category: meta.category,
+        description: meta.description,
+        icon: meta.icon,
+      });
+    }
+    console.log(`-> Discovered ${staffSlugs.length} staff panel modules from (staffs)/staff-panel/*`);
   }
 
-  const entries = fs.readdirSync(staffPanelDir, { withFileTypes: true });
-  const subDirs = entries.filter((e) => e.isDirectory()).map((e) => e.name);
+  // 2. Teacher Panel Modules from [domain]/(teacher)/teacher/*
+  const teacherDir = path.resolve(process.cwd(), 'src/app/[domain]/(teacher)/teacher');
+  if (fs.existsSync(teacherDir)) {
+    // Root dashboard: /teacher
+    allModulesToInsert.push({
+      slug: 'teacher-dashboard',
+      ...resolveControlMetadata('teacher-dashboard', 'teacher'),
+      path: '/teacher',
+    });
 
-  // Ensure 'modules' is included if directory exists or as administrative workstation
-  const controlSlugs = Array.from(new Set([...subDirs, 'modules'])).sort();
-  console.log(`-> Discovered ${controlSlugs.length} staff panel control modules from [domain]/(staffs)/staff-panel/*`);
+    const entries = fs.readdirSync(teacherDir, { withFileTypes: true });
+    const teacherSubDirs = entries
+      .filter((e) => e.isDirectory() && !e.name.startsWith('['))
+      .map((e) => e.name);
+
+    for (const sub of teacherSubDirs) {
+      const slug = `teacher-${sub}`;
+      const meta = resolveControlMetadata(slug, 'teacher');
+      allModulesToInsert.push({
+        slug,
+        name: meta.name,
+        path: `/teacher/${sub}`,
+        category: meta.category,
+        description: meta.description,
+        icon: meta.icon,
+      });
+    }
+    console.log(`-> Discovered ${teacherSubDirs.length + 1} teacher panel modules from (teacher)/teacher/*`);
+  }
+
+  // 3. Student Panel Modules from [domain]/(student)/student/*
+  const studentDir = path.resolve(process.cwd(), 'src/app/[domain]/(student)/student');
+  if (fs.existsSync(studentDir)) {
+    // Root dashboard: /student
+    allModulesToInsert.push({
+      slug: 'student-dashboard',
+      ...resolveControlMetadata('student-dashboard', 'student'),
+      path: '/student',
+    });
+
+    const entries = fs.readdirSync(studentDir, { withFileTypes: true });
+    const studentSubDirs = entries
+      .filter((e) => e.isDirectory() && !e.name.startsWith('['))
+      .map((e) => e.name);
+
+    for (const sub of studentSubDirs) {
+      const slug = `student-${sub}`;
+      const meta = resolveControlMetadata(slug, 'student');
+      allModulesToInsert.push({
+        slug,
+        name: meta.name,
+        path: `/student/${sub}`,
+        category: meta.category,
+        description: meta.description,
+        icon: meta.icon,
+      });
+    }
+    console.log(`-> Discovered ${studentSubDirs.length + 1} student panel modules from (student)/student/*`);
+  }
+
+  // 4. Officer Panel Modules from [domain]/(officer)/officer/*
+  const officerDir = path.resolve(process.cwd(), 'src/app/[domain]/(officer)/officer');
+  if (fs.existsSync(officerDir)) {
+    // Root dashboard: /officer
+    allModulesToInsert.push({
+      slug: 'officer-dashboard',
+      ...resolveControlMetadata('officer-dashboard', 'officer'),
+      path: '/officer',
+    });
+
+    const entries = fs.readdirSync(officerDir, { withFileTypes: true });
+    const officerSubDirs = entries
+      .filter((e) => e.isDirectory() && !e.name.startsWith('['))
+      .map((e) => e.name);
+
+    for (const sub of officerSubDirs) {
+      const slug = `officer-${sub}`;
+      const meta = resolveControlMetadata(slug, 'officer');
+      allModulesToInsert.push({
+        slug,
+        name: meta.name,
+        path: `/officer/${sub}`,
+        category: meta.category,
+        description: meta.description,
+        icon: meta.icon,
+      });
+    }
+    console.log(`-> Discovered ${officerSubDirs.length + 1} officer panel modules from (officer)/officer/*`);
+  }
+
+  console.log(`-> Total control modules to insert/update: ${allModulesToInsert.length}`);
 
   let count = 0;
-  for (let i = 0; i < controlSlugs.length; i++) {
-    const slug = controlSlugs[i];
-    const meta = resolveControlMetadata(slug);
-    const itemPath = `/staff-panel/${slug}`;
+  for (let i = 0; i < allModulesToInsert.length; i++) {
+    const mod = allModulesToInsert[i];
 
     await query(
       `INSERT INTO website_control_modules (
@@ -153,7 +344,7 @@ async function seedControlModules() {
          icon = EXCLUDED.icon,
          display_order = EXCLUDED.display_order,
          updated_at = CURRENT_TIMESTAMP`,
-      [meta.name, slug, itemPath, meta.category, meta.description, meta.icon, i + 1]
+      [mod.name, mod.slug, mod.path, mod.category, mod.description, mod.icon, i + 1]
     );
 
     count++;
@@ -189,4 +380,3 @@ module.exports = {
   seedControlModules,
   resolveControlMetadata,
 };
-

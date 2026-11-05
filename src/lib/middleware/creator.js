@@ -318,9 +318,9 @@ export async function getWebsiteUserSession(request) {
 export async function getUserRolesAndPermissions(userId, websiteId) {
   try {
     const res = await query(
-      `SELECT wm.slug as module, wmp.can_view, wmp.can_create, wmp.can_edit, wmp.can_delete
+      `SELECT cm.slug as module, wmp.can_view, wmp.can_create, wmp.can_edit, wmp.can_delete
        FROM website_modules_permissions wmp
-       JOIN website_modules wm ON wm.id = wmp.website_module_id
+       JOIN website_control_modules cm ON cm.id = COALESCE(wmp.control_module_id, wmp.website_module_id)
        WHERE wmp.staff_id = $1 AND wmp.website_id = $2`,
       [userId, websiteId]
     );

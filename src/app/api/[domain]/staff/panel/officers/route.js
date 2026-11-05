@@ -210,10 +210,10 @@ export async function GET(request, context) {
 
       // Fetch officer's granted module permissions
       const permsRes = await queryDb(
-        `SELECT wop.website_module_id, wop.can_view, wop.can_create, wop.can_edit, wop.can_delete,
-                wm.name AS module_name, wm.slug AS module_slug, wm.icon AS module_icon
+        `SELECT COALESCE(wop.control_module_id, wop.website_module_id) AS website_module_id, wop.can_view, wop.can_create, wop.can_edit, wop.can_delete,
+                cm.name AS module_name, cm.slug AS module_slug, cm.icon AS module_icon
          FROM website_officer_permissions wop
-         JOIN website_modules wm ON wm.id = wop.website_module_id
+         JOIN website_control_modules cm ON cm.id = COALESCE(wop.control_module_id, wop.website_module_id)
          WHERE wop.website_id = $1 AND wop.officer_id = $2`,
         [website.id, officer.id]
       );
@@ -237,20 +237,20 @@ export async function GET(request, context) {
 
     // 2. Fetch all website modules allowed for this website by its subscription package
     let packageModulesRes = await queryDb(
-      `SELECT DISTINCT wm.id, wm.name, wm.slug, wm.description, wm.icon, wm.is_active
-       FROM website_modules wm
-       JOIN package_modules pm ON pm.website_module_id = wm.id
-       JOIN subscriptions s ON s.package_id = pm.package_id
+      `SELECT DISTINCT cm.id, cm.name, cm.slug, cm.description, cm.icon, cm.is_active
+       FROM website_control_modules cm
+       JOIN package_control_modules pcm ON pcm.control_module_id = cm.id
+       JOIN subscriptions s ON s.package_id = pcm.package_id
        JOIN websites w ON (w.subscription_id = s.id OR s.website_id = w.id)
-       WHERE w.id = $1 AND wm.is_active = TRUE
-       ORDER BY wm.id ASC`,
+       WHERE w.id = $1 AND cm.is_active = TRUE
+       ORDER BY cm.id ASC`,
       [website.id]
     );
 
     if (packageModulesRes.rows.length === 0) {
       packageModulesRes = await queryDb(
         `SELECT id, name, slug, description, icon, is_active
-         FROM website_modules
+         FROM website_control_modules
          WHERE is_active = TRUE
          ORDER BY id ASC`
       );
@@ -570,7 +570,7 @@ export async function POST(request, context) {
 
     // STEP 4: Save granted permissions if provided
     if (permissions && typeof permissions === 'object') {
-      const allMods = await queryDb(`SELECT id, slug FROM website_modules WHERE is_active = TRUE`);
+      const allMods = await queryDb(`SELECT id, slug FROM website_control_modules WHERE is_active = TRUE`);
       const modMap = {};
       allMods.rows.forEach((m) => {
         modMap[m.slug] = m.id;
@@ -578,7 +578,7 @@ export async function POST(request, context) {
       });
 
       for (const [key, perm] of Object.entries(permissions)) {
-        const moduleId = modMap[key] || modMap[perm.website_module_id] || modMap[perm.module_slug];
+        const moduleId = modMap[key] || modMap[perm.website_module_id] || modMap[perm.control_module_id] || modMap[perm.module_slug];
         if (moduleId) {
           const canView = perm.can_view !== undefined ? Boolean(perm.can_view) : true;
           const canCreate = Boolean(perm.can_create);
@@ -587,9 +587,10 @@ export async function POST(request, context) {
 
           await queryDb(
             `INSERT INTO website_officer_permissions (
-               website_id, officer_id, website_module_id, can_view, can_create, can_edit, can_delete
-             ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-             ON CONFLICT (officer_id, website_module_id) DO UPDATE SET
+               website_id, officer_id, control_module_id, website_module_id, can_view, can_create, can_edit, can_delete
+             ) VALUES ($1, $2, $3, $3, $4, $5, $6, $7)
+             ON CONFLICT (officer_id, control_module_id) DO UPDATE SET
+               website_module_id = EXCLUDED.website_module_id,
                can_view = EXCLUDED.can_view,
                can_create = EXCLUDED.can_create,
                can_edit = EXCLUDED.can_edit,
@@ -888,7 +889,7 @@ export async function PUT(request, context) {
 
     // STEP 4: Update module permissions if provided
     if (permissions && typeof permissions === 'object') {
-      const allMods = await queryDb(`SELECT id, slug FROM website_modules WHERE is_active = TRUE`);
+      const allMods = await queryDb(`SELECT id, slug FROM website_control_modules WHERE is_active = TRUE`);
       const modMap = {};
       allMods.rows.forEach((m) => {
         modMap[m.slug] = m.id;
@@ -896,7 +897,7 @@ export async function PUT(request, context) {
       });
 
       for (const [key, perm] of Object.entries(permissions)) {
-        const moduleId = modMap[key] || modMap[perm.website_module_id] || modMap[perm.module_slug];
+        const moduleId = modMap[key] || modMap[perm.website_module_id] || modMap[perm.control_module_id] || modMap[perm.module_slug];
         if (moduleId) {
           const canView = perm.can_view !== undefined ? Boolean(perm.can_view) : true;
           const canCreate = Boolean(perm.can_create);
@@ -905,9 +906,10 @@ export async function PUT(request, context) {
 
           await queryDb(
             `INSERT INTO website_officer_permissions (
-               website_id, officer_id, website_module_id, can_view, can_create, can_edit, can_delete
-             ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-             ON CONFLICT (officer_id, website_module_id) DO UPDATE SET
+               website_id, officer_id, control_module_id, website_module_id, can_view, can_create, can_edit, can_delete
+             ) VALUES ($1, $2, $3, $3, $4, $5, $6, $7)
+             ON CONFLICT (officer_id, control_module_id) DO UPDATE SET
+               website_module_id = EXCLUDED.website_module_id,
                can_view = EXCLUDED.can_view,
                can_create = EXCLUDED.can_create,
                can_edit = EXCLUDED.can_edit,

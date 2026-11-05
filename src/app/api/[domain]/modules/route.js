@@ -93,14 +93,6 @@ export async function GET(request, context) {
       controlModules = ctrlRes.rows || [];
     }
 
-    // Query Base System Modules
-    if (type === 'all' || type === 'system') {
-      const sysRes = await queryDb(
-        'SELECT * FROM website_modules ORDER BY id ASC'
-      ).catch(() => ({ rows: [] }));
-      systemModules = sysRes.rows || [];
-    }
-
     // Calculate categories and counts
     const homeCategories = Array.from(new Set(homeModules.map((m) => m.category).filter(Boolean)));
     const controlCategories = Array.from(new Set(controlModules.map((m) => m.category).filter(Boolean)));
@@ -112,11 +104,9 @@ export async function GET(request, context) {
       type,
       home_modules: homeModules,
       control_modules: controlModules,
-      system_modules: systemModules,
       summary: {
         total_home: homeModules.length,
         total_control: controlModules.length,
-        total_system: systemModules.length,
         total_all: homeModules.length + controlModules.length,
         home_categories: homeCategories,
         control_categories: controlCategories,

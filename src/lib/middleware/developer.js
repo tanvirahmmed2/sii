@@ -187,14 +187,27 @@ export async function getDeveloperSession(request) {
       console.warn('Notice verifying developer session against database:', e.message);
     }
 
-    // Fetch granular permissions directly from module_permissions (combines developer with module)
-    const permRes = await queryDb(
-      `SELECT m.slug AS module_slug, mp.can_view, mp.can_create, mp.can_edit, mp.can_delete
-       FROM module_permissions mp
-       JOIN modules m ON mp.module_id = m.id
-       WHERE mp.developer_id = $1 AND m.is_active = TRUE`,
-      [dev.id]
-    ).catch(() => ({ rows: [] }));
+    // Fetch granular permissions from developer_role_permissions via dev.role_id, with fallback to module_permissions
+    let permRes = { rows: [] };
+    if (dev.role_id) {
+      permRes = await queryDb(
+        `SELECT m.slug AS module_slug, drp.can_view, drp.can_create, drp.can_edit, drp.can_delete
+         FROM developer_role_permissions drp
+         JOIN modules m ON drp.module_id = m.id
+         WHERE drp.role_id = $1 AND m.is_active = TRUE`,
+        [dev.role_id]
+      ).catch(() => ({ rows: [] }));
+    }
+
+    if (!permRes.rows || permRes.rows.length === 0) {
+      permRes = await queryDb(
+        `SELECT m.slug AS module_slug, mp.can_view, mp.can_create, mp.can_edit, mp.can_delete
+         FROM module_permissions mp
+         JOIN modules m ON mp.module_id = m.id
+         WHERE mp.developer_id = $1 AND m.is_active = TRUE`,
+        [dev.id]
+      ).catch(() => ({ rows: [] }));
+    }
 
     let permissions = permRes.rows
       .filter((r) => r.can_view)

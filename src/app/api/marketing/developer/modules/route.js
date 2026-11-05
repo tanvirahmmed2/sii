@@ -295,7 +295,7 @@ export async function GET(request) {
       const isPrimary =
         isWebsiteModule &&
         !isChildOrRelation &&
-        t.table_name !== 'website_modules';
+        !['website_modules', 'website_home_modules', 'website_control_modules'].includes(t.table_name);
 
       return {
         table_name: t.table_name,
@@ -342,14 +342,16 @@ export async function GET(request) {
       filteredModules = legacyModules;
     }
 
-    // Fetch Home Modules and Control Modules lists for quick developer introspection
-    const [homeRes, ctrlRes] = await Promise.all([
+    // Fetch Home Modules, Control Modules, and Developer Panel Platform Modules
+    const [homeRes, ctrlRes, devModsRes] = await Promise.all([
       queryDb('SELECT * FROM website_home_modules ORDER BY display_order ASC, id ASC').catch(() => ({ rows: [] })),
       queryDb('SELECT * FROM website_control_modules ORDER BY category ASC, display_order ASC, id ASC').catch(() => ({ rows: [] })),
+      queryDb('SELECT * FROM modules ORDER BY sort_order ASC, id ASC').catch(() => ({ rows: [] })),
     ]);
 
     const homeModulesList = homeRes.rows || [];
     const controlModulesList = ctrlRes.rows || [];
+    const developerModulesList = devModsRes.rows || [];
 
     return NextResponse.json({
       success: true,
@@ -361,12 +363,14 @@ export async function GET(request) {
         legacy: legacyModules.length,
         home_modules: homeModulesList.length,
         control_modules: controlModulesList.length,
+        developer_modules: developerModulesList.length,
       },
       filter,
       modules: filteredModules,
       available_modules: selectableModules,
       home_modules: homeModulesList,
       control_modules: controlModulesList,
+      developer_modules: developerModulesList,
     });
   } catch (error) {
     console.error('Error querying database modules:', error);
