@@ -8,22 +8,11 @@ export { sendWebsiteEmail, getWebsiteBrevoConfig };
  * Supports optional options.websiteId to automatically use tenant mailer.
  */
 export const sendEmail = async ({ to, toName, subject, html, websiteId }) => {
-  let senderName = BREVO_SENDER_NAME || 'Campus Administration';
-
   if (websiteId) {
-    try {
-      const config = await getWebsiteBrevoConfig(websiteId);
-      if (config.configured && config.apiKey && config.senderEmail) {
-        return await sendWebsiteEmail(websiteId, { to, toName, subject, html });
-      }
-      if (config.senderName) {
-        senderName = config.senderName;
-      }
-      console.log(`[Brevo] Website ${websiteId} does not have a custom mailer configured. Using main platform mailer.`);
-    } catch (websiteMailerErr) {
-      console.warn(`[Brevo] Website mailer failed for website ${websiteId}: ${websiteMailerErr.message}. Falling back to main platform mailer.`);
-    }
+    return await sendWebsiteEmail(websiteId, { to, toName, subject, html });
   }
+
+  const senderName = BREVO_SENDER_NAME || 'Campus Administration';
 
   if (!BREVO_API_KEY) {
     throw new Error('BREVO_API_KEY is not defined in environment secrets.');

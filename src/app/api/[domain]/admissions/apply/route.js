@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
+import { withTenantTransaction } from '@/lib/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
+import { validateSubmissionPayload } from '@/lib/form-criteria-engine';
 
 /**
  * GET /api/[domain]/admissions/apply?admission_id=...
- * Returns active circular details and application fee for candidate review before submitting.
+ * Returns active circular details, frozen form_schema_snapshot, criteria_rules, fee, and exam schedules.
  */
 export async function GET(request, context) {
   try {
@@ -42,6 +44,15 @@ export async function GET(request, context) {
 
     const res = await queryDb(sql, params);
 
+    // Fetch live form fields as fallback for circulars without a frozen snapshot
+    const liveFieldsRes = await queryDb(`
+      SELECT id AS form_field_id, target_scope, field_key, label, field_type,
+             options, validation_regex, is_unique, is_required, is_required_in_admission, sort_order
+      FROM website_form_fields
+      WHERE website_id = $1 AND is_visible_in_admission = TRUE AND is_active = TRUE
+      ORDER BY sort_order ASC, id ASC
+    `, [website.id]);
+
     // Fetch subjects for any exam-based circulars
     const examSubjectsRes = await queryDb(`
       SELECT id, admission_id, admission_exam_id, title, mark, time
@@ -58,14 +69,27 @@ export async function GET(request, context) {
       subjectsByAdmission[sub.admission_id].push(sub);
     }
 
-    const circularsWithSubjects = res.rows.map((circ) => ({
-      ...circ,
-      exam_subjects: subjectsByAdmission[circ.id] || []
-    }));
+    const circularsWithSubjects = res.rows.map((circ) => {
+      const activeSnapshot =
+        Array.isArray(circ.form_schema_snapshot) && circ.form_schema_snapshot.length > 0
+          ? circ.form_schema_snapshot
+          : liveFieldsRes.rows;
+
+      return {
+        ...circ,
+        form_schema_snapshot: activeSnapshot,
+        criteria_rules: circ.criteria_rules || {
+          age: { enabled: false, min_years: null, max_years: null, as_of_date: null },
+          rules: { all: [] }
+        },
+        exam_subjects: subjectsByAdmission[circ.id] || []
+      };
+    });
 
     return NextResponse.json({
       success: true,
-      circulars: circularsWithSubjects
+      circulars: circularsWithSubjects,
+      circular: circularsWithSubjects[0] || null
     });
   } catch (error) {
     console.error('Error in GET /admissions/apply:', error);
@@ -75,8 +99,7 @@ export async function GET(request, context) {
 
 /**
  * POST /api/[domain]/admissions/apply
- * Candidate submits application form -> records applicant, info, and fee payment entry.
- * Note: payment_status is in website_admission_fee_payments.
+ * Validates dynamic schema & AST criteria in transaction -> records applicant, info, and fee payment entry.
  */
 export async function POST(request, context) {
   try {
@@ -132,7 +155,8 @@ export async function POST(request, context) {
     }
     const circular = circRes.rows[0];
 
-    if (!applicant_name || !applicant_name.trim()) {
+    const candidateName = (applicant_name || body.name || '').trim();
+    if (!candidateName) {
       return NextResponse.json({ success: false, error: 'Applicant candidate name is required.' }, { status: 400 });
     }
     if (!email || !email.trim() || !email.includes('@')) {
@@ -153,8 +177,7 @@ export async function POST(request, context) {
 
     const existingApp = existingAppCheck.rows[0] || null;
 
-    // 0a. Check cross-role email uniqueness:
-    // Prevent enrolled students from applying, prevent staff/teacher/officer/other applicant conflict
+    // 0a. Check cross-role email uniqueness
     const emailAvailability = await checkInstitutionEmailAvailability(website.id, cleanEmail, {
       excludeRole: existingApp ? 'applicant' : null,
       excludeId: existingApp?.id || null,
@@ -186,232 +209,43 @@ export async function POST(request, context) {
       }
     }
 
-    // 1. Fetch active modular form fields from unified website_form_fields
-    const fieldsRes = await queryDb(`
-      SELECT * FROM website_form_fields
-      WHERE website_id = $1 AND is_active = TRUE
-      ORDER BY sort_order ASC, id ASC
-    `, [website.id]);
-
-    const activeFields = fieldsRes.rows.length > 0 ? fieldsRes.rows : [
-      { field_key: 'applicant_name', label: 'Applicant Name', field_type: 'text', is_required: true, section: 'personal' },
-      { field_key: 'phone', label: 'Phone', field_type: 'text', is_required: true, validation_regex: '^01[3-9]\\d{8}$', section: 'personal' },
-      { field_key: 'gender', label: 'Gender', field_type: 'select', options: ['Male', 'Female', 'Other'], is_required: true, section: 'personal' },
-      { field_key: 'date_of_birth', label: 'Date of Birth', field_type: 'date', is_required: true, section: 'personal' }
-    ];
-
-
-    const validationErrors = [];
+    // Prepare submitted custom fields and partitioned buckets
     const submittedCustom = body.custom_fields && typeof body.custom_fields === 'object' ? { ...body.custom_fields } : {};
-
-    for (const f of activeFields) {
-      let val = body[f.field_key];
-      if (val === undefined || val === null) {
-        val = submittedCustom[f.field_key];
-      }
-      const strVal = val !== undefined && val !== null ? String(val).trim() : '';
-
-      // Check Required
-      if (f.is_required && !strVal) {
-        validationErrors.push({
-          field_key: f.field_key,
-          label: f.label,
-          error: `${f.label} is required.`
-        });
-        continue;
-      }
-
-      if (strVal) {
-        // Field Type Checks
-        if (f.field_type === 'number') {
-          if (isNaN(Number(strVal))) {
-            validationErrors.push({
-              field_key: f.field_key,
-              label: f.label,
-              error: `${f.label} must be a valid number.`
-            });
-          }
-        } else if (f.field_type === 'date') {
-          if (isNaN(Date.parse(strVal))) {
-            validationErrors.push({
-              field_key: f.field_key,
-              label: f.label,
-              error: `${f.label} must be a valid date.`
-            });
-          }
-        } else if (f.field_type === 'select') {
-          let opts = [];
-          if (Array.isArray(f.options)) opts = f.options;
-          else if (typeof f.options === 'string') {
-            try { opts = JSON.parse(f.options); } catch { opts = []; }
-          }
-          if (opts.length > 0 && !opts.includes(strVal)) {
-            validationErrors.push({
-              field_key: f.field_key,
-              label: f.label,
-              error: `Invalid selection for ${f.label}. Allowed options: ${opts.join(', ')}.`
-            });
-          }
-        }
-
-        // Regex Pattern Validation
-        if (f.validation_regex) {
-          try {
-            const re = new RegExp(f.validation_regex);
-            if (!re.test(strVal)) {
-              validationErrors.push({
-                field_key: f.field_key,
-                label: f.label,
-                error: `${f.label} format is invalid. ${f.help_text || ''}`.trim()
-              });
-            }
-          } catch (e) {
-            console.warn(`Invalid regex pattern for field ${f.field_key}:`, e.message);
-          }
-        }
-      }
-
-      submittedCustom[f.field_key] = val !== undefined ? val : null;
-    }
-
-    // STRICT POLICY: IF NOT OK -> DO NOT SAVE!
-    if (validationErrors.length > 0) {
-      return NextResponse.json({
-        success: false,
-        error: 'Application data does not meet the circular requirements.',
-        validation_errors: validationErrors
-      }, { status: 422 });
-    }
 
     const resolvedLastClass = last_class ? last_class.trim() : (body.past_school_class || 'N/A');
     const resolvedLastGrade = last_class_grade !== undefined && last_class_grade !== '' && last_class_grade !== null
       ? parseFloat(last_class_grade)
       : (previous_gpa ? parseFloat(previous_gpa) : null);
     const resolvedLastInst = last_institution ? last_institution.trim() : (previous_school || body.past_school_name || 'N/A');
+    const resolvedGender = body.gender || submittedCustom.gender || gender || 'Male';
+    const resolvedDob = body.date_of_birth || submittedCustom.date_of_birth || date_of_birth || null;
 
-    let applicant;
-    let appNumber;
-
-    const resolvedGender = body.gender || submittedCustom.gender || 'Male';
-    const resolvedDob = body.date_of_birth || submittedCustom.date_of_birth || null;
-
-    if (existingAppCheck.rows.length > 0) {
-      // Update existing applicant -> status becomes 'unpaid'
-      const existing = existingAppCheck.rows[0];
-      appNumber = existing.application_no;
-      const updateRes = await queryDb(`
-        UPDATE website_admission_applicants
-        SET applicant_name = $1,
-            email = $2,
-            phone = $3,
-            gender = $4,
-            date_of_birth = $5,
-            status = 'unpaid',
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = $6 AND website_id = $7
-        RETURNING *
-      `, [
-        applicant_name.trim(),
-        cleanEmail,
-        phone.trim(),
-        resolvedGender,
-        resolvedDob,
-        existing.id,
-        website.id
-      ]);
-      applicant = updateRes.rows[0];
-    } else {
-      // Generate Application Number: APP-{year}-{random_seq}
-      const countRes = await queryDb(`SELECT COUNT(*)::int AS count FROM website_admission_applicants WHERE website_id = $1`, [website.id]);
-      const seq = (countRes.rows[0].count || 0) + 1001;
-      const year = new Date().getFullYear();
-      appNumber = `APP-${year}-${seq}`;
-
-      const insertApp = await queryDb(`
-        INSERT INTO website_admission_applicants (
-          website_id, admission_id, application_no, applicant_name, email,
-          phone, gender, date_of_birth, status
-        ) VALUES (
-          $1, $2, $3, $4, $5,
-          $6, $7, $8, 'unpaid'
-        ) RETURNING *
-      `, [
-        website.id,
-        admId,
-        appNumber,
-        applicant_name.trim(),
-        cleanEmail,
-        phone.trim(),
-        resolvedGender,
-        resolvedDob
-      ]);
-      applicant = insertApp.rows[0];
-    }
-
-    // 3. Partition submitted custom fields by target_scope (deterministic routing)
-    const customPersonal = {};
-    const customGuardian = {};
-    const customAddress = {};
-
-    for (const f of activeFields) {
-      const val = submittedCustom[f.field_key] !== undefined ? submittedCustom[f.field_key] : body[f.field_key];
-      if (val !== undefined && val !== null) {
-        const scope = f.target_scope || (f.section === 'guardian' ? 'guardians' : f.section === 'address' ? 'addresses' : 'info');
-        if (scope === 'guardians') {
-          customGuardian[f.field_key] = val;
-        } else if (scope === 'addresses') {
-          customAddress[f.field_key] = val;
-        } else {
-          customPersonal[f.field_key] = val;
-        }
-      }
-    }
-
-    // 3a. Upsert modular data into website_admission_applicant_info
     const personalData = {
-      gender: gender || 'Male',
-      date_of_birth: date_of_birth || null,
-      blood_group: body.blood_group || null,
-      religion: body.religion || null,
+      gender: resolvedGender,
+      date_of_birth: resolvedDob,
+      blood_group: body.blood_group || submittedCustom.blood_group || null,
+      religion: body.religion || submittedCustom.religion || null,
       last_class: resolvedLastClass,
       last_class_grade: resolvedLastGrade,
       last_institution: resolvedLastInst,
-      ...customPersonal
+      ...submittedCustom
     };
 
-    await queryDb(`
-      INSERT INTO website_admission_applicant_info (website_id, applicant_id, data, updated_at)
-      VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-      ON CONFLICT (applicant_id) DO UPDATE SET
-        data = website_admission_applicant_info.data || EXCLUDED.data,
-        updated_at = CURRENT_TIMESTAMP
-    `, [website.id, applicant.id, JSON.stringify(personalData)]);
-
-    // 3b. Upsert modular data into website_admission_applicant_guardians
     const guardianData = {
-      father_name: father_name || null,
-      father_phone: father_phone || null,
-      father_occupation: father_occupation || null,
-      mother_name: mother_name || null,
-      mother_phone: mother_phone || null,
-      mother_occupation: mother_occupation || null,
+      father_name: father_name || body.father_name || null,
+      father_phone: father_phone || body.father_phone || null,
+      father_occupation: father_occupation || body.father_occupation || null,
+      mother_name: mother_name || body.mother_name || null,
+      mother_phone: mother_phone || body.mother_phone || null,
+      mother_occupation: mother_occupation || body.mother_occupation || null,
       guardian_name: guardian_name || father_name || null,
       guardian_phone: guardian_phone || father_phone || null,
       guardian_relation: guardian_relation || 'Father',
       guardian_email: body.guardian_email || null,
       guardian_address: body.guardian_address || null,
-      ...customGuardian
+      ...(body.guardian_custom_fields || {})
     };
 
-    await queryDb(`
-      INSERT INTO website_admission_applicant_guardians (website_id, applicant_id, data, updated_at)
-      VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-      ON CONFLICT (applicant_id) DO UPDATE SET
-        data = website_admission_applicant_guardians.data || EXCLUDED.data,
-        updated_at = CURRENT_TIMESTAMP
-    `, [website.id, applicant.id, JSON.stringify(guardianData)]);
-
-    // 3c. Upsert modular data into website_admission_applicant_addresses
     const addressData = {
       present_address: present_address || address || null,
       permanent_address: permanent_address || address || null,
@@ -420,79 +254,204 @@ export async function POST(request, context) {
       upazila: body.upazila || null,
       postal_code: body.postal_code || null,
       country: body.country || 'Bangladesh',
-      ...customAddress
+      ...(body.address_custom_fields || {})
     };
 
-    await queryDb(`
-      INSERT INTO website_admission_applicant_addresses (website_id, applicant_id, data, updated_at)
-      VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-      ON CONFLICT (applicant_id) DO UPDATE SET
-        data = website_admission_applicant_addresses.data || EXCLUDED.data,
-        updated_at = CURRENT_TIMESTAMP
-    `, [website.id, applicant.id, JSON.stringify(addressData)]);
+    const payload = {
+      core: {
+        applicant_name: candidateName,
+        name: candidateName,
+        email: cleanEmail,
+        phone: phone.trim(),
+        gender: resolvedGender,
+        date_of_birth: resolvedDob,
+      },
+      info: personalData,
+      guardians: guardianData,
+      addresses: addressData
+    };
 
+    // Execute submission write inside isolated transaction
+    const result = await withTenantTransaction(website.id, async (client) => {
+      // 1. Validate Dynamic Fields and AST Criteria Rules
+      const validation = await validateSubmissionPayload({
+        clientOrPool: client,
+        websiteId: website.id,
+        admissionId: admId,
+        applicantId: existingApp?.id || null,
+        mode: 'admission',
+        payload
+      });
 
-    // 4. Upsert pending payment record in website_admission_fee_payments
-    const feeAmount = parseFloat(circular.fee_amount) || 500.00;
-    const feeCurrency = circular.fee_currency || 'BDT';
-    const invoiceRef = `INV-ADM-${appNumber}`;
+      if (!validation.valid) {
+        const valError = new Error(validation.errors[0] || 'Application requirements not met.');
+        valError.isValidationError = true;
+        valError.errors = validation.errors;
+        throw valError;
+      }
 
-    const existingPayment = await queryDb(
-      `SELECT id, payment_status FROM website_admission_fee_payments WHERE applicant_id = $1 AND website_id = $2 LIMIT 1`,
-      [applicant.id, website.id]
-    );
+      let applicant;
+      let appNumber;
 
-    if (existingPayment.rows.length === 0) {
-      await queryDb(`
-        INSERT INTO website_admission_fee_payments (
-          website_id, applicant_id, admission_id,
-          gateway_code, amount, currency, transaction_id, payment_status, invoice_no
-        ) VALUES (
-          $1, $2, $3,
-          'online', $4, $5, NULL, 'pending', $6
-        )
-      `, [
-        website.id,
-        applicant.id,
-        admId,
+      if (existingAppCheck.rows.length > 0) {
+        const existing = existingAppCheck.rows[0];
+        appNumber = existing.application_no;
+        const updateRes = await client.query(`
+          UPDATE website_admission_applicants
+          SET applicant_name = $1,
+              name = $1,
+              email = $2,
+              phone = $3,
+              gender = $4,
+              date_of_birth = $5,
+              status = 'unpaid',
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = $6 AND website_id = $7
+          RETURNING *
+        `, [
+          candidateName,
+          cleanEmail,
+          phone.trim(),
+          resolvedGender,
+          resolvedDob,
+          existing.id,
+          website.id
+        ]);
+        applicant = updateRes.rows[0];
+      } else {
+        const countRes = await client.query(
+          `SELECT COUNT(*)::int AS count FROM website_admission_applicants WHERE website_id = $1`,
+          [website.id]
+        );
+        const seq = (countRes.rows[0].count || 0) + 1001;
+        const year = new Date().getFullYear();
+        appNumber = `APP-${year}-${seq}`;
+
+        const insertApp = await client.query(`
+          INSERT INTO website_admission_applicants (
+            website_id, admission_id, application_no, applicant_name, name, email,
+            phone, gender, date_of_birth, status
+          ) VALUES (
+            $1, $2, $3, $4, $4, $5,
+            $6, $7, $8, 'unpaid'
+          ) RETURNING *
+        `, [
+          website.id,
+          admId,
+          appNumber,
+          candidateName,
+          cleanEmail,
+          phone.trim(),
+          resolvedGender,
+          resolvedDob
+        ]);
+        applicant = insertApp.rows[0];
+      }
+
+      // Upsert modular info
+      await client.query(`
+        INSERT INTO website_admission_applicant_info (website_id, applicant_id, data, updated_at)
+        VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+        ON CONFLICT (applicant_id) DO UPDATE SET
+          data = website_admission_applicant_info.data || EXCLUDED.data,
+          updated_at = CURRENT_TIMESTAMP
+      `, [website.id, applicant.id, JSON.stringify(personalData)]);
+
+      // Upsert guardians
+      await client.query(`
+        INSERT INTO website_admission_applicant_guardians (website_id, applicant_id, data, updated_at)
+        VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+        ON CONFLICT (applicant_id) DO UPDATE SET
+          data = website_admission_applicant_guardians.data || EXCLUDED.data,
+          updated_at = CURRENT_TIMESTAMP
+      `, [website.id, applicant.id, JSON.stringify(guardianData)]);
+
+      // Upsert addresses
+      await client.query(`
+        INSERT INTO website_admission_applicant_addresses (website_id, applicant_id, data, updated_at)
+        VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+        ON CONFLICT (applicant_id) DO UPDATE SET
+          data = website_admission_applicant_addresses.data || EXCLUDED.data,
+          updated_at = CURRENT_TIMESTAMP
+      `, [website.id, applicant.id, JSON.stringify(addressData)]);
+
+      // Upsert fee payment record
+      const feeAmount = parseFloat(circular.fee_amount) || 500.00;
+      const feeCurrency = circular.fee_currency || 'BDT';
+      const invoiceRef = `INV-ADM-${appNumber}`;
+
+      const existingPayment = await client.query(
+        `SELECT id, payment_status FROM website_admission_fee_payments WHERE applicant_id = $1 AND website_id = $2 LIMIT 1`,
+        [applicant.id, website.id]
+      );
+
+      if (existingPayment.rows.length === 0) {
+        await client.query(`
+          INSERT INTO website_admission_fee_payments (
+            website_id, applicant_id, admission_id,
+            gateway_code, amount, currency, transaction_id, payment_status, invoice_no
+          ) VALUES (
+            $1, $2, $3,
+            'online', $4, $5, NULL, 'pending', $6
+          )
+        `, [
+          website.id,
+          applicant.id,
+          admId,
+          feeAmount,
+          feeCurrency,
+          invoiceRef
+        ]);
+      }
+
+      // Invalidate consumed OTP verification
+      if (verifiedCheck?.rows?.length > 0) {
+        await client.query(`DELETE FROM website_email_verifications WHERE id = $1`, [verifiedCheck.rows[0].id]);
+      }
+
+      return {
+        applicant,
+        appNumber,
         feeAmount,
         feeCurrency,
         invoiceRef
-      ]);
-    }
-
-    // Consume verified token record to prevent replay attack
-    try {
-      if (typeof verifiedCheck !== 'undefined' && verifiedCheck?.rows?.length > 0) {
-        await queryDb(`DELETE FROM website_email_verifications WHERE id = $1`, [verifiedCheck.rows[0].id]);
-      }
-    } catch (_) {}
+      };
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Admission application registered successfully. Please proceed with payment.',
-      applicant_id: applicant.id,
-      application_number: appNumber,
-      fee_amount: feeAmount,
-      fee_currency: feeCurrency,
-      invoice_ref: invoiceRef,
+      applicant_id: result.applicant.id,
+      application_number: result.appNumber,
+      fee_amount: result.feeAmount,
+      fee_currency: result.feeCurrency,
+      invoice_ref: result.invoiceRef,
       applicant: {
-        id: applicant.id,
-        application_no: appNumber,
-        applicant_name: applicant.applicant_name,
-        email: applicant.email,
-        phone: applicant.phone,
-        fee_amount: feeAmount,
-        currency: feeCurrency,
+        id: result.applicant.id,
+        application_no: result.appNumber,
+        applicant_name: result.applicant.applicant_name,
+        email: result.applicant.email,
+        phone: result.applicant.phone,
+        fee_amount: result.feeAmount,
+        currency: result.feeCurrency,
         payment_status: 'pending'
       },
       payment: {
-        payment_url: `/pay/admission-fees/${applicant.id}`,
-        invoice_ref: invoiceRef
+        payment_url: `/pay/admission-fees/${result.applicant.id}`,
+        invoice_ref: result.invoiceRef
       },
-      next_step: `/pay/admission-fees/${applicant.id}`
+      next_step: `/pay/admission-fees/${result.applicant.id}`
     });
   } catch (error) {
+    if (error.isValidationError) {
+      return NextResponse.json({
+        success: false,
+        error: error.message,
+        errors: error.errors || [error.message],
+        validation_errors: error.errors || [error.message]
+      }, { status: 422 });
+    }
+
     console.error('Error in POST /admissions/apply:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

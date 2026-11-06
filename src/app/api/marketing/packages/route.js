@@ -64,6 +64,8 @@ function formatPackageRecord(p) {
     is_active: Boolean(p.is_active),
     grace_period: Number(p.grace_period ?? 3),
     sort_order: Number(p.sort_order ?? 0),
+    monthly_mail: Number(p.monthly_mail ?? 1000),
+    monthly_sms: Number(p.monthly_sms ?? 200),
     features,
     home_modules: Array.isArray(p.home_modules) ? p.home_modules : [],
     home_module_ids: Array.isArray(p.home_module_ids) ? p.home_module_ids : [],

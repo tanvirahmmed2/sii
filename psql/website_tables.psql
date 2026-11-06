@@ -639,52 +639,26 @@ CREATE TRIGGER update_website_period_class_subjects_updated_at
 
 
 -- ----------------------------------------------------------------------------
--- 20. WEBSITE BREVO MAILER TABLE (Transactional Email Credentials)
+-- 20. WEBSITE MONTHLY USAGES TABLE (Email & SMS Quota Tracking)
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_brevo_mailer (
+CREATE TABLE IF NOT EXISTS website_monthly_usages (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    brevo_api_key TEXT NOT NULL,
-    brevo_sender_email VARCHAR(255) NOT NULL,
-    brevo_sender_name VARCHAR(255) NOT NULL,
-    is_active BOOLEAN DEFAULT TRUE,
+    year_month VARCHAR(7) NOT NULL, -- e.g. '2026-11'
+    mail_count INT NOT NULL DEFAULT 0,
+    sms_count INT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id)
+    UNIQUE(website_id, year_month)
 );
 
-DROP TRIGGER IF EXISTS update_website_brevo_mailer_updated_at ON website_brevo_mailer;
-CREATE TRIGGER update_website_brevo_mailer_updated_at
-    BEFORE UPDATE ON website_brevo_mailer
+DROP TRIGGER IF EXISTS update_website_monthly_usages_updated_at ON website_monthly_usages;
+CREATE TRIGGER update_website_monthly_usages_updated_at
+    BEFORE UPDATE ON website_monthly_usages
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- ----------------------------------------------------------------------------
--- 20B. WEBSITE SMS GATEWAYS TABLE (SMS Provider Credentials & Masking Settings)
--- Supports: mimsms, greenweb, onnorokom, twilio, custom
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_sms_gateways (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    provider VARCHAR(50) NOT NULL DEFAULT 'mimsms',
-    sender_id VARCHAR(100) NOT NULL,
-    sender_type VARCHAR(50) NOT NULL DEFAULT 'masking' CHECK (sender_type IN ('masking', 'non-masking', 'voice')),
-    api_key TEXT NOT NULL,
-    client_id VARCHAR(100),
-    endpoint_url TEXT,
-    default_encoding VARCHAR(20) DEFAULT 'unicode' CHECK (default_encoding IN ('unicode', 'gsm')),
-    balance NUMERIC(12, 2) DEFAULT 0.00,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id)
-);
-
-DROP TRIGGER IF EXISTS update_website_sms_gateways_updated_at ON website_sms_gateways;
-CREATE TRIGGER update_website_sms_gateways_updated_at
-    BEFORE UPDATE ON website_sms_gateways
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE INDEX IF NOT EXISTS idx_ws_sms_gw_web ON website_sms_gateways(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_monthly_usages_lookup
+    ON website_monthly_usages (website_id, year_month);
 
 -- ----------------------------------------------------------------------------
 -- 21. WEBSITE META TABLE (Facebook, Instagram & WhatsApp Integration Keys)
@@ -1211,8 +1185,8 @@ CREATE INDEX IF NOT EXISTS idx_ws_periods_day ON website_periods(website_id, day
 CREATE INDEX IF NOT EXISTS idx_ws_pcs_period ON website_period_class_subjects(website_id, period_id);
 CREATE INDEX IF NOT EXISTS idx_ws_pcs_class_subject ON website_period_class_subjects(website_id, class_subject_id);
 
--- Mailer, Meta & Messaging Indexes
-CREATE INDEX IF NOT EXISTS idx_ws_brevo_mailer_website ON website_brevo_mailer(website_id);
+-- Usages, Meta & Messaging Indexes
+CREATE INDEX IF NOT EXISTS idx_ws_monthly_usages_web ON website_monthly_usages(website_id);
 CREATE INDEX IF NOT EXISTS idx_ws_meta_website ON website_meta(website_id);
 CREATE INDEX IF NOT EXISTS idx_ws_meta_conv_website ON website_meta_conversations(website_id, platform);
 CREATE INDEX IF NOT EXISTS idx_ws_meta_conv_lookup ON website_meta_conversations(website_id, platform, status);
@@ -1240,7 +1214,14 @@ CREATE TABLE IF NOT EXISTS website_students (
     session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
     registration_no VARCHAR(100) NOT NULL,
     roll_no VARCHAR(50),
+    name VARCHAR(255),
     email VARCHAR(255),
+    phone VARCHAR(50),
+    number VARCHAR(50),
+    gender VARCHAR(20),
+    blood_group VARCHAR(10),
+    date_of_birth DATE,
+    religion VARCHAR(50),
     student_unique_id VARCHAR(100) NOT NULL,
     password TEXT,
     recovery_token VARCHAR(255),
@@ -1282,6 +1263,7 @@ CREATE TABLE IF NOT EXISTS website_student_info (
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
     data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    admission_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
     verification_status VARCHAR(50) DEFAULT 'pending_setup' CHECK (verification_status IN ('pending_setup', 'submitted', 'verified', 'rejected')),
     is_registered BOOLEAN DEFAULT FALSE,
     verification_notes TEXT,
@@ -1309,6 +1291,10 @@ CREATE TABLE IF NOT EXISTS website_form_fields (
     field_type VARCHAR(50) NOT NULL CHECK (field_type IN ('text', 'number', 'select', 'multiselect', 'date', 'file', 'textarea', 'boolean')),
     options JSONB DEFAULT '[]'::jsonb,
     is_required BOOLEAN NOT NULL DEFAULT FALSE,
+    is_required_in_admission BOOLEAN NOT NULL DEFAULT FALSE,
+    is_required_in_student BOOLEAN NOT NULL DEFAULT FALSE,
+    carry_over_to_student BOOLEAN NOT NULL DEFAULT TRUE,
+    is_editable_by_student BOOLEAN NOT NULL DEFAULT TRUE,
     is_unique BOOLEAN NOT NULL DEFAULT FALSE,
     validation_regex VARCHAR(255),
     placeholder VARCHAR(150),
@@ -1321,7 +1307,7 @@ CREATE TABLE IF NOT EXISTS website_form_fields (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, field_key)
+    CONSTRAINT uq_website_form_fields_scope_key UNIQUE (website_id, target_scope, field_key)
 );
 
 DROP TRIGGER IF EXISTS update_website_form_fields_updated_at ON website_form_fields;
@@ -1332,6 +1318,21 @@ CREATE TRIGGER update_website_form_fields_updated_at
 CREATE INDEX IF NOT EXISTS idx_ws_form_fields_web ON website_form_fields(website_id);
 CREATE INDEX IF NOT EXISTS idx_ws_form_fields_act ON website_form_fields(website_id, is_active);
 CREATE INDEX IF NOT EXISTS idx_website_form_fields_scope ON website_form_fields(website_id, target_scope, is_active, sort_order);
+CREATE INDEX IF NOT EXISTS idx_form_fields_tenant_lifecycle ON website_form_fields (website_id, target_scope, is_visible_in_admission, is_visible_in_student);
+
+-- Per-Circular Form Field Mapping Table (Decouples Circulars from Master Catalog)
+CREATE TABLE IF NOT EXISTS website_admission_form_configs (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    admission_id BIGINT NOT NULL REFERENCES website_admissions(id) ON DELETE CASCADE,
+    form_field_id BIGINT NOT NULL REFERENCES website_form_fields(id) ON DELETE CASCADE,
+    is_required BOOLEAN NOT NULL DEFAULT TRUE,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (admission_id, form_field_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_adm_form_configs_lookup ON website_admission_form_configs (website_id, admission_id, sort_order);
 
 -- ----------------------------------------------------------------------------
 -- 39. WEBSITE STUDENT ADDRESSES TABLE (Modular Address Store)
@@ -2625,6 +2626,11 @@ CREATE TABLE IF NOT EXISTS website_admissions (
     selection_method VARCHAR(50) DEFAULT 'manual' CHECK (selection_method IN ('exam', 'merit', 'manual')),
     is_result_published BOOLEAN DEFAULT FALSE,
     result_published_at TIMESTAMPTZ,
+    form_schema_snapshot JSONB NOT NULL DEFAULT '[]'::jsonb,
+    criteria_rules JSONB NOT NULL DEFAULT '{
+      "age": { "enabled": false, "min_years": null, "max_years": null, "as_of_date": null },
+      "rules": { "all": [] }
+    }'::jsonb,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -4505,159 +4511,190 @@ CREATE INDEX IF NOT EXISTS idx_student_info_nid
   WHERE data->>'nid_number' IS NOT NULL;
 
 CREATE OR REPLACE FUNCTION fn_enroll_admission_applicant(
+    p_website_id BIGINT,
     p_applicant_id BIGINT,
-    p_class_id BIGINT,
     p_session_id BIGINT,
+    p_class_id BIGINT,
     p_section_id BIGINT,
     p_department_id BIGINT,
+    p_roll_no VARCHAR(50),
     p_registration_no VARCHAR(100),
     p_student_unique_id VARCHAR(100),
-    p_roll_no VARCHAR(50),
-    p_temp_password_hash TEXT DEFAULT NULL,
-    p_setup_token VARCHAR(255) DEFAULT NULL
-)
-RETURNS BIGINT AS $$
+    p_setup_token VARCHAR(255),
+    p_setup_token_expires TIMESTAMPTZ,
+    p_staff_id BIGINT
+) RETURNS BIGINT
+LANGUAGE plpgsql
+AS $$
 DECLARE
-    v_website_id BIGINT;
-    v_applicant_name VARCHAR(255);
-    v_applicant_email VARCHAR(255);
-    v_applicant_phone VARCHAR(50);
-    v_applicant_gender VARCHAR(20);
-    v_applicant_dob DATE;
+    v_applicant RECORD;
     v_new_student_id BIGINT;
-    v_clean_reg_no VARCHAR(100);
+    v_raw_info JSONB := '{}'::jsonb;
+    v_carry_over_info JSONB := '{}'::jsonb;
+    v_admission_snapshot JSONB := '{}'::jsonb;
 BEGIN
-    -- 1. Lock and validate applicant record
-    SELECT website_id, applicant_name, LOWER(TRIM(email)), phone, gender, date_of_birth
-    INTO v_website_id, v_applicant_name, v_applicant_email, v_applicant_phone, v_applicant_gender, v_applicant_dob
+    -- 1. Obtain row-level lock on the applicant to prevent double-enrollment
+    SELECT *, COALESCE(applicant_name, name) AS resolved_name
+    INTO v_applicant
     FROM website_admission_applicants
-    WHERE id = p_applicant_id AND status IN ('completed', 'selected', 'paid')
+    WHERE id = p_applicant_id AND website_id = p_website_id
     FOR UPDATE;
 
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'Applicant % is not eligible for enrollment (must be in "completed", "paid", or "selected" status).', p_applicant_id;
+        RAISE EXCEPTION 'APPLICANT_NOT_FOUND: Applicant % not found for website %', p_applicant_id, p_website_id;
     END IF;
 
-    -- Clean up registration number (strip REG- if passed)
-    v_clean_reg_no := TRIM(REGEXP_REPLACE(p_registration_no, '^REG-?', '', 'i'));
+    IF v_applicant.status = 'enrolled' OR v_applicant.enrolled_student_id IS NOT NULL THEN
+        RAISE EXCEPTION 'ALREADY_ENROLLED: Applicant % is already enrolled as student %', p_applicant_id, v_applicant.enrolled_student_id;
+    END IF;
 
-    -- 2. Guard against duplicate registration number per website
+    IF v_applicant.status NOT IN ('selected', 'accepted') THEN
+        RAISE EXCEPTION 'INVALID_APPLICANT_STATUS: Expected selected/accepted, got %', v_applicant.status;
+    END IF;
+
+    -- 2. Transaction-scoped advisory locks for registration_no and class roll_no
+    PERFORM pg_advisory_xact_lock(hashtext(p_website_id::text || ':reg:' || p_registration_no));
+    PERFORM pg_advisory_xact_lock(hashtext(p_website_id::text || ':roll:' || COALESCE(p_session_id::text, '') || ':' || COALESCE(p_class_id::text, '') || ':' || COALESCE(p_section_id::text, '') || ':' || p_roll_no));
+
     IF EXISTS (
-        SELECT 1 FROM website_students 
-        WHERE website_id = v_website_id 
-          AND LOWER(TRIM(registration_no)) = LOWER(v_clean_reg_no)
+        SELECT 1 FROM website_students
+        WHERE website_id = p_website_id AND registration_no = p_registration_no
     ) THEN
-        RAISE EXCEPTION 'Registration number "%" is already taken in this institution.', v_clean_reg_no;
+        RAISE EXCEPTION 'DUPLICATE_REGISTRATION_NO: Registration number % already exists', p_registration_no;
     END IF;
 
-    -- 3. Insert Core Student Identity
+    -- 3. Insert Core Student Record (is_active = FALSE, is_verified = FALSE until verified)
     INSERT INTO website_students (
         website_id,
+        admission_applicant_id,
         session_id,
-        department_id,
         class_id,
         section_id,
+        department_id,
         registration_no,
         student_unique_id,
         roll_no,
         name,
         email,
+        phone,
         number,
         gender,
         date_of_birth,
-        password,
-        admission_applicant_id,
         verification_token,
         verification_token_expires,
         is_active,
-        is_verified
+        is_verified,
+        created_at,
+        updated_at
     ) VALUES (
-        v_website_id,
+        p_website_id,
+        p_applicant_id,
         p_session_id,
-        p_department_id,
         p_class_id,
         p_section_id,
-        v_clean_reg_no,
+        p_department_id,
+        p_registration_no,
         p_student_unique_id,
-        TRIM(p_roll_no),
-        v_applicant_name,
-        v_applicant_email,
-        v_applicant_phone,
-        COALESCE(v_applicant_gender, 'Male'),
-        v_applicant_dob,
-        p_temp_password_hash,
-        p_applicant_id,
+        p_roll_no,
+        COALESCE(v_applicant.resolved_name, v_applicant.applicant_name),
+        v_applicant.email,
+        v_applicant.phone,
+        v_applicant.phone,
+        v_applicant.gender,
+        v_applicant.date_of_birth,
         p_setup_token,
-        CASE WHEN p_setup_token IS NOT NULL THEN CURRENT_TIMESTAMP + INTERVAL '7 days' ELSE NULL END,
+        p_setup_token_expires,
         FALSE,
-        FALSE
+        FALSE,
+        NOW(),
+        NOW()
     ) RETURNING id INTO v_new_student_id;
 
-    -- 4. Copy Extended Modular Info
+    -- 4. Partition Applicant JSONB Info into Carry-Over Student Data vs. Admission Archive Snapshot
+    SELECT COALESCE(data, '{}'::jsonb)
+    INTO v_raw_info
+    FROM website_admission_applicant_info
+    WHERE applicant_id = p_applicant_id AND website_id = p_website_id;
+
+    -- Extract fields configured to carry over to student profile
+    SELECT COALESCE(jsonb_object_agg(kv.key, kv.value), '{}'::jsonb)
+    INTO v_carry_over_info
+    FROM jsonb_each(v_raw_info) AS kv(key, value)
+    LEFT JOIN website_form_fields ff
+      ON ff.website_id = p_website_id
+     AND ff.target_scope = 'info'
+     AND ff.field_key = kv.key
+    WHERE COALESCE(ff.carry_over_to_student, TRUE) = TRUE;
+
+    -- Build immutable admission snapshot (includes all original applicant answers + exam metrics)
+    v_admission_snapshot := jsonb_build_object(
+        'application_no', v_applicant.application_no,
+        'admission_id', v_applicant.admission_id,
+        'exam_roll', v_applicant.exam_roll,
+        'exam_score', v_applicant.score,
+        'merit_position', v_applicant.merit_position,
+        'enrolled_by_staff_id', p_staff_id,
+        'enrolled_at', NOW(),
+        'raw_applicant_info', v_raw_info
+    );
+
     INSERT INTO website_student_info (
         website_id,
         student_id,
+        data,
+        admission_snapshot,
         verification_status,
         is_registered,
-        verification_notes,
-        data
-    )
-    SELECT 
-        v_website_id,
+        created_at,
+        updated_at
+    ) VALUES (
+        p_website_id,
         v_new_student_id,
+        v_carry_over_info,
+        v_admission_snapshot,
         'pending_setup',
         FALSE,
-        'Enrolled from admission application #' || app.application_no,
-        COALESCE(info.data, '{}'::jsonb)
-    FROM website_admission_applicants app
-    LEFT JOIN website_admission_applicant_info info ON info.applicant_id = app.id
-    WHERE app.id = p_applicant_id
-    ON CONFLICT (student_id) DO UPDATE SET 
-        data = website_student_info.data || EXCLUDED.data,
-        updated_at = CURRENT_TIMESTAMP;
+        NOW(),
+        NOW()
+    );
 
-    -- 5. Copy Guardian Details
-    INSERT INTO website_student_guardians (website_id, student_id, data)
-    SELECT v_website_id, v_new_student_id, COALESCE(data, '{}'::jsonb)
+    -- 5. Clone Guardians & Addresses
+    INSERT INTO website_student_guardians (website_id, student_id, data, created_at, updated_at)
+    SELECT p_website_id, v_new_student_id, COALESCE(data, '{}'::jsonb), NOW(), NOW()
     FROM website_admission_applicant_guardians
-    WHERE applicant_id = p_applicant_id
-    ON CONFLICT (student_id) DO UPDATE SET 
-        data = website_student_guardians.data || EXCLUDED.data,
-        updated_at = CURRENT_TIMESTAMP;
+    WHERE applicant_id = p_applicant_id AND website_id = p_website_id
+    ON CONFLICT (student_id) DO NOTHING;
 
-    -- 6. Copy Addresses
-    INSERT INTO website_student_addresses (website_id, student_id, data)
-    SELECT v_website_id, v_new_student_id, COALESCE(data, '{}'::jsonb)
+    INSERT INTO website_student_addresses (website_id, student_id, data, created_at, updated_at)
+    SELECT p_website_id, v_new_student_id, COALESCE(data, '{}'::jsonb), NOW(), NOW()
     FROM website_admission_applicant_addresses
-    WHERE applicant_id = p_applicant_id
-    ON CONFLICT (student_id) DO UPDATE SET 
-        data = website_student_addresses.data || EXCLUDED.data,
-        updated_at = CURRENT_TIMESTAMP;
+    WHERE applicant_id = p_applicant_id AND website_id = p_website_id
+    ON CONFLICT (student_id) DO NOTHING;
 
-    -- 7. Copy Primary Image & Signature
-    INSERT INTO website_student_pictures (website_id, student_id, image_url, image_id, is_primary)
-    SELECT v_website_id, v_new_student_id, photo_url, photo_public_id, TRUE
+    -- 6. Clone Cloudinary Photo & Signature References
+    INSERT INTO website_student_pictures (website_id, student_id, image_url, image_id, is_primary, created_at)
+    SELECT p_website_id, v_new_student_id, photo_url, photo_public_id, TRUE, NOW()
     FROM website_admission_applicant_images
-    WHERE applicant_id = p_applicant_id AND photo_url IS NOT NULL;
+    WHERE applicant_id = p_applicant_id AND website_id = p_website_id AND photo_url IS NOT NULL;
 
-    INSERT INTO website_student_signatures (website_id, student_id, signature_url, signature_id)
-    SELECT v_website_id, v_new_student_id, signature_url, signature_public_id
+    INSERT INTO website_student_signatures (website_id, student_id, signature_url, signature_id, created_at)
+    SELECT p_website_id, v_new_student_id, signature_url, signature_public_id, NOW()
     FROM website_admission_applicant_images
-    WHERE applicant_id = p_applicant_id AND signature_url IS NOT NULL
-    ON CONFLICT (student_id) DO UPDATE SET 
-        signature_url = EXCLUDED.signature_url,
-        updated_at = CURRENT_TIMESTAMP;
+    WHERE applicant_id = p_applicant_id AND website_id = p_website_id AND signature_url IS NOT NULL
+    ON CONFLICT (student_id) DO NOTHING;
 
-    -- 8. Establish Forward Link & Update Applicant Status
+    -- 7. Mark Applicant as Enrolled
     UPDATE website_admission_applicants
     SET status = 'enrolled',
         enrolled_student_id = v_new_student_id,
-        enrolled_at = CURRENT_TIMESTAMP
-    WHERE id = p_applicant_id;
+        selected_by_staff_id = COALESCE(selected_by_staff_id, p_staff_id),
+        enrolled_at = NOW(),
+        updated_at = NOW()
+    WHERE id = p_applicant_id AND website_id = p_website_id;
 
     RETURN v_new_student_id;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 
 

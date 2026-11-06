@@ -216,6 +216,12 @@ export async function PUT(request, { params }) {
     const isActive = data.is_active !== undefined ? Boolean(data.is_active) : Boolean(current.is_active);
     const gracePeriod = data.grace_period !== undefined ? Math.max(0, Number(data.grace_period)) : (current.grace_period !== undefined ? Number(current.grace_period) : 3);
     const sortOrder = data.sort_order !== undefined ? Number(data.sort_order) || 0 : (current.sort_order || 0);
+    const monthlyMail = data.monthly_mail !== undefined
+      ? Math.max(0, Number(data.monthly_mail))
+      : (current.monthly_mail !== undefined ? Number(current.monthly_mail) : 1000);
+    const monthlySms = data.monthly_sms !== undefined
+      ? Math.max(0, Number(data.monthly_sms))
+      : (current.monthly_sms !== undefined ? Number(current.monthly_sms) : 200);
 
     let featuresJson = current.features ? JSON.stringify(current.features) : '[]';
     if (data.features !== undefined) {
@@ -252,8 +258,10 @@ export async function PUT(request, { params }) {
            is_active = $24,
            grace_period = $25,
            sort_order = $26,
+           monthly_mail = $27,
+           monthly_sms = $28,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $27`,
+       WHERE id = $29`,
       [
         name, newSlug, shortDescription, tagline, description,
         monthlyPriceUsd, yearlyPriceUsd, monthlyPriceBdt, yearlyPriceBdt,
@@ -261,6 +269,7 @@ export async function PUT(request, { params }) {
         maxStudents, maxTeachers, maxStaff, maxStorage, maxStorageMb,
         isAvailableStudentPanel, isAvailableTeacherPanel, isAvailableCustomDomain,
         featuresJson, isPopular, isPublic, isActive, gracePeriod, sortOrder,
+        monthlyMail, monthlySms,
         current.id
       ]
     );

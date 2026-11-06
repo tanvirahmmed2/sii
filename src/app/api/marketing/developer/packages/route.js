@@ -247,6 +247,8 @@ export async function POST(request) {
     const isActive = data.is_active !== undefined ? Boolean(data.is_active) : true;
     const gracePeriod = data.grace_period !== undefined ? Math.max(0, Number(data.grace_period)) : 3;
     const sortOrder = Number(data.sort_order) || 0;
+    const monthlyMail = data.monthly_mail !== undefined ? Math.max(0, Number(data.monthly_mail)) : 1000;
+    const monthlySms = data.monthly_sms !== undefined ? Math.max(0, Number(data.monthly_sms)) : 200;
     const features = Array.isArray(data.features)
       ? JSON.stringify(data.features)
       : (typeof data.features === 'object' && data.features !== null ? JSON.stringify(data.features) : '[]');
@@ -258,14 +260,16 @@ export async function POST(request) {
         monthly_price, yearly_price, discount_percentage,
         max_students, max_teachers, max_staff, max_storage, max_storage_mb,
         is_available_student_panel, is_available_teacher_panel, is_available_custom_domain,
-        features, is_popular, is_public, is_active, grace_period, sort_order
+        features, is_popular, is_public, is_active, grace_period, sort_order,
+        monthly_mail, monthly_sms
       ) VALUES (
         $1, $2, $3, $4, $5,
         $6, $7, $8, $9,
         $10, $11, $12,
         $13, $14, $15, $16, $17,
         $18, $19, $20,
-        $21::jsonb, $22, $23, $24, $25, $26
+        $21::jsonb, $22, $23, $24, $25, $26,
+        $27, $28
       )
       RETURNING *`,
       [
@@ -274,7 +278,8 @@ export async function POST(request) {
         monthlyPriceUsd, yearlyPriceUsd, discountPercentage,
         maxStudents, maxTeachers, maxStaff, maxStorage, maxStorageMb,
         isAvailableStudentPanel, isAvailableTeacherPanel, isAvailableCustomDomain,
-        features, isPopular, isPublic, isActive, gracePeriod, sortOrder
+        features, isPopular, isPublic, isActive, gracePeriod, sortOrder,
+        monthlyMail, monthlySms
       ]
     );
 
@@ -428,6 +433,12 @@ export async function PUT(request) {
     const isActive = data.is_active !== undefined ? Boolean(data.is_active) : Boolean(current.is_active);
     const gracePeriod = data.grace_period !== undefined ? Math.max(0, Number(data.grace_period)) : (current.grace_period !== undefined ? Number(current.grace_period) : 3);
     const sortOrder = data.sort_order !== undefined ? Number(data.sort_order) || 0 : (current.sort_order || 0);
+    const monthlyMail = data.monthly_mail !== undefined
+      ? Math.max(0, Number(data.monthly_mail))
+      : (current.monthly_mail !== undefined ? Number(current.monthly_mail) : 1000);
+    const monthlySms = data.monthly_sms !== undefined
+      ? Math.max(0, Number(data.monthly_sms))
+      : (current.monthly_sms !== undefined ? Number(current.monthly_sms) : 200);
 
     let featuresJson = current.features ? JSON.stringify(current.features) : '[]';
     if (data.features !== undefined) {
@@ -464,8 +475,10 @@ export async function PUT(request) {
            is_active = $24,
            grace_period = $25,
            sort_order = $26,
+           monthly_mail = $27,
+           monthly_sms = $28,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $27`,
+       WHERE id = $29`,
       [
         name, slug, shortDescription, tagline, description,
         monthlyPriceUsd, yearlyPriceUsd, monthlyPriceBdt, yearlyPriceBdt,
@@ -473,6 +486,7 @@ export async function PUT(request) {
         maxStudents, maxTeachers, maxStaff, maxStorage, maxStorageMb,
         isAvailableStudentPanel, isAvailableTeacherPanel, isAvailableCustomDomain,
         featuresJson, isPopular, isPublic, isActive, gracePeriod, sortOrder,
+        monthlyMail, monthlySms,
         Number(id)
       ]
     );

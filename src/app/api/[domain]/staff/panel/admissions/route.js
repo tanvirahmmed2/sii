@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyStaffPaymentAccess } from 'src/lib/database/paymentGateways.js';
+import { syncAdmissionFormSnapshot } from '@/lib/form-criteria-engine';
 
 /**
  * GET /api/[domain]/staff/panel/admissions
@@ -137,6 +138,8 @@ export async function POST(request, context) {
       last_class,
       last_class_grade,
       last_institution,
+      criteria_rules = null,
+      form_field_configs = null,
       exam_subjects = []
     } = body;
 
@@ -180,12 +183,14 @@ export async function POST(request, context) {
         website_id, department_id, session_id, class_id, title, description,
         start_date, end_date, exam_date, result_date, min_age, max_age, capacity,
         status, is_published, created_by_staff_id,
-        selection_method, last_class, last_class_grade, last_institution
+        selection_method, last_class, last_class_grade, last_institution,
+        criteria_rules
       ) VALUES (
         $1, $2, $3, $4, $5, $6,
         $7, $8, $9, $10, $11, $12, $13,
         $14, $15, $16,
-        $17, $18, $19, $20
+        $17, $18, $19, $20,
+        $21
       ) RETURNING *
     `, [
       auth.website.id,
@@ -207,10 +212,33 @@ export async function POST(request, context) {
       validSelectionMethod,
       last_class ? last_class.trim() : 'N/A',
       last_class_grade !== undefined && last_class_grade !== '' && last_class_grade !== null ? parseFloat(last_class_grade) : null,
-      last_institution ? last_institution.trim() : 'N/A'
+      last_institution ? last_institution.trim() : 'N/A',
+      criteria_rules ? JSON.stringify(criteria_rules) : JSON.stringify({
+        age: { enabled: false, min_years: null, max_years: null, as_of_date: null },
+        rules: { all: [] }
+      })
     ]);
 
     const createdAdm = insertRes.rows[0];
+
+    // 1b. Map Per-Circular Form Field Configs & Freeze Schema Snapshot
+    if (Array.isArray(form_field_configs) && form_field_configs.length > 0) {
+      const fieldIds = form_field_configs.map((f) => parseInt(f.form_field_id || f.id, 10));
+      const reqs = form_field_configs.map((f) => Boolean(f.is_required));
+      const sorts = form_field_configs.map((f, i) => parseInt(f.sort_order !== undefined ? f.sort_order : i, 10) || 0);
+
+      await queryDb(`
+        INSERT INTO website_admission_form_configs (website_id, admission_id, form_field_id, is_required, sort_order)
+        SELECT $1, $2, t.field_id, t.is_req, t.s_order
+        FROM UNNEST($3::bigint[], $4::boolean[], $5::int[]) AS t(field_id, is_req, s_order)
+        ON CONFLICT (admission_id, form_field_id) DO UPDATE SET
+          is_required = EXCLUDED.is_required,
+          sort_order = EXCLUDED.sort_order
+      `, [auth.website.id, createdAdm.id, fieldIds, reqs, sorts]);
+    }
+
+    const frozenSnapshot = await syncAdmissionFormSnapshot(queryDb, auth.website.id, createdAdm.id);
+    createdAdm.form_schema_snapshot = frozenSnapshot;
 
     // 2. Insert admission fee structure
     const feeRes = await queryDb(`
@@ -324,6 +352,8 @@ export async function PUT(request, context) {
       last_class,
       last_class_grade,
       last_institution,
+      criteria_rules = null,
+      form_field_configs = null,
       exam_subjects
     } = body;
 
@@ -381,8 +411,9 @@ export async function PUT(request, context) {
           last_class = COALESCE($16, last_class),
           last_class_grade = $17,
           last_institution = COALESCE($18, last_institution),
+          criteria_rules = COALESCE($19, criteria_rules),
           updated_at = CURRENT_TIMESTAMP
-      WHERE id = $19 AND website_id = $20
+      WHERE id = $20 AND website_id = $21
       RETURNING *
     `, [
       title ? title.trim() : null,
@@ -403,11 +434,39 @@ export async function PUT(request, context) {
       last_class !== undefined ? (last_class ? last_class.trim() : 'N/A') : null,
       last_class_grade !== undefined && last_class_grade !== '' && last_class_grade !== null ? parseFloat(last_class_grade) : null,
       last_institution !== undefined ? (last_institution ? last_institution.trim() : 'N/A') : null,
+      criteria_rules ? JSON.stringify(criteria_rules) : null,
       id,
       auth.website.id
     ]);
 
     const updatedCirc = updateRes.rows[0];
+
+    // Upsert Per-Circular Form Field Configs & Re-freeze Snapshot
+    if (Array.isArray(form_field_configs)) {
+      if (form_field_configs.length > 0) {
+        const fieldIds = form_field_configs.map((f) => parseInt(f.form_field_id || f.id, 10));
+        const reqs = form_field_configs.map((f) => Boolean(f.is_required));
+        const sorts = form_field_configs.map((f, i) => parseInt(f.sort_order !== undefined ? f.sort_order : i, 10) || 0);
+
+        await queryDb(`
+          DELETE FROM website_admission_form_configs
+          WHERE admission_id = $1 AND website_id = $2 AND NOT (form_field_id = ANY($3::bigint[]))
+        `, [id, auth.website.id, fieldIds]);
+
+        await queryDb(`
+          INSERT INTO website_admission_form_configs (website_id, admission_id, form_field_id, is_required, sort_order)
+          SELECT $1, $2, t.field_id, t.is_req, t.s_order
+          FROM UNNEST($3::bigint[], $4::boolean[], $5::int[]) AS t(field_id, is_req, s_order)
+          ON CONFLICT (admission_id, form_field_id) DO UPDATE SET
+            is_required = EXCLUDED.is_required,
+            sort_order = EXCLUDED.sort_order
+        `, [auth.website.id, id, fieldIds, reqs, sorts]);
+      } else {
+        await queryDb(`DELETE FROM website_admission_form_configs WHERE admission_id = $1 AND website_id = $2`, [id, auth.website.id]);
+      }
+    }
+    const frozenSnapshot = await syncAdmissionFormSnapshot(queryDb, auth.website.id, id);
+    updatedCirc.form_schema_snapshot = frozenSnapshot;
 
     // Upsert or update fee
     if (fee_amount !== undefined) {

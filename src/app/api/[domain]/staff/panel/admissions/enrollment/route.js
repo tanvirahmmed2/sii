@@ -196,19 +196,23 @@ export async function POST(request, context) {
 
     // 2. Perform atomic in-database enrollment via RPC
     const setupToken = crypto.randomBytes(32).toString('hex');
+    const setupTokenExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const staffId = auth.user?.id || null;
     const enrollResult = await queryDb(
-      `SELECT fn_enroll_admission_applicant($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) AS new_student_id`,
+      `SELECT fn_enroll_admission_applicant($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) AS new_student_id`,
       [
+        auth.website.id,
         appId,
-        finalClassId,
         finalSessionId,
+        finalClassId,
         finalSectionId,
         candidate.circular_department_id || null,
+        finalRoll,
         finalRegNo,
         studentUniqueId,
-        finalRoll,
-        null, // temp_password_hash (student sets password via setup token)
-        setupToken
+        setupToken,
+        setupTokenExpires,
+        staffId
       ]
     );
 

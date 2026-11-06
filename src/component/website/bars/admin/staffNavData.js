@@ -1229,16 +1229,6 @@ export const staffNavData = [
         "title": "Meta",
         "module": "settings",
         "path": "/configure-meta"
-      },
-      {
-        "title": "Mailer",
-        "module": "communications",
-        "path": "/configure-mailer"
-      },
-      {
-        "title": "SMS",
-        "module": "communications",
-        "path": "/configure-sms"
       }
     ]
   },

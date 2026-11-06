@@ -363,29 +363,49 @@ async function handleSetupSubmission(request, context) {
       hashedPassword = await hashPassword(password);
     }
 
-    // 1. Upsert website_student_info (Modular)
+    // 1. Upsert website_student_info (Modular, protecting non-editable carry-over values)
+    const currentInfoRes = await queryDb(
+      `SELECT data FROM website_student_info WHERE student_id = $1 AND website_id = $2`,
+      [student.id, website.id]
+    );
+    const existingStudentData = currentInfoRes.rows[0]?.data || {};
+
+    const nonEditableFieldsRes = await queryDb(
+      `SELECT field_key FROM website_form_fields WHERE website_id = $1 AND is_editable_by_student = FALSE`,
+      [website.id]
+    );
+    const nonEditableKeys = new Set(nonEditableFieldsRes.rows.map((r) => r.field_key));
+
     const finalInfo = {
-      name: name?.trim() || null,
+      ...existingStudentData,
+      name: name?.trim() || existingStudentData.name || null,
       email: inputEmail,
-      number: number || null,
-      gender: gender || null,
-      blood_group: blood_group || null,
-      date_of_birth: date_of_birth || null,
-      religion: religion || null,
+      number: number || existingStudentData.number || null,
+      gender: gender || existingStudentData.gender || null,
+      blood_group: blood_group || existingStudentData.blood_group || null,
+      date_of_birth: date_of_birth || existingStudentData.date_of_birth || null,
+      religion: religion || existingStudentData.religion || null,
       ...dynamicInfo,
     };
+
+    // Restore immutable carry-over fields
+    for (const k of nonEditableKeys) {
+      if (existingStudentData[k] !== undefined) {
+        finalInfo[k] = existingStudentData[k];
+      }
+    }
 
     await queryDb(
       `INSERT INTO website_student_info (
           website_id, student_id, data, is_registered, verification_status,
           verification_notes, updated_at
        )
-       VALUES ($1, $2, $3, TRUE, 'verified', 'Verified via institutional email mailer OTP', CURRENT_TIMESTAMP)
+       VALUES ($1, $2, $3, TRUE, 'submitted', 'Verified via institutional email mailer OTP', CURRENT_TIMESTAMP)
        ON CONFLICT (student_id)
        DO UPDATE SET
-          data = website_student_info.data || EXCLUDED.data,
+          data = EXCLUDED.data,
           is_registered = TRUE,
-          verification_status = 'verified',
+          verification_status = 'submitted',
           updated_at = CURRENT_TIMESTAMP`,
       [website.id, student.id, JSON.stringify(finalInfo)]
     );
