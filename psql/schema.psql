@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS developers (
     role_id BIGINT REFERENCES developer_roles(id) ON DELETE SET NULL,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
-    phone VARCHAR(50),
+    phone VARCHAR(50) UNIQUE NOT NULL,
     designation VARCHAR(100) DEFAULT 'Software Engineer',
     password VARCHAR(255) NOT NULL,
     avatar_url TEXT,
@@ -103,6 +103,8 @@ CREATE TABLE IF NOT EXISTS developers (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_developers_phone ON developers(phone);
 
 ALTER TABLE developers ADD COLUMN IF NOT EXISTS role_id BIGINT REFERENCES developer_roles(id) ON DELETE SET NULL;
 
@@ -358,14 +360,11 @@ CREATE TABLE IF NOT EXISTS creators (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
-    phone VARCHAR(50),
+    phone VARCHAR(50) UNIQUE NOT NULL,
     country VARCHAR(100),
     city VARCHAR(100),
     address TEXT,
-    password VARCHAR(255), -- Nullable for OAuth / Google sign-in
-    google_id VARCHAR(255),
-    auth_provider VARCHAR(50) DEFAULT 'local',
-    avatar_url TEXT,
+    password VARCHAR(255) NOT NULL,
     email_verified BOOLEAN DEFAULT FALSE,
     verification_token VARCHAR(255),
     verification_token_expires TIMESTAMPTZ,
@@ -378,7 +377,8 @@ CREATE TABLE IF NOT EXISTS creators (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
-CREATE UNIQUE INDEX IF NOT EXISTS idx_creators_google_id ON creators(google_id) WHERE google_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_creators_phone ON creators(phone);
+CREATE INDEX IF NOT EXISTS idx_creators_email ON creators(email);
 
 DROP TRIGGER IF EXISTS update_creators_updated_at ON creators;
 CREATE TRIGGER update_creators_updated_at

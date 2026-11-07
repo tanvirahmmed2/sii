@@ -133,9 +133,9 @@ export async function getCreatorSession(request) {
       name: c.name,
       email: c.email,
       phone: c.phone,
-      bio: c.bio || null,
-      avatarUrl: c.avatar_url || null,
-      authProvider: c.auth_provider || 'local',
+      country: c.country || null,
+      city: c.city || null,
+      address: c.address || null,
       isActive: c.is_active,
       isVerified: c.is_verified || c.email_verified || false,
       createdAt: c.created_at,
@@ -147,16 +147,26 @@ export async function getCreatorSession(request) {
   }
 }
 
-export async function authenticateCreator(email, password, { ip = '127.0.0.1', userAgent = 'Unknown', twoFactorCode } = {}) {
-  const cleanEmail = String(email || '').trim().toLowerCase();
+export async function authenticateCreator(identifier, password, { ip = '127.0.0.1', userAgent = 'Unknown', twoFactorCode } = {}) {
+  const raw = String(identifier || '').trim();
+  if (!raw) {
+    throw new Error('Email or phone number is required.');
+  }
+
+  const cleanEmail = raw.toLowerCase();
+  const digits = raw.replace(/\D/g, '');
 
   const res = await queryDb(
-    `SELECT * FROM creators WHERE LOWER(email) = $1 LIMIT 1`,
-    [cleanEmail]
+    `SELECT * FROM creators 
+     WHERE LOWER(email) = $1 
+        OR phone = $2 
+        OR (LENGTH($3) >= 8 AND RIGHT(REGEXP_REPLACE(phone, '\\D', '', 'g'), 10) = RIGHT($3, 10))
+     LIMIT 1`,
+    [cleanEmail, raw, digits]
   );
 
   if (res.rows.length === 0) {
-    throw new Error('No creator account found with this email.');
+    throw new Error('No creator account found with this email or phone number.');
   }
 
   const creator = res.rows[0];

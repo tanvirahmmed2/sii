@@ -208,6 +208,20 @@ export async function POST(request) {
     delete updateData.role;
     delete updateData.role_id;
 
+    if (updateData.phone) {
+      updateData.phone = updateData.phone.trim();
+      const phoneDigits = updateData.phone.replace(/\D/g, '');
+      const existingPhone = await queryDb(
+        `SELECT id FROM developers 
+         WHERE (phone = $1 OR (LENGTH($2) >= 8 AND RIGHT(REGEXP_REPLACE(phone, '\\D', '', 'g'), 10) = RIGHT($2, 10))) 
+           AND id != $3 LIMIT 1`,
+        [updateData.phone, phoneDigits, targetId]
+      );
+      if (existingPhone.rows.length > 0) {
+        return NextResponse.json({ success: false, error: 'A developer with this phone number already exists.' }, { status: 400 });
+      }
+    }
+
     if (updateData.password && updateData.password.trim()) {
       updateData.password = await hashPassword(updateData.password.trim());
     } else {

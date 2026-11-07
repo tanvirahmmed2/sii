@@ -6,7 +6,8 @@ import { SITE_NAME } from 'src/lib/database/secret';
 
 export default function AdminRecoveryForm() {
   const [step, setStep] = useState('request'); 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
+  const [readOnly, setReadOnly] = useState(true);
   const [token, setToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -20,17 +21,23 @@ export default function AdminRecoveryForm() {
     setError('');
     setSuccessMessage('');
 
+    if (!identifier.trim()) {
+      setError('Email or phone number is required.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch('/api/marketing/developer/me/recovery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'request_token', email }),
+        body: JSON.stringify({ action: 'request_token', identifier: identifier.trim() }),
       });
 
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setSuccessMessage(data.message || 'Recovery token has been sent to your email.');
+        setSuccessMessage(data.message || 'Recovery token has been sent to your registered email.');
         setStep('reset');
       } else {
         setError(data.error || 'Failed to generate recovery token.');
@@ -64,8 +71,8 @@ export default function AdminRecoveryForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'reset_password',
-          email,
-          token,
+          identifier: identifier.trim(),
+          token: token.trim(),
           newPassword,
         }),
       });
@@ -108,7 +115,7 @@ export default function AdminRecoveryForm() {
             <p>Your password has been updated. You can now login with your new password.</p>
           </div>
           <Link
-            href={`/developer-auth/login?email=${encodeURIComponent(email)}`}
+            href="/developer-auth/login"
             className="block text-center w-full py-2.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium transition-colors"
           >
             Login with New Password
@@ -117,7 +124,7 @@ export default function AdminRecoveryForm() {
       )}
 
       {step === 'reset' && (
-        <form onSubmit={handleResetPassword} className="space-y-4">
+        <form onSubmit={handleResetPassword} autoComplete="off" className="space-y-4">
           {successMessage && (
             <div className="p-3 rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-xs font-normal">
               {successMessage}
@@ -126,42 +133,47 @@ export default function AdminRecoveryForm() {
 
           <div className="space-y-1">
             <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">
-              Security Token
+              Security Token *
             </label>
             <input
               type="text"
+              name="developer_recovery_token"
+              autoComplete="off"
               required
               value={token}
               onChange={(e) => setToken(e.target.value)}
-              placeholder="e.g. 123D1"
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-mono font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
             />
           </div>
 
           <div className="space-y-1">
             <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">
-              New Password
+              New Password *
             </label>
             <input
               type="password"
+              name="developer_new_password"
+              autoComplete="new-password"
               required
+              minLength={6}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Minimum 6 characters"
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
             />
           </div>
 
           <div className="space-y-1">
             <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">
-              Confirm New Password
+              Confirm New Password *
             </label>
             <input
               type="password"
+              name="developer_confirm_password"
+              autoComplete="new-password"
               required
+              minLength={6}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Repeat new password"
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
             />
           </div>
@@ -177,19 +189,34 @@ export default function AdminRecoveryForm() {
       )}
 
       {step === 'request' && (
-        <form onSubmit={handleRequestToken} className="space-y-4">
+        <form onSubmit={handleRequestToken} autoComplete="off" className="space-y-4">
+          <input
+            type="text"
+            name="decoy_username_prevent_autofill"
+            tabIndex={-1}
+            aria-hidden="true"
+            autoComplete="username"
+            className="sr-only opacity-0 absolute -z-50 pointer-events-none h-0 w-0"
+          />
           <div className="space-y-1">
             <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">
-              Developer Email Address
+              Email or Phone Number *
             </label>
             <input
-              type="email"
+              type="text"
+              name="dev_rec_identifier"
+              autoComplete="off"
               required
-              placeholder="developer@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              readOnly={readOnly}
+              onFocus={() => setReadOnly(false)}
+              onPointerDown={() => setReadOnly(false)}
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
             />
+            <p className="text-[11px] text-slate-400 mt-1">
+              Enter your registered email address or phone number. A security recovery token will be sent to your registered email address.
+            </p>
           </div>
 
           <button

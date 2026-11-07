@@ -12,8 +12,9 @@ export default function AdminVerifyForm() {
   const initialToken = searchParams.get('token') || '';
   const errorParam = searchParams.get('error') || '';
 
-  const [email, setEmail] = useState(initialEmail);
-  const [code, setCode] = useState(initialToken ? '' : '');
+  const [email, setEmail] = useState('');
+  const [readOnly, setReadOnly] = useState(true);
+  const [code, setCode] = useState('');
   const [autoVerifying, setAutoVerifying] = useState(Boolean(initialToken));
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
@@ -22,12 +23,6 @@ export default function AdminVerifyForm() {
   const [resendCooldown, setResendCooldown] = useState(0);
 
   const autoVerifyAttempted = useRef(false);
-
-  useEffect(() => {
-    if (initialEmail && !email) {
-      setEmail(initialEmail);
-    }
-  }, [initialEmail]);
 
   useEffect(() => {
     if (errorParam === 'invalid_token') {
@@ -63,8 +58,7 @@ export default function AdminVerifyForm() {
           if (data.success) {
             setSuccess(data.message || 'Account verified successfully. Redirecting to login...');
             setTimeout(() => {
-              const targetEmail = data.email || initialEmail;
-              router.push(`/developer-auth/login?verified=true&email=${encodeURIComponent(targetEmail)}`);
+              router.push('/developer-auth/login?verified=true');
             }, 1200);
           } else {
             setError(data.error || 'Verification link is invalid or expired.');
@@ -98,7 +92,7 @@ export default function AdminVerifyForm() {
       if (res.ok && data.success) {
         setSuccess(data.message || 'Account verified successfully. Redirecting to login...');
         setTimeout(() => {
-          router.push(`/developer-auth/login?verified=true&email=${encodeURIComponent(email)}`);
+          router.push('/developer-auth/login?verified=true');
         }, 1200);
       } else {
         setError(data.error || 'Verification failed. Please check the code or link.');
@@ -175,17 +169,29 @@ export default function AdminVerifyForm() {
         </div>
       )}
 
-      <form onSubmit={handleVerify} className="space-y-4">
+      <form onSubmit={handleVerify} autoComplete="off" className="space-y-4">
+        <input
+          type="text"
+          name="decoy_username_prevent_autofill"
+          tabIndex={-1}
+          aria-hidden="true"
+          autoComplete="username"
+          className="sr-only opacity-0 absolute -z-50 pointer-events-none h-0 w-0"
+        />
         <div className="space-y-1">
           <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">
             Developer Email
           </label>
           <input
             type="email"
+            name="dev_verify_email"
+            autoComplete="off"
             required
+            readOnly={readOnly}
+            onFocus={() => setReadOnly(false)}
+            onPointerDown={() => setReadOnly(false)}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="developer@example.com"
             className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
           />
         </div>
@@ -196,10 +202,14 @@ export default function AdminVerifyForm() {
           </label>
           <input
             type="text"
+            name="dev_verify_code"
+            autoComplete="off"
             required
+            readOnly={readOnly}
+            onFocus={() => setReadOnly(false)}
+            onPointerDown={() => setReadOnly(false)}
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            placeholder="Enter verification code or token"
             className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-mono font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
           />
         </div>

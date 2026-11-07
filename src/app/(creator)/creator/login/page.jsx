@@ -12,8 +12,9 @@ function CreatorLoginForm() {
   const redirectParam = searchParams.get('redirect');
 
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [readOnly, setReadOnly] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [is2FARequired, setIs2FARequired] = useState(false);
@@ -67,7 +68,7 @@ function CreatorLoginForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'login',
-          email: email.trim().toLowerCase(),
+          identifier: identifier.trim(),
           password,
           twoFactorCode: is2FARequired ? twoFactorCode.trim() : undefined,
         }),
@@ -78,7 +79,7 @@ function CreatorLoginForm() {
       if (!res.ok || !data.success) {
         if (data.requiresVerification) {
           setIsUnverified(true);
-          setUnverifiedEmail(data.email || email);
+          setUnverifiedEmail(data.email || identifier);
           setError(data.error || 'Account not verified. Please verify your email.');
           return;
         }
@@ -195,17 +196,36 @@ function CreatorLoginForm() {
         </div>
       ) : (
         <form onSubmit={handleLogin} autoComplete="off" className="space-y-3">
+          <input
+            type="text"
+            name="decoy_username_prevent_autofill"
+            tabIndex={-1}
+            aria-hidden="true"
+            autoComplete="username"
+            className="sr-only opacity-0 absolute -z-50 pointer-events-none h-0 w-0"
+          />
+          <input
+            type="password"
+            name="decoy_password_prevent_autofill"
+            tabIndex={-1}
+            aria-hidden="true"
+            autoComplete="current-password"
+            className="sr-only opacity-0 absolute -z-50 pointer-events-none h-0 w-0"
+          />
           <div>
             <label className="block text-[11px] font-medium text-slate-700 mb-1">
-              Email Address *
+              Email or Phone Number *
             </label>
             <input
-              type="email"
-              name="creator_login_email"
+              type="text"
+              name="creator_auth_identifier"
               autoComplete="off"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              readOnly={readOnly}
+              onFocus={() => setReadOnly(false)}
+              onPointerDown={() => setReadOnly(false)}
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
             />
           </div>
@@ -225,9 +245,12 @@ function CreatorLoginForm() {
             <div className="relative flex items-center">
               <input
                 type={showPassword ? 'text' : 'password'}
-                name="creator_login_password"
-                autoComplete="current-password"
+                name="creator_auth_secret"
+                autoComplete="new-password"
                 required
+                readOnly={readOnly}
+                onFocus={() => setReadOnly(false)}
+                onPointerDown={() => setReadOnly(false)}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800 pr-12"

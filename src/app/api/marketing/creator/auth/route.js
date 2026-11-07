@@ -17,31 +17,54 @@ export async function handleAuthAction(body, request) {
 
   if (action === 'register') {
     const d = body.creatorData || body;
-    if (!d.name || !d.email || !d.password) {
-      return NextResponse.json({ success: false, error: 'Name, email, and password are required.' }, { status: 400 });
+    if (!d.name || !d.email || !d.password || !d.phone) {
+      return NextResponse.json({ success: false, error: 'Name, email, phone number, and password are required.' }, { status: 400 });
     }
 
     const cleanEmail = String(d.email).trim().toLowerCase();
-    const existing = await queryDb('SELECT id FROM creators WHERE LOWER(email) = $1 LIMIT 1', [cleanEmail]);
+    const cleanPhone = String(d.phone).trim();
+    if (cleanPhone.length < 5) {
+      return NextResponse.json({ success: false, error: 'Please enter a valid phone number.' }, { status: 400 });
+    }
+
+    const phoneDigits = cleanPhone.replace(/\D/g, '');
+
+    const existing = await queryDb(
+      `SELECT id, email, phone FROM creators 
+       WHERE LOWER(email) = $1 
+          OR phone = $2 
+          OR (LENGTH($3) >= 8 AND RIGHT(REGEXP_REPLACE(phone, '\\D', '', 'g'), 10) = RIGHT($3, 10))
+       LIMIT 1`,
+      [cleanEmail, cleanPhone, phoneDigits]
+    );
+
     if (existing.rows.length > 0) {
+      const ex = existing.rows[0];
+      if (ex.email && ex.email.toLowerCase() === cleanEmail) {
+        return NextResponse.json({
+          success: false,
+          error: 'An account with this email already exists. Please log in.',
+          registeredWithPassword: true,
+        }, { status: 409 });
+      }
       return NextResponse.json({
         success: false,
-        error: 'An account with this email already exists. Please log in.',
+        error: 'An account with this phone number already exists. Please log in.',
         registeredWithPassword: true,
       }, { status: 409 });
     }
 
     const hashedPassword = await hashPassword(d.password);
     const verificationCode = generateAlphanumericToken(6);
-    const phone = (d.phone || '').trim() || null;
+    const phone = cleanPhone;
     const country = (d.country || '').trim() || null;
     const city = (d.city || '').trim() || null;
     const address = (d.address || '').trim() || null;
 
     const res = await queryDb(
-      `INSERT INTO creators (name, email, password, phone, country, city, address, auth_provider, email_verified, verification_token, verification_token_expires, is_active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'local', FALSE, $8, CURRENT_TIMESTAMP + INTERVAL '24 hours', TRUE)
-       RETURNING id, name, email, phone, auth_provider, email_verified, is_active, created_at`,
+      `INSERT INTO creators (name, email, password, phone, country, city, address, email_verified, verification_token, verification_token_expires, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, $8, CURRENT_TIMESTAMP + INTERVAL '24 hours', TRUE)
+       RETURNING id, name, email, phone, email_verified, is_active, created_at`,
       [
         d.name.trim(),
         cleanEmail,
@@ -99,18 +122,24 @@ export async function handleAuthAction(body, request) {
 
 
   if (action === 'verify') {
-    const { token, code, email } = body;
+    const { token, code, email, identifier, phone } = body;
     const candidateCode = String(code || token || '').trim();
+    const raw = String(email || identifier || phone || '').trim();
 
-    if (!candidateCode || !email) {
-      return NextResponse.json({ success: false, error: 'Verification code and email are required.' }, { status: 400 });
+    if (!candidateCode || !raw) {
+      return NextResponse.json({ success: false, error: 'Verification code and email or phone number are required.' }, { status: 400 });
     }
 
-    const cleanEmail = String(email).trim().toLowerCase();
+    const cleanEmail = raw.toLowerCase();
+    const phoneDigits = raw.replace(/\D/g, '');
     const res = await queryDb(
       `SELECT id, name, email, email_verified, verification_token, verification_token_expires 
-       FROM creators WHERE LOWER(email) = $1 LIMIT 1`,
-      [cleanEmail]
+       FROM creators 
+       WHERE LOWER(email) = $1 
+          OR phone = $2 
+          OR (LENGTH($3) >= 8 AND RIGHT(REGEXP_REPLACE(phone, '\\D', '', 'g'), 10) = RIGHT($3, 10))
+       LIMIT 1`,
+      [cleanEmail, raw, phoneDigits]
     );
 
     const creator = res.rows[0];
@@ -179,20 +208,25 @@ export async function handleAuthAction(body, request) {
   }
 
   if (action === 'resend_verification') {
-    const { email } = body;
-    if (!email) {
-      return NextResponse.json({ success: false, error: 'Email is required.' }, { status: 400 });
+    const raw = String(body.email || body.identifier || body.phone || '').trim();
+    if (!raw) {
+      return NextResponse.json({ success: false, error: 'Email address or phone number is required.' }, { status: 400 });
     }
 
-    const cleanEmail = String(email).trim().toLowerCase();
+    const cleanEmail = raw.toLowerCase();
+    const phoneDigits = raw.replace(/\D/g, '');
     const res = await queryDb(
-      'SELECT id, name, email, is_active, email_verified FROM creators WHERE LOWER(email) = $1 LIMIT 1',
-      [cleanEmail]
+      `SELECT id, name, email, is_active, email_verified FROM creators 
+       WHERE LOWER(email) = $1 
+          OR phone = $2 
+          OR (LENGTH($3) >= 8 AND RIGHT(REGEXP_REPLACE(phone, '\\D', '', 'g'), 10) = RIGHT($3, 10))
+       LIMIT 1`,
+      [cleanEmail, raw, phoneDigits]
     );
 
     const creator = res.rows[0];
     if (!creator) {
-      return NextResponse.json({ success: false, error: 'Creator account not found with this email.' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Creator account not found with this email or phone number.' }, { status: 404 });
     }
 
     if (creator.is_active === false) {
@@ -211,14 +245,15 @@ export async function handleAuthAction(body, request) {
       [newCode, creator.id]
     );
 
-    console.log(`[CREATOR RESEND] New verification code for ${cleanEmail}: ${newCode}`);
+    const targetEmail = creator.email;
+    console.log(`[CREATOR RESEND] New verification code for ${targetEmail}: ${newCode}`);
 
     const baseUrl = getBaseUrl(request);
-    const verifyUrl = `${baseUrl}/creator/verify?token=${newCode}&email=${encodeURIComponent(cleanEmail)}`;
+    const verifyUrl = `${baseUrl}/creator/verify?token=${newCode}&email=${encodeURIComponent(targetEmail)}`;
 
     try {
       await sendEmail({
-        to: cleanEmail,
+        to: targetEmail,
         subject: `Your Verification Code: ${newCode} - ${SITE_NAME}`,
         html: buildStyledEmail({
           title: 'Verify Your Creator Account',
@@ -246,12 +281,13 @@ export async function handleAuthAction(body, request) {
   }
 
   if (action === 'login') {
-    const { email, password, twoFactorCode } = body;
+    const identifier = (body.identifier || body.email || body.phone || '').trim();
+    const { password, twoFactorCode } = body;
     const ip = request?.headers?.get('x-forwarded-for')?.split(',')[0]?.trim() || request?.headers?.get('x-real-ip') || '127.0.0.1';
     const userAgent = request?.headers?.get('user-agent') || 'Unknown';
 
     try {
-      const result = await authenticateCreator(email, password, { ip, userAgent, twoFactorCode });
+      const result = await authenticateCreator(identifier, password, { ip, userAgent, twoFactorCode });
       const response = NextResponse.json({
         success: true,
         creator: result.creator,
@@ -303,73 +339,97 @@ export async function handleAuthAction(body, request) {
   }
 
   if (action === 'recover') {
-    const { email } = body;
-    if (!email) {
-      return NextResponse.json({ success: false, error: 'Email address is required.' }, { status: 400 });
+    const raw = String(body.identifier || body.email || body.phone || '').trim();
+    if (!raw) {
+      return NextResponse.json({ success: false, error: 'Email address or phone number is required.' }, { status: 400 });
     }
 
-    const cleanEmail = String(email).trim().toLowerCase();
+    const cleanEmail = raw.toLowerCase();
+    const phoneDigits = raw.replace(/\D/g, '');
     const recoveryCode = generateAlphanumericToken(6);
 
     const res = await queryDb(
       `UPDATE creators 
        SET recovery_token = $1, recovery_token_expires = CURRENT_TIMESTAMP + INTERVAL '1 hour', updated_at = CURRENT_TIMESTAMP
-       WHERE LOWER(email) = LOWER($2)
-       RETURNING id, name, email`,
-      [recoveryCode, cleanEmail]
+       WHERE id = (
+         SELECT id FROM creators 
+         WHERE LOWER(email) = $2 
+            OR phone = $3 
+            OR (LENGTH($4) >= 8 AND RIGHT(REGEXP_REPLACE(phone, '\\D', '', 'g'), 10) = RIGHT($4, 10))
+         LIMIT 1
+       )
+       RETURNING id, name, email, phone`,
+      [recoveryCode, cleanEmail, raw, phoneDigits]
     );
 
     if (res.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'No creator account found with this email address.' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'No creator account found with this email or phone number.' }, { status: 404 });
     }
 
     const creator = res.rows[0];
-    console.log(`[CREATOR RECOVERY] Password reset code for ${cleanEmail}: ${recoveryCode}`);
+    const targetEmail = creator.email;
+    const baseUrl = getBaseUrl(request);
+    const resetUrl = `${baseUrl}/creator/recovery?token=${recoveryCode}&email=${encodeURIComponent(targetEmail)}`;
+
+    console.log(`[CREATOR RECOVERY] Password reset code for ${targetEmail}: ${recoveryCode}`);
 
     try {
       await sendEmail({
-        to: cleanEmail,
+        to: targetEmail,
         subject: `Your Password Reset Code: ${recoveryCode} - ${SITE_NAME}`,
         html: buildStyledEmail({
           title: 'Password Reset Request',
           subtitle: `${SITE_NAME} Security Recovery`,
           recipientName: creator.name,
           bodyParagraphs: [
-            `You requested to reset your password on ${SITE_NAME}. Use the security recovery token below to set your new password:`,
+            `You requested to reset your password on ${SITE_NAME}. Use the security recovery token below or click the reset link to set your new password:`,
           ],
           code: recoveryCode,
           codeLabel: 'Recovery Token',
-          footerNote: 'This recovery token will expire in 1 hour. If you did not request a password reset, please ignore this email.',
+          actionUrl: resetUrl,
+          actionText: 'Reset Password Instantly',
+          footerNote: 'This recovery token and link will expire in 1 hour. If you did not request a password reset, please ignore this email.',
         }),
-        text: `Hello ${creator.name},\n\nYour ${SITE_NAME} password reset code is: ${recoveryCode}\n\nExpires in 1 hour.`,
+        text: `Hello ${creator.name},\n\nYour ${SITE_NAME} password reset code is: ${recoveryCode}\n\nOr reset directly at:\n${resetUrl}\n\nExpires in 1 hour.`,
       });
     } catch (mailErr) {
       console.warn('Notice sending creator reset email:', mailErr.message);
     }
 
+    const maskedEmail = targetEmail.replace(/^(.)(.*)(@.*)$/, (_, first, middle, domain) => {
+      return first + '*'.repeat(Math.max(middle.length, 3)) + domain;
+    });
+
     return NextResponse.json({
       success: true,
-      message: 'A 6-digit password reset code has been sent to your email.',
+      message: `A 6-digit password reset code has been sent to your email (${maskedEmail}).`,
+      email: targetEmail,
     });
   }
 
   if (action === 'reset_password') {
-    const { email, code, token, newPassword } = body;
+    const { email, identifier, phone, code, token, newPassword } = body;
     const recoveryCode = String(code || token || '').trim();
+    const raw = String(email || identifier || phone || '').trim();
 
-    if (!email || !recoveryCode || !newPassword) {
-      return NextResponse.json({ success: false, error: 'Email, recovery code, and new password are required.' }, { status: 400 });
+    if (!raw || !recoveryCode || !newPassword) {
+      return NextResponse.json({ success: false, error: 'Email or phone number, recovery code, and new password are required.' }, { status: 400 });
     }
 
     if (String(newPassword).length < 6) {
       return NextResponse.json({ success: false, error: 'Password must be at least 6 characters long.' }, { status: 400 });
     }
 
-    const cleanEmail = String(email).trim().toLowerCase();
+    const cleanEmail = raw.toLowerCase();
+    const phoneDigits = raw.replace(/\D/g, '');
     const res = await queryDb(
       `SELECT id, name, email, recovery_token, recovery_token_expires 
-       FROM creators WHERE LOWER(email) = $1 LIMIT 1`,
-      [cleanEmail]
+       FROM creators 
+       WHERE LOWER(email) = $1 
+          OR phone = $2 
+          OR (LENGTH($3) >= 8 AND RIGHT(REGEXP_REPLACE(phone, '\\D', '', 'g'), 10) = RIGHT($3, 10))
+       LIMIT 1`,
+      [cleanEmail, raw, phoneDigits]
     );
 
     const creator = res.rows[0];

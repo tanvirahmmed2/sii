@@ -10,16 +10,34 @@ async function handleCreateAdmin(d, request) {
   const data = d || {};
   const name = data.name?.trim();
   const email = data.email?.trim().toLowerCase();
+  const phone = data.phone?.trim();
   const password = data.password?.trim();
+  const designation = data.designation?.trim() || null;
   const isActive = data.isActive !== undefined ? Boolean(data.isActive) : (data.is_active !== undefined ? Boolean(data.is_active) : true);
 
-  if (!name || !email || !password) {
-    throw new Error('Full Name, Email Address, and Password are required.');
+  if (!name || !email || !phone || !password) {
+    throw new Error('Full Name, Email Address, Phone Number, and Password are required.');
   }
 
-  const existing = await queryDb('SELECT id FROM developers WHERE LOWER(email) = $1 LIMIT 1', [email]);
+  if (phone.length < 5) {
+    throw new Error('Please enter a valid phone number.');
+  }
+
+  const phoneDigits = phone.replace(/\D/g, '');
+  const existing = await queryDb(
+    `SELECT id, email, phone FROM developers 
+     WHERE LOWER(email) = $1 
+        OR phone = $2 
+        OR (LENGTH($3) >= 8 AND RIGHT(REGEXP_REPLACE(phone, '\\D', '', 'g'), 10) = RIGHT($3, 10))
+     LIMIT 1`,
+    [email, phone, phoneDigits]
+  );
   if (existing.rows.length > 0) {
-    throw new Error('A developer with this email address already exists.');
+    const ex = existing.rows[0];
+    if (ex.email && ex.email.toLowerCase() === email) {
+      throw new Error('A developer with this email address already exists.');
+    }
+    throw new Error('A developer with this phone number already exists.');
   }
 
   const hashedPassword = await hashPassword(password);
@@ -28,12 +46,12 @@ async function handleCreateAdmin(d, request) {
 
   const insertRes = await queryDb(
     `INSERT INTO developers (
-       name, email, password, is_active, email_verified,
+       name, email, phone, designation, password, is_active, email_verified,
        verification_token, verification_token_expires, two_factor_code, two_factor_expires
      )
-     VALUES ($1, $2, $3, $4, FALSE, $5, CURRENT_TIMESTAMP + INTERVAL '24 hours', $6, CURRENT_TIMESTAMP + INTERVAL '24 hours')
-     RETURNING id, name, email, is_active, email_verified, created_at`,
-    [name, email, hashedPassword, isActive, verificationToken, verificationCode]
+     VALUES ($1, $2, $3, $4, $5, $6, FALSE, $7, CURRENT_TIMESTAMP + INTERVAL '24 hours', $8, CURRENT_TIMESTAMP + INTERVAL '24 hours')
+     RETURNING id, name, email, phone, designation, is_active, email_verified, created_at`,
+    [name, email, phone, designation, hashedPassword, isActive, verificationToken, verificationCode]
   );
 
   const newAdmin = {
@@ -266,6 +284,20 @@ export async function PUT(request) {
     delete data.role;
     delete data.role_id;
     delete data.permissions;
+
+    if (data.phone) {
+      data.phone = data.phone.trim();
+      const phoneDigits = data.phone.replace(/\D/g, '');
+      const existingPhone = await queryDb(
+        `SELECT id FROM developers 
+         WHERE (phone = $1 OR (LENGTH($2) >= 8 AND RIGHT(REGEXP_REPLACE(phone, '\\D', '', 'g'), 10) = RIGHT($2, 10))) 
+           AND id != $3 LIMIT 1`,
+        [data.phone, phoneDigits, targetId]
+      );
+      if (existingPhone.rows.length > 0) {
+        return NextResponse.json({ success: false, error: 'A developer with this phone number already exists.' }, { status: 400 });
+      }
+    }
 
     if (data.password && data.password.trim()) {
       data.password = await hashPassword(data.password.trim());

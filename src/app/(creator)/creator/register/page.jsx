@@ -11,6 +11,7 @@ export default function CreatorRegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [readOnly, setReadOnly] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [phone, setPhone] = useState('');
 
@@ -25,6 +26,12 @@ export default function CreatorRegisterPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    if (!name.trim() || !email.trim() || !phone.trim() || !password) {
+      setError('Please fill in all required fields.');
+      setLoading(false);
+      return;
+    }
 
     if (password.length < 6) {
       setError('Password must be at least 6 characters long.');
@@ -42,7 +49,7 @@ export default function CreatorRegisterPage() {
             name: name.trim(),
             email: email.trim().toLowerCase(),
             password,
-            phone: phone.trim() || undefined,
+            phone: phone.trim(),
           },
         }),
       });
@@ -148,19 +155,19 @@ export default function CreatorRegisterPage() {
           <form onSubmit={handleRegister} autoComplete="off" className="space-y-3">
             <input
               type="text"
-              name="fake_username_prevent_autofill"
-              style={{ display: 'none' }}
+              name="decoy_username_prevent_autofill"
               tabIndex={-1}
               aria-hidden="true"
-              autoComplete="off"
+              autoComplete="username"
+              className="sr-only opacity-0 absolute -z-50 pointer-events-none h-0 w-0"
             />
             <input
               type="password"
-              name="fake_password_prevent_autofill"
-              style={{ display: 'none' }}
+              name="decoy_password_prevent_autofill"
               tabIndex={-1}
               aria-hidden="true"
               autoComplete="new-password"
+              className="sr-only opacity-0 absolute -z-50 pointer-events-none h-0 w-0"
             />
             <div>
               <label className="block text-[11px] font-medium text-slate-700 mb-1">
@@ -171,6 +178,9 @@ export default function CreatorRegisterPage() {
                 name="creator_full_name"
                 autoComplete="off"
                 required
+                readOnly={readOnly}
+                onFocus={() => setReadOnly(false)}
+                onPointerDown={() => setReadOnly(false)}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
@@ -183,9 +193,12 @@ export default function CreatorRegisterPage() {
               </label>
               <input
                 type="email"
-                name="creator_registration_email"
+                name="creator_reg_email"
                 autoComplete="off"
                 required
+                readOnly={readOnly}
+                onFocus={() => setReadOnly(false)}
+                onPointerDown={() => setReadOnly(false)}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
@@ -199,10 +212,13 @@ export default function CreatorRegisterPage() {
               <div className="relative flex items-center">
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  name="creator_registration_password"
+                  name="creator_reg_password"
                   autoComplete="new-password"
                   required
                   minLength={6}
+                  readOnly={readOnly}
+                  onFocus={() => setReadOnly(false)}
+                  onPointerDown={() => setReadOnly(false)}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800 pr-12"
@@ -219,12 +235,16 @@ export default function CreatorRegisterPage() {
 
             <div>
               <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                Phone Number (Optional)
+                Phone Number *
               </label>
               <input
                 type="tel"
                 name="creator_phone_number"
                 autoComplete="off"
+                required
+                readOnly={readOnly}
+                onFocus={() => setReadOnly(false)}
+                onPointerDown={() => setReadOnly(false)}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"

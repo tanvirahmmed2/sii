@@ -18,7 +18,7 @@ export default function DevelopersPage() {
   const router = useRouter();
 
   const [editingDev, setEditingDev] = useState(null);
-  const [editFormData, setEditFormData] = useState({ name: '', designation: '', is_active: true, password: '' });
+  const [editFormData, setEditFormData] = useState({ name: '', phone: '', designation: '', is_active: true, password: '' });
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
 
@@ -161,7 +161,8 @@ export default function DevelopersPage() {
     setEditingDev(dev);
     setEditFormData({
       name: dev.name || '',
-      designation: dev.designation || 'Software Engineer',
+      phone: dev.phone || '',
+      designation: dev.designation || '',
       is_active: dev.is_active !== false,
       password: '',
     });
@@ -177,6 +178,7 @@ export default function DevelopersPage() {
       const payload = {
         id: editingDev.id,
         name: editFormData.name.trim(),
+        phone: editFormData.phone.trim(),
         designation: editFormData.designation.trim(),
         is_active: editFormData.is_active,
       };
@@ -198,6 +200,7 @@ export default function DevelopersPage() {
               ? {
                   ...d,
                   name: payload.name,
+                  phone: payload.phone,
                   designation: payload.designation,
                   is_active: payload.is_active,
                 }
@@ -321,6 +324,7 @@ export default function DevelopersPage() {
     return (
       (d.name || '').toLowerCase().includes(term) ||
       (d.email || '').toLowerCase().includes(term) ||
+      (d.phone || '').toLowerCase().includes(term) ||
       (d.designation || '').toLowerCase().includes(term)
     );
   });
@@ -396,6 +400,19 @@ export default function DevelopersPage() {
               </div>
 
               <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Phone Number <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  type="tel"
+                  required
+                  value={editFormData.phone}
+                  onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+                />
+              </div>
+
+              <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
                 <input
                   type="email"
@@ -435,7 +452,8 @@ export default function DevelopersPage() {
                 </label>
                 <input
                   type="password"
-                  placeholder="••••••••"
+                  name="edit_dev_password"
+                  autoComplete="new-password"
                   value={editFormData.password}
                   onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
                   className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
@@ -493,7 +511,6 @@ export default function DevelopersPage() {
             <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2">
               <input
                 type="text"
-                placeholder="Filter SaaS modules..."
                 value={permSearch}
                 onChange={(e) => setPermSearch(e.target.value)}
                 className="w-full sm:w-64 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs text-slate-900 dark:text-white focus:outline-none"
@@ -666,7 +683,6 @@ export default function DevelopersPage() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <input
             type="text"
-            placeholder="Search by name, email, or designation..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full sm:w-72 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
@@ -714,6 +730,7 @@ export default function DevelopersPage() {
                       <td className="py-2.5">
                         <div className="font-semibold text-slate-900 dark:text-white">{dev.name}</div>
                         <div className="font-mono text-[11px] text-slate-500">{dev.email}</div>
+                        {dev.phone && <div className="font-mono text-[11px] text-slate-500">{dev.phone}</div>}
                       </td>
                       <td className="py-2.5">
                         <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">

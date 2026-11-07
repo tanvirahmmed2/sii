@@ -12,10 +12,10 @@ export default function AdminLoginForm() {
   const context = useContext(Context);
 
   const initialVerified = searchParams.get('verified') === 'true';
-  const initialEmailParam = searchParams.get('email') || '';
 
-  const [email, setEmail] = useState(initialEmailParam || '');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [readOnly, setReadOnly] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -25,13 +25,12 @@ export default function AdminLoginForm() {
   const [resendNotice, setResendNotice] = useState('');
 
   useEffect(() => {
-    if (initialEmailParam) {
-      setEmail(initialEmailParam);
-    }
+    setIdentifier('');
+    setPassword('');
     if (initialVerified) {
       setVerifiedSuccess(true);
     }
-  }, [initialEmailParam, initialVerified]);
+  }, [initialVerified]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -44,7 +43,7 @@ export default function AdminLoginForm() {
       const res = await fetch('/api/marketing/developer/me/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ identifier: identifier.trim(), password }),
       });
 
       const data = await res.json();
@@ -58,7 +57,7 @@ export default function AdminLoginForm() {
       } else {
         if (data.unverified) {
           setUnverifiedInfo({
-            email: data.email || email,
+            email: data.email || identifier,
             message: data.error || 'Your developer account has not been verified yet. Please check your email for the activation link.',
           });
         } else {
@@ -73,7 +72,7 @@ export default function AdminLoginForm() {
   };
 
   const handleResendLink = async () => {
-    const targetEmail = unverifiedInfo?.email || email;
+    const targetEmail = unverifiedInfo?.email || identifier;
     if (!targetEmail) return;
 
     setResending(true);
@@ -83,7 +82,7 @@ export default function AdminLoginForm() {
       const res = await fetch('/api/marketing/developer/me/resend-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: targetEmail }),
+        body: JSON.stringify({ email: targetEmail, identifier: targetEmail }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -152,17 +151,38 @@ export default function AdminLoginForm() {
         </div>
       )}
 
-      <form onSubmit={handleLogin} className="space-y-4">
+      <form onSubmit={handleLogin} autoComplete="off" className="space-y-4">
+        <input
+          type="text"
+          name="decoy_username_prevent_autofill"
+          tabIndex={-1}
+          aria-hidden="true"
+          autoComplete="username"
+          className="sr-only opacity-0 absolute -z-50 pointer-events-none h-0 w-0"
+        />
+        <input
+          type="password"
+          name="decoy_password_prevent_autofill"
+          tabIndex={-1}
+          aria-hidden="true"
+          autoComplete="current-password"
+          className="sr-only opacity-0 absolute -z-50 pointer-events-none h-0 w-0"
+        />
+
         <div className="space-y-1">
           <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">
-            Email Address
+            Email or Phone Number *
           </label>
           <input
-            type="email"
+            type="text"
+            name="dev_auth_identifier"
+            autoComplete="off"
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="developer@company.com"
+            readOnly={readOnly}
+            onFocus={() => setReadOnly(false)}
+            onPointerDown={() => setReadOnly(false)}
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
             className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
           />
         </div>
@@ -170,7 +190,7 @@ export default function AdminLoginForm() {
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <label className="text-xs font-normal text-slate-700 dark:text-slate-300">
-              Password
+              Password *
             </label>
             <Link
               href="/developer-auth/recovery"
@@ -182,7 +202,12 @@ export default function AdminLoginForm() {
           <div className="relative">
             <input
               type={showPassword ? 'text' : 'password'}
+              name="dev_auth_secret"
+              autoComplete="new-password"
               required
+              readOnly={readOnly}
+              onFocus={() => setReadOnly(false)}
+              onPointerDown={() => setReadOnly(false)}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800 pr-12"

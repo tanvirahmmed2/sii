@@ -6,10 +6,12 @@ export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/mar
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     password: '',
-    designation: 'Software Engineer',
+    designation: '',
     isActive: true,
   });
+  const [readOnly, setReadOnly] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -20,6 +22,12 @@ export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/mar
     setError('');
     setSuccessMsg('');
 
+    if (!formData.name.trim() || !formData.email.trim() || !formData.phone.trim() || !formData.password.trim()) {
+      setError('Full Name, Email Address, Phone Number, and Password are required.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch(apiEndpoint, {
         method: 'POST',
@@ -29,8 +37,9 @@ export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/mar
           data: {
             name: formData.name.trim(),
             email: formData.email.trim(),
+            phone: formData.phone.trim(),
             password: formData.password.trim(),
-            designation: formData.designation.trim() || 'Software Engineer',
+            designation: formData.designation.trim() || null,
             isActive: Boolean(formData.isActive),
           },
         }),
@@ -39,7 +48,7 @@ export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/mar
       if (data.success) {
         setSuccessMsg(`Developer account created for ${formData.email}. An activation link has been sent to their email.`);
         const createdRecord = data.admin || data.record;
-        setFormData({ name: '', email: '', password: '', designation: 'Software Engineer', isActive: true });
+        setFormData({ name: '', email: '', phone: '', password: '', designation: '', isActive: true });
         if (onSuccess) {
           setTimeout(() => {
             onSuccess(createdRecord);
@@ -61,7 +70,7 @@ export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/mar
         <div>
           <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Add Developer Account</h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Create a developer account. Module permissions will be granted directly.
+            Create a developer account with required unique phone number and credentials.
           </p>
         </div>
         {onCancel && (
@@ -87,16 +96,36 @@ export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/mar
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <form onSubmit={handleSubmit} autoComplete="off" className="space-y-3">
+        <input
+          type="text"
+          name="decoy_username_prevent_autofill"
+          tabIndex={-1}
+          aria-hidden="true"
+          autoComplete="username"
+          className="sr-only opacity-0 absolute -z-50 pointer-events-none h-0 w-0"
+        />
+        <input
+          type="password"
+          name="decoy_password_prevent_autofill"
+          tabIndex={-1}
+          aria-hidden="true"
+          autoComplete="new-password"
+          className="sr-only opacity-0 absolute -z-50 pointer-events-none h-0 w-0"
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Full Name <span className="text-rose-600">*</span>
             </label>
             <input
               type="text"
+              name="developer_name"
+              autoComplete="off"
               required
-              placeholder="e.g. Alex Morgan"
+              readOnly={readOnly}
+              onFocus={() => setReadOnly(false)}
+              onPointerDown={() => setReadOnly(false)}
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
@@ -109,10 +138,32 @@ export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/mar
             </label>
             <input
               type="email"
+              name="developer_email"
+              autoComplete="off"
               required
-              placeholder="developer@company.com"
+              readOnly={readOnly}
+              onFocus={() => setReadOnly(false)}
+              onPointerDown={() => setReadOnly(false)}
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Phone Number <span className="text-rose-600">*</span>
+            </label>
+            <input
+              type="tel"
+              name="developer_phone"
+              autoComplete="off"
+              required
+              readOnly={readOnly}
+              onFocus={() => setReadOnly(false)}
+              onPointerDown={() => setReadOnly(false)}
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
             />
           </div>
@@ -125,8 +176,13 @@ export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/mar
             </label>
             <input
               type="password"
+              name="developer_password"
+              autoComplete="new-password"
               required
-              placeholder="••••••••"
+              minLength={6}
+              readOnly={readOnly}
+              onFocus={() => setReadOnly(false)}
+              onPointerDown={() => setReadOnly(false)}
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
@@ -139,7 +195,11 @@ export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/mar
             </label>
             <input
               type="text"
-              placeholder="e.g. Lead Engineer, Fullstack, Support"
+              name="developer_designation"
+              autoComplete="off"
+              readOnly={readOnly}
+              onFocus={() => setReadOnly(false)}
+              onPointerDown={() => setReadOnly(false)}
               value={formData.designation}
               onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
               className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"

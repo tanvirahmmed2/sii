@@ -60,7 +60,7 @@ export async function GET(request) {
     );
 
     return NextResponse.redirect(
-      new URL(`/developer-auth/login?verified=true&email=${encodeURIComponent(dev.email)}`, request.url)
+      new URL('/developer-auth/login?verified=true', request.url)
     );
   } catch (error) {
     console.error('Error in GET /api/marketing/developer/me/verify:', error);

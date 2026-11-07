@@ -310,19 +310,24 @@ export async function requireDeveloperPermission(request, moduleSlug) {
   return check;
 }
 
-export async function authenticateDeveloper(email, password, { ip = '127.0.0.1', userAgent = 'Unknown' } = {}) {
-  const cleanEmail = String(email || '').trim().toLowerCase();
+export async function authenticateDeveloper(identifier, password, { ip = '127.0.0.1', userAgent = 'Unknown' } = {}) {
+  const raw = String(identifier || '').trim();
+  const cleanEmail = raw.toLowerCase();
+  const digits = raw.replace(/\D/g, '');
   const cleanPassword = String(password || '');
 
   const devRes = await queryDb(
     `SELECT d.*
      FROM developers d
-     WHERE LOWER(d.email) = $1 LIMIT 1`,
-    [cleanEmail]
+     WHERE LOWER(d.email) = $1 
+        OR d.phone = $2 
+        OR (LENGTH($3) >= 8 AND RIGHT(REGEXP_REPLACE(d.phone, '\\D', '', 'g'), 10) = RIGHT($3, 10))
+     LIMIT 1`,
+    [cleanEmail, raw, digits]
   );
 
   if (devRes.rows.length === 0) {
-    throw new Error('Invalid email or password.');
+    throw new Error('Invalid email, phone number, or password.');
   }
 
   const dev = devRes.rows[0];

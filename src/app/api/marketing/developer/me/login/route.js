@@ -4,11 +4,13 @@ import { DEVELOPER_TOKEN } from 'src/lib/database/secret';
 
 export async function POST(request) {
   try {
-    const { email, password } = await request.json();
+    const body = await request.json();
+    const identifier = (body.identifier || body.email || body.phone || '').trim();
+    const password = body.password;
 
-    if (!email || !password) {
+    if (!identifier || !password) {
       return NextResponse.json(
-        { success: false, error: 'Email and password are required.' },
+        { success: false, error: 'Email or phone number and password are required.' },
         { status: 400 }
       );
     }
@@ -16,7 +18,7 @@ export async function POST(request) {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || '127.0.0.1';
     const userAgent = request.headers.get('user-agent') || 'Unknown';
 
-    const result = await authenticateDeveloper(email, password, { ip, userAgent });
+    const result = await authenticateDeveloper(identifier, password, { ip, userAgent });
 
     const response = NextResponse.json({
       success: true,

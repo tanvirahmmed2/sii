@@ -6,27 +6,32 @@ import { SITE_NAME, getBaseUrl } from 'src/lib/database/secret';
 
 export async function POST(request) {
   try {
-    const { email } = await request.json();
+    const body = await request.json();
+    const raw = String(body.email || body.identifier || body.phone || '').trim();
 
-    if (!email) {
+    if (!raw) {
       return NextResponse.json(
-        { success: false, error: 'Email address is required.' },
+        { success: false, error: 'Email address or phone number is required.' },
         { status: 400 }
       );
     }
 
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanEmail = raw.toLowerCase();
+    const phoneDigits = raw.replace(/\D/g, '');
 
     const adminRes = await queryDb(
       `SELECT id, name, email, is_active, email_verified 
        FROM developers 
-       WHERE LOWER(email) = $1 LIMIT 1`,
-      [cleanEmail]
+       WHERE LOWER(email) = $1 
+          OR phone = $2 
+          OR (LENGTH($3) >= 8 AND RIGHT(REGEXP_REPLACE(phone, '\\D', '', 'g'), 10) = RIGHT($3, 10))
+       LIMIT 1`,
+      [cleanEmail, raw, phoneDigits]
     );
 
     if (adminRes.rows.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'No developer account found for this email address.' },
+        { success: false, error: 'No developer account found for this email address or phone number.' },
         { status: 404 }
       );
     }
